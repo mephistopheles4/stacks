@@ -115,10 +115,48 @@ const CHROME_CANDIDATES = [
   '/usr/bin/google-chrome',
 ];
 
+/**
+ * The one flag. `--pull-request` is what `gates.yml` passes on a pull request,
+ * and it skips the two checks that cost four fifths of the step on a runner with
+ * no GPU (#427): G60 and G61. They still run on every push to `main` and in
+ * `deploy:site`, which pass nothing. Anything else is refused before the build,
+ * so a typo in the workflow cannot quietly run a different set and pass.
+ */
+const PULL_REQUEST_FLAG = '--pull-request';
+const SKIPPED_ON_PULL_REQUESTS = 'G60, G61';
+
+function readArgs(argv: readonly string[]): { pullRequest: boolean } {
+  const unknown = argv.filter((arg) => arg !== PULL_REQUEST_FLAG);
+  if (unknown.length > 0) {
+    console.error(
+      `smoke:render: unknown argument ${unknown.map((arg) => JSON.stringify(arg)).join(', ')}. ` +
+        `The only flag is ${PULL_REQUEST_FLAG}.`,
+    );
+    process.exit(1);
+  }
+  return { pullRequest: argv.includes(PULL_REQUEST_FLAG) };
+}
+
+/**
+ * Elapsed time per step, recorded as each one ends and printed with the report,
+ * so the next regression is visible in the CI log without an experiment branch.
+ */
+const TIMINGS: { label: string; seconds: number }[] = [];
+
+async function timed<T>(label: string, run: () => Promise<T>): Promise<T> {
+  const started = performance.now();
+  try {
+    return await run();
+  } finally {
+    TIMINGS.push({ label, seconds: (performance.now() - started) / 1000 });
+  }
+}
+
 async function main(): Promise<void> {
+  const { pullRequest } = readArgs(process.argv.slice(2));
   mkdirSync(ARTIFACTS, { recursive: true });
 
-  await buildSite();
+  await timed('build the site (fixtures and astro)', buildSite);
   const { server, origin } = await serveDist({ root: DIST });
   const large = await serveDist({ root: DIST, overlay: join(REPO_ROOT, LARGE_ASSETS) });
   try {
@@ -151,6 +189,7 @@ async function main(): Promise<void> {
         if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
       });
 
+      const bootStarted = performance.now();
       await page.goto(origin, { waitUntil: 'networkidle0', timeout: 30_000 });
 
       try {
@@ -177,19 +216,32 @@ async function main(): Promise<void> {
       const cost = (await page.evaluate('window.__shelf.stats()')) as ShelfCost;
 
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
+      TIMINGS.push({
+        label: 'boot, settle and screenshot',
+        seconds: (performance.now() - bootStarted) / 1000,
+      });
 
-      const pickup = await checkPickup(page);
-      const viewer = await checkViewer(page);
-      const phone = await checkPhone(page);
-      const spread = await checkSpread(browser, origin);
-      const lit = await checkLargeLibraryLit(browser, origin, large.origin);
+      const pickup = await timed('G35 pickup', () => checkPickup(page));
+      const viewer = await timed('cover viewer', () => checkViewer(page));
+      const phone = await timed('page at 375x812', () => checkPhone(page));
+      const spread = await timed('open spread', () => checkSpread(browser, origin));
+      const lit = await timed('G59 large-library-lit', () =>
+        checkLargeLibraryLit(browser, origin, large.origin),
+      );
       // Last, and in browser contexts of their own, so the record G60 writes can
       // never reach the page every check above measured.
-      const fallback = await checkContextLossFallback(browser, origin);
-      const sampling = await checkShadowReaders(browser, origin, large.origin);
-      const tuner = await checkTuner(browser, origin);
+      const fallback: FallbackChecked = pullRequest
+        ? { lines: [], failures: [] }
+        : await timed('G60 context-loss-fallback', () => checkContextLossFallback(browser, origin));
+      const sampling: SamplingChecked = pullRequest
+        ? { lines: [], failures: [] }
+        : await timed('G61 one-shadow-reader', () =>
+            checkShadowReaders(browser, origin, large.origin),
+          );
+      const tuner = await timed('pickup tuner', () => checkTuner(browser, origin));
 
       report({
+        skipped: pullRequest ? SKIPPED_ON_PULL_REQUESTS : undefined,
         bookCount: Number(bookCount),
         bookcaseOverflow: Number(bookcaseOverflow),
         stats,
@@ -1940,6 +1992,8 @@ async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit>
 }
 
 function report(result: {
+  /** Which checks this run left out, and so what its `OK` does not cover. */
+  skipped: string | undefined;
   bookCount: number;
   bookcaseOverflow: number;
   stats: Stats;
@@ -1955,6 +2009,7 @@ function report(result: {
   tuner: TunerChecked;
 }): void {
   const {
+    skipped,
     bookCount,
     bookcaseOverflow,
     stats,
@@ -2039,15 +2094,25 @@ function report(result: {
   console.log(
     `                  planted   ${books(lit.largeBooks)} ${above(lit.planted)}   (the fog pulled over it)`,
   );
-  console.log(`context loss (G60), each case in a browser context of its own`);
-  for (const line of fallback.lines) console.log(`  ${line}`);
-  console.log(
-    `shadow-map readers (G61), budget ${String(BUDGET)} sampling draws a frame, each page in a ` +
-      'browser context of its own',
-  );
-  for (const line of sampling.lines) console.log(`  ${line}`);
+  if (skipped === undefined) {
+    console.log(`context loss (G60), each case in a browser context of its own`);
+    for (const line of fallback.lines) console.log(`  ${line}`);
+    console.log(
+      `shadow-map readers (G61), budget ${String(BUDGET)} sampling draws a frame, each page in a ` +
+        'browser context of its own',
+    );
+    for (const line of sampling.lines) console.log(`  ${line}`);
+  } else {
+    // Said where the lines would be, so a reader of a pull request's log cannot
+    // take a green run for one that observed them.
+    console.log(`skipped on pull requests: ${skipped} (run after merge and at deploy)`);
+  }
   console.log('pickup tuner, each page in a browser context of its own');
   for (const line of tuner.lines) console.log(`  ${line}`);
+  console.log('step times');
+  for (const { label, seconds } of TIMINGS) {
+    console.log(`  ${label.padEnd(40)} ${seconds.toFixed(1).padStart(6)} s`);
+  }
   console.log(`screenshot        ${OUTPUT}`);
 
   // G35 (`enhanced-card`), reworded: see `lib/pickup-gate.ts`.

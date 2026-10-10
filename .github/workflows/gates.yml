@@ -47,7 +47,10 @@ permissions:
 
 concurrency:
   group: gates-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only a superseded pull-request run is cancelled. A run on `main` is the one
+  # place G60 and G61 run before a deploy (#427), so two quick merges must not
+  # cancel the first one's.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   suite:
@@ -117,8 +120,18 @@ jobs:
       # Chrome stable that ubuntu-latest ships at /usr/bin/google-chrome, which
       # is already in the script's candidate list — no Chromium download.
       # Also stages its own 50-book fixture vault.
+      #
+      # A pull request skips G60 and G61 (`--pull-request`), which were four
+      # fifths of this step on a runner with no GPU. They still run on every push
+      # to `main` and in `deploy:site`. See the decision record and
+      # `docs/gates.md`.
+      #
+      # Through `env:` and read as `$SMOKE_ARGS`, not spliced into the command: G55 holds every
+      # `run:` step to that, whatever the expression is.
       - name: smoke:render
-        run: pnpm smoke:render
+        env:
+          SMOKE_ARGS: ${{ github.event_name == 'pull_request' && '--pull-request' || '' }}
+        run: pnpm smoke:render $SMOKE_ARGS
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
