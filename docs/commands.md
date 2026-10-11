@@ -957,6 +957,7 @@ pnpm exec tsx scripts/phone-check.ts                  # the default page, 120 s
 pnpm exec tsx scripts/phone-check.ts --matrix         # default ×3, ?shadows=0, ?receivers=all
 pnpm exec tsx scripts/phone-check.ts --gpuinfo        # chrome://gpu, in a tab of its own
 pnpm exec tsx scripts/phone-check.ts --pickups 5      # the default page, picking up five books
+pnpm exec tsx scripts/phone-check.ts --examine 60      # hold a book, tap into examining, the phone's back key out, then turn it for 60 s
 ```
 
 **`--pickups <n>` drives the shelf's loop hook**, `window.__shelf.pickupLoop(n)`:

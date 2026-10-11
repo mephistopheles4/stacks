@@ -22,14 +22,14 @@ import { boot } from './boot.ts';
 export function start(): void {
   const canvas = document.getElementById('shelf-canvas');
   const status = document.getElementById('pickup-status');
-  const viewer = document.getElementById('cover-viewer');
-  const viewerImage = document.getElementById('cover-viewer-image');
+  const viewer = document.getElementById('book-viewer');
+  const viewerClose = document.getElementById('book-viewer-close');
 
   if (
     !(canvas instanceof HTMLCanvasElement) ||
     !(status instanceof HTMLElement) ||
     !(viewer instanceof HTMLDialogElement) ||
-    !(viewerImage instanceof HTMLImageElement)
+    !(viewerClose instanceof HTMLButtonElement)
   ) {
     // Nothing to boot into. Silent rather than thrown: a missing element here
     // means the template changed, which is a build-time mistake, and throwing on
@@ -40,6 +40,6 @@ export function start(): void {
 
   void boot(canvas, {
     status,
-    coverViewer: { dialog: viewer, image: viewerImage },
+    bookViewer: { dialog: viewer, close: viewerClose },
   });
 }

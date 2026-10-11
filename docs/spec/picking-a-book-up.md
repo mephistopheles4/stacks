@@ -704,7 +704,7 @@ of the card goes.
 | Title and author | the left-hand page, as prototyped ([#371](https://github.com/mephistopheles4/stacks/issues/371)'s screenshot). **On a phone**, which frames the right-hand page alone, they lead the right-hand page too |
 | Reading line, object line, subjects, links row (`cardModel`) | the right-hand page: on their own for a book with no Thoughts (#369's C, as is); **below the Thoughts**, after a rule, for a book with them, so the links stay reachable for every book |
 | The close control | a **put-back control** on the right-hand page. A phone fills the screen with the page, so there is no empty space to tap; this is how a touch reader without a back gesture puts the book down |
-| The enlarged cover (`cover-viewer.ts`, [ADR-0052](../adr/0052-the-enlarged-cover-is-a-real-dialog.md)) | **kept**, opened from a control among the card's lines, showing the held copy when one exists (#377) |
+| The enlarged cover (`cover-viewer.ts`, [ADR-0052](../adr/0052-the-enlarged-cover-is-a-real-dialog.md)) | **changed** (#418, [ADR-0109](../adr/0109-the-held-book-is-examined-in-3d.md)): the control, "Turn the book over", closes the held book in your hand and lets you turn it in a transparent modal `<dialog>` (`book-viewer.ts`), wearing the held copy when one exists (#377). The flat image goes |
 | The announcer (`role="status"`) | **kept**: «Title» by «Author» on pickup, changed on a second book, empty after put-back |
 | The bottom sheet and its drag ([ADR-0049](../adr/0049-the-card-is-a-non-modal-bottom-sheet.md)) | **retired**. Focus still never moves on pickup, for that record's reason: there is still no keyboard path to the shelf |
 
@@ -742,7 +742,7 @@ G35 (`enhanced-card`) checks nine things; each is kept, moved or retired.
 | 6. the announcer | **moves**, with put-back as the dismissal |
 | 7. the close control survives a swap | **becomes** the put-back control surviving a pickup of a second book |
 | 8. `published` rendering | **moves** |
-| 9. the enlarged cover (`checkCoverViewer`) | **moves** to the new entry; its Escape-layering clause now reads "one Escape closes the viewer and leaves the book held" |
+| 9. the enlarged cover (`checkCoverViewer`) | **moves** to the new entry; its Escape-layering clause now reads "one Escape closes the viewer and leaves the book held". **Reworked by #418** as `checkViewer`, examining: the width clause retires for the board at 0°, and turning, focus and the emptied hand are added (ADR-0109) |
 | `checkSheet` | **retires** with the sheet |
 
 The row keeps its number and slug, and its wording changes in the step that

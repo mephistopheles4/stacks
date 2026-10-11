@@ -1,5 +1,10 @@
 # The enlarged cover is a real `<dialog>`, and the card is still not one
 
+> **Superseded in part by [ADR-0109](0109-the-held-book-is-examined-in-3d.md).**
+> The dialog and its role stand. The flat image, the 512px ceiling and
+> *never scaled past native size* do not: the control now closes the held book
+> in your hand to turn it in 3D.
+
 Clicking the cover on the detail card opens it larger, in a native `<dialog>`
 opened with `showModal()`. The card beside it remains deliberately **not** a
 dialog ([ADR-0049](0049-the-card-is-a-non-modal-bottom-sheet.md)).

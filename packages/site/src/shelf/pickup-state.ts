@@ -62,6 +62,17 @@ export interface PickupEffects<B> {
   settled(book: B): void;
   /** «Title» by «Author» on pickup, and empty when the hand is empty. */
   announce(book: B | undefined): void;
+  /** Close the book in the hand and let it be turned: the examining view opens. */
+  examine(book: B): void;
+  /** Leave the examining view: the turn eases square and the book opens again. */
+  leave(book: B): void;
+  /**
+   * Stop examining at once, with no motion, whatever stage it is in: the view
+   * closes and the book is as it was open in the hand. Returns whether there
+   * was anything to stop — the book closed, or still easing open — so a put-back
+   * knows the shared track is not at the pose the page shows.
+   */
+  cutExamining(book: B): boolean;
   reduced(): boolean;
   /** How much faster putting back runs than picking up. */
   returnSpeed(): number;
@@ -89,6 +100,15 @@ export interface PickupState<B> {
   popped(): void;
   /** The context was lost: everything back in its slot at once, as a hard cut. */
   drop(): void;
+  /**
+   * Close the held book in your hand to turn it (#418). Only a book at rest in
+   * the hand can be examined; returns whether it was.
+   */
+  examine(): boolean;
+  /** Leave the examining view, one level: the book stays held. */
+  leave(): boolean;
+  /** Whether the held book is closed in your hand, to be turned. */
+  examining(): boolean;
   /** The book in your hand — lifting or held, never one going back. */
   holding(): Holding<B> | undefined;
   /** The latest book in motion, whatever its phase: what the tuner follows. */
@@ -103,6 +123,10 @@ interface Active<B> {
   readonly book: B;
   phase: Phase;
   track: Track;
+  /** Closed in the hand, to be turned. */
+  examining: boolean;
+  /** Examined at some point since the pickup: its effects may still be easing. */
+  examined: boolean;
 }
 
 export function createPickupState<B>(
@@ -142,7 +166,13 @@ export function createPickupState<B>(
   const pick = (book: B): void => {
     // Out of its slot first: the track is built from the book as lifted.
     effects.left(book);
-    const entry: Active<B> = { book, phase: 'lifting', track: undefined as unknown as Track };
+    const entry: Active<B> = {
+      book,
+      phase: 'lifting',
+      track: undefined as unknown as Track,
+      examining: false,
+      examined: false,
+    };
     entry.track = wire(entry);
     active.push(entry);
     remember(book);
@@ -171,8 +201,13 @@ export function createPickupState<B>(
   const sendBack = (entry: Active<B>): void => {
     if (entry.phase === 'returning') return;
     entry.phase = 'returning';
+    entry.examining = false;
+    // Whatever way the hand empties, the examining view goes with it. A closed
+    // book is then not at the pose the shared track holds: reversing it would
+    // draw the book open before it went, so it is cut like reduced motion.
+    const cut = entry.examined && effects.cutExamining(entry.book);
     if (holding() === undefined) effects.announce(undefined);
-    if (effects.reduced()) {
+    if (cut || effects.reduced()) {
       entry.track.rewind();
       settle(entry);
     } else {
@@ -231,6 +266,7 @@ export function createPickupState<B>(
       const lost = active;
       active = [];
       for (const entry of lost) {
+        if (entry.examined) effects.cutExamining(entry.book);
         entry.track.rewind();
         entry.track.dispose();
         effects.settled(entry.book);
@@ -242,6 +278,25 @@ export function createPickupState<B>(
       // from it on a rebuild could take the visitor off the site.
       if (effects.history.held()) effects.history.back();
     },
+
+    examine() {
+      const entry = holding();
+      if (entry?.phase !== 'held' || entry.examining) return false;
+      entry.examining = true;
+      entry.examined = true;
+      effects.examine(entry.book);
+      return true;
+    },
+
+    leave() {
+      const entry = holding();
+      if (entry?.examining !== true) return false;
+      entry.examining = false;
+      effects.leave(entry.book);
+      return true;
+    },
+
+    examining: () => holding()?.examining === true,
 
     holding() {
       const entry = holding();

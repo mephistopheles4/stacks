@@ -1,6 +1,6 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
-import { mountCoverViewer, type CoverViewerElements } from './cover-viewer.ts';
+import { mountBookViewer, type BookViewerElements } from './book-viewer.ts';
 import { mountDiagnostics } from './diagnostics.ts';
 import {
   createPickup,
@@ -131,8 +131,8 @@ export interface PageHandles {
    * «Author» on pickup, changed on a second book, empty after put-back.
    */
   readonly status: HTMLElement;
-  /** The enlarged-cover dialog. See `cover-viewer.ts`. */
-  readonly coverViewer: CoverViewerElements;
+  /** The dialog that examines the held book. See `book-viewer.ts`. */
+  readonly bookViewer: BookViewerElements;
 }
 
 export async function boot(
@@ -436,11 +436,10 @@ export async function boot(
   if (handle === undefined) return undefined;
 
   const host = surface.parentElement ?? document.body;
-  const coverViewer = mountCoverViewer(page.coverViewer, host);
   const live = createPickup(handle.stage, {
     status: page.status,
     host,
-    coverViewerOpen: () => coverViewer.isOpen(),
+    viewer: mountBookViewer(page.bookViewer, host),
   });
   held.pickup = live;
   publish(handle, () => fallback().kind, live);
