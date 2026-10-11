@@ -959,37 +959,17 @@ async function examineOne(
     await opensView(page);
     leftByButton = await leavesBy(page, () => page.keyboard.press('Enter'));
 
-    // Reduced motion cuts: no tween is in flight a moment after the click, where
-    // the tween would take over half a second. Read as state, not as a frame
-    // count, so a slow runner cannot tell the two apart.
-    const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100));
+    // Reduced motion cuts: no tween is in flight at the moment the view's state
+    // changes, where a tween would run for over half a second. Read as state at
+    // that moment, not as a frame count or a wait, so a slow runner cannot tell
+    // the two apart.
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
     await page.click(EXAMINE_CONTROL);
-    await settle();
-    const reducedReading = (await page.evaluate(
-      `JSON.stringify({ matches: matchMedia('(prefers-reduced-motion: reduce)').matches, held: window.__shelf.held() })`,
-    )) as string;
-    const closedAtOnce = (await page.evaluate(
-      `(() => { const h = window.__shelf.held(); return h?.examining === true && h.easing === false; })()`,
-    )) as boolean;
+    const closedAtOnce = await noTweenWhenExamining(page, true);
     await page.keyboard.press('Escape');
-    await settle();
-    const openedAtOnce = (await page.evaluate(
-      `(() => { const h = window.__shelf.held(); return h?.examining === false && h.easing === false && !${DIALOG}?.open; })()`,
-    )) as boolean;
+    const openedAtOnce = await noTweenWhenExamining(page, false);
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
     reducedCuts = closedAtOnce && openedAtOnce;
-    if (!reducedCuts) {
-      // What the runner saw, so a failure on a slow machine names its cause.
-      console.log(
-        'reduced motion probe',
-        JSON.stringify({
-          closedAtOnce,
-          openedAtOnce,
-          media: reducedReading,
-        }),
-      );
-    }
 
     // The hand empties while examining, by the back button: the view goes with it.
     await until(page, PAGE_SHOWN, 3000);
@@ -1019,6 +999,25 @@ async function examineOne(
     reducedCuts,
     emptiedCloses,
   };
+}
+
+/**
+ * Waits, inside the page, for the view's state to become `examining`, then
+ * reports whether no tween was in flight at that moment. The pickup sets its
+ * tween flag in the same call as the state, so under reduced motion the two
+ * agree at once, and with a tween the flag stays up for its 0.6 s.
+ */
+async function noTweenWhenExamining(page: Page, examining: boolean): Promise<boolean> {
+  return (await page.evaluate(`new Promise((resolve) => {
+    const started = performance.now();
+    const tick = () => {
+      const h = window.__shelf.held();
+      if (h && h.examining === ${String(examining)}) resolve(h.easing === false);
+      else if (performance.now() - started > 3000) resolve(false);
+      else setTimeout(tick, 0);
+    };
+    tick();
+  })`)) as boolean;
 }
 
 /**
