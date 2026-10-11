@@ -125,6 +125,7 @@ pitch and Home, reduced motion, nothing fetched, a book with no cover, and a
 `cover` reading taken off the material so a blank cover is not the shelf copy. ⚠️ The planting caught the gate itself: the turning and emptied-hand
 readings were taken from whichever book was reported first, so a book picked
 second hid a failure — they are now carried from the book that ran them.
+
 **2026-10-10 — the pickup's move-4 review answered**
 ([#413](https://github.com/mephistopheles4/stacks/issues/413)): a double
 put-back delivered before its popstate stepped back twice and off the site; one

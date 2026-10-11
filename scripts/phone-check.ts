@@ -322,7 +322,24 @@ async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<Exam
     return parse<{ x: number; y: number }>(value);
   };
 
-  while ((await cdp.evaluate('window.__shelf?.ready === true')) !== true) await sleep(500);
+  const waitingFrom = Date.now();
+  while ((await cdp.evaluate('window.__shelf?.ready === true')) !== true) {
+    // A shelf that never boots (a refused or lost context) must not hold the run
+    // open: `runOne` awaits this after the watch, and would never write its result.
+    if (Date.now() - waitingFrom > 60_000) {
+      return {
+        held: false,
+        opened: false,
+        backLeftBookHeld: false,
+        backEmptiedHand: false,
+        turnedForS: 0,
+        drags: 0,
+        yaw: undefined,
+        notes: ['the shelf never said it was ready'],
+      };
+    }
+    await sleep(500);
+  }
   await cdp.evaluate('window.__shelf.pickUp(3)');
   const heldAt = Date.now();
   while ((await read())?.phase !== 'held') {
