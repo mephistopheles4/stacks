@@ -159,6 +159,11 @@ export interface HeldReading {
    * off the material, so a fallback that blanked the cover is not the shelf copy.
    */
   readonly cover: 'held' | 'shelf' | 'none';
+  /**
+   * Whether the book is still being closed or opened again by a tween. Under
+   * reduced motion it never is: the move is a cut, in the same call.
+   */
+  readonly easing: boolean;
   /** The front board's angle to the page block, in degrees: 0 with the book closed. */
   readonly boardAngle: number;
   /** The turn examining has put on the book, in degrees. */
@@ -884,6 +889,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         progress: entry?.track?.progress() ?? 1,
         thoughts: entry?.pages.right.querySelector('.held-thoughts:not([hidden])') !== null,
         examining: state.examining(),
+        easing: entry?.ease !== undefined,
         cover: coverReading(entry),
         boardAngle: entry === undefined ? 0 : boardAngleOf(entry),
         turn: {

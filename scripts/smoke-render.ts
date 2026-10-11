@@ -959,17 +959,21 @@ async function examineOne(
     await opensView(page);
     leftByButton = await leavesBy(page, () => page.keyboard.press('Enter'));
 
-    // Reduced motion cuts: closed and open again inside a few frames, where the
-    // tween takes over half a second.
+    // Reduced motion cuts: no tween is in flight a moment after the click, where
+    // the tween would take over half a second. Read as state, not as a frame
+    // count, so a slow runner cannot tell the two apart.
+    const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100));
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
     await page.click(EXAMINE_CONTROL);
-    const closedAtOnce = await until(
-      page,
-      `Math.abs(window.__shelf.held()?.boardAngle ?? 90) <= ${String(CLOSED_TOLERANCE_DEG)}`,
-      250,
-    );
+    await settle();
+    const closedAtOnce = (await page.evaluate(
+      `(() => { const h = window.__shelf.held(); return h?.examining === true && h.easing === false; })()`,
+    )) as boolean;
     await page.keyboard.press('Escape');
-    const openedAtOnce = await until(page, PAGE_SHOWN, 250);
+    await settle();
+    const openedAtOnce = (await page.evaluate(
+      `(() => { const h = window.__shelf.held(); return h?.examining === false && h.easing === false && !${DIALOG}?.open; })()`,
+    )) as boolean;
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
     reducedCuts = closedAtOnce && openedAtOnce;
 
