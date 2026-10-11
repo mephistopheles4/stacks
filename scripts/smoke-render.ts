@@ -966,6 +966,9 @@ async function examineOne(
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
     await page.click(EXAMINE_CONTROL);
     await settle();
+    const reducedReading = (await page.evaluate(
+      `JSON.stringify({ matches: matchMedia('(prefers-reduced-motion: reduce)').matches, held: window.__shelf.held() })`,
+    )) as string;
     const closedAtOnce = (await page.evaluate(
       `(() => { const h = window.__shelf.held(); return h?.examining === true && h.easing === false; })()`,
     )) as boolean;
@@ -976,6 +979,17 @@ async function examineOne(
     )) as boolean;
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
     reducedCuts = closedAtOnce && openedAtOnce;
+    if (!reducedCuts) {
+      // What the runner saw, so a failure on a slow machine names its cause.
+      console.log(
+        'reduced motion probe',
+        JSON.stringify({
+          closedAtOnce,
+          openedAtOnce,
+          media: reducedReading,
+        }),
+      );
+    }
 
     // The hand empties while examining, by the back button: the view goes with it.
     await until(page, PAGE_SHOWN, 3000);

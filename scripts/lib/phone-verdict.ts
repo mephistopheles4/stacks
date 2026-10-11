@@ -46,6 +46,13 @@ export interface PhoneOptions {
    * held cover's upload timed on the device (§8). Undefined runs no pickups.
    */
   readonly pickups: number | undefined;
+  /**
+   * Seconds to keep turning a held book in the examining view once the page is
+   * ready (#418, ADR-0109): a real tap opens it, the phone's own back key leaves
+   * it, and a drag turns it for this long while the context is watched.
+   * Undefined runs none.
+   */
+  readonly examine: number | undefined;
 }
 
 const FLAGS_WITH_VALUES = [
@@ -57,6 +64,7 @@ const FLAGS_WITH_VALUES = [
   'adb',
   'port',
   'pickups',
+  'examine',
 ] as const;
 const SWITCHES = ['keep', 'shot', 'gpuinfo', 'matrix'] as const;
 
@@ -120,6 +128,7 @@ export function parsePhoneArgs(argv: readonly string[]): PhoneOptions {
     shot: switches.has('shot'),
     gpuinfo: switches.has('gpuinfo'),
     pickups: values.has('pickups') ? number(values.get('pickups') ?? '', '--pickups') : undefined,
+    examine: values.has('examine') ? number(values.get('examine') ?? '', '--examine') : undefined,
   };
 }
 

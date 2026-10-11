@@ -19,6 +19,9 @@
  *     --shot             save a screenshot beside the result
  *     --pickups <n>      once the page is ready, pick up and put back n books through
  *                        the shelf's loop hook, and report each held cover's upload
+ *     --examine <s>      once the page is ready, hold a book, open the examining view
+ *                        with a real tap, leave it with the phone's own back key, open
+ *                        it again and turn the book for s seconds (#418)
  *
  * **Not a `pnpm` script, deliberately**: it needs adb and a phone with USB
  * debugging on, which no CI runner and few contributors have, and a documented
@@ -269,6 +272,140 @@ function startPickups(rounds: number): string {
   })()`;
 }
 
+/** What the examining drive saw on the phone, kept apart from the context's own verdict. */
+interface ExamineReading {
+  readonly held: boolean;
+  /** A real tap on the page's control opened the view. */
+  readonly opened: boolean;
+  /** The phone's back key left the view with the book still held. */
+  readonly backLeftBookHeld: boolean;
+  /** …or emptied the hand instead (a back that went to history, not to the dialog). */
+  readonly backEmptiedHand: boolean;
+  /** Seconds spent turning, and how many drags were sent. */
+  readonly turnedForS: number;
+  readonly drags: number;
+  /** The turn at the end, in degrees: it moved if the drags reached the book. */
+  readonly yaw: number | undefined;
+  readonly notes: readonly string[];
+}
+
+const HELD_NOW = `(() => {
+  const h = window.__shelf?.held?.();
+  return JSON.stringify(h === undefined ? null : { examining: h.examining, phase: h.phase, yaw: h.turn.yaw });
+})()`;
+
+/**
+ * The examining view on the phone itself (#418, spec S12): a held book, a tap
+ * that is a real user activation, the phone's back key, and a minute of
+ * dragging — with the context watched beside it by `watch`. Everything read
+ * comes off `window.__shelf`; nothing is written to the page.
+ */
+async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<ExamineReading> {
+  const notes: string[] = [];
+  const read = async (): Promise<{ examining: boolean; phase: string; yaw: number } | null> =>
+    parse<{ examining: boolean; phase: string; yaw: number } | null>(
+      await cdp.evaluate(HELD_NOW),
+    ) ?? null;
+  const tap = async (x: number, y: number): Promise<void> => {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    await sleep(60);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const control = async (): Promise<{ x: number; y: number } | undefined> => {
+    const value = await cdp.evaluate(`(() => {
+      const el = document.querySelector('.held-page-right .held-examine');
+      if (!el) return null;
+      el.scrollIntoView({ block: 'center' });
+      const r = el.getBoundingClientRect();
+      return JSON.stringify({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+    })()`);
+    return parse<{ x: number; y: number }>(value);
+  };
+
+  while ((await cdp.evaluate('window.__shelf?.ready === true')) !== true) await sleep(500);
+  await cdp.evaluate('window.__shelf.pickUp(3)');
+  const heldAt = Date.now();
+  while ((await read())?.phase !== 'held') {
+    if (Date.now() - heldAt > 15_000) {
+      return {
+        held: false,
+        opened: false,
+        backLeftBookHeld: false,
+        backEmptiedHand: false,
+        turnedForS: 0,
+        drags: 0,
+        yaw: undefined,
+        notes: ['the book never reached the held state'],
+      };
+    }
+    await sleep(250);
+  }
+  await sleep(1500);
+
+  const at = await control();
+  if (at === undefined) notes.push('the page had no examine control');
+  else await tap(at.x, at.y);
+  await sleep(1500);
+  const opened = (await read())?.examining === true;
+
+  // The phone's own back key: Chrome routes it to a modal dialog's close watcher.
+  adb('shell', 'input', 'keyevent', 'KEYCODE_BACK');
+  await sleep(1500);
+  const afterBack = await read();
+  const backLeftBookHeld = afterBack !== null && !afterBack.examining;
+  const backEmptiedHand = afterBack === null;
+  if (backEmptiedHand) notes.push('back emptied the hand: it was taken as history, not as a close');
+
+  let drags = 0;
+  let yaw: number | undefined;
+  const startedTurning = Date.now();
+  if (!backEmptiedHand) {
+    await sleep(800);
+    const again = await control();
+    if (again !== undefined) await tap(again.x, again.y);
+    await sleep(1200);
+    const size = parse<{ w: number; h: number }>(
+      await cdp.evaluate('JSON.stringify({ w: innerWidth, h: innerHeight })'),
+    );
+    const w = size?.w ?? 400;
+    const h = size?.h ?? 800;
+    let direction = 1;
+    while (Date.now() - startedTurning < seconds * 1000) {
+      const x0 = w / 2 - 80 * direction;
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: x0, y: h / 2 }],
+      });
+      for (let step = 1; step <= 8; step += 1) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: x0 + (160 * direction * step) / 8, y: h / 2 + 10 * step }],
+        });
+        await sleep(16);
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      drags += 1;
+      direction = -direction;
+      await sleep(120);
+    }
+    yaw = (await read())?.yaw;
+    // One level out, then put the book back, so the page is as it was.
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK');
+    await sleep(1200);
+    await cdp.evaluate('window.__shelf.putBack()');
+  }
+  return {
+    held: true,
+    opened,
+    backLeftBookHeld,
+    backEmptiedHand,
+    turnedForS: Math.round((Date.now() - startedTurning) / 1000),
+    drags,
+    yaw,
+    notes,
+  };
+}
+
 /** The GPU as the page is told it, read on the blank page before the run. */
 const RENDERER = `(() => {
   const gl = document.createElement('canvas').getContext('webgl2');
@@ -368,7 +505,16 @@ async function runOne(
     const started = Date.now();
     await cdp.send('Page.navigate', { url });
     if (options.pickups !== undefined) await cdp.evaluate(startPickups(options.pickups));
-    const observation = await watch(adb, cdp, run.waitS, started);
+    const driving =
+      options.examine === undefined
+        ? undefined
+        : examineOnPhone(adb, cdp, options.examine).catch((error: unknown) => ({
+            error: error instanceof Error ? error.message : String(error),
+          }));
+    const waitS =
+      options.examine === undefined ? run.waitS : Math.max(run.waitS, options.examine + 45);
+    const observation = await watch(adb, cdp, waitS, started);
+    const examined = await driving;
     const read = parse<Read>(await cdp.evaluate(READ));
     const elapsedS = (Date.now() - started) / 1000;
 
@@ -415,6 +561,7 @@ async function runOne(
           elapsedS,
           profile: read?.profile ?? null,
           pickups: read?.pickups ?? null,
+          examine: examined ?? null,
           swaps: read?.swaps ?? null,
           sampling: { line: row.sampling, failures },
           console: consoleLines(cdp.events).slice(-60),
@@ -428,6 +575,7 @@ async function runOne(
     console.log(
       `${run.label}: ${verdict.kind} — ${verdict.reason}\n  ${row.sampling}\n  ${base}.json`,
     );
+    if (examined !== undefined) console.log(`  examining: ${JSON.stringify(examined)}`);
     const pickups = read?.pickups;
     if (pickups !== null && pickups !== undefined) {
       console.log(
