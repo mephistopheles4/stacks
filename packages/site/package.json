@@ -11,7 +11,7 @@
   "dependencies": {
     "@stacks/core": "workspace:*",
     "@tweakpane/plugin-essentials": "0.2.1",
-    "astro": "^7.3.5",
+    "astro": "^7.3.7",
     "gsap": "3.15.0",
     "three": "^0.185.1",
     "tweakpane": "4.0.5"
