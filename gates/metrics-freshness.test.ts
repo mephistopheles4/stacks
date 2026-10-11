@@ -259,8 +259,11 @@ function deploy(repo: string, args: readonly string[] = []): { status: number; o
  *
  * ⚠️ **Vitest's 5000ms default is too small for a cold `tsx` start.** Alone the
  * file runs about 1.7s a test. Under the full suite these tests were measured at
- * 5.1s and 5.3s on an idle machine, and at 6.9s, 7.5s and 9.8s under load. With
- * other sessions running test suites on the same machine they took 31s to 45s.
+ * 5.1s and 5.3s on an idle machine, and at 6.9s, 7.5s and 9.8s under load. They
+ * took 31s to 45s on 2026-10-11, while the machine was paging: committed memory
+ * was at its limit and a leaking driver held about 60GB of kernel pool. That
+ * worst case is a sick machine's, not a healthy one's, and a deploy can still
+ * meet it.
  * Each overrun turned `pnpm test` red, and `pnpm deploy:site` runs that before
  * it builds, so it blocked the deploy too.
  *

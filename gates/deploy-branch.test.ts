@@ -232,8 +232,8 @@ const STOPPED_ON_PURPOSE = '--stop-after-record:';
  * The budget of the tests below that spawn `scripts/deploy.ts` through a cold
  * `tsx` start (#437). Alone each runs in under 2s. Under the full suite "takes
  * --any-branch as the override" overran Vitest's 5000ms default at 6.1s on an
- * idle machine. With other sessions running test suites on the same machine,
- * spawns here and in G39 (`metrics-freshness`) took 31s to 45s.
+ * idle machine. While the machine was paging under a kernel memory leak, spawns
+ * here and in G39 (`metrics-freshness`) took 31s to 45s; G39 has the detail.
  *
  * ⚠️ **This budget cannot stop a hang, so it only needs to clear a slow run.**
  * `spawnSync` blocks the worker, and Vitest marks the test failed only after the
@@ -414,7 +414,7 @@ describe('G17 — deploy publishes main', { timeout: SPAWN_BUDGET_MS }, () => {
     //
     // This test had 30s of its own, set against the whole file's worst observed
     // CI run: eight tests in 8951ms on node 22, 6714ms on node 24. Run beside
-    // other sessions' test suites on one machine, it took 31s and failed
+    // other sessions' test suites on a machine that was paging, it took 31s and failed
     // (#437). It now takes the file's `SPAWN_BUDGET_MS`, 120s. Trimming it back
     // towards the default re-arms a flake that only ever fires between merges.
     //
