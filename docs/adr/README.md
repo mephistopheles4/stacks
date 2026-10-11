@@ -137,3 +137,4 @@ Two other files hold what these deliberately do not:
 | [0106](./0106-thoughts-ship-only-plain-prose.md) | Thoughts ship only plain prose; any other shape withholds the section (amends 0101) |
 | [0107](./0107-thoughts-are-read-by-a-commonmark-parser.md) | The Thoughts section is read by a CommonMark parser, and the allowlist applies to its tokens (amends 0101 and 0106) |
 | [0108](./0108-g60-and-g61-run-after-merge-not-on-pull-requests.md) | G60 and G61 run after merge and at deploy, not on pull requests (amends 0023) |
+| [0109](./0109-the-held-book-is-examined-in-3d.md) | The held book is examined in 3D, in the dialog's place (supersedes 0052 in part) |

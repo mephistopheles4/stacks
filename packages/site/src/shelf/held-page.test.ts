@@ -22,10 +22,11 @@ describe('the left-hand page', () => {
 });
 
 describe('the right-hand page', () => {
-  it("is the card's lines alone for a book with no Thoughts (#369's C)", () => {
+  it("is the card's lines and the examine control for a book with no Thoughts (#369's C)", () => {
     expect(rightPageBlocks(book(), { narrow: false, thoughts: false })).toEqual([
       'reading',
       'links',
+      'examine',
       'put-back',
     ]);
   });
@@ -37,6 +38,7 @@ describe('the right-hand page', () => {
       'thoughts',
       'reading',
       'links',
+      'examine',
       'put-back',
     ]);
   });
@@ -48,11 +50,12 @@ describe('the right-hand page', () => {
       'thoughts',
       'reading',
       'links',
+      'examine',
       'put-back',
     ]);
   });
 
-  it('carries every optional line the card would, in the card order, and the cover control', () => {
+  it('carries every optional line the card would, in the card order, and the examine control', () => {
     const full = book({
       tags: ['autumn'],
       publisher: 'Fieldfare Press',
@@ -66,8 +69,13 @@ describe('the right-hand page', () => {
       'object',
       'subjects',
       'links',
-      'cover',
+      'examine',
       'put-back',
     ]);
+  });
+
+  it('offers the examine control to a book with no cover too: the binding is the point (#418)', () => {
+    const bare = book({ cover: undefined });
+    expect(rightPageBlocks(bare, { narrow: false, thoughts: false })).toContain('examine');
   });
 });

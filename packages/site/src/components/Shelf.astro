@@ -23,24 +23,28 @@
   <p id="pickup-status" class="visually-hidden" role="status"></p>
 
   <!--
-    The cover, larger. A real `<dialog>` opened with `showModal`: focus moves
-    in, the page goes inert, Escape closes it, and focus returns to the control
-    on the held book's page that opened it. One Escape closes this and leaves
-    the book held.
+    Examining the held book (#418, ADR-0109). A real `<dialog>` opened with
+    `showModal`: focus moves in, the page goes inert, Escape and Android's back
+    gesture close it. It carries no picture: it is a transparent surface over
+    the canvas, where the closed book is drawn and turned. One Escape leaves it
+    and keeps the book held.
 
     In the template rather than built at runtime, so Astro's scoping reaches it
     and the styles below need no `:global()`.
   -->
-  <dialog id="cover-viewer" class="cover-viewer" aria-label="Book cover"><!--
-    Replaced with the book's own name when it opens; this is what it says if
-    something goes wrong before that.
-  -->
-    <img id="cover-viewer-image" alt="" />
-    <button id="cover-viewer-close" class="cover-viewer-close" type="button">
-      <span class="visually-hidden">Close the cover</span>
+  <dialog
+    id="book-viewer"
+    class="book-viewer"
+    aria-label="Book"
+    aria-describedby="book-viewer-hint"
+  >
+    <p id="book-viewer-hint" class="book-viewer-hint">
+      Drag, or use the arrow keys, to turn it. Escape returns to the page.
+    </p>
+    <button id="book-viewer-close" class="book-viewer-close" type="button">
+      <span class="visually-hidden">Back to the page</span>
     </button>
-  </dialog>
-</div>
+  </dialog></div>
 
 <script>
   import { start } from '../shelf/start.ts';
@@ -173,7 +177,7 @@
     fill: currentColor;
   }
 
-  .shelf :global(.held-page .card-cover),
+  .shelf :global(.held-page .held-examine),
   .shelf :global(.held-put-back) {
     display: inline-flex;
     align-items: center;
@@ -188,8 +192,8 @@
     cursor: pointer;
   }
 
-  .shelf :global(.held-page .card-cover) {
-    cursor: zoom-in;
+  .shelf :global(.held-page .held-examine) {
+    cursor: grab;
   }
 
   .shelf :global(.held-page button:focus-visible),
@@ -231,65 +235,65 @@
   }
 
   /*
-    The enlarged cover. The dialog is a frame around one image and nothing else,
-    so it carries no chrome of its own — the UA's border, padding and background
-    all go, and what is left is the picture on a scrim.
+    Examining the held book. The dialog is a transparent surface the size of the
+    viewport and nothing else: the book it is about is drawn on the canvas
+    behind it, over the shelf's own veil (which dims everything else), so neither the dialog nor its
+    backdrop paints anything of its own.
 
-    `max-width`/`max-height` only, with no width: an `<img>` left to its natural
-    size renders at exactly that and shrinks only when it would not fit. Which
-    is the honest ceiling here — the staged file is capped at MAX_COVER_EDGE,
-    and scaling it past native would make the "see it closer" answer blurrier
-    than the thumbnail it came from.
+    `inset: 0` and the full size are stated because the UA's `dialog:modal`
+    shrink-wraps its content, and this one has none to wrap. `touch-action:
+    none` is what lets a drag turn the book rather than scroll or swipe back.
   */
-  /*
-    Position, `inset: 0`, `margin: auto` and `width: fit-content` are the UA's
-    own rules for `dialog:modal`, and they already centre a shrink-wrapped box.
-    They are deliberately not restated: overriding `position` or `margin` here
-    is what breaks that centring, because `inset: 0` with an author `width` no
-    longer resolves to fit-content. Only the chrome is removed.
-  */
-  .cover-viewer {
-    max-width: 100%;
-    max-height: 100%;
+  .book-viewer {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
     padding: 0;
     border: 0;
     background: none;
-    /* The close control hangs off the corner; the UA's `auto` would clip it. */
-    overflow: visible;
-    cursor: zoom-out;
+    overflow: hidden;
+    touch-action: none;
+    /* A drag must turn the book, not select the hint beneath the pointer. */
+    user-select: none;
+    cursor: grab;
   }
 
-  .cover-viewer::backdrop {
-    background: rgba(10, 8, 7, 0.82);
-    backdrop-filter: blur(6px);
+  .book-viewer:active {
+    cursor: grabbing;
   }
 
-  .cover-viewer img {
-    display: block;
-    max-width: 92vw;
-    max-height: 88vh;
-    border-radius: 0.35rem;
-    box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.7);
+  .book-viewer::backdrop {
+    background: none;
   }
 
   /*
-    Redundant with "click anywhere", and deliberately so: a surface you can only
-    leave by knowing a convention is a surface some people are stuck on.
-
-    **Top-right of the viewport, not of the image**, and that is what `fixed`
-    rather than `absolute` buys. The dialog shrink-wraps its image, so anchoring
-    to it put the control on the artwork's corner the moment the image filled the
-    screen — which is every phone, where the cover is 339px of a 375px viewport.
-    A fixed descendant of a top-layer dialog resolves against the viewport, and
-    can here because nothing above it carries a transform or a filter; the
-    `backdrop-filter` lives on `::backdrop`, which is a sibling pseudo-element
-    and not an ancestor.
-
-    The plate stays, quieter. It is over the scrim in the common case and does
-    not need to work hard — but on a short landscape viewport a 92vw image can
-    still reach the corner, and a light glyph alone on a pale cover would vanish.
+    The instruction is visible text, not only a description for a screen reader:
+    a sighted visitor with a keyboard needs to know the arrows work too. It sits
+    at the foot, over the veil, where the book is not.
   */
-  .cover-viewer-close {
+  .book-viewer-hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: clamp(0.75rem, 3vw, 1.5rem);
+    margin: 0;
+    padding: 0 1rem;
+    text-align: center;
+    font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+    color: #f2e8dc;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+  }
+
+  /*
+    Redundant with a tap and with Escape, and deliberately so: a surface you can
+    only leave by knowing a convention is a surface some people are stuck on.
+    Top-right of the viewport.
+  */  .book-viewer-close {
     position: fixed;
     top: clamp(0.75rem, 3vw, 1.5rem);
     right: clamp(0.75rem, 3vw, 1.5rem);
@@ -305,7 +309,7 @@
     cursor: pointer;
   }
 
-  .cover-viewer-close::before {
+  .book-viewer-close::before {
     content: '\00d7';
     font-size: 1.35rem;
     line-height: 1;

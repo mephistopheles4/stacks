@@ -105,44 +105,88 @@ describe('pickupFailures', () => {
 describe('viewerFailures', () => {
   const viewer: ViewerRead = {
     opened: true,
-    width: 520,
+    namedForBook: true,
+    closedAngle: 0.1,
     escapeClosedViewer: true,
     heldAfterEscape: true,
+    pageVisibleAfterEscape: true,
     held: '/held-covers/a.jpg',
     showedHeld: true,
     withoutHeld: { showedOwn: true },
     fellBack: true,
     pathInPage: false,
+    turned: true,
+    keyTurned: true,
+    focusInside: true,
+    focusReturned: true,
+    leftByTap: true,
+    leftByButton: true,
+    reducedCuts: true,
+    fetchedNothing: true,
+    coverlessOpens: true,
+    emptiedCloses: true,
   };
 
-  it('passes a viewer that opens the held copy and leaves the book held on Escape', () => {
+  it('passes a view that closes the book, turns it and leaves with it still held', () => {
     expect(viewerFailures(viewer)).toEqual([]);
   });
 
   it.each<[string, Partial<ViewerRead>, RegExp]>([
-    ['a viewer that never opened', { opened: false }, /did not open/],
-    ['a small image', { width: 80 }, /80px wide/],
+    ['a view that never opened', { opened: false }, /did not open/],
+    ['a dialog not named for the book', { namedForBook: false }, /not named for the book/],
+    ['a book left open at 12°', { closedAngle: 12 }, /12\.0° off closed/],
+    ['a book left open the other way', { closedAngle: -3 }, /3\.0° off closed/],
+    ['a board angle never read', { closedAngle: undefined }, /never read/],
     ['an Escape that did nothing', { escapeClosedViewer: false }, /did not close/],
     ['an Escape that took the book too', { heldAfterEscape: false }, /also put the book back/],
-    ['the shelf copy shown', { showedHeld: false }, /did not show the held copy/],
+    ['a page still hidden after Escape', { pageVisibleAfterEscape: false }, /page was not visible/],
+    [
+      'the shelf copy worn when a held copy exists',
+      { showedHeld: false },
+      /did not wear the held copy/,
+    ],
     ['no held copy anywhere', { held: undefined }, /never checked/],
     ['no book without a held copy reached', { withoutHeld: undefined }, /other path went unseen/],
     [
-      'the shelf copy not shown for a book without a held copy',
+      'the shelf copy not worn for a book without a held copy',
       { withoutHeld: { showedOwn: false } },
-      /did not show the shelf copy/,
+      /did not wear the shelf copy/,
     ],
     ['no fallback when the held copy fails', { fellBack: false }, /failed to load/],
     ['a cover path written into the page', { pathInPage: true }, /written into the held page/],
+    ['a drag that turned nothing', { turned: false }, /drag across the view did not turn/],
+    [
+      'an arrow key that did not turn 15°',
+      { keyTurned: false },
+      /arrow key did not turn the book by 15°/,
+    ],
+    ['focus left outside the dialog', { focusInside: false }, /focus was not inside/],
+    ['focus lost after Escape', { focusReturned: false }, /focus did not return/],
+    ['a tap that did not leave', { leftByTap: false }, /tap on the view did not leave/],
+    ['a button that did not leave', { leftByButton: false }, /Back to the page did not leave/],
+    ['motion that tweens under reduced motion', { reducedCuts: false }, /reduced motion/],
+    ['a fetch while examining', { fetchedNothing: false }, /fetched a cover/],
+    ['no book without a cover reached', { coverlessOpens: undefined }, /no book without a cover/],
+    ['a coverless book that did not examine', { coverlessOpens: false }, /with no cover did not/],
+    ['a book 0.51° off closed', { closedAngle: 0.51 }, /0\.5° off closed/],
+    [
+      'a hand emptied with the view left open',
+      { emptiedCloses: false },
+      /left the view open over an empty hand/,
+    ],
   ])('fails on %s', (_name, patch, message) => {
     expect(viewerFailures({ ...viewer, ...patch }).join('\n')).toMatch(message);
+  });
+
+  it('passes a book exactly at the closed tolerance, either way', () => {
+    expect(viewerFailures({ ...viewer, closedAngle: 0.5 })).toEqual([]);
+    expect(viewerFailures({ ...viewer, closedAngle: -0.5 })).toEqual([]);
   });
 
   it('fails when no viewer was reached at all', () => {
     expect(viewerFailures(undefined)).toHaveLength(1);
   });
 });
-
 describe('phoneFailures', () => {
   it('passes a page that fits, leads with the title and keeps put-back on screen', () => {
     expect(phoneFailures({ pageInView: true, titleLeads: true, putBackInView: true })).toEqual([]);

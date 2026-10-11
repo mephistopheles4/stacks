@@ -253,6 +253,18 @@ the WebGL context is lost and the shelf is rebuilt. It is not a **put back**:
 nothing plays, which is why the code names it apart (`drop()`).
 *Avoid*: put back (for this case), reset.
 
+**Examining**:
+The **held** book closed in your hand and turned, in place of a flat picture of
+its cover: the page's control closes it, a drag or the arrow keys turn it, and
+Escape, a tap, the close button or Android's back gesture open it again at its
+page, still held. The code says `examining` (`held().examining`, `examine()`,
+`leave()`) and the view is `book-viewer.ts`. Not the public build's
+*inspector*, and not `?solo`'s single-book *inspector*, which is a separate
+renderer
+([ADR-0109](docs/adr/0109-the-held-book-is-examined-in-3d.md)).
+*Avoid*: inspect, inspection (both are already the public build's and
+`?solo`'s), view the cover, zoom.
+
 **Open spread**:
 A **held** book's two pages at rest: the front board flat at 180° to the page
 block, both pages in one plane square to the camera, meeting at the gutter. The
