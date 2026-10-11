@@ -228,7 +228,22 @@ const PAST_THE_STEP = 'trend record —';
  */
 const STOPPED_ON_PURPOSE = '--stop-after-record:';
 
-describe('G17 — deploy publishes main', () => {
+/**
+ * The budget of the tests below that spawn `scripts/deploy.ts` through a cold
+ * `tsx` start (#437). Alone each runs in under 2s. Under the full suite "takes
+ * --any-branch as the override" overran Vitest's 5000ms default at 6.1s on an
+ * idle machine. While the machine was paging under a kernel memory leak, spawns
+ * here and in G39 (`metrics-freshness`) took 31s to 45s; G39 has the detail.
+ *
+ * ⚠️ **This budget cannot stop a hang, so it only needs to clear a slow run.**
+ * `spawnSync` blocks the worker, and Vitest marks the test failed only after the
+ * child exits. A tight number therefore catches nothing and turns a slow,
+ * correct run red. 120s is well over twice the 45s worst case, and it is the
+ * budget every cold `tsx` spawn in the suite carries.
+ */
+const SPAWN_BUDGET_MS = 120_000;
+
+describe('G17 — deploy publishes main', { timeout: SPAWN_BUDGET_MS }, () => {
   it('reaches the branch decision at all', () => {
     // Everything below distinguishes two messages. If the script began failing
     // earlier — a syntax error, a missing import — every assertion would still
@@ -344,9 +359,10 @@ describe('G17 — deploy publishes main', () => {
     // A control must not lie (docs/shelf-inspectors.md): the override's usual
     // line claims a publish, and this run publishes nothing.
     expect(output).not.toContain('publishing a branch other than main');
-    // The same cold spawn as the test below, so the same budget, for the reason
-    // given there. Trim one and not the other and the twin stops being a twin.
-  }, 30_000);
+    // The same cold spawn as the test below, so the same budget: the file's
+    // `SPAWN_BUDGET_MS`, for the reasons given there and below. Give one of the
+    // two its own number and the twin stops being a twin.
+  });
 
   it('reads the checkout it is actually in, not a fixture', () => {
     // Every test above redirects git at a scratch repository, which is what
@@ -382,8 +398,7 @@ describe('G17 — deploy publishes main', () => {
       expect(output, 'on main, the guard must let the run reach step 0b').toContain(PAST_THE_STEP);
       expect(output, 'the branch guard must not be what stopped it').not.toContain('not main');
     } else expect(output).toContain(branch);
-    // ⚠️ **The timeout is this test's alone, and it is headroom, not an
-    // estimate.** Off `main` the run stops at the branch guard and is cheap. On
+    // ⚠️ **The timeout is headroom, not an estimate.** Off `main` the run stops at the branch guard and is cheap. On
     // `main` it is the most expensive spawn in the file — a cold `tsx` start
     // that runs past the guard to step 0b — and it is reached **only on the
     // push run after a merge**. At Vitest's default 5000ms it reddened `main`
@@ -397,10 +412,11 @@ describe('G17 — deploy publishes main', () => {
     // renders no series at all. What the budget covers is the spawn itself on
     // a loaded runner.
     //
-    // 30s is against the whole file's worst observed CI run — eight tests in
-    // 8951ms on node 22, 6714ms on node 24 — so this one test could take the
-    // entire file's worst case three times over. Trimming it back towards the
-    // default re-arms a flake that only ever fires between merges.
+    // This test had 30s of its own, set against the whole file's worst observed
+    // CI run: eight tests in 8951ms on node 22, 6714ms on node 24. Run beside
+    // other sessions' test suites on a machine that was paging, it took 31s and failed
+    // (#437). It now takes the file's `SPAWN_BUDGET_MS`, 120s. Trimming it back
+    // towards the default re-arms a flake that only ever fires between merges.
     //
     // **`--stop-after-record` is what keeps it under that number.** Until
     // #321 the run ended just after step 0b only because an `actions/checkout`
@@ -408,5 +424,5 @@ describe('G17 — deploy publishes main', () => {
     // refused — the absence of a ref, not a stop anybody built, and a workflow
     // that fetched the ref would have let the run go on. The stop sits before
     // G39's verdict, so where this run ends no longer depends on that ref.
-  }, 30_000);
+  });
 });

@@ -25,7 +25,18 @@ const ADAPTER = pathToFileURL(
 /** Planted in a note's private part, where a trace of the body would carry it. */
 const CANARY = 'PRIVATE_REMAINDER_canary';
 
-describe('N65: the build that loads', () => {
+/**
+ * The budget of N65's tests, each of which starts a fresh Node through a cold
+ * `tsx` import (#437). Under the full suite the slowest took 2.4s, about two
+ * seconds under Vitest's 5000ms default. The same cold start in the deploy tests
+ * took up to 45s while the machine was paging under a kernel memory leak.
+ * The child is spawned synchronously, so this budget cannot stop a hang and only
+ * needs to clear a slow run. 120s is the budget G17 and G39 give the same cold
+ * start, for the reasons written there.
+ */
+const SPAWN_BUDGET_MS = 120_000;
+
+describe('N65: the build that loads', { timeout: SPAWN_BUDGET_MS }, () => {
   it.each([
     [
       'the default entry',

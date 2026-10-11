@@ -253,6 +253,29 @@ function deploy(repo: string, args: readonly string[] = []): { status: number; o
   return { status: result.status ?? -1, output: `${result.stdout}${result.stderr}` };
 }
 
+/**
+ * The budget of every test that calls {@link deploy}, set on each `describe`
+ * below rather than suite-wide (#437).
+ *
+ * ⚠️ **Vitest's 5000ms default is too small for a cold `tsx` start.** Alone the
+ * file runs about 1.7s a test. Under the full suite these tests were measured at
+ * 5.1s and 5.3s on an idle machine, and at 6.9s, 7.5s and 9.8s under load. They
+ * took 31s to 45s on 2026-10-11, while the machine was paging: committed memory
+ * was at its limit and a leaking driver held about 60GB of kernel pool. That
+ * worst case is a sick machine's, not a healthy one's, and a deploy can still
+ * meet it.
+ * Each overrun turned `pnpm test` red, and `pnpm deploy:site` runs that before
+ * it builds, so it blocked the deploy too.
+ *
+ * ⚠️ **This budget cannot stop a hang, so it only needs to clear a slow run.**
+ * `spawnSync` blocks the worker, and Vitest marks the test failed only after the
+ * child exits. A tight number therefore catches nothing and turns a slow,
+ * correct run red. 120s is well over twice the 45s worst case. It is the same
+ * budget G17 (`deploy-branch`) and N65 (`micromark-build`) give the same cold
+ * start.
+ */
+const SPAWN_BUDGET_MS = 120_000;
+
 /** One ref of a scratch repository, or `''` where there is no such ref. */
 function refAt(repo: string, ref: string): string {
   const result = spawnSync('git', ['rev-parse', '--verify', '--quiet', ref], {
@@ -284,7 +307,7 @@ function expectRefused(status: number, output: string): void {
   ).not.toContain(PAST_THE_CHECK);
 }
 
-describe('G39 — the harness reaches the check at all', () => {
+describe('G39 — the harness reaches the check at all', { timeout: SPAWN_BUDGET_MS }, () => {
   it('gets past a fresh record, and prints it', () => {
     // Without this every assertion below would still be comparing strings: a
     // syntax error or a missing import fails earlier, and the tests expecting a
@@ -305,72 +328,76 @@ describe('G39 — the harness reaches the check at all', () => {
   });
 });
 
-describe('G39 — per-series, because the record is not one number', () => {
-  it('refuses on a nightly four days back, naming which series is stale', () => {
-    // The merge row on top is the failure an aggregate check cannot see: the
-    // newest row in the store is minutes old and three quarters of the
-    // instrument has been dead since Saturday.
-    const { status, output } = deploy(repoWith([nightly(4 * DAY), merge(600)]));
+describe(
+  'G39 — per-series, because the record is not one number',
+  { timeout: SPAWN_BUDGET_MS },
+  () => {
+    it('refuses on a nightly four days back, naming which series is stale', () => {
+      // The merge row on top is the failure an aggregate check cannot see: the
+      // newest row in the store is minutes old and three quarters of the
+      // instrument has been dead since Saturday.
+      const { status, output } = deploy(repoWith([nightly(4 * DAY), merge(600)]));
 
-    expectRefused(status, output);
-    expect(output).toContain('the trend record is stale');
-    expect(output).toContain('mutation-score');
-    expect(output).toContain('mutation-run-runtime');
-    expect(output).toContain('live-exclusions');
-    // The series that is fine must not be named, or "which series" means
-    // nothing and the refusal is an aggregate one wearing a list.
-    expect(output).not.toContain('gate-suite-runtime ');
-    expect(output).toContain('4 days ago');
-  });
+      expectRefused(status, output);
+      expect(output).toContain('the trend record is stale');
+      expect(output).toContain('mutation-score');
+      expect(output).toContain('mutation-run-runtime');
+      expect(output).toContain('live-exclusions');
+      // The series that is fine must not be named, or "which series" means
+      // nothing and the refusal is an aggregate one wearing a list.
+      expect(output).not.toContain('gate-suite-runtime ');
+      expect(output).toContain('4 days ago');
+    });
 
-  it('refuses a series with no sample at all exactly as a stale one', () => {
-    const { status, output } = deploy(
-      repoWith([merge(600, 'bbbbbbbb', { complexity: undefined })]),
-    );
+    it('refuses a series with no sample at all exactly as a stale one', () => {
+      const { status, output } = deploy(
+        repoWith([merge(600, 'bbbbbbbb', { complexity: undefined })]),
+      );
 
-    expectRefused(status, output);
-    expect(output).toContain('no sample at all');
-    expect(output).toContain('mutation-score');
-  });
+      expectRefused(status, output);
+      expect(output).toContain('no sample at all');
+      expect(output).toContain('mutation-score');
+    });
 
-  it('refuses when only the counts have gone quiet, under --dry-run', () => {
-    // The complexity half is the one a working pipeline hides best: both events
-    // write it, so a merge every hour keeps the newest row minutes old while
-    // the counter itself has been failing since Saturday. Everything else here
-    // is ten minutes old and green.
-    const { status, output } = deploy(
-      repoWith([
-        nightly(600, 'cccccccc', { complexity: undefined }),
-        merge(600, 'dddddddd', { complexity: undefined }),
-        nightly(4 * DAY, 'eeeeeeee'),
-      ]),
-      ['--dry-run'],
-    );
+    it('refuses when only the counts have gone quiet, under --dry-run', () => {
+      // The complexity half is the one a working pipeline hides best: both events
+      // write it, so a merge every hour keeps the newest row minutes old while
+      // the counter itself has been failing since Saturday. Everything else here
+      // is ten minutes old and green.
+      const { status, output } = deploy(
+        repoWith([
+          nightly(600, 'cccccccc', { complexity: undefined }),
+          merge(600, 'dddddddd', { complexity: undefined }),
+          nightly(4 * DAY, 'eeeeeeee'),
+        ]),
+        ['--dry-run'],
+      );
 
-    expectRefused(status, output);
-    expect(output).toContain('the trend record is stale');
-    expect(output).toContain('complexity-max');
-    expect(output).toContain('complexity-functions');
-    expect(output).toContain('complexity-mass');
-    expect(output).toContain('complexity-mass-over-10');
-    expect(output).toContain('4 days ago');
-    // The healthy half must stay unnamed, or the refusal is an aggregate one
-    // wearing a list — the whole cost per-series staleness was paid for.
-    expect(output).not.toContain('mutation-score ');
-    expect(output).not.toContain('gate-suite-runtime ');
-  });
+      expectRefused(status, output);
+      expect(output).toContain('the trend record is stale');
+      expect(output).toContain('complexity-max');
+      expect(output).toContain('complexity-functions');
+      expect(output).toContain('complexity-mass');
+      expect(output).toContain('complexity-mass-over-10');
+      expect(output).toContain('4 days ago');
+      // The healthy half must stay unnamed, or the refusal is an aggregate one
+      // wearing a list — the whole cost per-series staleness was paid for.
+      expect(output).not.toContain('mutation-score ');
+      expect(output).not.toContain('gate-suite-runtime ');
+    });
 
-  it('does not refuse a deploy for a flag, which is the point of ADR-0064', () => {
-    // ⚠️ `--dry-run` publishes nothing, and still cannot clear this. Asserted
-    // beside the refusal above so the two readings of the same flag stay in one
-    // place: it changes what happens *after* the checks, never whether they run.
-    const fresh = deploy(repoWith([nightly(600), merge(300)]), ['--dry-run']);
+    it('does not refuse a deploy for a flag, which is the point of ADR-0064', () => {
+      // ⚠️ `--dry-run` publishes nothing, and still cannot clear this. Asserted
+      // beside the refusal above so the two readings of the same flag stay in one
+      // place: it changes what happens *after* the checks, never whether they run.
+      const fresh = deploy(repoWith([nightly(600), merge(300)]), ['--dry-run']);
 
-    expect(fresh.output).not.toContain('the trend record is stale');
-  });
-});
+      expect(fresh.output).not.toContain('the trend record is stale');
+    });
+  },
+);
 
-describe('G39 — one fetch, two messages', () => {
+describe('G39 — one fetch, two messages', { timeout: SPAWN_BUDGET_MS }, () => {
   it('sends you to the sync when the branch has rows the store lacks', () => {
     const repo = repoWith([nightly(4 * DAY)], [nightly(4 * DAY), nightly(600, 'cccccccc')]);
     const before = refAt(repo, 'refs/remotes/origin/metrics');
@@ -415,7 +442,7 @@ describe('G39 — one fetch, two messages', () => {
   });
 });
 
-describe('G39 — the dated bootstrap', () => {
+describe('G39 — the dated bootstrap', { timeout: SPAWN_BUDGET_MS }, () => {
   it('prints that no record has ever arrived, and agrees with the judgement about today', () => {
     // The calendar cannot be planted through the script, so what is asserted is
     // that the script and `judgeRecord` say the same thing on the day this
@@ -430,7 +457,7 @@ describe('G39 — the dated bootstrap', () => {
   });
 });
 
-describe('G39 — which flags clear it', () => {
+describe('G39 — which flags clear it', { timeout: SPAWN_BUDGET_MS }, () => {
   it('refuses under --dry-run, which is the honest way to watch it fail', () => {
     const { status, output } = deploy(repoWith([merge(600)]), ['--dry-run']);
 
