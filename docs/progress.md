@@ -120,7 +120,9 @@ reworked: the width clause retires for the board at 0° ±0.5°, and turning, fo
 return and the emptied hand are added. Observed red with faults planted in the
 build: the Escape guard removed, no focus return, the closing tween off, a
 cut that leaves the dialog open, a static dialog name and a drag that turns
-nothing. ⚠️ The planting caught the gate itself: the turning and emptied-hand
+nothing. The move-4 review then widened it: the tap and the button exits,
+pitch and Home, reduced motion, nothing fetched, a book with no cover, and a
+`cover` reading taken off the material so a blank cover is not the shelf copy. ⚠️ The planting caught the gate itself: the turning and emptied-hand
 readings were taken from whichever book was reported first, so a book picked
 second hid a failure — they are now carried from the book that ran them.
 **2026-10-10 — the pickup's move-4 review answered**

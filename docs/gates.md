@@ -1846,7 +1846,9 @@ source runs no script — but it was worth changing for the third: the card
 wrote a path into the page only so the viewer could read it back. The control
 now hands its paths and alt text over in memory (`offerCover`, on the held
 book's page since the card retired in #413), and a held copy that fails to load
-falls back to the shelf copy instead of a broken image.
+falls back to the shelf copy instead of a broken image. **Since #418** ([ADR-0109](adr/0109-the-held-book-is-examined-in-3d.md))
+no path reaches the page at all: the control examines the book, and
+`offerCover` is gone.
 
 ## Where cover art may go
 

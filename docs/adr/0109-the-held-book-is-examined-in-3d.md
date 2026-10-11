@@ -66,7 +66,7 @@ empty hand.
 
 - **Off Chrome on Android a back gesture empties the hand** (iOS Safari's edge
   swipe, Firefox on Android) rather than returning to the page, because there it
-  is history navigation, not a close request. An inspection history entry would
+  is history navigation, not a close request. A history entry for examining would
   cost the guards §3.9 built; its trigger is recorded on #418 (S13): the Pixel check finds Android back does not leave the view, the owner wants the desktop back button to leave one level, or the off-Chrome cut proves wrong on a real device.
 - **Turning is visual-only for a screen-reader user.** Browse and quick-nav
   modes may keep the arrow keys, and a turn is not announced. The dialog's

@@ -119,6 +119,11 @@ describe('viewerFailures', () => {
     keyTurned: true,
     focusInside: true,
     focusReturned: true,
+    leftByTap: true,
+    leftByButton: true,
+    reducedCuts: true,
+    fetchedNothing: true,
+    coverlessOpens: true,
     emptiedCloses: true,
   };
 
@@ -157,6 +162,13 @@ describe('viewerFailures', () => {
     ],
     ['focus left outside the dialog', { focusInside: false }, /focus was not inside/],
     ['focus lost after Escape', { focusReturned: false }, /focus did not return/],
+    ['a tap that did not leave', { leftByTap: false }, /tap on the view did not leave/],
+    ['a button that did not leave', { leftByButton: false }, /Back to the page did not leave/],
+    ['motion that tweens under reduced motion', { reducedCuts: false }, /reduced motion/],
+    ['a fetch while examining', { fetchedNothing: false }, /fetched a cover/],
+    ['no book without a cover reached', { coverlessOpens: undefined }, /no book without a cover/],
+    ['a coverless book that did not examine', { coverlessOpens: false }, /with no cover did not/],
+    ['a book 0.51° off closed', { closedAngle: 0.51 }, /0\.5° off closed/],
     [
       'a hand emptied with the view left open',
       { emptiedCloses: false },
@@ -164,6 +176,11 @@ describe('viewerFailures', () => {
     ],
   ])('fails on %s', (_name, patch, message) => {
     expect(viewerFailures({ ...viewer, ...patch }).join('\n')).toMatch(message);
+  });
+
+  it('passes a book exactly at the closed tolerance, either way', () => {
+    expect(viewerFailures({ ...viewer, closedAngle: 0.5 })).toEqual([]);
+    expect(viewerFailures({ ...viewer, closedAngle: -0.5 })).toEqual([]);
   });
 
   it('fails when no viewer was reached at all', () => {

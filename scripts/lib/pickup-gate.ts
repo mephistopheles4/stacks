@@ -10,10 +10,12 @@
  * `read` is not suppressed; the fallback link; link shape and accessible
  * names; the announcer, with put-back as the dismissal; the put-back control
  * where the close control was; `published` rendering and the collapse rules,
- * which stay unit tests in `card.test.ts`; and the enlarged cover, whose Escape
- * now leaves the book held. **What is new**: `location.href` unchanged after a
- * pickup, the page hidden from sight and from the accessibility tree until it
- * fades in, and the spread's three numbers. `checkSheet` retired with the sheet.
+ * which stay unit tests in `card.test.ts`; and examining the held book (#418),
+ * the enlarged cover reworked, whose Escape leaves only the view. **What is
+ * new**: `location.href` unchanged after a pickup, the page hidden from sight
+ * and from the accessibility tree until it fades in, the spread's three
+ * numbers, and examining's closed board, turn, exits, focus and emptied hand.
+ * `checkSheet` retired with the sheet.
  */
 
 /** What a click on a book left on the page, read at rest and across a second pickup. */
@@ -246,10 +248,23 @@ export interface ViewerRead {
    * CodeQL's `js/xss-through-dom`).
    */
   readonly pathInPage: boolean;
-  /** A pointer drag across the dialog changed the book's yaw. */
+  /** A drag across and down changed yaw and pitch, and pitch stayed within ±75°. */
   readonly turned: boolean;
-  /** One ArrowRight changed it by 15°. */
+  /** Home squared the book, then one ArrowRight changed its yaw by 15°. */
   readonly keyTurned: boolean;
+  /** A tap anywhere on the view left it, the book still held and the page showing. */
+  readonly leftByTap: boolean;
+  /** "Back to the page", pressed by the keyboard, did the same. */
+  readonly leftByButton: boolean;
+  /** Under reduced motion the book was closed, and open again, within a few frames. */
+  readonly reducedCuts: boolean;
+  /** No cover was requested between the view opening and leaving it. */
+  readonly fetchedNothing: boolean;
+  /**
+   * A book with no cover, examined: its control was there, the book closed and
+   * the view left. Nothing when no such book was reached (S7).
+   */
+  readonly coverlessOpens: boolean | undefined;
   /** Focus was inside the dialog while it was open (`showModal` moves it in). */
   readonly focusInside: boolean;
   /** After Escape, once at rest, focus was on the page's control. */
@@ -306,8 +321,27 @@ export function viewerFailures(read: ViewerRead | undefined): string[] {
   if (read.pathInPage) {
     failures.push('a cover path was written into the held page — nothing offers a path to the DOM');
   }
-  if (!read.turned) failures.push('a drag across the view did not turn the book');
-  if (!read.keyTurned) failures.push('an arrow key did not turn the book by 15°');
+  if (!read.turned) {
+    failures.push('a drag across the view did not turn the book in yaw and pitch, within ±75°');
+  }
+  if (!read.keyTurned) {
+    failures.push('Home did not square the book, or an arrow key did not turn the book by 15°');
+  }
+  if (!read.leftByTap) {
+    failures.push('a tap on the view did not leave it with the book held and the page showing');
+  }
+  if (!read.leftByButton) {
+    failures.push('Back to the page did not leave the view with the book held');
+  }
+  if (!read.reducedCuts) {
+    failures.push('under reduced motion the book tweened shut or open instead of cutting');
+  }
+  if (!read.fetchedNothing) failures.push('examining fetched a cover it should already have');
+  if (read.coverlessOpens === undefined) {
+    failures.push('no book without a cover was reached, so examining one was never checked');
+  } else if (!read.coverlessOpens) {
+    failures.push('a book with no cover did not close and leave the view when examined');
+  }
   if (!read.focusInside) failures.push('focus was not inside the dialog while it was open');
   if (!read.focusReturned) {
     failures.push("focus did not return to the page's control after Escape, once the page showed");

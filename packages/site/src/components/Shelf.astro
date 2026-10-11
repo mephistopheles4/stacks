@@ -237,7 +237,7 @@
   /*
     Examining the held book. The dialog is a transparent surface the size of the
     viewport and nothing else: the book it is about is drawn on the canvas
-    behind it, under the shelf's own veil, so neither the dialog nor its
+    behind it, over the shelf's own veil (which dims everything else), so neither the dialog nor its
     backdrop paints anything of its own.
 
     `inset: 0` and the full size are stated because the UA's `dialog:modal`
@@ -257,6 +257,8 @@
     background: none;
     overflow: hidden;
     touch-action: none;
+    /* A drag must turn the book, not select the hint beneath the pointer. */
+    user-select: none;
     cursor: grab;
   }
 
