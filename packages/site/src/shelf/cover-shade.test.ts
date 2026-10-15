@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
 
-import { MAX_HEIGHT, toRows, type ShelfRow } from './books.ts';
+import { MAX_HEIGHT, toRows, type ShelfBook, type ShelfRow } from './books.ts';
 import { bookCase } from './binding-case.ts';
 import { PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
 import {
@@ -31,7 +31,9 @@ import {
   type CoverOccluders,
   type CoverQuad,
 } from './cover-shade.ts';
+import { makeNeighbourShadow } from './contact-shadow.ts';
 import { paintedPieces } from './painted-pieces.ts';
+import { buildBook, COVERS } from './scene.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import { DEFAULT_SETTINGS, type KeyLightSettings } from './shelf-settings.ts';
 
@@ -717,15 +719,65 @@ describe('the material and the mesh', () => {
   // so a shade without the same bias loses the depth test once the shelf turns —
   // the owner watched the band flicker, then vanish. Equal biases on parallel
   // planes cancel, and the lift decides at every angle.
-  it('carries exactly the depth bias of the printed cover it lies on', () => {
-    const cover = onPrintedFace(new THREE.MeshStandardMaterial());
-    const shade = coverShadeMaterial(new THREE.Texture());
+  describe('carries exactly the depth bias of the printed cover it lies on', () => {
+    const bias = (material: THREE.Material): [boolean, number, number] => [
+      material.polygonOffset,
+      material.polygonOffsetFactor,
+      material.polygonOffsetUnits,
+    ];
 
-    expect(cover.polygonOffset).toBe(true);
-    expect(cover.polygonOffsetFactor).toBeLessThan(0);
-    expect(shade.polygonOffset).toBe(true);
-    expect(shade.polygonOffsetFactor).toBe(cover.polygonOffsetFactor);
-    expect(shade.polygonOffsetUnits).toBe(cover.polygonOffsetUnits);
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('as the shared function sets it, at the values that closed the hairline', () => {
+      // Pinned, so a change to them is a decision and not a drift the
+      // equalities below would carry along.
+      expect(bias(onPrintedFace(new THREE.MeshStandardMaterial()))).toEqual([true, -1, -2]);
+      expect(bias(coverShadeMaterial(new THREE.Texture()))).toEqual([true, -1, -2]);
+    });
+
+    it('as a built book lays its printed cover', () => {
+      // No canvas under `node`: every painter falls back, the faces still build.
+      vi.stubGlobal('document', {
+        createElement: () => ({ width: 0, height: 0, getContext: () => null }),
+      });
+      const faceOut: ShelfBook = {
+        book: { id: 'bias-probe', title: 'Probe', status: 'read', tags: [] },
+        thickness: 0.1,
+        height: 0.9,
+        binding: 'hardback',
+        colour: '#7a4a2a',
+        faceOut: true,
+        footprint: 0.6,
+        coverWidth: 0.6,
+      };
+      const book = buildBook(faceOut, 0.6, COVERS, false, DEFAULT_SETTINGS);
+      const cover = book.getObjectByName('cover');
+
+      expect(cover).toBeInstanceOf(THREE.Mesh);
+      expect(bias((cover as THREE.Mesh).material as THREE.Material)).toEqual(
+        bias(coverShadeMaterial(new THREE.Texture())),
+      );
+    });
+
+    it('as the neighbour shadow lays its gradient on the same cover', () => {
+      // Just enough of a 2D context for one linear gradient.
+      const context = {
+        fillStyle: '',
+        createLinearGradient: () => ({ addColorStop: () => undefined }),
+        fillRect: () => undefined,
+      };
+      vi.stubGlobal('document', {
+        createElement: () => ({ width: 0, height: 0, getContext: () => context }),
+      });
+      const neighbour = makeNeighbourShadow(0.6, 0.9);
+
+      expect(neighbour).toBeInstanceOf(THREE.Mesh);
+      expect(bias(neighbour?.material as THREE.Material)).toEqual(
+        bias(coverShadeMaterial(new THREE.Texture())),
+      );
+    });
   });
 });
 
