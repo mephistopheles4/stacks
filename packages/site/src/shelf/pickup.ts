@@ -39,6 +39,7 @@ import type { BookViewer } from './book-viewer.ts';
 import { announcement } from './card.ts';
 import { buildPages, PAGE_PX, rooted, type HeldPages } from './held-page.ts';
 import { loadThoughts } from './notes.ts';
+import { gutterStops } from './gutter-shade.ts';
 import { openSpread, type OpenSpread } from './open-spread.ts';
 import { bezier, openAngle, schedule, textOpacity } from './pickup-motion.ts';
 import { createPickupState, type PickupState, type Track } from './pickup-state.ts';
@@ -571,16 +572,19 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         : undefined;
 
     const paper = withoutShadowFetch(
-      new THREE.MeshStandardMaterial({ color: 0xece2cf, roughness: 0.95 }),
+      // The sheets carry the gutter's shadow as a vertex colour — see
+      // gutter-shade.ts — and this flag is what multiplies it in.
+      new THREE.MeshStandardMaterial({ color: 0xece2cf, roughness: 0.95, vertexColors: true }),
     );
-    const rightSheet = sheetMesh(paper);
+    // Each sheet's fold is on its own side: -x on the right page, +x on the left.
+    const rightSheet = sheetMesh(paper, -1);
     const { right, leftOnBoard } = spread;
     rightSheet.scale.set(right.width, right.height, 1);
     rightSheet.rotation.y = Math.PI / 2;
     rightSheet.position.set(right.x, right.y, right.z);
     group.add(rightSheet);
 
-    const leftSheet = sheetMesh(paper);
+    const leftSheet = sheetMesh(paper, 1);
     leftSheet.scale.set(leftOnBoard.width, leftOnBoard.height, 1);
     leftSheet.rotation.y = -Math.PI / 2;
     leftSheet.position.set(
@@ -917,13 +921,50 @@ function asMesh(object: THREE.Object3D | undefined): THREE.Mesh | undefined {
   return object instanceof THREE.Mesh ? object : undefined;
 }
 
-/** One of the two paper sheets: lit, reading no shadow map, casting none. */
-function sheetMesh(material: THREE.MeshStandardMaterial): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+/**
+ * One of the two paper sheets: lit, reading no shadow map, casting none, and
+ * darkening into the fold on its `gutter` edge.
+ */
+function sheetMesh(material: THREE.MeshStandardMaterial, gutter: 1 | -1): THREE.Mesh {
+  const mesh = new THREE.Mesh(gutterSheet(gutter), material);
   mesh.castShadow = false;
   mesh.receiveShadow = false;
   mesh.visible = false;
   return mesh;
+}
+
+/**
+ * A unit plane facing +z, as `PlaneGeometry(1, 1)` is, cut into columns at the
+ * gutter shade's stops so each column edge carries that stop's shade. One row:
+ * the shadow runs the page's whole height, so nothing varies along y.
+ */
+function gutterSheet(gutter: 1 | -1): THREE.BufferGeometry {
+  const stops = gutterStops(gutter);
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const colours: number[] = [];
+  for (const y of [0.5, -0.5]) {
+    for (const { x, shade } of stops) {
+      positions.push(x, y, 0);
+      normals.push(0, 0, 1);
+      uvs.push(x + 0.5, y + 0.5);
+      colours.push(shade, shade, shade);
+    }
+  }
+  const across = stops.length;
+  const index: number[] = [];
+  for (let i = 0; i < across - 1; i++) {
+    const [a, b, c, d] = [i, i + 1, i + across, i + across + 1];
+    index.push(a, c, b, c, d, b);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setIndex(index);
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
+  return geometry;
 }
 
 function trackOf(tl: Timeline): Track {
