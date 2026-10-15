@@ -22,6 +22,7 @@ import {
   inShadow,
   lightRatios,
   MAX_ATLAS_SIZE,
+  onPrintedFace,
   TILE_GUTTER,
   TILE_HEIGHT,
   TILE_WIDTH,
@@ -710,6 +711,21 @@ describe('the material and the mesh', () => {
     expect(mesh.receiveShadow).toBe(false);
     expect(mesh.renderOrder).toBe(1);
     expect(mesh.name).toBe('cover-shade');
+  });
+
+  // The printed cover's bias scales with the depth slope and the lift does not,
+  // so a shade without the same bias loses the depth test once the shelf turns —
+  // the owner watched the band flicker, then vanish. Equal biases on parallel
+  // planes cancel, and the lift decides at every angle.
+  it('carries exactly the depth bias of the printed cover it lies on', () => {
+    const cover = onPrintedFace(new THREE.MeshStandardMaterial());
+    const shade = coverShadeMaterial(new THREE.Texture());
+
+    expect(cover.polygonOffset).toBe(true);
+    expect(cover.polygonOffsetFactor).toBeLessThan(0);
+    expect(shade.polygonOffset).toBe(true);
+    expect(shade.polygonOffsetFactor).toBe(cover.polygonOffsetFactor);
+    expect(shade.polygonOffsetUnits).toBe(cover.polygonOffsetUnits);
   });
 });
 
