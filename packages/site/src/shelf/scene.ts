@@ -17,6 +17,7 @@ import {
   COVER_LIFT,
   coverQuads,
   lightRatios,
+  onPrintedFace,
   type CoverQuad,
 } from './cover-shade.ts';
 import { changedPieces, livePieces, paintedPieces } from './painted-pieces.ts';
@@ -1710,6 +1711,11 @@ export function buildBook(
    * hairline is not why this is the right shape — there is a `SKIN` gap at every
    * corner of every book for the same reason, and this closes all of them.
    *
+   * ⚠️ **An overlay laid on a printed face must carry the same offset** —
+   * `onPrintedFace`, which the cover shade and the neighbour shadow both go
+   * through. Without it the face's slope-scaled bias outgrows the overlay's lift
+   * once the shelf turns, and the overlay flickers and then vanishes.
+   *
    * ⚠️ **Nothing here reaches the shadow pass.** three's `getDepthMaterial`
    * copies `side`, `alphaTest`, `map` and displacement, and not `polygonOffset` —
    * so decal and board write the same depth into the shadow map, which is
@@ -1719,13 +1725,7 @@ export function buildBook(
    * one change that breaks this.
    */
   const printed = (material: THREE.MeshStandardMaterial): THREE.Mesh => {
-    material.polygonOffset = true;
-    // Factor scales with the depth slope, so the bias grows at exactly the
-    // grazing angles where the hairline showed. Units is the spec's minimum
-    // resolvable step; two of them, for the phones this project has history with.
-    material.polygonOffsetFactor = -1;
-    material.polygonOffsetUnits = -2;
-    const mesh = new THREE.Mesh(UNIT_PLANE, material);
+    const mesh = new THREE.Mesh(UNIT_PLANE, onPrintedFace(material));
     group.add(mesh);
     return mesh;
   };

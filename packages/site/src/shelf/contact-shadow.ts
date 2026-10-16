@@ -7,6 +7,7 @@ import {
   coverShadeMaterial,
   coverShadeMesh,
   inShadow,
+  onPrintedFace,
   type BookcaseLight,
   type CoverQuad,
 } from './cover-shade.ts';
@@ -318,9 +319,14 @@ export function makeNeighbourShadow(width: number, height: number): THREE.Mesh |
   // material's map, so one cached texture would be freed by the first book and
   // gone for the rest. A 64×4 gradient is a kilobyte; the caching would cost
   // more to get right than it saves.
+  //
+  // Biased like the cover it lies on, or the cover wins once the shelf turns —
+  // see `COVER_LIFT`.
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(width, height),
-    new THREE.MeshBasicMaterial({ map: finish(canvas), transparent: true, depthWrite: false }),
+    onPrintedFace(
+      new THREE.MeshBasicMaterial({ map: finish(canvas), transparent: true, depthWrite: false }),
+    ),
   );
   mesh.renderOrder = 1;
   return mesh;

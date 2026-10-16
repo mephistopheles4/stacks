@@ -122,10 +122,37 @@ export const COVER_SHADE_ALPHA = 0.28;
  * `SKIN`, 0.0012, the hair a printed face used to float above its board before
  * the faces were laid on their boards with a polygon offset. The two overlays
  * share one plane, which is harmless: neither writes depth, and two black
- * overlays darken the same whichever is drawn first. It is far larger than the
- * depth buffer can resolve at this distance, so the printed cover never wins.
+ * overlays darken the same whichever is drawn first.
+ *
+ * ⚠️ **The lift alone does not keep the printed cover behind.** The cover's
+ * polygon offset scales with its depth slope and the lift does not, so once
+ * the shelf turns far enough the cover's bias outgrows the lift and the cover
+ * wins the depth test: the shade flickers where the two are close and then
+ * vanishes. Both overlays carry the same offset through `onPrintedFace`, which
+ * cancels on parallel planes and leaves this lift to decide at every angle.
  */
 export const COVER_LIFT = 0.0024;
+
+/**
+ * Biases a material's depth the way every printed face is biased, so it wins
+ * ties with the board it lies on.
+ *
+ * Factor scales with the depth slope, so the bias grows at exactly the grazing
+ * angles where a hairline showed between printed spine and printed cover. Units
+ * is the spec's minimum resolvable step; two of them, for the phones this
+ * project has history with.
+ *
+ * **Anything laid over a printed face must go through this too** — see
+ * `COVER_LIFT` for what happens when one does not. One function rather than two
+ * numbers copied, so the face and what lies on it cannot drift apart.
+ * `polygonOffset` is render state, not a define, so it costs no program.
+ */
+export function onPrintedFace<M extends THREE.Material>(material: M): M {
+  material.polygonOffset = true;
+  material.polygonOffsetFactor = -1;
+  material.polygonOffsetUnits = -2;
+  return material;
+}
 
 /** Where the plank's front edge stands, in world `z`. */
 const PLANK_FRONT_Z = SHELF.depth / 2 - PLANK_INSET;
@@ -578,12 +605,14 @@ export function coverShadeMaterial(atlas: THREE.Texture): THREE.MeshBasicMateria
   atlas.wrapS = THREE.ClampToEdgeWrapping;
   atlas.wrapT = THREE.ClampToEdgeWrapping;
   atlas.flipY = true;
-  return new THREE.MeshBasicMaterial({
-    map: atlas,
-    transparent: true,
-    depthWrite: false,
-    opacity: COVER_SHADE_ALPHA,
-  });
+  return onPrintedFace(
+    new THREE.MeshBasicMaterial({
+      map: atlas,
+      transparent: true,
+      depthWrite: false,
+      opacity: COVER_SHADE_ALPHA,
+    }),
+  );
 }
 
 /**
