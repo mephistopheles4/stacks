@@ -39,12 +39,12 @@ import type { BookViewer } from './book-viewer.ts';
 import { announcement } from './card.ts';
 import { buildPages, PAGE_PX, rooted, type HeldPages } from './held-page.ts';
 import { loadThoughts } from './notes.ts';
+import { paperMaterial, sheetGeometry } from './gutter-sheet.ts';
 import { openSpread, type OpenSpread } from './open-spread.ts';
 import { bezier, openAngle, schedule, textOpacity } from './pickup-motion.ts';
 import { createPickupState, type PickupState, type Track } from './pickup-state.ts';
 import type { TunablePickup, TunerReading } from './pickup-tuner.ts';
 import { FRONT_PARTS, PAGE_BLOCK, type ShelfStage, type StagedBook } from './scene.ts';
-import { withoutShadowFetch } from './shadow-receivers.ts';
 import { PICKUP_MOTION, type PickupMotion } from './shelf-settings.ts';
 
 /**
@@ -570,17 +570,15 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         ? (found as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>)
         : undefined;
 
-    const paper = withoutShadowFetch(
-      new THREE.MeshStandardMaterial({ color: 0xece2cf, roughness: 0.95 }),
-    );
-    const rightSheet = sheetMesh(paper);
+    const paper = paperMaterial();
+    const rightSheet = sheetMesh(paper, 'right');
     const { right, leftOnBoard } = spread;
     rightSheet.scale.set(right.width, right.height, 1);
     rightSheet.rotation.y = Math.PI / 2;
     rightSheet.position.set(right.x, right.y, right.z);
     group.add(rightSheet);
 
-    const leftSheet = sheetMesh(paper);
+    const leftSheet = sheetMesh(paper, 'left');
     leftSheet.scale.set(leftOnBoard.width, leftOnBoard.height, 1);
     leftSheet.rotation.y = -Math.PI / 2;
     leftSheet.position.set(
@@ -917,9 +915,12 @@ function asMesh(object: THREE.Object3D | undefined): THREE.Mesh | undefined {
   return object instanceof THREE.Mesh ? object : undefined;
 }
 
-/** One of the two paper sheets: lit, reading no shadow map, casting none. */
-function sheetMesh(material: THREE.MeshStandardMaterial): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+/**
+ * One of the two paper sheets: lit, reading no shadow map, casting none, and
+ * darkening into the fold — see gutter-sheet.ts.
+ */
+function sheetMesh(material: THREE.MeshStandardMaterial, page: 'left' | 'right'): THREE.Mesh {
+  const mesh = new THREE.Mesh(sheetGeometry(page), material);
   mesh.castShadow = false;
   mesh.receiveShadow = false;
   mesh.visible = false;
@@ -998,14 +999,20 @@ function measure(entry: Lifted, stage: ShelfStage): SpreadReading {
     return new THREE.Vector2(((point.x + 1) / 2) * box.width, ((1 - point.y) / 2) * box.height);
   };
 
-  // A unit plane's corners, in its own frame: ±0.5 along x and y.
-  const corners = (mesh: THREE.Object3D): THREE.Vector2[] =>
-    [
-      [-0.5, -0.5],
-      [0.5, -0.5],
-      [0.5, 0.5],
-      [-0.5, 0.5],
-    ].map(([x, y]) => project(new THREE.Vector3(x, y, 0), mesh));
+  // A sheet's extent read off its own vertices, never assumed: a geometry that
+  // drifted off the unit plane, or bent out of it, must move these numbers.
+  const extent = (mesh: THREE.Mesh): THREE.Box3 => {
+    mesh.geometry.computeBoundingBox();
+    return mesh.geometry.boundingBox ?? new THREE.Box3();
+  };
+  const corners = (mesh: THREE.Mesh): THREE.Vector2[] => {
+    const { min, max } = extent(mesh);
+    return [min.x, max.x].flatMap((x) =>
+      [min.y, max.y].flatMap((y) =>
+        [min.z, max.z].map((z) => project(new THREE.Vector3(x, y, z), mesh)),
+      ),
+    );
+  };
   const size = (points: THREE.Vector2[]): { width: number; height: number } => {
     const xs = points.map((point) => point.x);
     const ys = points.map((point) => point.y);
@@ -1026,9 +1033,11 @@ function measure(entry: Lifted, stage: ShelfStage): SpreadReading {
   // The inner edges at the gutter. Each sheet is a plane turned about Y: the
   // right one by +90°, so its local −x points to the spine; the left one rides
   // the board turned −90° and then the hinge's −180°, so its local +x does.
+  const leftEdge = extent(rig.leftSheet);
+  const rightEdge = extent(rig.rightSheet);
   const gaps = [-0.5, 0, 0.5].map((y) =>
-    project(new THREE.Vector3(0.5, y, 0), rig.leftSheet).distanceTo(
-      project(new THREE.Vector3(-0.5, y, 0), rig.rightSheet),
+    project(new THREE.Vector3(leftEdge.max.x, y, leftEdge.max.z), rig.leftSheet).distanceTo(
+      project(new THREE.Vector3(rightEdge.min.x, y, rightEdge.max.z), rig.rightSheet),
     ),
   );
 
