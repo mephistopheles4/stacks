@@ -135,7 +135,7 @@ jobs:
       # `run:` step to that, whatever the expression is.
       - name: smoke:render
         env:
-          SMOKE_ARGS: ${{ github.event_name == 'pull_request' && '--pull-request' || '' }}
+          SMOKE_ARGS: ''
         run: pnpm smoke:render $SMOKE_ARGS
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
