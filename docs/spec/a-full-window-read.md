@@ -264,7 +264,7 @@ would have shipped alone. The same holds if the owner refuses the correction.
 | The armable line's rule | **decided: never above the lowest** (q3, the owner through the head chef, 2026-10-17) | built here; #462 adopts it |
 | Sign-off: proceed, fix or kill | **decided: proceed** (q4, the owner through the head chef, 2026-10-17) | built in #471 |
 | `pnpm trend:sync --rebuild`, once | the owner, by hand | after merge, before the next `pnpm trend:sync` |
-| Whether the added deploy time is acceptable | the owner | at the pull request |
+| Whether the added deploy time is acceptable | **decided: accepted** (q6, the owner through the head chef, 2026-10-17): about +1.6 s today, up to about 8 s at the 200-record cap | at the pull request |
 
 ### For #462's builder
 
