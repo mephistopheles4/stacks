@@ -178,6 +178,16 @@ mechanism applies forward.**
 - **`preserves` is built and unused.** Every seeded entry says `false`, so no
   window is joined today. The first `true` will be a deliberate act with a
   measurement behind it.
+
+  > ⚠️ **Superseded on 2026-10-17 by [#464](https://github.com/mephistopheles4/stacks/issues/464).**
+  > The 2026-10-09 `configHash` entry was corrected in place to `true`, on the
+  > owner's decision. That is the first `true` to join a window: both files
+  > whose exclusions moved the stamp were created in the same commit, and a
+  > Stryker run on the newest tree under the previous value scored the same
+  > mutants, mutant for mutant, under both configurations. The measurement
+  > is in the entry's `reason` and in
+  > [`docs/spec/a-full-window-read.md`](../spec/a-full-window-read.md) §S6.
+  > The bullet above is left verbatim, as records here are.
 - ⚠️ **Preservation reaches two of the three stamps, because the third has no
   window yet.** `calibration` and `capCalibration` consume `configHash` and
   `fixtureHash`; there is no duplication calibration window anywhere, since the
