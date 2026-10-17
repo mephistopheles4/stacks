@@ -196,7 +196,10 @@ would need the owner to re-approve the G60 row.
 ## S9. Out of scope
 
 - **Running G60 and G61 on pull requests again.** ADR-0108 skips them because
-  of their cost. *Owner's answer to q2 is pending; see §S13.*
+  of their cost, and it stands until a follow-up decides. Owner, q2. Once C5's
+  push run is in, the build session files one issue, *"Should pull requests
+  run G60 and G61 again?"*, quoting that run's G60 and G61 times beside
+  ADR-0108's 258 s and 86 s.
 - **`clickToPickUp`'s search** (G35, 17.1 s on CI) and the other candidates in
   #397's body. They were not measured here and stay on #397 if the owner wants
   them.
@@ -254,11 +257,13 @@ Each line is a decision, who took it, and what changes if it is reversed.
   recommendation. Reversed: a test would need a seam in `main()`'s order of
   calls, which does not exist.
 - **G61's boots join the timer.** Owner, q1 = A.
+- **ADR-0108's pull-request skip stays; a follow-up decides after C5.**
+  Owner, q2 = A, relayed by the lead. Reversed: this spec would also run G60
+  and G61 on pull requests, with a new ADR.
 - **#397's other candidates out of scope.** `spec-397`'s recommendation.
 
 ## S13. Needs a human
 
 - **Sign-off**: proceed, fix or kill.
-- **q2**, whether pull requests run G60 and G61 again: pending.
 - **Closing #397.** The build's PR can close it, or leave it open for
   `clickToPickUp` and the rest. That is the owner's call at merge.
