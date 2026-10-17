@@ -45,7 +45,7 @@ Three faults make that print wrong today, and each one is measured on #464.
 2. **The 2026-10-09 entry is corrected to `preserves: true`**, with S6's
    measurement in its reason, once the owner approves it as a question (S7).
 3. **The armable line never prints a value above the window's lowest**, by the
-   rule S4 settles on the owner's answer (S7).
+   rule in S4, which the owner chose (q3).
 
 ## S3. User stories
 
@@ -153,8 +153,10 @@ as `28.999999999999996`. The rule prints `29.00`, and a floor of `29` is under
 no score but over this one, so `breaches` refuses the run it came from.
 Measured in Node on 2026-10-17.
 
-*Claude's recommendation, open as S7's second question:* **the largest
-hundredth that is not above `L`, compared as `breaches` compares.** That is
+**Decided by the owner (q3, 2026-10-17): the largest hundredth that is not
+above `L`, compared as `breaches` compares.** ⚠️ **For #322's build session:**
+#462 §S4's named value `N` uses this function, `roundDownToHundredths`, and not
+the `⌊L × 100 + 10⁻⁶⌋` it states. That is
 `k = ⌊L × 100⌋`, then one step up if `(k + 1) / 100 ≤ L`, then one step down
 if `k / 100 > L`. A printed floor is then never above a score the window holds,
 whatever the float. The cost is that it departs from the rule the owner named
@@ -256,8 +258,8 @@ would have shipped alone. The same holds if the owner refuses the correction.
 
 | Decision | Who | When |
 | --- | --- | --- |
-| Correct the 2026-10-09 entry to `preserves: true` | the owner, as a question through the head chef | before the commit that edits it |
-| The armable line's rule, S4's recommendation or the issue's rule | the owner, as a question through the head chef | before the build |
+| Correct the 2026-10-09 entry to `preserves: true` | **decided: yes** (q2, the owner through the head chef, 2026-10-17) | edited in the build |
+| The armable line's rule | **decided: never above the lowest** (q3, the owner through the head chef, 2026-10-17) | built here; #462 adopts it |
 | Sign-off: proceed, fix or kill | the owner, as a question through the head chef | after the two above |
 | `pnpm trend:sync --rebuild`, once | the owner, by hand | after merge, before the next `pnpm trend:sync` |
 | Whether the added deploy time is acceptable | the owner | at the pull request |
