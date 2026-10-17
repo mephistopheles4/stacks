@@ -58,9 +58,10 @@ concurrency:
 
 jobs:
   suite:
-    # package.json declares `engines: node >=24`, and this one leg is what
-    # checks that floor. Node 22 was dropped in ADR-0110; the matrix stays so
-    # a second version can return without reshaping the job.
+    # package.json declares `engines: node >=24`, and this one leg runs the
+    # suite on that floor. Nothing ties the two together: change one, change
+    # the other (ADR-0110). The matrix stays so a second version can return
+    # without reshaping the job.
     strategy:
       fail-fast: false
       matrix:
@@ -151,8 +152,8 @@ jobs:
   # Known vulnerabilities in the dependency tree.
   #
   # Its own job rather than a step in the matrix: the answer does not depend on
-  # which Node version is running, and running it twice would report the same
-  # advisory twice.
+  # which Node version is running, and with more than one leg it would report
+  # the same advisory once per leg.
   #
   # This is the one gate whose result can change without the code changing — an
   # advisory published tomorrow turns yesterday's green commit red. That is the
@@ -227,9 +228,10 @@ jobs:
   #
   # Its own job rather than steps in the matrix, for the reason the `audit` job
   # above states: the answer does not depend on which Node version is running,
-  # and running it twice would report the same finding twice. A lint verdict is
-  # about TypeScript source, so the Node version cannot move it — in the matrix
-  # the type-aware run costs about 15 seconds and reports everything twice; here
+  # and with more than one leg it would report the same finding once per leg. A
+  # lint verdict is about TypeScript source, so the Node version cannot move it —
+  # in a two-leg matrix the type-aware run cost about 15 seconds and reported
+  # everything twice; here
   # it costs about 7.5 and reports each finding once. A Markdown rule break is
   # the same on every Node version for the same reason.
   #
@@ -311,7 +313,8 @@ jobs:
   #
   # Its own job rather than a step in the matrix, for the reason `audit` and
   # `style` already state: the answer does not depend on which Node version is
-  # running, and running it twice would report the same fault twice.
+  # running, and with more than one leg it would report the same fault once per
+  # leg.
   conventions:
     name: conventions
     runs-on: ubuntu-latest

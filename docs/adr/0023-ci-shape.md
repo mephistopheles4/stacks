@@ -10,7 +10,7 @@ Requiring `suite (22)` and `suite (24)` by name would mean editing the branch ru
 
 - **2026-07-31** — **One required check, named `gates`, aggregating a `suite` matrix.** Requiring `suite (22)` and `suite (24)` by name would mean editing the branch ruleset every time the matrix changes, and a required check that never reports blocks the pull request forever. The aggregator keeps one stable name. For the same reason the workflow is **never path-filtered**: a skipped required workflow reports nothing, which is indistinguishable from a check that has not run yet.
 
-- **2026-07-31** — **CI runs Node 22 and 24.** `engines` claims `>=22` while development happens on 24, so testing only 24 would have left that claim as one more thing nothing checks — the exact failure this phase exists to stop. *Superseded by [ADR-0110](0110-node-24-is-the-floor.md): the floor is now `>=24`, checked by one leg.*
+- **2026-07-31** — **CI runs Node 22 and 24.** `engines` claims `>=22` while development happens on 24, so testing only 24 would have left that claim as one more thing nothing checks — the exact failure this phase exists to stop. *Superseded by [ADR-0110](0110-node-24-is-the-floor.md): the floor is now `>=24`, and one leg runs on it.*
 
 - **2026-07-31** — **`verifyDepsBeforeRun: warn`, not `false`.** pnpm 11 defaults it to `install`, which makes `pnpm test` try to reinstall first and then abort with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY` in any shell without a TTY — every agent shell, every CI runner. `false` would have silenced the staleness diagnostic too; `warn` keeps it. It reported a genuine out-of-sync tree the moment it was switched on.
 

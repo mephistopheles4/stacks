@@ -15,9 +15,14 @@ unchanged, and it is still the only required check, so removing the
 ## Why
 
 Development and deploys already run on Node 24. The Node 22 leg existed only to
-check the `engines` claim, which ADR-0023 refused to leave unchecked; with the
-floor raised to 24, the one remaining leg checks it, so that reasoning still
-holds. Node 22's upstream support ends in April 2027.
+check the `engines` claim, which ADR-0023 refused to leave unchecked. With the
+floor raised to 24, the one remaining leg runs the suite on the floor. Node
+22's upstream support ends in April 2027.
+
+⚠️ **The floor and the matrix agree by hand, not by a gate.** No test reads
+`engines.node` or the `suite` matrix, so raising one without the other stays
+green. A gate asserting that the lowest matrix version equals the `engines`
+floor would close that; it is left as a follow-up rather than built here.
 
 The two legs ran in parallel, so this saves runner minutes rather than wall
 time: it is a simplification, not a speed-up.
