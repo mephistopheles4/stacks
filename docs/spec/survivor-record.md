@@ -2,8 +2,9 @@
 
 The spec for [#344](https://github.com/mephistopheles4/stacks/issues/344).
 Standard tier: planned on Opus at medium effort, to be built on Sonnet at
-medium. Written on 2026-10-17 by session `spec-344` for the owner to sign off.
-**Nothing here is built until the owner says proceed.**
+medium. Written on 2026-10-17 by session `spec-344`. **Signed off by the owner
+on 2026-10-17: proceed** (q6, relayed by the head chef). It is waiting for a
+build session.
 
 The owner decided the shape on #344: a stripped survivor list each night, keyed
 by content and matched as a multiset, on its own orphan branch. The grilling
@@ -461,6 +462,7 @@ delete it. Nothing reads it, so leaving it costs nothing.
 | Warn-only: a failed record never reds the night | owner (Q5) | §S4.5, the `docs/gates.md` row in §S4.8. ⚠️ The summary step is already warn-only in this shape, so this adds a second warn-only step rather than the first. Zero `continue-on-error` stays true |
 | Branch named `survivors` | owner (q1, relayed by the head chef) | every path above |
 | No new entry script: the git half in `commit-metrics.ts`, the record and the line in `mutation-scopes.ts`, pure logic in a mutated lib module | owner (q3, relayed by the head chef) | §S4.5, §S4.8, §S7. Option B would restamp and restart the calibration windows |
+| Sign-off: proceed | owner (q6, relayed by the head chef) | the build |
 | File the equivalent-mutant reader as a follow-up issue, #472 | owner (q5, relayed by the head chef) | §S7 |
 | Guards for the two `security?` findings: C9 kept out of Stryker's dry run, and the previous record's SHA and date checked before printing | owner (q4, relayed by the head chef) | §S4.4, §S4.8, C8 |
 | One commit path for both branches; never check out the tip | `spec-344`'s recommendation | §S4.6, C9, acceptance 2 |
