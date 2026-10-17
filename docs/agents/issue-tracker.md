@@ -9,48 +9,74 @@ inside a clone.
 installed. They are not a requirement for contributing** — see
 [`CONTRIBUTING.md`](../../CONTRIBUTING.md). Nothing here gates a pull request.
 
-## Posting prose: use the helper
+## Posting prose
 
-**Every body — an issue, a pull request, a comment, a review, a reply — goes
-through [`scripts/gh-post.ts`](../../scripts/gh-post.ts).** It reflows the prose
-for GitHub's rendering, posts it, reads it back and exits non-zero if what
-arrived is not what went out.
+**Write GitHub prose unwrapped, with full URLs.** GitHub renders a single
+newline as a line break, so a hard-wrapped paragraph posts as ragged lines, and
+a repository-relative link is dead in a body. One line per paragraph; the full
+`https://github.com/mephistopheles4/stacks/…` address for any link. Write the
+body to a file and pass the file — never `--body`, since prose carries
+apostrophes and backticks that break shell quoting.
+
+The forms are POSIX-shell forms, as this page's other blocks are. In
+PowerShell, quote the `{owner}/{repo}` path.
 
 ```bash
-pnpm exec tsx scripts/gh-post.ts issue --title "..." --body body.md
-pnpm exec tsx scripts/gh-post.ts issue-comment --issue 220 --body reply.md
-pnpm exec tsx scripts/gh-post.ts review-thread-reply --pr 225 --comment <id> --body reply.md
+gh issue create --title "..." --body-file body.md
+gh issue comment <issue> --body-file reply.md
+gh pr create --title "..." --body-file body.md
+gh pr review <pr> --comment --body-file review.md
+gh api "repos/{owner}/{repo}/pulls/<pr>/comments/<id>/replies" -F body=@reply.md
 ```
 
-`--from <dir>` is the repository-relative directory the prose was written in, so
-its relative links resolve. `--dry-run` prints what would be posted and posts
-nothing. `--help` is the usage above; the surfaces are `issue`, `pull-request`,
-`issue-comment`, `pull-request-review` and `review-thread-reply`.
+**Read every post back.** Fetch the posted object and compare its body with the
+file, byte for byte, after normalising line endings to LF and dropping the one
+trailing newline that `--jq` adds to the read-back (GitHub keeps the file's own
+final newline, so strip it from the read-back only):
+
+```bash
+gh api <the posted object's API path> --jq .body | head -c -1 | diff - body.md && echo match
+```
+
+The path depends on what was posted. `gh issue create` and `gh pr create` print
+the new URL, whose number is `<n>`; `gh issue comment` prints a URL ending
+`#issuecomment-<id>`; `gh api … -F body=@reply.md` returns the new comment's
+`id` in its response (add `--jq .id`). `gh pr review` prints nothing, so list
+`repos/{owner}/{repo}/pulls/<pr>/reviews` and take the newest review's `id`.
+
+| Posted | API path |
+| --- | --- |
+| Issue | `repos/{owner}/{repo}/issues/<n>` |
+| Pull request | `repos/{owner}/{repo}/pulls/<n>` |
+| Issue or pull-request comment | `repos/{owner}/{repo}/issues/comments/<id>` |
+| Review | `repos/{owner}/{repo}/pulls/<pr>/reviews/<id>` |
+| Review-thread reply or review comment | `repos/{owner}/{repo}/pulls/comments/<id>` |
+
+`head -c -1` is the one newline `--jq` adds; if the body file has CRLF line
+endings, strip them first with `tr -d '\r' < body.md`.
 
 **Six known ways to hand-roll this wrong, and three of them return HTTP 200** —
-they are enumerated on
-[#220](https://github.com/mephistopheles4/stacks/issues/220), which is why the
-helper exists. It is not a gate and nothing requires it; it is the only form
-that checks its own work.
+`-f body=@reply.md` posts the literal filename, for one. They are enumerated on
+[#220](https://github.com/mephistopheles4/stacks/issues/220). The read-back is
+what catches them. Nothing here is a gate and nothing requires it.
 
 ## Conventions
 
-- **Create an issue**: the helper's `issue` surface. Never `--body` — a prose
-  body carries apostrophes and backticks that break shell quoting.
+- **Create an issue**: `gh issue create --body-file`, as under *Posting prose*.
 - **Read an issue**: `gh issue view <number> --comments`.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
-- **Comment on an issue**: the helper's `issue-comment` surface.
-- **Open a pull request**: the helper's `pull-request` surface, with the body
-  started from [`.github/pull_request_template.md`](../../.github/pull_request_template.md).
+- **Comment on an issue**: `gh issue comment --body-file`.
+- **Open a pull request**: `gh pr create --body-file`, with the body started
+  from [`.github/pull_request_template.md`](../../.github/pull_request_template.md).
   ⚠️ **GitHub applies the template only in the web form**, never to a body posted
-  from here, so the helper checks the title and the template's two questions
-  exactly as G55 (`pr-conventions`) will, and refuses — `--dry-run` included —
-  before anything exists.
+  from here, so run `pnpm exec tsx scripts/check-pr.ts` by hand before
+  `gh pr create`: it checks the title and the template's two questions exactly
+  as G55 (`pr-conventions`) will.
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number>`. If the closing note is more than a few
-  words, post it with the helper first and close without a comment — `gh issue
-  close` has no `--comment-file`, so its `--comment` is the argument-passing
-  form this page has just removed everywhere else.
+  words, post it with `gh issue comment --body-file` first and close without a
+  comment — `gh issue close` has no `--comment-file`, and its `--comment` takes
+  the text inline, which *Posting prose* above rules out.
 - **Claim an issue**: `gh issue edit <number> --add-assignee <login>` — or
   `--add-assignee "@me"` for the account `gh` is authenticated as. **When an
   assignment happened is half of what it means, and no `gh issue` flag carries
@@ -86,7 +112,7 @@ view shows: that half comes from the timeline, a ticket at a time.
 
 - **The map** is an issue labelled `wayfinder:map`. Tickets are its **sub-issues**,
   each additionally labelled `wayfinder:research` / `prototype` / `grilling` / `task`.
-- **Create a ticket under a map**: the helper's `issue` surface, which takes
+- **Create a ticket under a map**: `gh issue create --body-file`, with
   `--parent <map>` and `--label "wayfinder:<type>"`.
 - **Blocking** uses GitHub's issue-dependencies API, which `gh` has no flag for:
 
