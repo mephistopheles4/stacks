@@ -110,4 +110,11 @@ describe('G66 — no tracked text file carries a C0 control character', () => {
     // 0x0B sits between LF and CR, so an off-by-one on either bound admits it.
     expect(controlCharacters(text([0x0b]))).toEqual([{ line: 1, column: 1, code: 0x0b }]);
   });
+
+  it('reads the top of the range, 0x1C to 0x1F, as control characters', () => {
+    // The tree holds none of these, so only a planted case pins the upper bound.
+    expect(controlCharacters(text([0x1c, 0x1d, 0x1e, 0x1f])).map((found) => found.code)).toEqual([
+      0x1c, 0x1d, 0x1e, 0x1f,
+    ]);
+  });
 });

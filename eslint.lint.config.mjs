@@ -205,17 +205,30 @@ export default tseslint.config(
      * runs the builder now, and this refuses the sink anywhere in the package.
      *
      * ⚠️ **By property name, on any object**, so `el['innerHTML']` and a
-     * destructured `{ innerHTML }` are refused too. It does not reach
-     * `DOMParser` or `document.write`; `provider-marks.ts` uses the first on
-     * build-time constants, and its own comment says why. Observed red on a
+     * destructured `{ innerHTML }` are refused too, and so are the two newer
+     * sinks, `setHTMLUnsafe` and `createContextualFragment`. Observed red on a
      * planted `innerHTML` assignment in `held-page.ts`, then reverted.
+     *
+     * ⚠️ **What it does not reach, accepted**: a key in an object literal
+     * (`Object.assign(el, { innerHTML })`), a string handed to `Reflect.set`,
+     * `DOMParser` — which `provider-marks.ts` uses on build-time constants, and
+     * its own comment says why — and `set:html` in an `.astro` file, which no
+     * rule here reads and which carries only fixed SVGs today. Like every rule
+     * in this file it is held by nothing: deleting it turns nothing red (see
+     * "The linter's own config" under "Not gated, deliberately").
      */
     files: ['packages/site/src/**/*.ts'],
 
     rules: {
       'no-restricted-properties': [
         'error',
-        ...['innerHTML', 'outerHTML', 'insertAdjacentHTML'].map((property) => ({
+        ...[
+          'innerHTML',
+          'outerHTML',
+          'insertAdjacentHTML',
+          'setHTMLUnsafe',
+          'createContextualFragment',
+        ].map((property) => ({
           property,
           message:
             'The site builds every node from text. Use textContent or createElement; ' +

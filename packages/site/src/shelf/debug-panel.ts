@@ -66,6 +66,17 @@ export interface PanelOptions {
   readonly base?: () => ShelfSettings;
 }
 
+/**
+ * Whether any panel on this page has written the address yet.
+ *
+ * ⚠️ **The module's, not a panel's.** A rebuild while a book is held mounts a
+ * fresh panel and puts the book down, and that put-back's history step reaches
+ * the new panel, not the one that wrote — so a flag per panel read `false` there
+ * and lost the setting from the address once more (#426, behaviour-lens on
+ * #448). The module loads once per page, so the flag lives as long as the page.
+ */
+let written = false;
+
 export function mountPanel(host: HTMLElement, options: PanelOptions): () => void {
   const { handle } = options;
   let settings = handle.settings;
@@ -188,7 +199,6 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
 
   // A put-back steps the history back to an entry from before the change, so
   // the address is written again after it; see `keepSettingsInAddress`.
-  let written = false;
   const forgetAddress = keepSettingsInAddress(() =>
     written ? { settings, base: options.base?.() } : undefined,
   );

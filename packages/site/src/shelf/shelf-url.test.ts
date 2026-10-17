@@ -460,6 +460,27 @@ describe('keepSettingsInAddress, across a put-back (#426)', () => {
     expect(writes).toEqual([`?debug&${AA}`]);
   });
 
+  it('asks what to write on every step, not once when it is installed', () => {
+    // The panel has written nothing when it installs this, so a helper that
+    // read `current` once would never write — the #426 symptom back again.
+    const { writes, pop } = afterPutBack();
+    const panel: { now?: { settings: ShelfSettings } } = {};
+    keepSettingsInAddress(() => panel.now);
+
+    panel.now = { settings: dialled };
+    pop();
+    expect(writes).toEqual([`?debug&${AA}`]);
+  });
+
+  it("diffs against the page's own base, so a painted device's fallback stays out of the link", () => {
+    const { writes, pop } = afterPutBack();
+    keepSettingsInAddress(() => ({ settings: PAINTED_BASE, base: PAINTED_BASE }));
+
+    pop();
+    // Against the shipped defaults the same settings would write `shadows=0`.
+    expect(writes).toEqual(['?debug']);
+  });
+
   it('leaves the address alone until the panel has written once', () => {
     const { writes, pop } = afterPutBack();
     keepSettingsInAddress(() => undefined);
