@@ -113,7 +113,11 @@ install script. With `allowBuilds` set to `workerd: false`, and also with
 `workerd: true`, the frozen install exits 0, and both `pnpm exec wrangler
 --version` (4.149.0) and `pnpm exec wrangler pages deploy --help` work.
 Whether `pages deploy` itself needs workerd's binary can't be checked without a
-real deploy.
+real deploy. The pinned lockfile holds the same single `esbuild@0.28.2` and
+`sharp@0.35.5` as today, so wrangler brings no new version of a package
+`allowBuilds` admits by name, and workerd is its only new install script.
+wrangler's usage telemetry is **on by default**: its CLI reads
+`WRANGLER_SEND_METRICS`, and has `wrangler telemetry disable`.
 
 The measurements ran on the Windows 11 workstation. CI installs on
 `ubuntu-latest`, where platform-only optional packages can resolve that a
@@ -139,6 +143,12 @@ a time.
   until someone adds the new exact version. puppeteer-core travels in
   Dependabot's weekly `dev-tooling` group, with typescript, vitest and tsx, so
   that failure holds back the whole group's pull request, not just one bump.
+  **What the acceptance covers:** these packages run on the deploy machine,
+  with the Cloudflare credential in reach. chromium-bidi runs inside the
+  deploy's own `smoke:render` gate, and every child process of the deploy
+  inherits its whole environment. G67's chromium-bidi rule in §S5 is the
+  control that answers this, since a look at the publisher can't tell a
+  takeover from a normal release.
 - **D2, door 3: pass the window on the dlx call.** The owner said yes in chat.
   ⚠️ **Replaced by D4**, after the lens review measured that dlx doesn't apply
   the trust policy. It is kept here so the reasoning stays visible.
@@ -164,7 +174,9 @@ a time.
 
 - `minimumReleaseAgeIgnoreMissingTime: false`. Its comment corrects the
   premise: it does not stop git or tarball dependencies, which is what G67's
-  lockfile rule is for.
+  lockfile rule is for. pnpm's docs say the same key also governs the trust
+  policy, making it fail on a package the registry can't date rather than skip
+  it. That was read, not measured, and the comment says so.
 - `trustPolicy: no-downgrade` and a block-list `trustPolicyExclude` holding the
   three exact versions. Each entry gets a comment with its removal condition:
   `semver` and `chokidar` come out when the lockfile stops holding that
@@ -176,7 +188,10 @@ a time.
   fails on an entry other than these three exact versions, or the lockfile
   holds a resolution that isn't integrity-only, stop and bring it to the owner.
   Never add or change a trust or age exclude without the owner's word: each
-  one accepts a possible package takeover.
+  one accepts a possible package takeover. Likewise, if the lockfile gains a
+  new version of a package `allowBuilds` admits by name, stop: its install
+  script would run with no new answer. The log lists the lockfile keys
+  wrangler adds, and says yes or no on new allowed builds.
 - **The hatch text** gains one line, in this file and in the Dependabot npm
   note: before excluding a version from the window, check how it was published.
   A token publish where earlier releases had provenance is the stolen-token
@@ -184,7 +199,11 @@ a time.
   failing install is the signal to look, not to add a trust exclude by reflex.
   The Dependabot note also names the expected failure: a `dev-tooling` group
   pull request that moves chromium-bidi goes red on `ERR_PNPM_TRUST_DOWNGRADE`,
-  and its remedy is the owner's decision to move the exact exclude.
+  and its remedy is the owner's decision to move the exact exclude. And one
+  limit, in both files: the trust policy only fails a version when an earlier
+  release had stronger evidence. For a package that never published with
+  provenance, a passing install says nothing about who published it, and the
+  window is the only control the age hatch removes.
 
 **`gates/release-age.test.ts` (G67)**, extending its existing readers, still
 with no YAML parser:
@@ -203,16 +222,35 @@ with no YAML parser:
   `  'name@version':` for a scoped name, at two spaces' indent. An entry the
   lockfile no longer holds fails, naming it. Otherwise an old exclude would let
   that exact version back in, unreviewed, the day a later lockfile resolved it.
-- **The lockfile rule.** Every line of `pnpm-lock.yaml` that holds
-  `resolution:` must read `resolution: {integrity: <value>}`, with no other key.
-  Anything else fails, naming the line. A lockfile with no `resolution:` line
-  at all fails as well, so a renamed field can't read as a pass. Split lines on
-  `\r?\n`, as the workspace reader does, since a Windows checkout may carry
-  CRLF.
+- **The lockfile rule.** Every `resolution` key in `pnpm-lock.yaml`, read in
+  any quoting and spacing as `switchProblems` reads a key, must read
+  `{integrity: sha512-<value>}`, with no other key and no other hash type.
+  Anything else fails, naming the line. Then the count check: the number of
+  package keys in the `packages:` section must equal the number of
+  integrity-only resolutions, so a resolution spelled some way the reader
+  misses still fails. A lockfile with no resolution at all fails as well.
+  Split lines on `\r?\n`, as the workspace reader does, since a Windows
+  checkout may carry CRLF.
+- **The chromium-bidi rule.** A `trustPolicyExclude` entry for
+  `chromium-bidi` must name exactly the version `puppeteer-core`'s lockfile
+  snapshot depends on, and `puppeteer-core` must be the only snapshot that
+  depends on `chromium-bidi`. Today that snapshot reads `chromium-bidi:
+  157.0.8090-0(devtools-protocol@0.0.1696802)`, so strip the parenthesised
+  peer suffix before comparing. The exclude can then only follow a
+  provenance-published puppeteer-core, which a stolen chromium-bidi token can't
+  fake. The owner's word is still needed on every move (§S4).
+- **Config that changes pnpm at runtime.** A top-level `configDependencies` or
+  `pnpmfile` key in `pnpm-workspace.yaml` fails, and so does any `.pnpmfile.*`
+  at the repository root. pnpm's docs say their hooks can rewrite settings, and
+  that a pinned config dependency skips the window. Neither exists today.
 - **The deploy rule.** The root `package.json` must carry `wrangler` in
   `devDependencies` as one exact version: no range, tag or protocol. And
-  `scripts/deploy.ts` must hold no `dlx`: neither the string `'dlx'` in an
-  argument list nor `pnpm dlx` in its printed `--dry-run` command. The script
+  `scripts/deploy.ts` must hold one allowed form: the upload's argument list
+  starts `'exec', 'wrangler'`, and the printed `--dry-run` command starts
+  `pnpm exec wrangler`. Anything else fails: `dlx`, `npx`, `pnpx`, `bunx` or
+  `--package` anywhere in the file, or `wrangler` run as a command any other
+  way. This is an allowlist, following invariant 2's rule, not a ban on one
+  word. The script
   runs at import, so read its source text, as G67 already reads
   `pnpm-workspace.yaml`. A form the reader doesn't recognise fails closed.
 
@@ -231,7 +269,14 @@ published. Changing it to `true` is the remedy, and it is the owner's.
 **`scripts/deploy.ts`** drops `WRANGLER = 'wrangler@4'`. The upload runs
 `pnpm exec wrangler pages deploy …`, and the `--dry-run` print shows the same
 command. Its comment says why: the lockfile holds wrangler to the window and
-the trust policy, and dlx holds it to the window only.
+the trust policy, and dlx holds it to the window only. **Before the upload it
+refuses** unless the version in the repository's own
+`node_modules/wrangler/package.json` equals the exact pin in `package.json`.
+`pnpm exec` puts `node_modules/.bin` first on the PATH, and
+`verifyDepsBeforeRun: warn` doesn't stop a stale install, so without this
+refusal the upload could run some other wrangler from the PATH. No flag
+clears the refusal. `--dry-run` prints the version it checked. If G45 lists
+the deploy's refusals in `docs/commands.md`, add this one there.
 
 **`.github/dependabot.yml`** gives the github-actions entry `cooldown:
 default-days: 7`, with a comment pointing at the npm entry's note, and saying
@@ -245,9 +290,19 @@ measurements as the investigation narrative.
 **One ADR, for the new dependency**, as AGENTS.md requires for any added
 dependency: wrangler is a devDependency so that the deploy's credentialed fetch
 sits under the lockfile's checks. It records the cost: wrangler's 48 packages
-join every install, CI's included, and Dependabot opens wrangler bumps. Take
+join every install, CI's included, and Dependabot opens wrangler bumps. It
+also says what's in reach of the deploy's tools: the Cloudflare credential,
+where it lives (an environment variable or wrangler's own login store, as
+the owner states), that it never enters the repository, `.env` or CI, and the
+point in D1. Take
 the next number free on `main` and on open pull requests at build time. On
-2026-10-17, open pull requests held 0111, 0113 and 0115. The settings
+2026-10-17, open pull requests held 0111, 0113 and 0115.
+
+**The log and the ADR carry no local path and no user name.** Describe the
+scratch copy generically, and trim command output to the lines that matter.
+pnpm's errors print absolute paths, and two earlier log files already carry a
+local path naming an account. Search both files for a drive-letter path
+before committing. The settings
 themselves need no ADR: each is cheap to reverse, and the reasoning lives in
 the comments and the log.
 
@@ -273,16 +328,21 @@ The acceptance claims, for the build and for the QA pair at Test:
   That run is done by hand once, in a scratch copy, and recorded in the log.
 - **C5.** G67 passes today's lockfile and the same text with CRLF line
   endings. It fails a planted `tarball:` key, a `gitHosted:` key, a `type: git`
-  resolution, and a lockfile with no resolutions.
+  resolution, a `sha1-` integrity, a resolution under a quoted or oddly spaced
+  key, an extra package key with no integrity-only resolution, and a lockfile
+  with no resolutions. All of these go in one parameterised case.
 - **C6.** G67 fails a `package.json` whose `wrangler` is a range, a tag or
-  absent, and fails a `deploy.ts` that holds `dlx` in an argument list or in
-  its printed command. `pnpm deploy:site --dry-run` prints a `pnpm exec
-  wrangler` command.
+  absent. It fails a `deploy.ts` that holds `dlx`, an `npx` form or a
+  `--package` form, or runs wrangler other than through `pnpm exec`. `pnpm
+  deploy:site --dry-run` prints a `pnpm exec wrangler` command and the
+  wrangler version it checked.
 - **C7.** The github-actions entry in `dependabot.yml` carries `cooldown:
   default-days: 7`. **This one is not gated**, matching the npm entry, which
   nothing gates either. A reviewer checks it by reading the diff.
 - **C8.** The hatch text in both files says to check how a version was
-  published, and door 1's comment carries §S3's correction.
+  published, and names the trust policy's limit for a package that never had
+  provenance. Door 1's comment carries §S3's correction and the trust-policy
+  clause from pnpm's docs.
 - **C9.** On the Windows workstation, with the final `pnpm-workspace.yaml` and
   after a frozen install, `pnpm exec wrangler --version` exits 0 and prints the
   pinned version, and `pnpm exec wrangler pages deploy --help` exits 0.
@@ -296,6 +356,14 @@ The acceptance claims, for the build and for the QA pair at Test:
 - **C11.** G67 passes the repository's excludes, since all three trust excludes
   name lockfile packages. It fails an age or trust exclude whose version the
   lockfile doesn't hold, a scoped one included.
+- **C12.** G67 passes today's chromium-bidi exclude. It fails one naming a
+  version `puppeteer-core` doesn't depend on, and a lockfile where a second
+  package depends on `chromium-bidi`. It also fails a `configDependencies` key,
+  a `pnpmfile` key, and a root `.pnpmfile.cjs`.
+- **C13.** In a scratch copy where the installed wrangler's version differs from
+  the pin, the deploy refuses before the upload, naming both versions, and
+  uploads nothing. The refusal is tested through the function that compares
+  the two, with no deploy.
 
 Each G67 rule is proved the way G67 already proves its own: synthetic workspace
 text, one passing and one failing per form. Count the test cases against the
@@ -325,8 +393,12 @@ The owner chose the standard tier over the sensitive route, so the build
 
 ## S8. Out of scope
 
-- Finding out what `minimumReleaseAgeIgnoreMissingTime` covers. Nothing turns
-  on it once the lockfile rule exists.
+- Finding out what `minimumReleaseAgeIgnoreMissingTime` covers beyond what
+  pnpm's docs say. G67 requires the key, and per the docs it also governs the
+  trust policy (§S5), so it must not be dropped as dead.
+- Proving whether pnpm config from environment variables or the command line
+  overrides `pnpm-workspace.yaml`. Pull-request review of the workflows is the
+  control for that.
 - A gate on `dependabot.yml`'s cooldowns, for either entry.
 - Investigating chromium-bidi's change of publisher beyond the evidence in §S3.
 
@@ -340,6 +412,8 @@ The owner chose the standard tier over the sensitive route, so the build
   part of this work.
 - **`allowBuilds` `workerd: true`**, if a real deploy ever shows that `pages
   deploy` needs workerd's binary (§S5), is the owner's call.
+- **Where the Cloudflare credential lives**, for the ADR (§S5): the owner tells
+  the builder. The builder reads no credential store.
 - **The security pair at Test** is an offer the build makes once (§S6). The
   choice of the standard tier over the sensitive route reached this session by
   relay, through the lead, so it stays open until the owner answers it.
