@@ -183,8 +183,9 @@ request, signed by the build session, and each is the owner's to strike (S12).
 
 - **On the pact's repository**: the poster refuses a body holding a
   hard-wrapped prose paragraph or a repository-relative link, and never
-  rewrites it. This is D2's other half. **Filing it is a ticket cut**, so it
-  goes to the owner through the head chef as a question with the sign-off.
+  rewrites it. This is D2's other half. **Pending on the pact's repository**:
+  on the owner's answer to q6, the pact's own head chef files it, and nothing
+  here files it.
 - Noted for that ticket: the poster's `issue` surface has no `--parent`, which
   `gh-post.ts` had. That only matters for the pact's own users.
 - **For the owner, outside the repository**: at least one of the owner's own
@@ -223,7 +224,7 @@ live posts, on #461 and on the build's pull request.
 ## S12. Needs a human
 
 1. **Sign-off on this spec**: proceed, fix or kill.
-2. **The ticket cut in S8**: whether to file the pact follow-up.
+2. **The ticket cut in S8**: answered, the pact's head chef files it.
 3. **Claim 7's two live posts**: the comment on #461 and the review comment
    with its reply on the build's pull request. Each can be struck at sign-off.
 4. **An armed scope**, if S5's build-time check finds one: the build stops
