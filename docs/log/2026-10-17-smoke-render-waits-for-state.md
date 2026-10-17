@@ -29,6 +29,33 @@ unwrapped function as `window.__rawRaf` and the recorder uses it. The recorder
 also catches a throw from `stats()`, because G60 loses contexts on purpose and
 a throw in a frame callback is a page error.
 
+## The throttle findings (spec S6.1)
+
+Two throwaway draft pull requests, one cut from `main` and one from the build,
+each carried the temporary empty `SMOKE_ARGS` commit and a probe commit that
+set the CPU throttling rate and added network latency on every page the gate
+opens through CDP. Both were closed unmerged and their branches deleted.
+
+- **A CPU throttle barely bites here.** At 4x, the first frame took about 2.3
+  times longer to arrive, but the first non-zero fps fell only to 0.61 of the
+  unthrottled reading on `main` and 0.68 on the build, short of the half the
+  spec asks. SwiftShader rasterises outside the throttled main thread, as the
+  spec warned. `main` stayed green at 4x.
+- **CPU 6x plus 400 ms latency turned `main` red at one wait** (G61's held-book
+  page) and left the build green. One wait is not the two the spec asks of a
+  control, and the owner's decision was one stronger try and then no more, so
+  the eight green samples and the planted breaks are the proof.
+- **The planted breaks all ended red with the report printed**: a no-op
+  `pickUp` in 3.7 minutes, a cover that never answers in 42 seconds, a second
+  render callback per frame in 89 seconds. The first of them crashed the run
+  before its report, because `history.back()` with nothing held left the page.
+  The two later pickups in G35 now end the check on a timeout.
+- **K8's margin held**: the longest click-to-pickup under the 4x throttle was
+  21 ms against its 4 s deadline.
+- **The settle costs time on a runner with no GPU.** Unthrottled, G60 took
+  390.5 s on the build against 272.6 s on `main`, because each of its twelve
+  boots now waits for 10 still frames.
+
 ## A full-path local run, before the proof on CI
 
 `pnpm smoke:render` with no flag, on the workstation (GPU), green:
