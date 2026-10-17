@@ -1328,8 +1328,8 @@ export interface WindowStamps {
  * the oldest nightly read was cut short by the cap or by the record's end, and
  * one that does not reach it was not. #462's age reads exactly that.
  *
- * Built on `streakBack` and `countsTowardWindow` rather than a copy of them,
- * for the drift `tally`'s docstring names.
+ * Built on `nightliesIn`, `streakBack` and `countsTowardWindow` rather than a
+ * copy of them, for the drift the first and last of those docstrings name.
  */
 export function windowReadEnough(rows: readonly RunRow[], stamps: WindowStamps): boolean {
   const ordered = nightliesIn(rows).sort((one, other) => one.timestamp - other.timestamp);
@@ -1384,7 +1384,8 @@ export function readWindow(
  * rule prints `29.00`: a floor typed from it is above the score it came from,
  * and `breaches` refuses that very run. So the candidate is checked against
  * `value` directly, a step either way, in the floats `breaches` reads. The
- * owner chose this rule on #464 (q3), and #462's named value uses it too.
+ * owner chose this rule on #464 (q3). #462's named value must use it too: its
+ * spec still names the old rule.
  */
 export function roundDownToHundredths(value: number): number {
   let hundredths = Math.floor(value * 100);
@@ -1729,8 +1730,8 @@ export function renderCapLines(input: CapPrintInput): string[] {
   // first as the second is reading a working pipe as a dead one.
   //
   // It is `emptyWindowNote`'s, not a second copy: both windows are now the same
-  // twenty nightlies, so a second sentence saying it differently would be a
-  // second sentence to keep true.
+  // streak walk, so a second sentence saying it differently would be a second
+  // sentence to keep true.
   const note = emptyWindowNote(input.window, 'counted under this rule');
   return note === undefined ? rows : [note, ...rows];
 }

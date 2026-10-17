@@ -2447,7 +2447,7 @@ describe('windowReadEnough and readWindow', () => {
     );
   });
 
-  it("C4: never stops short of today's minimum, one nightly past the window", () => {
+  it('C4: never stops on fewer than WINDOW_RUNS + 1 nightlies, the old minimum', () => {
     const ended = [...healthy(20, 24), nightly(19, { ok: false })];
     expect(windowReadEnough([...ended, ...healthy(15, 18)], STAMPS)).toBe(false);
     expect(windowReadEnough([...ended, ...healthy(14, 18)], STAMPS)).toBe(true);
@@ -2526,6 +2526,9 @@ describe('windowReadEnough and readWindow', () => {
 
     const daysRead = new Set(read.map((row) => (row.timestamp - BASE) / DAY));
     for (const day of [31, 30, 21, 20]) expect(daysRead.has(day), `day ${String(day)}`).toBe(true);
+    // And it stops there: the nightlies past both breaks are never read.
+    expect(daysRead.has(19)).toBe(false);
+    expect(read).toHaveLength(41);
   });
 
   it('C7: stops at the cap, or at the end of the record', () => {
@@ -2534,6 +2537,10 @@ describe('windowReadEnough and readWindow', () => {
 
     expect(readWindow(names, load, STAMPS, 7)).toHaveLength(7);
     expect(readWindow(names, load, STAMPS, 200)).toHaveLength(30);
+
+    // A name that does not load is skipped, and still counts toward the cap.
+    const unreadable = (name: string) => (name === names[2] ? undefined : load(name));
+    expect(readWindow(names, unreadable, STAMPS, 7)).toHaveLength(6);
   });
 });
 
@@ -2575,5 +2582,13 @@ describe('roundDownToHundredths', () => {
     });
     expect(breaches([{ scope: 'scripts', score: stored }], armed)).toEqual([]);
     expect(roundDownToHundredths(stored)).toBe(28.99);
+
+    // Both corrections, on inputs found by search. 0.29 times 100 floors one
+    // low, so it needs the step up to print itself; 0.16999999999999998 times
+    // 100 rounds up to 17, so it needs the step down to stay under itself.
+    expect(printed(0.29)).toBe('0.29');
+    const under = 0.16999999999999998;
+    expect(printed(under)).toBe('0.16');
+    expect(roundDownToHundredths(under)).toBeLessThanOrEqual(under);
   });
 });

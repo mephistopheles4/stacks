@@ -1,6 +1,6 @@
 # `docs/spec/` — the locked specs
 
-**Seven efforts have produced a locked spec in this folder.** Each is decided end to
+**Eight efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
 share one. **The third, fifth and sixth are waiting for an implementation
 session**; the first two have been built and are kept as written, and the fourth

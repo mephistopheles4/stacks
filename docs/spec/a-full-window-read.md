@@ -2,8 +2,9 @@
 
 The spec for [#464](https://github.com/mephistopheles4/stacks/issues/464).
 Standard tier: planned and built in one session, `spec-464`, on Opus. Written
-on 2026-10-17 for the owner to sign off. **Every decision marked *Claude's
-recommendation* is open until then.** It must land before any bound is armed
+on 2026-10-17 and **signed off by the owner the same day (q4)**, so every
+decision in it, the one marked *Claude's recommendation* included, is settled.
+It must land before any bound is armed
 ([#322](https://github.com/mephistopheles4/stacks/issues/322), Q8 and Q9).
 Revised after the spec pair; the crossing is on
 [#471](https://github.com/mephistopheles4/stacks/pull/471).
@@ -43,7 +44,7 @@ Three faults make that print wrong today, and each one is measured on #464.
    streaks have ended inside the read, or until the record cap stops it.
    `windowRecords` in `deploy.ts` becomes a thin caller.
 2. **The 2026-10-09 entry is corrected to `preserves: true`**, with S6's
-   measurement in its reason, once the owner approves it as a question (S7).
+   measurement in its reason, as the owner approved (q2, S7).
 3. **The armable line never prints a value above the window's lowest**, by the
    rule in S4, which the owner chose (q3).
 
@@ -199,7 +200,7 @@ Test-first, one test per claim, in `scripts/lib/floors.test.ts`.
 | # | Claim | Test |
 | --- | --- | --- |
 | C1 | The read is not enough until both streaks have ended inside it | rows whose `configHash` streak has ended and whose `fixtureHash` streak has not: `false`; add the older row that ends the second: `true` |
-| C2 | Each of the three streak ends counts: a failed nightly, a gap over three days, an unaccepted stamp, the newest nightly included | one `it.each` over the three, each also as the newest nightly |
+| C2 | Each of the three streak ends counts: a failed nightly, a gap over three days, an unaccepted stamp, the newest nightly included | an `it.each` over a failed nightly and an unaccepted stamp, and one test for the gap, which needs two rows to exist; each also as the newest nightly |
 | C3 | An accepted value does not end a streak | a stamp change the chain accepts: `false` until the next unaccepted one |
 | C4 | The read never stops short of today's minimum | both streaks ended within five nightlies: `false` until `WINDOW_RUNS + 1` |
 | C5 | The armable line never prints above the lowest | `44.116` prints `44.11`; an exact `44.11` prints `44.11`; `28.999999999999996` prints a value that, armed as the floor, gives no breach through `breaches` |
@@ -209,8 +210,9 @@ Test-first, one test per claim, in `scripts/lib/floors.test.ts`.
 C6 is the claim the issue's comment asks for: *"given enough nightlies past the
 window, it returns enough rows for a full window of trees, and for #462's age,
 back to the oldest nightly of the unbroken run."* It goes red if the rule stops
-one row early, because the planted record holds nightlies past each break. No
-test is spent beyond one per claim: Tests added stays 0 of 2.
+one row early, because the planted record holds nightlies past each break. C2's
+gap test is the one test beyond one per claim: Tests added is 1 of 2. There is
+no gate row, and the build is one ticket in this pull request.
 
 **Done means** `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build`
 green, with the new tests observed failing first.
@@ -260,9 +262,25 @@ would have shipped alone. The same holds if the owner refuses the correction.
 | --- | --- | --- |
 | Correct the 2026-10-09 entry to `preserves: true` | **decided: yes** (q2, the owner through the head chef, 2026-10-17) | edited in the build |
 | The armable line's rule | **decided: never above the lowest** (q3, the owner through the head chef, 2026-10-17) | built here; #462 adopts it |
-| Sign-off: proceed, fix or kill | the owner, as a question through the head chef | after the two above |
+| Sign-off: proceed, fix or kill | **decided: proceed** (q4, the owner through the head chef, 2026-10-17) | built in #471 |
 | `pnpm trend:sync --rebuild`, once | the owner, by hand | after merge, before the next `pnpm trend:sync` |
 | Whether the added deploy time is acceptable | the owner | at the pull request |
+
+### For #462's builder
+
+#462's spec ([#322](https://github.com/mephistopheles4/stacks/issues/322))
+states two things this build changes. Read these before building it.
+
+1. **The named value `N` is `roundDownToHundredths(L)`, not
+   `⌊L × 100 + 10⁻⁶⌋`.** The owner chose it (q3), because the formula #462
+   §S4 names prints `29.00` for a stored `28.999999999999996`, and a floor typed
+   from that refuses the run it came from.
+2. **An age is a lower bound when a streak reaches the oldest nightly read.**
+   Test that first, before the full-window test: a window ending near the oldest
+   row read is not full, so #462 §S5's wording would print an age the cap cut
+   short as an exact number. The read reaches the end of **both** streaks,
+   `configHash` and `fixtureHash`, not one, and keeps the row that broke each,
+   so the test needs nothing but the rows.
 
 ## S8. Out of scope
 

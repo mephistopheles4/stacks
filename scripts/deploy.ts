@@ -844,7 +844,8 @@ function reportFloors(): void {
  * question.
  *
  * It reads newest-first and stops once both streaks have ended inside the read,
- * keeping the row that broke each, and never before one nightly past a window.
+ * keeping the row that broke each, and never on fewer than `WINDOW_RUNS + 1`
+ * nightlies.
  * ⚠️ **Eleven nightlies was the rule until #464**, written when one nightly was
  * one sample; since ADR-0084 a sample is a distinct tree, and eleven nightlies
  * covered about five. The rule is `readWindow`'s, in `lib/floors.ts`, where a
