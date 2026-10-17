@@ -1,8 +1,8 @@
 # `docs/spec/` — the locked specs
 
-**Nine efforts have produced a locked spec in this folder.** Each is decided end to
+**Ten efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
-share one. **The third, fifth, sixth, eighth and ninth are waiting for an
+share one. **The third, fifth, sixth, eighth, ninth and tenth are waiting for an
 implementation session**; the first two have been built and are kept as written, and the fourth
 is built except its last step.
 
@@ -21,6 +21,7 @@ done when a rendered bookcase is on `main` — not when this folder is complete.
 | `smoke:render` waits for state, not for time | [`smoke-render-waits.md`](smoke-render-waits.md) | **built** ([#456](https://github.com/mephistopheles4/stacks/pull/456)), standard tier, one build session. 46 waits classified into five kinds, each with one rule; eleven stay fixed and two go against the issue's letter, each on the owner's approval (§S7), and no gate row's assertion changes. ⚠️ **Proved on CI by eight green samples with G60 and G61 on the pull request, and three planted breaks run locally; the planted slowness did not make `main` red at two waits, as §S6.1 asked, and the owner accepted the samples** — see [the log](../log/2026-10-17-smoke-render-waits-for-state.md). [#436](https://github.com/mephistopheles4/stacks/issues/436) carries the trail and the override list |
 | The ratchet tightens — a print line that asks, and never acts | [`the-ratchet-tightens.md`](the-ratchet-tightens.md) | **waiting for an implementation session**: standard tier, one ticket, one build session, no gate row. One print clause beside each armed bound the arming rule says could be tighter, naming the value and its age, and doing nothing else ([ADR-0111](../adr/0111-the-ratchet-asks-to-tighten-in-a-print.md)). ⚠️ **Nothing is armed until it merges.** ⚠️ **§S11 carries a measured finding that arming depends on**: the deploy reads too few nightlies to show a full window of trees. [#322](https://github.com/mephistopheles4/stacks/issues/322) carries the trail and §S9 the override list |
 | Retire `scripts/gh-post.ts` | [`retire-gh-post.md`](retire-gh-post.md) | **signed off 2026-10-17, waiting for an implementation session**, standard tier, one build session. The repository stops shipping a posting tool, and `AGENTS.md` names none ([ADR-0115](../adr/0115-the-repo-ships-no-posting-tool.md), superseding 0078). No gate row changes. ⚠️ The build re-stamps G56's `configHash` in the same commit. [#461](https://github.com/mephistopheles4/stacks/issues/461) carries the trail |
+| `smoke:render` closes its main page before the checks that boot their own | [`close-the-main-page.md`](close-the-main-page.md) | **signed off, waiting for an implementation session**, standard tier, one build session. A local probe found G60's 13.5 s to ready per boot is the gate's own main page, left open and drawing beside every later check; closing it after the phone check took four boots from 129.6 s to 32.0 s on 4 pinned cores. No gate row, wait or case order changes. [#397](https://github.com/mephistopheles4/stacks/issues/397) carries the trail |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
 **G30–G35**; the second landed **G36 and G38–G43**, derived from its own landing
