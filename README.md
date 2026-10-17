@@ -29,7 +29,7 @@ the data. Delete this tool and you still have your library.
 
 ## Quick start
 
-You'll need **Node 22+** and **pnpm**. For your own library you'll also need an
+You'll need **Node 24+** and **pnpm**. For your own library you'll also need an
 Obsidian vault (or any folder of Markdown — nothing here requires Obsidian
 itself); to just look at a shelf, you won't.
 

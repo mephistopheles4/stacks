@@ -58,13 +58,13 @@ concurrency:
 
 jobs:
   suite:
-    # package.json declares `engines: node >=22`. Running only the version the
-    # owner happens to have installed would leave that floor as another
-    # documented claim nothing checks.
+    # package.json declares `engines: node >=24`, and this one leg is what
+    # checks that floor. Node 22 was dropped in ADR-0110; the matrix stays so
+    # a second version can return without reshaping the job.
     strategy:
       fail-fast: false
       matrix:
-        node: ['22', '24']
+        node: ['24']
 
     name: suite (node ${{ matrix.node }})
     runs-on: ubuntu-latest
@@ -231,7 +231,7 @@ jobs:
   # about TypeScript source, so the Node version cannot move it — in the matrix
   # the type-aware run costs about 15 seconds and reports everything twice; here
   # it costs about 7.5 and reports each finding once. A Markdown rule break is
-  # the same on Node 22 and Node 24 for the same reason.
+  # the same on every Node version for the same reason.
   #
   # ⚠️ **One job, one red, several tools.** As `docs/spec/static-analysis-and-style.md`
   # §4 grows this job, a failure names `style` rather than the tool that failed.
