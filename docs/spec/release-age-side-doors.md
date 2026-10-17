@@ -6,7 +6,9 @@ follow-up to [#399](https://github.com/mephistopheles4/stacks/issues/399) and
 findings F3 to F6). Standard tier: planned on Opus at medium effort, to be built
 on Sonnet at medium. Written on 2026-10-17 by session `spec-459`. The owner
 settled §S4's decisions the same day: D1 to D3 in a grilling, D4 and D5 after the
-spec lenses' review, and D6 and D7 after the security pair's. The spec as a whole waits for the owner's sign-off.
+spec lenses' review, and D6 and D7 after the security pair's. **Signed off by
+the owner on 2026-10-17 ("Proceed"), relayed by the lead.** It waits for a
+build session.
 
 Every measurement below was taken on pnpm 11.18.0 against a scratch copy of the
 manifests and lockfile on `main` at `4e97f22`. The real lockfile was never
@@ -318,10 +320,12 @@ measurements as the investigation narrative.
 dependency: wrangler is a devDependency so that the deploy's credentialed fetch
 sits under the lockfile's checks. It records the cost: wrangler's 48 packages
 join every install, CI's included, and Dependabot opens wrangler bumps. It
-also says what's in reach of the deploy's tools: the Cloudflare credential,
-where it lives (an environment variable or wrangler's own login store, as
-the owner states), that it never enters the repository, `.env` or CI, and the
-point in D1. It names the telemetry flow and that D7 turns it off for the
+also says what's in reach of the deploy's tools: the Cloudflare credential.
+That credential is **wrangler's own OAuth login (`wrangler login`), stored in
+the user profile**, as the owner stated on 2026-10-17. It is not a token in
+`.env`, and it never enters the repository, `.env` or CI. The ADR also states
+that the login store sits in reach of every tool the deploy runs, which is
+the point in D1. It names the telemetry flow and that D7 turns it off for the
 upload. Take
 the next number free on `main` and on open pull requests at build time. On
 2026-10-17, open pull requests held 0111, 0113 and 0115.
@@ -438,7 +442,7 @@ The owner chose the standard tier over the sensitive route, so the build
 
 ## S9. Needs a human
 
-- **Sign-off**: proceed, fix or kill.
+- **Sign-off**: given on 2026-10-17, "Proceed", relayed by the lead.
 - **Accepting the change and merging it are the owner's.** So is the next real
   deploy, and so is every new trust or age exclude (§S5).
 - **The three trust excludes stay an unrecorded acceptance** until the
@@ -446,8 +450,11 @@ The owner chose the standard tier over the sensitive route, so the build
   part of this work.
 - **`allowBuilds` `workerd: true`**, if a real deploy ever shows that `pages
   deploy` needs workerd's binary (§S5), is the owner's call.
-- **Where the Cloudflare credential lives**, for the ADR (§S5): the owner tells
-  the builder. The builder reads no credential store.
+- **Where the Cloudflare credential lives** is settled: the `wrangler login`
+  OAuth store in the user profile (§S5). The builder reads no credential
+  store, and D6 keeps the user-profile variables in the upload's environment,
+  so wrangler still reaches that login. **C9 can't prove the login is reached
+  without a real deploy**, and the next deploy is the owner's.
 - **The security pair at Test** is an offer the build makes once (§S6). The
   choice of the standard tier over the sensitive route reached this session by
   relay, through the lead, so it stays open until the owner answers it.
