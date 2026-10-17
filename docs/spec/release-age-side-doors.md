@@ -5,8 +5,8 @@ follow-up to [#399](https://github.com/mephistopheles4/stacks/issues/399) and
 [#449](https://github.com/mephistopheles4/stacks/pull/449) (adversarial-lens
 findings F3 to F6). Standard tier: planned on Opus at medium effort, to be built
 on Sonnet at medium. Written on 2026-10-17 by session `spec-459`. The owner
-settled the three decisions in §S4 in a grilling the same day; the spec as a
-whole waits for the owner's sign-off.
+settled §S4's decisions the same day: D1 to D3 in a grilling, and D4 after the
+spec lenses' review. The spec as a whole waits for the owner's sign-off.
 
 Every measurement below was taken on pnpm 11.18.0 against a scratch copy of the
 manifests and lockfile on `main` at `4e97f22`. The real lockfile was never
@@ -31,7 +31,7 @@ severity:
 
 ## S2. Solution
 
-Each door is closed by a setting or an argument, and G67 holds each one, except
+Each door is closed by a setting or a pin, and G67 holds each one, except
 door 4, which is one line of `dependabot.yml`. Two of the issue's premises were
 wrong when measured, and §S3 corrects them, so the build closes the doors that
 actually exist:
@@ -40,7 +40,7 @@ actually exist:
 | --- | --- | --- |
 | 1 | `minimumReleaseAgeIgnoreMissingTime: false`, plus a lockfile rule: every resolution is integrity-only | the key at `false`; every `resolution:` line in `pnpm-lock.yaml` |
 | 2 | `trustPolicy: no-downgrade`, with an exact `trustPolicyExclude` for three entries | the key at `no-downgrade`; the excludes as exact versions; no `trustPolicyIgnoreAfter` |
-| 3 | `--config.minimum-release-age=10080` on the deploy's dlx call | the argument on the call |
+| 3 | wrangler becomes an exact-pinned root devDependency, run through `pnpm exec`, so the lockfile's age and trust checks cover it (D4, which replaces D2) | the exact pin in `package.json`; no `dlx` in `scripts/deploy.ts` |
 | 4 | `cooldown: default-days: 7` on the github-actions entry | nothing (§S6) |
 
 ## S3. What was measured
@@ -101,7 +101,19 @@ refuses as a trust downgrade, runs through `pnpm dlx` and exits 0, even with
 `--config.trust-policy=no-downgrade` passed on the call. So the new settings
 can't break the deploy's fetch. The flip side is that **the credentialed
 wrangler fetch is the one install the stolen-token check doesn't reach**, and
-no argument puts it in reach. §S9 carries that as an open question.
+no argument puts it in reach. D4 closes that gap.
+
+**Door 3, pinned (for D4).** In the scratch copy under §S5's final settings,
+`pnpm add -D -w wrangler@4` resolved **4.149.0**, so the window held. It added
+48 lockfile packages, passed the trust check with no new exclude, and left
+every resolution integrity-only. `--save-exact` still wrote `^4.149.0`, so the
+builder writes the exact version into `package.json` by hand. A frozen install
+then **fails** with `ERR_PNPM_IGNORED_BUILDS` on `workerd@1.20261006.1`'s
+install script. With `allowBuilds` set to `workerd: false`, and also with
+`workerd: true`, the frozen install exits 0, and both `pnpm exec wrangler
+--version` (4.149.0) and `pnpm exec wrangler pages deploy --help` work.
+Whether `pages deploy` itself needs workerd's binary can't be checked without a
+real deploy.
 
 The measurements ran on the Windows 11 workstation. CI installs on
 `ubuntu-latest`, where platform-only optional packages can resolve that a
@@ -127,10 +139,17 @@ a time.
   until someone adds the new exact version. puppeteer-core travels in
   Dependabot's weekly `dev-tooling` group, with typescript, vitest and tsx, so
   that failure holds back the whole group's pull request, not just one bump.
-- **D2, door 3: pass the window on the dlx call**, not just a comment and not
-  an exact pin. The owner said yes in chat. It is one argument, it removes the
-  dependence on the working directory, and it adds no upkeep. An exact pin was
-  declined because Dependabot can't see a version inside a script string.
+- **D2, door 3: pass the window on the dlx call.** The owner said yes in chat.
+  ⚠️ **Replaced by D4**, after the lens review measured that dlx doesn't apply
+  the trust policy. It is kept here so the reasoning stays visible.
+- **D4, door 3: wrangler becomes an exact-pinned root devDependency, run
+  through `pnpm exec`, in this build, with an ADR.** The owner's answer,
+  relayed by the lead: "Pin wrangler, in this build". The credentialed fetch is
+  the one install that matters most, and only the lockfile puts it under the
+  age and trust checks and the lockfile rule. The objection D2 raised, that
+  Dependabot can't see a version inside a script string, no longer applies: a
+  `package.json` pin is exactly what Dependabot bumps, under the npm entry's
+  seven-day cooldown.
 - **D3, door 1: the key, plus the lockfile rule.** The owner's answer, relayed
   by the lead: "Key + lockfile check". The key is defence in depth and costs
   nothing. The lockfile rule closes the door the issue meant.
@@ -180,15 +199,29 @@ with no YAML parser:
   at all fails as well, so a renamed field can't read as a pass. Split lines on
   `\r?\n`, as the workspace reader does, since a Windows checkout may carry
   CRLF.
-- **The deploy rule.** `scripts/deploy.ts` must pass
-  `--config.minimum-release-age=` with a value of 10080 or more in the argument
-  list of its `dlx` upload call, and in the printed `--dry-run` command. The
-  script runs at import, so read its source text, as G67 already reads
+- **The deploy rule.** The root `package.json` must carry `wrangler` in
+  `devDependencies` as one exact version: no range, tag or protocol. And
+  `scripts/deploy.ts` must hold no `dlx`: neither the string `'dlx'` in an
+  argument list nor `pnpm dlx` in its printed `--dry-run` command. The script
+  runs at import, so read its source text, as G67 already reads
   `pnpm-workspace.yaml`. A form the reader doesn't recognise fails closed.
 
-**`scripts/deploy.ts`** adds the argument right after `'dlx'`. Its comment says
-why: the workspace window already applies from the root, and this keeps it
-applying from anywhere.
+**`package.json`** gains `"wrangler": "<exact version>"` in `devDependencies`.
+Take the newest 4.x release that is at least seven days old at build time
+(4.149.0 when this was written), and write it by hand: `pnpm add
+--save-exact` still wrote a caret (§S3). Then let pnpm update the lockfile, and
+check the stop conditions above.
+
+**`pnpm-workspace.yaml`'s `allowBuilds`** gains `workerd: false`, with a
+comment. A frozen install fails without an answer for workerd's install script
+(§S3). `false` runs no new install script and fails safe: if `pages deploy`
+ever turns out to need workerd's binary, the upload fails and nothing is
+published. Changing it to `true` is the remedy, and it is the owner's.
+
+**`scripts/deploy.ts`** drops `WRANGLER = 'wrangler@4'`. The upload runs
+`pnpm exec wrangler pages deploy …`, and the `--dry-run` print shows the same
+command. Its comment says why: the lockfile holds wrangler to the window and
+the trust policy, and dlx holds it to the window only.
 
 **`.github/dependabot.yml`** gives the github-actions entry `cooldown:
 default-days: 7`, with a comment pointing at the npm entry's note, and saying
@@ -197,11 +230,19 @@ that security updates ignore it.
 **Documents, in the same commit as the code:** the G67 row in `docs/gates.md`
 grows to the new rules, and G19 holds the row. `docs/progress.md` gets one
 index line, and `docs/log/2026-10-17-release-age-side-doors.md` gets §S3's
-measurements as the investigation narrative. **No ADR**: each setting is cheap
-to reverse, and the reasoning lives in the comments and the log.
+measurements as the investigation narrative.
+
+**One ADR, for the new dependency**, as AGENTS.md requires for any added
+dependency: wrangler is a devDependency so that the deploy's credentialed fetch
+sits under the lockfile's checks. It records the cost: wrangler's 48 packages
+join every install, CI's included, and Dependabot opens wrangler bumps. Take
+the next number free on `main` and on open pull requests at build time. On
+2026-10-17, open pull requests held 0111, 0113 and 0115. The settings
+themselves need no ADR: each is cheap to reverse, and the reasoning lives in
+the comments and the log.
 
 **Rollback.** The build lands as one squash commit, and reverting it removes
-the keys, the G67 rules, the deploy argument and the cooldown together. No
+the keys, the G67 rules, the wrangler pin and the cooldown together. No
 data is touched. If `main` goes red after the merge, revert first, then
 diagnose.
 
@@ -223,16 +264,18 @@ The acceptance claims, for the build and for the QA pair at Test:
 - **C5.** G67 passes today's lockfile and the same text with CRLF line
   endings. It fails a planted `tarball:` key, a `gitHosted:` key, a `type: git`
   resolution, and a lockfile with no resolutions.
-- **C6.** G67 fails `deploy.ts` with the window argument removed, or set under
-  10080. `--dry-run` prints a command that carries the argument.
+- **C6.** G67 fails a `package.json` whose `wrangler` is a range, a tag or
+  absent, and fails a `deploy.ts` that holds `dlx` in an argument list or in
+  its printed command. `pnpm deploy:site --dry-run` prints a `pnpm exec
+  wrangler` command.
 - **C7.** The github-actions entry in `dependabot.yml` carries `cooldown:
   default-days: 7`. **This one is not gated**, matching the npm entry, which
   nothing gates either. A reviewer checks it by reading the diff.
 - **C8.** The hatch text in both files says to check how a version was
   published, and door 1's comment carries §S3's correction.
 - **C9.** On the Windows workstation, with the final `pnpm-workspace.yaml` and
-  run from the repository root, `pnpm dlx --config.minimum-release-age=10080
-  wrangler@4 --version` exits 0 and prints a version at least seven days old.
+  after a frozen install, `pnpm exec wrangler --version` exits 0 and prints the
+  pinned version, and `pnpm exec wrangler pages deploy --help` exits 0.
   The log records the command, its output and the exit code. **No real deploy
   runs in this work**; the next one is the owner's.
 - **C10.** Each of these exits 0 on the Windows workstation, and CI's `gates`
@@ -260,10 +303,12 @@ The owner chose the standard tier over the sensitive route, so the build
   **No business driver is written** in a spec or under a "Business drivers"
   heading in `AGENTS.md`, so this is flagged. The side taken is also the
   cheaper one to reverse: delete two keys.
-- **Reproducibility against upkeep, at D2.** An exact wrangler pin would make
-  every deploy reproducible, but nothing would move it. The window argument
-  keeps wrangler current, at seven days old or more. The owner took the
-  argument.
+- **Security against install weight, at D4.** Pinning wrangler puts the
+  credentialed fetch under the trust check and makes every deploy
+  reproducible. The cost is 48 more packages in every install, plus Dependabot
+  bumps to review. The owner took security, under the pact's security bar: the
+  fix is due unless its cost is grossly out of proportion. D2's dlx argument
+  was the cheaper option, and it left the trust check out.
 
 ## S8. Out of scope
 
@@ -284,9 +329,8 @@ The owner chose the standard tier over the sensitive route, so the build
 - **The three trust excludes stay an unrecorded acceptance** until the
   repository has a threat model. Creating one is the owner's decision, and not
   part of this work.
-- **The wrangler fetch is outside the trust check** (§S3). Whether to accept
-  that, or bring wrangler into the lockfile as a pinned devDependency, is the
-  owner's call. It is open as this spec's lens review closes.
+- **`allowBuilds` `workerd: true`**, if a real deploy ever shows that `pages
+  deploy` needs workerd's binary (§S5), is the owner's call.
 - **The security pair at Test** is an offer the build makes once (§S6). The
   choice of the standard tier over the sensitive route reached this session by
   relay, through the lead, so it stays open until the owner answers it.
