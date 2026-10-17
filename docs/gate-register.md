@@ -4533,6 +4533,10 @@ existing sweep at no new cost.
   from `<3.3.17` to `<3.3.18` on 2026-08-15 and turned CI red on an **unchanged
   lockfile**. *An advisory id is not a stable statement of scope*, which is a
   category-5 specimen arriving from outside the tree entirely.
+  ⚠️ **Corrected 2026-10-16 (#399): the decline was not the quarantine.**
+  Nothing set a seven-day window then, and with the window at 0 the same named
+  update still leaves 3.3.16. See
+  [the log](log/2026-10-16-the-window-that-was-not-set.md).
 
 **Observed-red line:** **two, and they are different failures.** ⚠️ **The
 distinction is the point of this row's teeth.**
@@ -6610,3 +6614,47 @@ itself never ran red here.
   code points, run the same sweep the tree does. Disposition `gated`.
 - **Decay** — **gated.** Nothing here depends on a tool version: the list
   comes from `git ls-files`, and the bytes are read raw. Disposition `gated`.
+
+### G67 — `release-age`
+
+**Gate:** [`gates/release-age.test.ts`](../gates/release-age.test.ts)
+**Date:** 2026-10-16
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number collided, and that is resolved.** This gate was built as
+G66 while #448 opened with its own G66. #448 merged first, so this one
+renumbered to G67 when main was merged in.
+
+**Observed-red**, twice. The live assertion was written before the key existed
+and went red on the real file: `minimumReleaseAge is not set at the top level`.
+Then `1440` was planted in the real `pnpm-workspace.yaml`, the one-day window
+this row exists to refuse, and it went red again. Both were reverted as separate
+steps. The hatch clause was added after integrity-lens found the exclude list
+unread, and observed red with `minimumReleaseAgeExclude: ['*']`, in block form,
+planted in the real file. pnpm 11.18.0 resolves inside the window under that
+entry, and under a bare package name. The switch clause was added after
+adversarial-lens named `minimumReleaseAgeStrict` and `trustLockfile`. Each was
+measured as a bypass: strict off made pnpm write an exclude entry itself and
+resolve inside the window, and a trusted lockfile took a four-day-old entry
+through a frozen install. The clause was observed red with `trustLockfile: true`
+planted in the real file.
+
+- **Weakening** — **exposed.** The floor is one constant, `FLOOR`, and lowering
+  it is one edit to this file. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The row reads the key pnpm reads, but
+  not pnpm itself: a key pnpm stopped honouring, or a `.npmrc` or environment
+  value that overrode it, would pass. Measured on #399 that pnpm 11.18.0 reads
+  10080 from this file. Disposition `accepted`.
+- **Routing around** — **gated for this file.** A comment, a nested key, a
+  quoted value and a duplicate all fail closed. The hatch,
+  `minimumReleaseAgeExclude`, is read: a wildcard, a bare name, a range, a flow
+  list or a line that is not a list item fails, and so do strict mode off and a
+  trusted lockfile. ⚠️ **Not covered**: `minimumReleaseAgeIgnoreMissingTime`,
+  whose default already lets a package with no publish time through, and an exact
+  entry left in place after its version ages past the window. That entry is
+  harmless, because it exempts one version that no longer needs it. Disposition
+  `gated`.
+- **Vacuous green** — **gated.** An absent key is a red, not a pass over
+  nothing. Disposition `gated`.
+- **Decay** — **exposed on a pnpm major.** If pnpm renames the key, this row
+  stays green over a key nothing reads. Disposition `accepted`.

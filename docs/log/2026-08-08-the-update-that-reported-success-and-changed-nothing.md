@@ -1,5 +1,8 @@
 # 2026-08-08 — the update that reported success and changed nothing
 
+> ⚠️ **The diagnosis below is wrong; see
+> [2026-10-16 — the window that was not set](./2026-10-16-the-window-that-was-not-set.md).**
+
 `main` had been red since G26 landed, on the `audit` job rather than on anything
 in the code: `js-yaml` 4.3.0 (GHSA-5p4m-2wfm-xmqj, via astro) and `nanoid` 3.3.16
 (GHSA-2v37-7h3g-55p8, via vite>postcss), both high. It also blocked both open

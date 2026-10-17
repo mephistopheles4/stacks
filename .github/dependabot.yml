@@ -32,6 +32,14 @@ updates:
     # and a review budget to match; a flood of dependency PRs is how a merge
     # gate becomes something you click through without reading.
     open-pull-requests-limit: 3
+    # pnpm-workspace.yaml sets `minimumReleaseAge` to seven days, and a frozen
+    # install fails on any lockfile entry younger than that. A bump to a release
+    # under seven days old would sit red until it aged, so Dependabot waits the
+    # same seven days. ⚠️ **Security updates ignore cooldown**: a security bump
+    # inside the window still fails CI until a `minimumReleaseAgeExclude` entry
+    # names it, which is the escape hatch that file documents (#399).
+    cooldown:
+      default-days: 7
     groups:
       # Patch and minor bumps for the toolchain travel together — they either
       # all pass the gates or the group is worth looking at as a whole.
