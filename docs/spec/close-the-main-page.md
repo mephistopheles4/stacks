@@ -4,7 +4,7 @@ The spec for [#397](https://github.com/mephistopheles4/stacks/issues/397).
 Standard tier: planned on Opus at medium effort, to be built on Sonnet at
 medium. Written on 2026-10-17 by session `spec-397` from a grilling the owner
 answered, an eagle-eye box and a local measurement. **Nothing here is built.**
-The owner signs it off: proceed, fix or kill.
+**Signed off by the owner on 2026-10-17 (proceed), relayed by the lead.**
 
 Every line number is on `main` at `4e97f22`. Each place is also named by its
 function, so a rebase can find it again.
@@ -314,7 +314,7 @@ Each line is a decision, who took it, and what changes if it is reversed.
 
 ## S13. Needs a human
 
-- **Sign-off**: proceed, fix or kill.
+- **Sign-off**: given, proceed, on 2026-10-17.
 - **Merging the revert pull request**, if §S6.2 opens one.
 - **Closing #397.** The build's PR can close it, or leave it open for
   `clickToPickUp` and the rest. That is the owner's call at merge.
