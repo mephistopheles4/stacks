@@ -58,7 +58,7 @@ export function pinIn(manifest: string | undefined): string | undefined {
 }
 
 /** The names wrangler itself reads, which the upload keeps even from `.env`. */
-const WRANGLER_NAMES = /^(?:CLOUDFLARE_|WRANGLER_)/;
+const WRANGLER_NAMES = /^(?:CLOUDFLARE_|WRANGLER_)/i;
 
 /**
  * The whole environment the upload's child process gets.
@@ -75,6 +75,10 @@ const WRANGLER_NAMES = /^(?:CLOUDFLARE_|WRANGLER_)/;
  */
 export function uploadEnv(shell: NodeJS.ProcessEnv, loaded: readonly string[]): NodeJS.ProcessEnv {
   const dropped = new Set(loaded.filter((name) => !WRANGLER_NAMES.test(name)));
-  const kept = Object.entries(shell).filter(([name]) => !dropped.has(name));
+  // Case-insensitive, since Windows environment names are: a `Wrangler_Send_Metrics`
+  // left beside the override could be the one the child reads.
+  const kept = Object.entries(shell).filter(
+    ([name]) => !dropped.has(name) && name.toUpperCase() !== 'WRANGLER_SEND_METRICS',
+  );
   return { ...Object.fromEntries(kept), WRANGLER_SEND_METRICS: 'false' };
 }

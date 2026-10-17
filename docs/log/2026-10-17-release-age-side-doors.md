@@ -99,6 +99,10 @@ GitHub's Dependabot options reference supports `cooldown` `default-days` for the
 `github-actions` ecosystem, and says cooldown does not apply to security updates.
 The entry gets `default-days: 7`. Not gated, matching the npm entry.
 
+## Claim labels
+
+C4, C6, C9, C13 and C14 in this log are the acceptance claims in §S6 of the spec.
+
 ## What the build changed beyond the spec's text
 
 - `loadEnv` returns the names it set; `runShell` can take a whole environment.
@@ -107,7 +111,7 @@ The entry gets `default-days: 7`. Not gated, matching the npm entry.
 - **The Thoughts parser's resolved closure moved**, as a side effect of the
   wrangler pin: `debug`'s optional peer under micromark now links
   `supports-color@10.2.2` (published 2025-09) instead of 7.2.0, and `has-flag`
-  drops out. N67's list was updated on the owner's word (q1). No micromark, debug
+  drops out. N67's list was updated on the owner's word. No micromark, debug
   or parser code changed, and the default build never loads `debug`. It departs
   from the letter of ADR-0107, which wants a closure move as its own change.
 - C6's dry-run, against a one-note scratch vault (the fixture vault trips the

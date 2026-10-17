@@ -205,6 +205,9 @@ function fail(message: string): never {
  * failing command is a refusal like any other; what differs is whether the
  * command runs at all, and that is the caller's question rather than this
  * function's.
+ *
+ * `wholeEnv`, when given, replaces the child's environment and `env` is then
+ * ignored: only the upload passes it (`uploadEnv`).
  */
 function run(
   command: string,
@@ -1223,7 +1226,9 @@ if (wranglerRefusal !== undefined) fail(wranglerRefusal);
 
 if (dryRun) {
   console.log(`\n--dry-run: not uploading. ${DIST} is ready.`);
-  console.log(`checked: the installed wrangler is ${wranglerPin ?? 'unpinned'}, its pin`);
+  console.log(
+    `checked: the installed wrangler is ${wranglerInstalled ?? 'missing'}, equal to its pin`,
+  );
   console.log(
     `to publish: pnpm exec wrangler pages deploy packages/site/dist --project-name ${project}`,
   );

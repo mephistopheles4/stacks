@@ -48,7 +48,7 @@ verifyDepsBeforeRun: warn
 # seven days, but **security updates ignore cooldown**, so a security bump inside
 # the window fails CI until someone adds that exclude entry.
 #
-# ⚠️ **Before excluding a version, check how it was published.** A token publish
+# ⚠️ **Before using the hatch above, check how the version was published.** A token publish
 # where earlier releases had provenance is the stolen-token signature, and an
 # exclude is the one place this file lets a version in unreviewed. The trust
 # policy below stays on for an excluded version (measured: naming chromium-bidi

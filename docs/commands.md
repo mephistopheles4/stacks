@@ -143,8 +143,17 @@ otherwise run some other wrangler. Cleared by `pnpm install`; no flag clears it.
 Google Books key, the vault path and every other key `loadEnv` set are left out,
 except names starting `CLOUDFLARE_` or `WRANGLER_`, and wrangler's usage
 telemetry is switched off for the call. The Cloudflare credential is wrangler's
-own `wrangler login`, stored in the user profile, which the shell's profile
-variables still reach.
+own `wrangler login`, stored in the user profile, which the shell's
+user-profile variables (`USERPROFILE` or `HOME`) still reach.
+
+**After a wrangler bump merges, run `pnpm install` before the next deploy**: the
+refusal above is that reminder, and it fires after the four gates, so run the
+install first and save the minutes. **The first deploy after this change is also
+the first proof** that wrangler reaches its login through that environment and
+that `workerd: false` is enough for `pages deploy`; nothing short of a real
+deploy shows either. Both fail safe, since a failing upload publishes nothing.
+A variable that only `.env` supplies, a proxy setting say, no longer reaches the
+upload unless it is a `CLOUDFLARE_` or `WRANGLER_` name.
 
 ## `pnpm deploy:site` — what it checks after the upload
 

@@ -30,8 +30,19 @@ seven-day cooldown.
 
 ## What it costs
 
-- wrangler adds 48 packages to every install, CI's included.
-- Dependabot opens wrangler bumps for review.
+- wrangler adds 27 lockfile packages to every install, CI's included (the spec's
+  scratch measurement said 48), and to the `audit` job's scan, which fails on a
+  high advisory anywhere in the lockfile.
+- Dependabot opens wrangler bumps for review, one pull request each, outside the
+  `dev-tooling` group. After one merges, the deploy refuses until `pnpm install`
+  brings `node_modules` up to the new pin.
+- **The Thoughts parser's resolved closure moved.** The wrangler pin put a second
+  `supports-color` in the tree, so `debug`'s optional peer under micromark now
+  links `supports-color@10.2.2` (published 2025-09) instead of 7.2.0, and
+  `has-flag` drops out. [ADR-0107](0107-thoughts-are-read-by-a-commonmark-parser.md)
+  wants a closure move as its own change on the security route; this one is a
+  side effect of the pin, changes no parser code, and the default build never
+  loads `debug`. The owner approved updating the closure list in this change.
 - `workerd: false` runs workerd's install script for nobody. If `wrangler pages
   deploy` turns out to need workerd's binary, the upload fails and nothing is
   published; changing the answer to `true` is the owner's call. This could not be
@@ -41,8 +52,8 @@ seven-day cooldown.
 
 The Cloudflare credential is wrangler's own OAuth login (`wrangler login`), stored
 in the user profile. It is not a token in `.env`, and it never enters the
-repository, `.env` or CI. Every tool the deploy runs can reach that login store,
-and that is the point of the trust policy being on for them: `chromium-bidi` runs
+repository, `.env` or CI. Any package the deploy runs could read that login store,
+so the trust policy is on for all of them: `chromium-bidi` runs
 inside the deploy's own `smoke:render` gate, is published by token where its
 earlier releases carried provenance, and is let through by an exact
 `trustPolicyExclude` entry on the owner's word (G67 ties that entry to the version
@@ -53,7 +64,9 @@ earlier releases carried provenance, and is let through by an exact
 wrangler sends usage data to Cloudflare by default, and nothing approved that flow.
 It is off for the upload (`WRANGLER_SEND_METRICS=false`, set after every other key
 so neither the shell nor `.env` can turn it back on). Running `wrangler` by hand
-outside the deploy is unaffected.
+outside the deploy is unaffected, and the switch covers usage reporting only:
+wrangler's own update check against the npm registry is a separate call it does
+not touch.
 
 ## wrangler's successor
 

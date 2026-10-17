@@ -11,7 +11,8 @@
  * name only exact versions: pnpm takes `'*'` there as every package, so one
  * wildcard would switch the window off with the key still at 10080.
  *
- * #459 shut the four doors #449's review left open, each held here:
+ * #459 shut the four doors #449's review left open; the first three are held
+ * here and the fourth is a diff check:
  *
  * 1. `minimumReleaseAgeIgnoreMissingTime: false`, required, and a lockfile
  *    whose every resolution is integrity-only. ⚠️ The key does **not** stop a
@@ -240,6 +241,10 @@ const chromiumBidiProblems = (text: string, lock: string): string[] => {
       section = line;
       continue;
     }
+    // A workspace package depending on it directly sits under `importers:`.
+    if (section.startsWith('importers:') && /^ {6}'?chromium-bidi'?:/.test(line)) {
+      dependents.push({ snapshot: 'an importer', version: '' });
+    }
     if (!section.startsWith('snapshots:')) continue;
     if (/^ {2}[^\s#]/.test(line)) snapshot = bareKey(line.trim());
     const dep = /^ {6}'?chromium-bidi'?:\s*(\S+)/.exec(line);
@@ -291,6 +296,10 @@ const deployProblems = (source: string): string[] => {
   const listed = (code.match(/(?<='exec',\s*)'wrangler'/g) ?? []).length;
   if (named !== 1 || listed !== 1) {
     problems.push("deploy.ts runs wrangler other than as 'exec', 'wrangler' in one upload call");
+  }
+  // The two lines that make the form safe: the refusal, and the narrowed env.
+  for (const line of ['fail(wranglerRefusal)', 'uploadEnv(process.env, loadedEnvKeys)']) {
+    if (!source.includes(line)) problems.push(`deploy.ts no longer holds ${line}`);
   }
   if ((source.match(/to publish: pnpm exec wrangler /g) ?? []).length !== 1) {
     problems.push('deploy.ts does not print exactly one `pnpm exec wrangler` command');
@@ -412,6 +421,12 @@ describe('G67 — the release-age window is stated, at seven days or more', () =
     ).toBeUndefined();
     expect(pinProblems(read('package.json'))).toEqual([]);
     expect(deployProblems(read('scripts/deploy.ts'))).toEqual([]);
+    // C3's first half: the list is these three and nothing else.
+    expect(readList(read('pnpm-workspace.yaml'), TRUST_EXCLUDE).items).toEqual([
+      'semver@6.3.1',
+      'chokidar@4.0.3',
+      'chromium-bidi@157.0.8090-0',
+    ]);
   });
 
   it('passes seven days exactly, and longer', () => {
@@ -603,6 +618,20 @@ describe('G67 — door 2: the trust policy is on, and its excludes are held', ()
       );
     }
     expect(problemOf(bare(age, missingIgnore, '# trustPolicy: no-downgrade'))).toMatch(/not set/);
+    // A later line would win in most YAML readers, so a second one fails.
+    expect(
+      problemOf(bare(age, missingIgnore, 'trustPolicy: no-downgrade', 'trustPolicy: off')),
+    ).toMatch(/trustPolicy is set 2 times/);
+    expect(
+      problemOf(
+        bare(
+          age,
+          missingIgnore,
+          'trustPolicy: no-downgrade',
+          `${missingIgnore.replace('false', 'true')}`,
+        ),
+      ),
+    ).toMatch(/minimumReleaseAgeIgnoreMissingTime is set 2 times/);
   });
 
   it('holds trustPolicyExclude to exact versions, and refuses trustPolicyIgnoreAfter (C3)', () => {
@@ -652,6 +681,14 @@ describe('G67 — door 2: the trust policy is on, and its excludes are held', ()
       /other@1.0.0 depends on chromium-bidi/,
     );
 
+    const direct = lock.replace(
+      '        version: 25.13.0\n',
+      '        version: 25.13.0\n      chromium-bidi:\n        specifier: 157.0.8090-0\n        version: 157.0.8090-0\n',
+    );
+    expect(problemOf(workspace(age, ...TRUSTED), { lock: direct })).toMatch(
+      /an importer depends on chromium-bidi/,
+    );
+
     for (const line of ['configDependencies:', 'pnpmfile: ./pnpmfile.cjs', "'pnpmfile': x"]) {
       expect(problemOf(workspace(age, line)), line).toMatch(/changes or narrows/);
     }
@@ -664,11 +701,12 @@ describe('G67 — door 3: wrangler is an exact pin, run through pnpm exec', () =
   const manifest = (wrangler: string | undefined): string =>
     JSON.stringify({ devDependencies: wrangler === undefined ? {} : { wrangler } });
   const upload = [
+    'if (wranglerRefusal !== undefined) fail(wranglerRefusal);',
     "run('pnpm', [",
     "  'exec',",
     "  'wrangler',",
     "  'pages',",
-    ']);',
+    '], {}, uploadEnv(process.env, loadedEnvKeys));',
     'console.log(`to publish: pnpm exec wrangler pages deploy ${dist}`);',
   ].join('\n');
 
