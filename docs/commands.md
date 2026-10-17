@@ -124,6 +124,45 @@ without being able to deploy
 ([#321](https://github.com/mephistopheles4/stacks/issues/321)). Typed by hand it
 is a harmless look at the branch guard, `SITE_URL` and the trend record.
 
+## `pnpm deploy:site` — the upload, and what it refuses
+
+**The upload runs the wrangler the lockfile holds**, through `pnpm exec`, not a
+version fetched at deploy time. wrangler is an exact-pinned root devDependency, so
+the lockfile's release-age window and trust policy cover the one install that
+carries the Cloudflare credential, and G67 (`release-age`) holds the pin and
+holds `scripts/deploy.ts` to that one form
+([ADR-0116](adr/0116-wrangler-is-a-pinned-dev-dependency.md)).
+
+**It refuses before the upload** unless the version in the repository's own
+`node_modules/wrangler/package.json` equals the pin in `package.json`, because
+`pnpm exec` puts `node_modules/.bin` first on the PATH and a stale install would
+otherwise run some other wrangler. Cleared by `pnpm install`; no flag clears it.
+`--dry-run` runs it and prints the version it checked.
+
+**The upload's environment is the shell's, less what `.env` supplied.** The
+Google Books key, the vault path and every other key `loadEnv` set are left out,
+except names starting `CLOUDFLARE_` or `WRANGLER_`, and wrangler's usage
+telemetry is switched off for the call. The Cloudflare credential is wrangler's
+own `wrangler login`, stored in the user profile, which the shell's
+user-profile variables (`USERPROFILE` or `HOME`) still reach.
+
+⚠️ **That narrowing covers the inherited environment only.** wrangler itself
+loads the repository root's `.env` and `.env.local` when it starts, and puts them
+back in its own environment, so where a `.env` sits at the root the Google Books
+key and the vault path still reach wrangler and its packages. Measured by reading
+the pinned wrangler's start-up code, not by a deploy. The owner accepted this
+([#459](https://github.com/mephistopheles4/stacks/issues/459)); the repository has
+no threat model, so it is recorded nowhere else.
+
+**After a wrangler bump merges, run `pnpm install` before the next deploy**: the
+refusal above is that reminder, and it fires after the four gates, so run the
+install first and save the minutes. **The first deploy after this change is also
+the first proof** that wrangler reaches its login through that environment and
+that `workerd: false` is enough for `pages deploy`; nothing short of a real
+deploy shows either. Both fail safe, since a failing upload publishes nothing.
+A variable that only `.env` supplies, a proxy setting say, no longer reaches the
+upload unless it is a `CLOUDFLARE_` or `WRANGLER_` name.
+
 ## `pnpm deploy:site` — what it checks after the upload
 
 **After the upload it asks the live site which build it is serving**, and then

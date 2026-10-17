@@ -196,8 +196,9 @@ describe('N65: the build that loads', { timeout: SPAWN_BUDGET_MS }, () => {
  * reached by caret ranges shared with `markdownlint`. A move of any one is its
  * own change, on the security route (ADR-0107): update this list in it, with
  * the named cases and G2 green and the new version at least seven days old.
- * `supports-color` and `has-flag` come through `debug`'s optional peer, which
- * pnpm links because the workspace holds it.
+ * `supports-color` comes through `debug`'s optional peer, which pnpm links
+ * because the workspace holds it. It moved from 7.2.0 (with `has-flag`) to
+ * 10.2.2 when wrangler joined the tree (#459); no parser code moved with it.
  */
 const CLOSURE = [
   '@types/debug@4.1.13',
@@ -207,7 +208,6 @@ const CLOSURE = [
   'decode-named-character-reference@1.3.0',
   'dequal@2.0.3',
   'devlop@1.1.0',
-  'has-flag@4.0.0',
   'micromark-core-commonmark@2.0.3',
   'micromark-extension-gfm-footnote@2.1.0',
   'micromark-extension-gfm-table@2.1.1',
@@ -231,7 +231,7 @@ const CLOSURE = [
   'micromark-util-types@2.0.2',
   'micromark@4.0.2',
   'ms@2.1.3',
-  'supports-color@7.2.0',
+  'supports-color@10.2.2',
 ];
 
 /** The four pins, as `packages/core/package.json` names them. */

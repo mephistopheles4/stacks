@@ -7,8 +7,13 @@ findings F3 to F6). Standard tier: planned on Opus at medium effort, to be built
 on Sonnet at medium. Written on 2026-10-17 by session `spec-459`. The owner
 settled §S4's decisions the same day: D1 to D3 in a grilling, D4 and D5 after the
 spec lenses' review, and D6 and D7 after the security pair's. **Signed off by
-the owner on 2026-10-17 ("Proceed"), relayed by the lead.** It waits for a
-build session.
+the owner on 2026-10-17 ("Proceed"), relayed by the lead.** **Built in
+[#477](https://github.com/mephistopheles4/stacks/pull/477)**, which departs from
+the text in three places, each recorded in the pull request and the log: the
+Thoughts parser's resolved closure moved (§S5 did not foresee it), the install
+adds 27 package keys to the lockfile (§S3 says 48, measured on a scratch copy), and the
+wrangler version refusal reads its two manifests in `deploy.ts` and compares
+them in `scripts/lib/upload.ts`.
 
 Every measurement below was taken on pnpm 11.18.0 against a scratch copy of the
 manifests and lockfile on `main` at `4e97f22`. The real lockfile was never
@@ -448,6 +453,11 @@ The owner chose the standard tier over the sensitive route, so the build
 - Proving whether pnpm config from environment variables or the command line
   overrides `pnpm-workspace.yaml`. Pull-request review of the workflows is the
   control for that.
+- A gate on a registry setting: a `registry` or `registries` key in
+  `pnpm-workspace.yaml` or a root `.npmrc` could point installs at a registry that
+  forges publish times and provenance. The lockfile's integrity hashes pin every
+  package already locked, and such a key would arrive in a pull request diff the
+  owner reviews. Decided with the owner during the build of #477 (a lens finding).
 - A gate on `dependabot.yml`'s cooldowns, for either entry.
 - Investigating chromium-bidi's change of publisher beyond the evidence in §S3.
 

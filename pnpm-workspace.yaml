@@ -8,6 +8,13 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
+  # workerd: wrangler (a root devDependency, #459) depends on it, and a frozen
+  # install fails with ERR_PNPM_IGNORED_BUILDS without an answer for its install
+  # script. `false` runs no new install script and fails safe: if `wrangler pages
+  # deploy` ever turns out to need workerd's binary, the upload fails and nothing
+  # is published. `pnpm exec wrangler --version` and `pages deploy --help` were
+  # measured working with it. Changing it to `true` is the owner's call.
+  workerd: false
 
 # pnpm 11 defaults this to `install`, which makes `pnpm test` try to reinstall
 # node_modules first — and that aborts outright with
@@ -40,7 +47,67 @@ verifyDepsBeforeRun: warn
 # each switches the window off with this key still at 10080. Dependabot's `cooldown` holds its version bumps to the same
 # seven days, but **security updates ignore cooldown**, so a security bump inside
 # the window fails CI until someone adds that exclude entry.
+#
+# ⚠️ **Before using the hatch above, check how the version was published.** A token publish
+# where earlier releases had provenance is the stolen-token signature, and an
+# exclude is the one place this file lets a version in unreviewed. The trust
+# policy below stays on for an excluded version (measured: naming chromium-bidi
+# here does not skip it), so a failing install is the signal to look, not to add
+# a trust exclude by reflex. The limit: the trust policy only fails a version when
+# an earlier release had stronger evidence. For a package that never published
+# with provenance, a passing install says nothing about who published it, and the
+# window is the only control this hatch removes.
 minimumReleaseAge: 10080
+
+# ⚠️ **This does not do what the issue for it (#459) assumed.** Measured on pnpm
+# 11.18.0 with the key at `false` and read back by `pnpm config get`: a `github:`
+# dependency and a codeload.github.com tarball dependency both still installed.
+# The key does not stop git or tarball dependencies. That door is closed by G67's
+# lockfile rule instead: every `resolution:` line in `pnpm-lock.yaml` must be
+# `{integrity: sha512-…}` and nothing else. Kept at `false` as defence in depth,
+# and because pnpm's docs say it also governs the trust policy below, making it
+# fail on a package the registry cannot date rather than skip it. That clause was
+# read in the docs and not measured. G67 requires the key, so do not drop it as
+# dead.
+minimumReleaseAgeIgnoreMissingTime: false
+
+# A stolen-token publish can arrive as the security fix the hatch above exists
+# for, and this is the one control that checks a version let in through it
+# (measured: the trust check still runs for a version named in
+# `minimumReleaseAgeExclude`). `no-downgrade` fails an install of a version
+# published with weaker evidence than an earlier release of the same package.
+#
+# ⚠️ **Never add or change an entry below without the owner's word.** Each one
+# accepts a possible package takeover on the owner's say-so, and the repository
+# has no threat model to record that acceptance in. Stop conditions, for every
+# later bump: an install that fails on any entry other than these three exact
+# versions; a lockfile resolution that is not integrity-only (G67); a new version
+# of a package `allowBuilds` admits by name, whose install script would run with
+# no new answer.
+#
+# - semver@6.3.1 (published 2023-07-10), an old line published after later lines
+#   carried provenance. Remove when the lockfile stops holding this version.
+# - chokidar@4.0.3 (published 2024-12-18), the same shape. Remove likewise.
+# - chromium-bidi@157.0.8090-0 (published 2026-10-07): 19 of its 177 versions
+#   were trusted-published from GitHub Actions, the last being 17.0.2 on
+#   2026-07-06, and every 157.x and 158.x release since was token-published. It
+#   arrives through puppeteer-core@25.13.0, which is published with provenance
+#   and pins exactly this version, and it runs inside the deploy's own
+#   `smoke:render` gate. G67 holds this entry to the version puppeteer-core's
+#   lockfile snapshot depends on. On each puppeteer-core bump that moves it, this
+#   entry moves to the new exact version, **only on the owner's word and with the
+#   evidence of who published it**; a `dev-tooling` Dependabot group pull request
+#   that moves it goes red on ERR_PNPM_TRUST_DOWNGRADE until then. If
+#   chromium-bidi publishes with provenance again, the entry comes out.
+#
+# Exact versions only, never a pattern: a bare name or `'*'` exempts every
+# version (G67). `trustPolicyIgnoreAfter` is refused too, since any value narrows
+# the check and it clears chromium-bidi in no case.
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - semver@6.3.1
+  - chokidar@4.0.3
+  - chromium-bidi@157.0.8090-0
 
 # GHSA-2v37-7h3g-55p8, high: nanoid <3.3.18 loops indefinitely on a custom
 # generator. It arrives four ways, all of them vite>postcss, and postcss@8.5.25
