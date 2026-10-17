@@ -412,6 +412,14 @@ contains what the assertion looks for. The specific failure most of this repo's
 gate design is arranged against.
 *Avoid*: false positive, flaky, silent pass.
 
+**Tighten**:
+Move a ratchet bound toward *better* — a mutation floor rises, a complexity cap
+falls. One word for two directions, because the two families move opposite ways.
+A bound is **tightenable** when the evidence that armed it now says it could be
+tighter.
+*Avoid*: lower, raise (each means the opposite thing for the other family),
+ratchet up.
+
 **Survivor**:
 A mutant the suite did not detect: `Survived` or `NoCoverage`, and nothing
 else. The job summary and the survivor record use this one meaning, so they
