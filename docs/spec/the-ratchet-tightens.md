@@ -265,7 +265,8 @@ tracked file, because nothing is armed before this merges (Q0).
 ## S9. Override list — the owner's decisions
 
 Every row was put to the owner one question at a time, each with a
-recommendation, and answered in the session's own chat. The coupled rows were
+recommendation, and answered in the session's own chat — from q12 on, through
+the lead session's question cards. The coupled rows were
 also laid out as a morphological box, which is not in this checkout.
 
 | # | Question | Answer |
@@ -282,6 +283,7 @@ also laid out as a morphological box, which is not in this checkout.
 | Q8 | The deploy's short read and the 2026-10-09 renovation | One follow-up, [#464](https://github.com/mephistopheles4/stacks/issues/464), landing before any arming |
 | Q9 | Arm on the preserved windows, leaving slack? | Yes: arm every bound at the rule's value once this merges and #464 lands, and tighten when the clause asks |
 | Q10 | Rescore old commits on CI, or count merge runs, to fill windows faster? | Neither; §10 of `the-ratchet.md` stays as written |
+| q12 | Where the armable line's round-down fix goes | Into #464, which already gates arming |
 
 Taken by the spec author as following from those answers, and open to the
 owner's override at sign-off: rounding the named floor **down** (§S4); the
@@ -311,8 +313,8 @@ avoids.** `unarmedState` prints `lowest.toFixed(2)`, so a window lowest of
 `44.116` prints `44.12`. Arming at the printed value sets a floor above a score
 the window holds, and `breaches` — strictly under — refuses the first deploy on
 the very run the floor came from, which its own docstring names as the thing it
-must not do. **It matters at once**, because Q9 arms every bound from that line.
-Where it is fixed is open in §S12.
+must not do. **It matters at once**, because Q9 arms every bound from that line,
+so the owner put the fix into #464, which lands before arming (q12).
 
 ⚠️ **The deploy reads too few nightlies to fill a window of trees.**
 `windowRecords` in `deploy.ts` stops one nightly past `WINDOW_RUNS`, a bound
@@ -373,7 +375,6 @@ the row.
 | What | From whom | When |
 | --- | --- | --- |
 | Sign-off on this spec: proceed, fix or kill, including §S9's author-taken defaults | the owner | before the build |
-| Where the armable line's rounding is fixed | the owner | before arming |
 | #464 merged | the owner | before arming, and before this build |
 | Arming every bound at the rule's value (Q9) | the owner, by hand | after this spec merges and #464 lands |
 | The two real-record dry runs (§S8) | the owner, on their machine | at build time, and after arming |
