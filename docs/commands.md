@@ -1011,7 +1011,7 @@ carry to a visitor's phone, and nothing in a URL can start this.
 **Not a `pnpm` script, and that is deliberate.** It needs adb and a phone with
 USB debugging on, which no CI runner has and [`CONTRIBUTING.md`](../CONTRIBUTING.md)
 cannot ask a contributor for — and a `pnpm` script is one G14 would pin in
-`AGENTS.md` while nothing ever ran it. `scripts/gh-post.ts` set the precedent.
+`AGENTS.md` while nothing ever ran it. The retired `gh-post.ts` set a precedent.
 
 **Before it runs:** adb on the `PATH`, or `--adb <path>`; the phone plugged in
 with USB debugging on and the computer authorised; Chrome on the phone; and a
