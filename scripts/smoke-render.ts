@@ -227,6 +227,24 @@ async function main(): Promise<void> {
       const pickup = await timed('G35 pickup', () => checkPickup(page));
       const viewer = await timed('examining', () => checkViewer(page));
       const phone = await timed('page at 375x812', () => checkPhone(page));
+      // The phone check is the last use of this page, so close it. An open page
+      // keeps drawing the shelf, and every browser context shares one GPU process
+      // (software, under SwiftShader on CI), so each later boot and frame waits
+      // behind it: 13.5 s to ready per G60 boot on CI against 0.7 s with it closed
+      // in a local 4-core probe (#397). A check that needs this page must come
+      // above this line. Listeners go first, so a request in flight when it closes
+      // cannot land in `errors` as an aborted one.
+      page.removeAllListeners();
+      try {
+        await page.close();
+      } catch (error) {
+        // CI's first run of this line threw this. Why the target was already gone
+        // is not known (#397), and the error alone does not prove the page closed:
+        // puppeteer may hold a stale id for a page that is still open. So say so in
+        // the log, where C5's reading can see it; anything else is still a failure.
+        if (!/No target with given id/.test(String(error))) throw error;
+        console.log('main page: close() found no target, cause not established (#397)');
+      }
       const spread = await timed('open spread', () => checkSpread(browser, origin));
       const lit = await timed('G59 large-library-lit', () =>
         checkLargeLibraryLit(browser, origin, large.origin),
@@ -2054,6 +2072,12 @@ async function visit(page: Page, origin: string, path: string): Promise<void> {
  */
 const VISITS = { count: 0, toReady: 0, toSettled: 0 };
 
+/**
+ * The same two times for G61's boots, which `measureSampling` makes without
+ * `visit()`. Its wait for steady sampling frames comes after and is not counted.
+ */
+const SAMPLING_BOOTS = { count: 0, toReady: 0, toSettled: 0 };
+
 async function readState(page: Page): Promise<PageState> {
   return (await page.evaluate(READ_STATE)) as PageState;
 }
@@ -2306,8 +2330,10 @@ async function measureSampling(
     // into a vacuous verdict — so the page under measurement is the one in front.
     await page.bringToFront();
     const settle = watchSettle(page);
+    const started = performance.now();
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    const ready = performance.now();
     // The woodwork's sheets arrive after `ready`, and the bookcase changes program as
     // each one lands. The sampling settle below counts from the last change it has
     // seen, so it cannot wait out a sheet still in flight: until the second one
@@ -2318,6 +2344,9 @@ async function measureSampling(
     // settles is recorded among the page's errors, and still judged on the frames
     // the sampling settle requires.
     if (!(await settle())) errors.push('the page never settled: textures or image requests moved');
+    SAMPLING_BOOTS.count += 1;
+    SAMPLING_BOOTS.toReady += (ready - started) / 1000;
+    SAMPLING_BOOTS.toSettled += (performance.now() - ready) / 1000;
     if (hold) {
       await page.evaluate('window.__shelf.pickUp(3)');
       if (!(await until(page, HELD, 'the book held for this page to come to rest'))) {
@@ -2666,6 +2695,13 @@ function report(result: {
     console.log(
       `  of which visit() boots: ${String(VISITS.count)}, ` +
         `${VISITS.toReady.toFixed(1)} s to ready + ${VISITS.toSettled.toFixed(1)} s to settled`,
+    );
+  }
+  if (SAMPLING_BOOTS.count > 0) {
+    console.log(
+      `  of which G61 boots: ${String(SAMPLING_BOOTS.count)}, ` +
+        `${SAMPLING_BOOTS.toReady.toFixed(1)} s to ready + ` +
+        `${SAMPLING_BOOTS.toSettled.toFixed(1)} s to settled`,
     );
   }
   console.log(`screenshot        ${OUTPUT}`);
