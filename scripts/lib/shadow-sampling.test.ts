@@ -16,6 +16,7 @@ import {
   judgeSampling,
   MIN_STEADY_FRAMES,
   steadyFrames,
+  summarise,
   type FrameBucket,
   type ProgramVerdict,
   type SamplingRun,
@@ -469,11 +470,20 @@ describe('describeSampling', () => {
         });
       });
       const pick = (): number | null => (next(3) === 0 ? null : next(at + 2));
-      const steady = steadyFrames(
-        snapshot({ frames, readyFrame: pick(), lastLinkFrame: pick(), lastSetChangeFrame: pick() }),
+      const page = snapshot({
+        frames,
+        readyFrame: pick(),
+        lastLinkFrame: pick(),
+        lastSetChangeFrame: pick(),
+      });
+      const readers = new Set(
+        steadyFrames(page).map((bucket) => bucket.samplingPrograms.join(',')),
       );
-      const readers = new Set(steady.map((bucket) => bucket.samplingPrograms.join(',')));
       expect(readers.size, `trial ${String(trial)}`).toBeLessThanOrEqual(1);
+      // And the count printed is the one count, with an empty window at 0.
+      const s = summarise(page);
+      expect(s.fewestPrograms, `trial ${String(trial)}`).toBe(s.mostPrograms);
+      expect(Number.isFinite(s.mostPrograms), `trial ${String(trial)}`).toBe(true);
     }
   });
 
