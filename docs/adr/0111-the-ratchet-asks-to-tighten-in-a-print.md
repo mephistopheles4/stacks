@@ -1,7 +1,7 @@
 # ADR-0111 — The ratchet asks to tighten, in a print and nowhere else
 
 **Date:** 2026-10-17
-**Status:** accepted, not built
+**Status:** accepted, built in [#322](https://github.com/mephistopheles4/stacks/issues/322)
 **Issue:** [#322](https://github.com/mephistopheles4/stacks/issues/322)
 **Spec:** [`docs/spec/the-ratchet-tightens.md`](../spec/the-ratchet-tightens.md)
 **Supersedes:** one clause of [`the-ratchet.md`](../spec/the-ratchet.md) §8, *"It never asks for improvement"*, and nothing else in it. [ADR-0061](0061-the-mutation-floor-refuses-deploy.md) and [ADR-0068](0068-the-complexity-cap-only-falls.md) are not amended.

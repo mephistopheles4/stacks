@@ -2,8 +2,8 @@
 
 **Thirteen efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
-share one. **The third, fifth, sixth, eighth, ninth, tenth, eleventh and twelfth are waiting for an
-implementation session**; the first two have been built and are kept as written, and the fourth
+share one. **The third, fifth, sixth, ninth, tenth, eleventh and twelfth are waiting for an
+implementation session**; the first two and the eighth have been built and are kept as written, and the fourth
 is built except its last step.
 
 ⚠️ **The fifth is the first whose finish line is not a document.** Its map carried

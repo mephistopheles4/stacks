@@ -1074,15 +1074,22 @@ function samplesIn(rows: readonly RunRow[]): number {
 
 function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): Streak {
   const ordered = nightliesIn(rows).sort((one, other) => one.timestamp - other.timestamp);
-  const streak = streakBack(ordered, stamped);
-  const window = newestTrees(streak);
+  const { samples, window } = windowOf(streakBack(ordered, stamped));
 
   return {
-    samples: samplesIn(streak),
+    samples,
     window,
     candidates: ordered.length,
     days: daysSpanned(window),
   };
+}
+
+/**
+ * A streak's samples and its window, written once for `streakOf` and for the
+ * tightening walk, which asks the same question at every older nightly.
+ */
+function windowOf(streak: readonly RunRow[]): { samples: number; window: RunRow[] } {
+  return { samples: samplesIn(streak), window: newestTrees(streak) };
 }
 
 /**
@@ -1444,25 +1451,22 @@ interface WindowAt {
   window: RunRow[];
 }
 
-/** Each nightly's window under one stamp, computed once however many bounds ask. */
+/**
+ * The window under one stamp as it stood ending at the nightly `end`.
+ *
+ * Recomputed for every bound that asks rather than cached: a cache is a branch
+ * no test can tell from the recomputation, and the walk is a few milliseconds
+ * over the whole record.
+ */
 function windowsEndingAt(
   ordered: readonly RunRow[],
   stamped: (row: RunRow) => boolean,
 ): (end: number) => WindowAt {
-  const cache = new Map<number, WindowAt>();
   return (end) => {
-    const cached = cache.get(end);
-    if (cached !== undefined) return cached;
-
     const slice = ordered.slice(0, end + 1);
     const streak = streakBack(slice, stamped);
-    const made = {
-      full: samplesIn(streak) >= WINDOW_RUNS,
-      reachesStart: streak.length === slice.length,
-      window: newestTrees(streak),
-    };
-    cache.set(end, made);
-    return made;
+    const { samples, window } = windowOf(streak);
+    return { full: samples >= WINDOW_RUNS, reachesStart: streak.length === slice.length, window };
   };
 }
 
@@ -1474,10 +1478,10 @@ function windowsEndingAt(
  * asked of the newest nightly's window first, then of each older one against
  * today's bound, newest back, until it stops holding.
  */
-function tightenedBy(
+function tighterSince(
   ordered: readonly RunRow[],
-  at: (end: number) => WindowAt,
-  judge: (window: WindowAt) => number | undefined,
+  windowAt: (end: number) => WindowAt,
+  judge: (state: WindowAt) => number | undefined,
   today: string,
 ): { value: number; days: number; atLeast: boolean } | undefined {
   const newestFirst = ordered.map((row, end) => ({ row, end })).reverse();
@@ -1486,14 +1490,15 @@ function tightenedBy(
   let atLeast = false;
 
   for (const { row, end } of newestFirst) {
-    const window = at(end);
-    const named = judge(window);
+    const state = windowAt(end);
+    const named = judge(state);
     if (named === undefined) {
       // ⚠️ **A shortfall at the edge of the read is not the rule failing.** A
       // window ending at an old nightly has only the nightlies read before it, so
       // it cannot fill however slack the bound was — and reading that as the
-      // rule stopping would print an age the record does not show (#464 §S4).
-      atLeast = !window.full && window.reachesStart;
+      // rule stopping would print an age the record does not show
+      // (docs/spec/a-full-window-read.md §S4).
+      atLeast = !state.full && state.reachesStart;
       break;
     }
     value ??= named;
@@ -1518,8 +1523,8 @@ function tightenedBy(
  *
  * ⚠️ **This asks and never acts.** It takes rows and returns a verdict per
  * bound; it takes no path, writes nothing and files nothing, which is what
- * keeps the print inside the standing constraint `renderFloorLines` names
- * (ADR-0111). The owner tightens by hand, in a pull request.
+ * keeps the print inside the standing constraint of escalating never and
+ * filing nothing (ADR-0111). The owner tightens by hand, in a pull request.
  *
  * **The window is arming's window**, walked by the same `streakBack` under the
  * same two stamps with the same accepted values, so a window that is not full,
@@ -1541,7 +1546,6 @@ function tightenedBy(
 export function tightenings(input: TightenInput): Tightenings {
   const found: Tightenings = { floors: new Map(), caps: new Map() };
   const ordered = nightliesIn(input.rows).sort((one, other) => one.timestamp - other.timestamp);
-  if (ordered.length === 0) return found;
 
   const last = ordered.length - 1;
   const floorWindows = windowsEndingAt(
@@ -1573,15 +1577,15 @@ export function tightenings(input: TightenInput): Tightenings {
     // One mutant where it is known; one hundredth otherwise, the least that
     // could ever be tightenable, so the degraded case asks only where it can.
     const needed = mutants === undefined ? 1 : Math.ceil(10_000 / mutants);
-    const judge = (at: WindowAt): number | undefined => {
-      const lowest = at.full ? lowestOver(at.window, scope) : null;
+    const judge = (state: WindowAt): number | undefined => {
+      const lowest = state.full ? lowestOver(state.window, scope) : null;
       if (lowest === null) return undefined;
       const named = roundDownToHundredths(lowest);
       return Math.round(named * 100) - floorHundredths >= needed ? named : undefined;
     };
 
     if (mutants !== undefined) {
-      const tighter = tightenedBy(ordered, floorWindows, judge, input.today);
+      const tighter = tighterSince(ordered, floorWindows, judge, input.today);
       if (tighter !== undefined) found.floors.set(scope, { kind: 'tightenable', ...tighter });
       continue;
     }
@@ -1596,11 +1600,11 @@ export function tightenings(input: TightenInput): Tightenings {
       if (reading.value === null || reading.value > cap.cap) continue;
 
       const limit = cap.cap;
-      const tighter = tightenedBy(
+      const tighter = tighterSince(
         ordered,
         capWindows,
-        (at) => {
-          const highest = at.full ? highestOver(at.window, series, scope) : null;
+        (state) => {
+          const highest = state.full ? highestOver(state.window, series, scope) : null;
           return highest !== null && highest <= limit - 1 ? highest : undefined;
         },
         input.today,

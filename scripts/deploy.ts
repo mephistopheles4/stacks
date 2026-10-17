@@ -58,6 +58,7 @@ import {
   scoredIn,
   renderCapLines,
   renderFloorLines,
+  localDay,
   runRowsFrom,
   tightenings,
 } from './lib/floors.ts';
@@ -930,9 +931,7 @@ function mutantsPerScope(run: MutationRun): Map<string, number> {
  * a day out is harmless and being confusing is not.
  */
 function localToday(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  return `${String(now.getFullYear())}-${month}-${String(now.getDate()).padStart(2, '0')}`;
+  return localDay(new Date());
 }
 
 const project = process.env['CF_PAGES_PROJECT'] ?? 'stacks';
