@@ -1,8 +1,8 @@
 # `docs/spec/` — the locked specs
 
-**Ten efforts have produced a locked spec in this folder.** Each is decided end to
+**Eleven efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
-share one. **The third, fifth, sixth, eighth, ninth and tenth are waiting for an
+share one. **The third, fifth, sixth, eighth, ninth, tenth and eleventh are waiting for an
 implementation session**; the first two have been built and are kept as written, and the fourth
 is built except its last step.
 
@@ -22,6 +22,7 @@ done when a rendered bookcase is on `main` — not when this folder is complete.
 | The ratchet tightens — a print line that asks, and never acts | [`the-ratchet-tightens.md`](the-ratchet-tightens.md) | **waiting for an implementation session**: standard tier, one ticket, one build session, no gate row. One print clause beside each armed bound the arming rule says could be tighter, naming the value and its age, and doing nothing else ([ADR-0111](../adr/0111-the-ratchet-asks-to-tighten-in-a-print.md)). ⚠️ **Nothing is armed until it merges.** ⚠️ **§S11 carries a measured finding that arming depends on**: the deploy reads too few nightlies to show a full window of trees. [#322](https://github.com/mephistopheles4/stacks/issues/322) carries the trail and §S9 the override list |
 | Retire `scripts/gh-post.ts` | [`retire-gh-post.md`](retire-gh-post.md) | **signed off 2026-10-17, waiting for an implementation session**, standard tier, one build session. The repository stops shipping a posting tool, and `AGENTS.md` names none ([ADR-0115](../adr/0115-the-repo-ships-no-posting-tool.md), superseding 0078). No gate row changes. ⚠️ The build re-stamps G56's `configHash` in the same commit. [#461](https://github.com/mephistopheles4/stacks/issues/461) carries the trail |
 | `smoke:render` closes its main page before the checks that boot their own | [`close-the-main-page.md`](close-the-main-page.md) | **signed off, waiting for an implementation session**, standard tier, one build session. A local probe found G60's 13.5 s to ready per boot is the gate's own main page, left open and drawing beside every later check; closing it after the phone check took four boots from 129.6 s to 32.0 s on 4 pinned cores. No gate row, wait or case order changes. [#397](https://github.com/mephistopheles4/stacks/issues/397) carries the trail |
+| The survivor record — every night's survivors, kept past 30 days | [`survivor-record.md`](survivor-record.md) | **waiting for an implementation session**, signed off by the owner on 2026-10-17; standard tier. A clean nightly on `main` writes its survivors to a new orphan branch, `survivors`, matched by content key as a multiset, and adds one line to the job summary saying what moved. Warn-only, no new token scope, and no gate row. [#344](https://github.com/mephistopheles4/stacks/issues/344) carries the measurements and the decisions |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
 **G30–G35**; the second landed **G36 and G38–G43**, derived from its own landing
