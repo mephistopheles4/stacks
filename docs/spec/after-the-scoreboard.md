@@ -300,7 +300,7 @@ Detail is in the file named.
 | Residual | Where |
 | --- | --- |
 | **Mutation score is raised by adding trivially-killable code**, and neither clause closes it. Any floor inherits it | [gate-or-trend](gate-or-trend.md), [the-ratchet](the-ratchet.md) |
-| **The ratchet's floor will probably never be raised.** A piece that looks armed and does nothing is worse than a slack floor, because it is silent | [the-ratchet](the-ratchet.md) |
+| **The ratchet's floor will probably never be raised.** A piece that looks armed and does nothing is worse than a slack floor, because it is silent. ⚠️ **Answered in part by [ADR-0111](../adr/0111-the-ratchet-asks-to-tighten-in-a-print.md)**: the deploy print now asks when a bound could tighten | [the-ratchet](the-ratchet.md) |
 | **Nothing enforces the `notes` line** on a lowering, and **nobody is required to read the diff** — by rule, not by preference | [the-ratchet](the-ratchet.md) |
 | **`scripts/` is unmeasured on day one** and enters `unarmed`; `unarmed` is a value somebody can type to make a refusal go away | [the-ratchet](the-ratchet.md) |
 | **Every number the ratchet rests on was measured once, on one machine, at one commit**, and nothing re-measures them | [the-ratchet](the-ratchet.md) |

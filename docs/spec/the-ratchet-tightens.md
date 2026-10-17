@@ -43,6 +43,12 @@ scripts  complexity-max            armed 14   current 11  (-1)   window highest 
 ⚠️ **Every number in that block is illustrative**, as in `the-ratchet.md`
 §10; the shape is the spec's and the numbers come from the record.
 
+**The separator is three spaces**, after whatever the armed line already ends
+with — the delta, or `1 mutant = …` where a mutant count is known. An armed line
+reading `no score in the record` or `no count in the record` carries no clause:
+with no current reading there is no breach check, and §S4 asks nothing it cannot
+check.
+
 The clause is the arming rule run again, in the tightening direction only. It
 asks and does nothing else: no file is edited, nothing is filed, nothing
 refuses. The owner tightens by hand, in a pull request, exactly as today.
@@ -89,7 +95,7 @@ carries it across exactly as it carries arming.
 - **Round the named floor down, never to nearest.** A floor typed at a value
   above any score in its window refuses the next deploy on a run the window
   itself contains, because `breaches` is strictly-under. Rounding down keeps the
-  named value at or below every score that produced it. (§S10 notes the same
+  named value at or below every score that produced it. (§S11 notes the same
   hazard in the existing armable line.)
 - **Asks nothing** when the bound is `unarmed` (the armable line covers it), when
   the window is not full, when the scope has a hole in the window (`null`), or
@@ -97,11 +103,15 @@ carries it across exactly as it carries arming.
   a tightening offer beside it would contradict it.
 
 ⚠️ **When the floor's resolution is unknown, the clause degrades and does not
-vanish.** `deploy.ts` reads the mutant count from the newest *local* mutation
-report, and a fresh checkout has none. Then the clause prints the window lowest
-with no verdict — `window lowest 72.40 - run pnpm mutation:run to judge` — on
-the rule `mutantsPerScope` already states: no report is a print, never a
-silence. The caps need no resolution and never degrade.
+vanish — but only where a tightening is possible at all.** `deploy.ts` reads the
+mutant count from the newest *local* mutation report, and a fresh checkout has
+none. Then, **when `N` is above the floor by at least one hundredth**, the
+clause prints the window lowest with no verdict —
+`window lowest 72.40 - run pnpm mutation:run to judge` — on the rule
+`mutantsPerScope` already states: no report is a print, never a silence. Where
+`N` equals the floor, as it does on every floor the day it is armed, no
+resolution could make it tightenable and nothing prints. The caps need no
+resolution and never degrade.
 
 ## S5. The age
 
@@ -112,8 +122,13 @@ is **derived from the record at each deploy** (Q4). Nothing is stored.
   it stood ending at that nightly, and test the rule against **today's** bound
   and today's resolution. Stop at the first nightly where it fails.
 - The age is the whole days from the oldest nightly that passed to `today`, by
-  the print's existing `days` helper. Zero is printed as `0 days`, as
+  the print's existing `days` helper. **The nightly's timestamp becomes a
+  `YYYY-MM-DD` in local time**, the same clock `localToday` reads, so the two
+  ends of the count are on one calendar. Zero is printed as `0 days`, as
   `unarmed for 0 days` already is.
+- **When the walk reaches the oldest record the deploy read and the rule still
+  holds, the age is a lower bound**, and prints as `tightenable for at least N
+  days`. A prompt ignored for months must not read as six weeks.
 - **Anything that empties the window resets the age**: a stamp change without
   `preserves`, a failed nightly, a gap over three days. That is the window's own
   rule, so #227 needs nothing new.
@@ -121,14 +136,19 @@ is **derived from the record at each deploy** (Q4). Nothing is stored.
   floors file does not record when a bound last moved. Accepted, and named in
   ADR-0111.
 
-**Cost.** A walk over the record per bound, and the record `deploy.ts` reads is
-bounded near the window — see `windowRecords` and its early break one nightly
-past `WINDOW_RUNS`.
-⚠️ **That bound is too short for an age** and the build must widen it: an age of
-`N` days needs about `N` nightlies beyond the window. Read the record to the end
-of the newest unbroken streak instead, which the walk needs anyway, keeping
-`WINDOW_RECORD_CAP` as the hard stop. ⚠️ **The same bound is too short for the
-window itself** — see §S11.
+**The record read is [#464](https://github.com/mephistopheles4/stacks/issues/464)'s,
+and this build depends on it.** Today `windowRecords` stops one nightly past
+`WINDOW_RUNS`, which is too short for the window itself (§S11) and for an age,
+which needs about one nightly per day of age beyond the window. #464 reads to
+the end of the newest unbroken streak, keeping `WINDOW_RECORD_CAP` as the hard
+stop, and lands before any arming (Q8) — so before this build. **This build does
+not touch the read.** If #464 has not landed when this build starts, stop and
+say so rather than widening it here.
+
+**Cost.** A window recomputed per older nightly, per bound, over a read of up to
+`WINDOW_RECORD_CAP` records. No budget is set: the build times one
+`pnpm deploy:site --dry-run` before and after, and states the added seconds in
+its pull request, for the owner to judge.
 
 ## S6. Implementation decisions
 
@@ -140,8 +160,8 @@ window itself** — see §S11.
 - **`renderFloorLines` and `renderCapLines` append the clause** to an armed
   line, and their `PrintInput`/`CapPrintInput` gain what they need from that
   function. The unarmed lines do not change.
-- **`deploy.ts` passes the rows through** and widens its record read per §S5.
-  Nothing else in it changes. The block headers keep saying what the lines are;
+- **`deploy.ts` passes the rows through**, and nothing else in it changes; the
+  read is #464's (§S5). The block headers keep saying what the lines are;
   the cap header's *"a cap only falls, and raising one costs a notes entry"*
   stays true.
 - **No change to `stryker.floors.json`'s schema, `parseFloors`, the refusals or
@@ -152,7 +172,14 @@ window itself** — see §S11.
   costs a notes entry" stay as written; the spec adds that a tightening needs
   no line, and the floors file's `$comment` gains one sentence saying so.
 - **`the-ratchet.md` and ADR-0061 are not edited.** ADR-0111 supersedes §8's
-  *"never asks for improvement"* clause and points back.
+  *"never asks for improvement"* clause and points back. The risk register row
+  in `after-the-scoreboard.md` that #322 quotes gains a one-line pointer to
+  ADR-0111, in this pull request.
+- **Rollback is a revert.** The change is a print only, with no schema, file
+  format or refusal touched, so reverting its pull request restores today's
+  print exactly.
+- **Stop and ask** when a gate cannot go green without editing a refusal, or
+  after three distinct approaches to one gate, per `AGENTS.md`.
 
 ## S7. Testing decisions
 
@@ -179,8 +206,9 @@ The acceptance claims, for the behaviour and integrity lenses at Test:
    resets it.
 6. **C6.** A renovation declaring `preserves` carries the clause and its age
    across the stamp change it names.
-7. **C7.** A floor with no known mutant count prints the degraded clause, never
-   nothing.
+7. **C7.** A floor with no known mutant count prints the degraded clause when
+   its rounded-down window lowest is above the floor by at least one hundredth,
+   and nothing when it equals the floor.
 8. **C8.** A boundary case prints the clause, and one hundredth less does not:
    with `m = 1250` (one mutant is exactly 8 hundredths) and `F = 71.55`, a
    window lowest of `71.63` asks and `71.629` does not; with `m = 1321` (one
@@ -188,6 +216,21 @@ The acceptance claims, for the behaviour and integrity lenses at Test:
 9. **C9.** Nothing the function or the print does writes a file: the function
    takes no path and touches no disk, and `stryker.floors.json` is unchanged
    after a `pnpm deploy:site --dry-run`.
+10. **C10.** When the walk reaches the oldest row it was handed with the rule
+    still holding, the clause reads `tightenable for at least <N> days`.
+11. **C11.** An armed line reading `no score in the record` or
+    `no count in the record` carries no clause, and an armed line with no delta
+    carries the clause after three spaces.
+
+**Done means every repository gate green**: `pnpm test`, `pnpm build`,
+`pnpm lint`, `pnpm typecheck`, `pnpm format:check` and `pnpm lint:md`, with
+vitest at `--maxWorkers=6` on this machine.
+
+**Where it runs.** The print exists only on the owner's machine, inside
+`pnpm deploy:site`; CI never reaches it. A real run needs the shared `.env`
+(`STACKS_VAULT`, `SITE_URL`), a `metrics` record fetched within three days, and
+a local mutation report for the floor's resolution, without which §S4's
+degraded clause prints. The tests need none of these.
 
 **Mutation.** `scripts/` is a declared Stryker scope, so the new code is
 mutated. Keep every branch reachable from a test, as `renderFloorLines`' own
@@ -205,8 +248,19 @@ floor is made of.
 | the same, with a `preserves: true` renovation | the clause and its age survive |
 | delete the local mutation report | the degraded clause, not a silence |
 
-⚠️ **`--dry-run` exercises all of these and uploads nothing**, which is the
-honest way to plant them on the real record, as in `the-ratchet.md` §12.
+**Every plant above is a fixture in `floors.test.ts`.** None of them edits a
+tracked file, because nothing is armed before this merges (Q0).
+
+**The real record is checked twice, by the owner**, with
+`pnpm deploy:site --dry-run`, which uploads nothing:
+
+- **At build time:** no clause prints, because every bound is `unarmed`, and
+  `stryker.floors.json` is unchanged afterwards.
+- **After arming** (Q9), once #464 and this build have landed: every armed line
+  prints without error, and no clause prints on the day of arming, because
+  every bound sits exactly at its window's extreme. The first clause is expected
+  as older trees leave the window — near early November on the record's pace —
+  and that day is the first real proof.
 
 ## S9. Override list — the owner's decisions
 
@@ -231,18 +285,20 @@ also laid out as a morphological box, which is not in this checkout.
 
 Taken by the spec author as following from those answers, and open to the
 owner's override at sign-off: rounding the named floor **down** (§S4); the
-degraded clause when the resolution is unknown (§S4); no clause beside a breach
-(§S4); widening the record read for the age (§S5).
+degraded clause when the resolution is unknown, and only where a tightening is
+possible (§S4); no clause beside a breach or a missing reading (§S2, §S4); the
+age as a lower bound at the edge of the read (§S5); and the record read left to
+#464, which this build waits for (§S5, following Q8).
 
 ## S10. Out of scope
 
 - **Moving any bound automatically**, or proposing a move outside the print.
-- **Arming**, and anything that changes what arms a scope.
+- **Arming**, anything that changes what arms a scope, and the two fixes arming
+  waits on, which are #464.
 - **The window's length**, fixed by ADR-0084, and **what counts toward it**:
   rescoring old commits on CI and counting merge runs were both declined (Q10).
 - **The trend-page line**, [#463](https://github.com/mephistopheles4/stacks/issues/463):
   it would reach the owner on a day with no deploy, and it files nothing either.
-- **Arming**, and the two fixes it waits on, which are #464.
 - **The duplication caps** in `jscpd.floors.json`, which have no calibration
   window yet ([#269](https://github.com/mephistopheles4/stacks/issues/269)).
   When one exists, this rule is the one to apply to it.
@@ -255,8 +311,8 @@ avoids.** `unarmedState` prints `lowest.toFixed(2)`, so a window lowest of
 `44.116` prints `44.12`. Arming at the printed value sets a floor above a score
 the window holds, and `breaches` — strictly under — refuses the first deploy on
 the very run the floor came from, which its own docstring names as the thing it
-must not do. Not fixed here: it is outside #322's scope, and it is the owner's
-call whether to file it.
+must not do. **It matters at once**, because Q9 arms every bound from that line.
+Where it is fixed is open in §S12.
 
 ⚠️ **The deploy reads too few nightlies to fill a window of trees.**
 `windowRecords` in `deploy.ts` stops one nightly past `WINDOW_RUNS`, a bound
@@ -307,6 +363,18 @@ tightness.
 and land before any arming (Q8): the read to the end of the streak, which §S5
 needs as well, and the corrected renovation.
 
-**Build order.** One ticket, one session: the function, the two render
-functions, the record read in `deploy.ts`, the floors file's `$comment`
-sentence, and the tests. `docs/spec/README.md` carries the row.
+**Build order.** #464 first, then this spec as one ticket in one session: the
+function, the two render functions, the rows passed through in `deploy.ts`, the
+floors file's `$comment` sentence, and the tests. `docs/spec/README.md` carries
+the row.
+
+## S12. Needs a human
+
+| What | From whom | When |
+| --- | --- | --- |
+| Sign-off on this spec: proceed, fix or kill, including §S9's author-taken defaults | the owner | before the build |
+| Where the armable line's rounding is fixed | the owner | before arming |
+| #464 merged | the owner | before arming, and before this build |
+| Arming every bound at the rule's value (Q9) | the owner, by hand | after this spec merges and #464 lands |
+| The two real-record dry runs (§S8) | the owner, on their machine | at build time, and after arming |
+| Whether the build's added deploy seconds are acceptable (§S5) | the owner | at the build's pull request |
