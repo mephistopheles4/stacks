@@ -6,7 +6,9 @@
  * release two days old (#399), so the policy those comments relied on was
  * whatever pnpm happened to ship. This holds the stated policy to the file pnpm
  * actually reads: the key present, once, at the top level, as a plain integer
- * of at least 10080 minutes.
+ * of at least 10080 minutes. And the hatch, `minimumReleaseAgeExclude`, may
+ * name only exact versions: pnpm takes `'*'` there as every package, so one
+ * wildcard would switch the window off with the key still at 10080.
  *
  * ⚠️ **No YAML parser, on purpose.** The root has none, and adding a
  * dependency to read one key is the trade this repository declines. The reader
@@ -48,10 +50,71 @@ const readReleaseAge = (text: string): Reading => {
   return { minutes: Number(value) };
 };
 
+const EXCLUDE = 'minimumReleaseAgeExclude';
+
+/** One exact `name@version`: no range, no wildcard, no bare name. */
+const EXACT = /^(?:@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+
+/**
+ * Problems with the top-level `minimumReleaseAgeExclude` list, the hatch.
+ * pnpm 11.18.0 takes `'*'` there and resolves inside the window, and a bare
+ * name exempts every version of it, both measured on #399. So each entry must
+ * name one exact version, and any form this reader does not know fails closed.
+ */
+const excludeProblems = (text: string): string[] => {
+  const lines = text.split(/\r?\n/);
+  const starts = lines.flatMap((line, i) =>
+    /^(['"]?)minimumReleaseAgeExclude\1\s*:/.test(line) ? [i] : [],
+  );
+  const [start] = starts;
+  if (start === undefined) return [];
+  if (starts.length > 1) return [`${EXCLUDE} is set ${starts.length} times`];
+  const inline = lines[start]
+    ?.slice(lines[start].indexOf(':') + 1)
+    .replace(/\s+#.*$/, '')
+    .trim();
+  if (inline !== '') return [`${EXCLUDE} is not a block list: ${inline}`];
+  const problems: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^\S/.test(line)) break;
+    const body = line.replace(/\s+#.*$/, '').trim();
+    if (body === '' || body.startsWith('#')) continue;
+    const item = /^-\s+(['"]?)(.*)\1$/.exec(body)?.[2];
+    if (item === undefined)
+      problems.push(`${EXCLUDE} holds a line that is not a list item: ${body}`);
+    else if (!EXACT.test(item)) problems.push(`${EXCLUDE} entry is not one exact version: ${item}`);
+  }
+  return problems;
+};
+
+/**
+ * Settings that switch the window off with the key still at 10080, each
+ * measured on pnpm 11.18.0 in #399: `minimumReleaseAgeStrict: false` writes an
+ * exclude entry itself and resolves inside the window, and `trustLockfile:
+ * true` lets a frozen install take a young lockfile entry. Absent is safe for
+ * both. Present, each must hold its safe value, written plainly.
+ */
+const SAFE_VALUES: Readonly<Record<string, string>> = {
+  minimumReleaseAgeStrict: 'true',
+  trustLockfile: 'false',
+};
+
+const switchProblems = (text: string): string[] =>
+  text.split(/\r?\n/).flatMap((line) => {
+    const key = /^(['"]?)(\w+)\1\s*:/.exec(line)?.[2];
+    if (key === undefined || !Object.hasOwn(SAFE_VALUES, key)) return [];
+    const value = line
+      .slice(line.indexOf(':') + 1)
+      .replace(/\s+#.*$/, '')
+      .trim();
+    return value === SAFE_VALUES[key] ? [] : [`${key} weakens the window: ${value}`];
+  });
+
 const problemOf = (text: string): string | undefined => {
   const reading = readReleaseAge(text);
   if ('problem' in reading) return reading.problem;
-  return reading.minutes < FLOOR ? `${KEY} is ${reading.minutes}, under ${FLOOR}` : undefined;
+  if (reading.minutes < FLOOR) return `${KEY} is ${reading.minutes}, under ${FLOOR}`;
+  return [...switchProblems(text), ...excludeProblems(text)][0];
 };
 
 const workspace = (...lines: string[]): string =>
@@ -99,5 +162,81 @@ describe('G66 — the release-age window is stated, at seven days or more', () =
     expect(problemOf(workspace('minimumReleaseAge: 10080', 'minimumReleaseAge: 1440'))).toMatch(
       /set 2 times/,
     );
+  });
+});
+
+describe('G66 — no neighbouring setting switches the window off', () => {
+  const beside = (line: string): string => workspace('minimumReleaseAge: 10080', line);
+
+  it('passes each switch absent, or set to its safe value', () => {
+    expect(problemOf(beside('minimumReleaseAgeStrict: true'))).toBeUndefined();
+    expect(problemOf(beside('trustLockfile: false  # verify every install'))).toBeUndefined();
+  });
+
+  it('fails strict mode turned off, which falls back inside the window', () => {
+    expect(problemOf(beside('minimumReleaseAgeStrict: false'))).toMatch(
+      /weakens the window: false/,
+    );
+  });
+
+  it('fails a trusted lockfile, which skips the frozen-install check', () => {
+    expect(problemOf(beside('trustLockfile: true'))).toMatch(/weakens the window: true/);
+  });
+
+  it('fails a value it cannot read as safe, rather than passing over it', () => {
+    expect(problemOf(beside("trustLockfile: 'false'"))).toMatch(/weakens the window/);
+    expect(problemOf(beside('minimumReleaseAgeStrict: yes'))).toMatch(/weakens the window/);
+    expect(problemOf(beside('minimumReleaseAgeStrict:'))).toMatch(/weakens the window/);
+  });
+
+  it('reads a quoted key, which pnpm reads as the same setting', () => {
+    expect(problemOf(beside("'trustLockfile': true"))).toMatch(/weakens the window: true/);
+    expect(problemOf(beside('"minimumReleaseAgeStrict": false'))).toMatch(/weakens the window/);
+    expect(problemOf(beside("'minimumReleaseAgeExclude':\n  - '*'"))).toMatch(
+      /not one exact version/,
+    );
+  });
+});
+
+describe('G66 — the hatch names one exact version, never a pattern', () => {
+  const withExclude = (...items: string[]): string =>
+    workspace('minimumReleaseAge: 10080', 'minimumReleaseAgeExclude:', ...items);
+
+  it('passes the hatch beside the key, and does not read it as the key', () => {
+    expect(problemOf(withExclude("  - 'postcss@8.5.30'"))).toBeUndefined();
+    expect(
+      problemOf(withExclude('  - postcss@8.5.30  # GHSA fix, remove 2026-10-20')),
+    ).toBeUndefined();
+    expect(problemOf(withExclude('  - "@astrojs/compiler-rs@0.5.2"'))).toBeUndefined();
+    expect(problemOf(withExclude('  - nanoid@3.3.18-beta.1'))).toBeUndefined();
+  });
+
+  it('fails a wildcard, which pnpm takes as every package', () => {
+    expect(problemOf(withExclude("  - '*'"))).toMatch(/not one exact version: \*/);
+    expect(problemOf(withExclude("  - '@astrojs/*'"))).toMatch(/not one exact version/);
+  });
+
+  it('fails a bare name or a range, which exempt more than one version', () => {
+    expect(problemOf(withExclude('  - postcss'))).toMatch(/not one exact version/);
+    expect(problemOf(withExclude('  - postcss@^8.5.30'))).toMatch(/not one exact version/);
+    expect(problemOf(withExclude('  - postcss@8.5.30 || 8.5.31'))).toMatch(/not one exact version/);
+  });
+
+  it('fails a form the reader does not know, rather than passing over it', () => {
+    expect(
+      problemOf(workspace('minimumReleaseAge: 10080', "minimumReleaseAgeExclude: ['*']")),
+    ).toMatch(/not a block list/);
+    expect(problemOf(withExclude('  postcss@8.5.30'))).toMatch(/not a list item/);
+    expect(
+      problemOf(
+        withExclude('  - postcss@8.5.30').concat('minimumReleaseAgeExclude:\n  - x@1.0.0\n'),
+      ),
+    ).toMatch(/set 2 times/);
+  });
+
+  it('reads only the hatch’s own block, and stops at the next top-level key', () => {
+    expect(
+      problemOf(withExclude('  - postcss@8.5.30', 'overrides:', "  postcss: '^8.5.30'")),
+    ).toBeUndefined();
   });
 });

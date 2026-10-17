@@ -34,7 +34,10 @@ verifyDepsBeforeRun: warn
 # exact or caret. **The escape hatch for a security fix inside the window is
 # `minimumReleaseAgeExclude`**, naming the exact `package@version`, together
 # with the override that requires it. Remove the exclude once the version is
-# seven days old. Dependabot's `cooldown` holds its version bumps to the same
+# seven days old. Never a pattern: pnpm takes `'*'` there as every package and a
+# bare name as every version, so G66 refuses anything but one exact version. It
+# refuses `minimumReleaseAgeStrict: false` and `trustLockfile: true` too, since
+# each switches the window off with this key still at 10080. Dependabot's `cooldown` holds its version bumps to the same
 # seven days, but **security updates ignore cooldown**, so a security bump inside
 # the window fails CI until someone adds that exclude entry.
 minimumReleaseAge: 10080

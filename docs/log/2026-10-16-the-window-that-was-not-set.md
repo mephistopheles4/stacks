@@ -87,7 +87,19 @@ not. Under an explicit 10080 window:
 | `^8.5.30` plus `minimumReleaseAgeExclude: [postcss@8.5.30]` | resolves 8.5.30, and a frozen install of that lockfile passes |
 
 **The hatch for a security fix inside the window is `minimumReleaseAgeExclude`,
-naming the exact version, beside the override.** The claim in the nanoid block
+naming the exact version, beside the override.** It takes patterns too, and they
+are dangerous: under `minimumReleaseAgeExclude: ['*']`, and under a bare
+`postcss`, the same probe resolved 8.5.30 inside the window. One wildcard
+switches the policy off with the key still at 10080, so G66 refuses any entry
+that is not one exact `package@version`. integrity-lens found this.
+
+Two neighbouring settings also switch the window off, and adversarial-lens named
+both. Under `minimumReleaseAgeStrict: false`, pnpm wrote
+`postcss@8.5.30` into `minimumReleaseAgeExclude` by itself and resolved it.
+Under `trustLockfile: true`, the four-day-old lockfile that failed a frozen
+install above went through. G66 refuses both. A duplicate key is not a third
+route: pnpm refuses to parse a file holding `minimumReleaseAge` twice, quoted or
+not. The claim in the nanoid block
 could not be tested under the default window; no override probe here named a
 version younger than a day.
 
