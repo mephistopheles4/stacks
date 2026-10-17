@@ -2753,9 +2753,19 @@ await main();
  */
 async function prepared(page: Page): Promise<Page> {
   const rate = Number(process.env['SMOKE_CPU_THROTTLE'] ?? '1');
-  if (rate > 1) {
+  const latency = Number(process.env['SMOKE_NET_LATENCY_MS'] ?? '0');
+  if (rate > 1 || latency > 0) {
     const client = await page.createCDPSession();
-    await client.send('Emulation.setCPUThrottlingRate', { rate });
+    if (rate > 1) await client.send('Emulation.setCPUThrottlingRate', { rate });
+    if (latency > 0) {
+      await client.send('Network.enable');
+      await client.send('Network.emulateNetworkConditions', {
+        offline: false,
+        latency,
+        downloadThroughput: -1,
+        uploadThroughput: -1,
+      });
+    }
   }
   await page.evaluateOnNewDocument(`(() => {
     const started = performance.now();
