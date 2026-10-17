@@ -142,3 +142,4 @@ Two other files hold what these deliberately do not:
 | [0111](./0111-the-ratchet-asks-to-tighten-in-a-print.md) | The ratchet asks to tighten, in a print and nowhere else (supersedes the-ratchet.md §8 in part) |
 | [0112](./0112-g26-pins-the-ranking-rule.md) | G26 pins the ranking rule, and its corpus is refreshed by splicing |
 | [0113](./0113-a-google-volume-in-another-language-is-refused-whole.md) | A Google volume in another language is refused whole (supersedes 0094 in part) |
+| [0115](./0115-the-repo-ships-no-posting-tool.md) | The repository ships no posting tool (supersedes 0078; proposed) |
