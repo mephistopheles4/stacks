@@ -74,7 +74,7 @@ export function shellCommand(command: string, args: readonly string[]): string {
 export function runShell(
   command: string,
   args: readonly string[],
-  options: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
+  options: { cwd?: string; env?: NodeJS.ProcessEnv; wholeEnv?: NodeJS.ProcessEnv } = {},
 ): void {
   const line = shellCommand(command, args);
   console.log(`\n$ ${line}`);
@@ -83,7 +83,9 @@ export function runShell(
     cwd: options.cwd ?? REPO_ROOT,
     shell: true,
     stdio: 'inherit',
-    env: { ...process.env, ...options.env },
+    // `wholeEnv` replaces the environment instead of merging over it, for the
+    // one caller that must leave keys out (the deploy's upload).
+    env: options.wholeEnv ?? { ...process.env, ...options.env },
   });
 
   if (result.status !== 0) throw new Error(`${line} exited ${String(result.status)}`);

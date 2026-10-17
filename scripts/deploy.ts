@@ -93,6 +93,7 @@ import { numbersFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { emptyScopes, sourceFiles } from './lib/scope-check.ts';
+import { INSTALLED_MANIFEST, pinIn, pinMismatch, uploadEnv, versionIn } from './lib/upload.ts';
 import {
   asDate,
   renderPanel,
@@ -106,7 +107,10 @@ import {
 // a real environment variable still wins, so `SITE_URL=... pnpm deploy` does
 // what it says. Without this the script would not see STACKS_VAULT at all,
 // because only the CLI was ever reading the file.
-loadEnv();
+//
+// The names it set are kept: the upload leaves every one of them out of its
+// environment, bar wrangler's own (`uploadEnv`).
+const loadedEnvKeys = loadEnv();
 
 const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 
@@ -121,9 +125,6 @@ const DIST_LABEL = 'packages/site/dist';
  * walk. Generous rather than tight — reading a record is one `git cat-file`.
  */
 const WINDOW_RECORD_CAP = 200;
-
-/** Pinned: a deploy tool that silently changes under you is not a deploy tool. */
-const WRANGLER = 'wrangler@4';
 
 // How long to give the edge, how a page names its build, and how a refusal is
 // told apart from a stale answer all live in `./lib/edge-probe.ts` now. Surface
@@ -205,9 +206,14 @@ function fail(message: string): never {
  * command runs at all, and that is the caller's question rather than this
  * function's.
  */
-function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = {}): void {
+function run(
+  command: string,
+  args: readonly string[],
+  env: NodeJS.ProcessEnv = {},
+  wholeEnv?: NodeJS.ProcessEnv,
+): void {
   try {
-    runShell(command, args, { env });
+    runShell(command, args, wholeEnv === undefined ? { env } : { wholeEnv });
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
   }
@@ -1197,10 +1203,29 @@ if (checkOnly) {
   process.exit(0);
 }
 
+// The upload runs the wrangler the lockfile holds, through `pnpm exec`: the
+// lockfile puts it under the release-age window **and** the trust policy, which
+// the one-shot fetch it replaced did not (it applied the window only), and the
+// upload carries the Cloudflare credentials. `pnpm exec` puts `node_modules/.bin`
+// first on the PATH and `verifyDepsBeforeRun: warn` does not stop a stale
+// install, so without the refusal below an upload could run some other wrangler.
+// G67 holds this file to that one form. See ADR-0116.
+//
+// **Which flags clear this refusal: none.** `--dry-run` runs it and prints the
+// version it checked; `--check-only` returned above and uploads nothing.
+const readIfThere = (file: string): string | undefined =>
+  existsSync(file) ? readFileSync(file, 'utf8') : undefined;
+const wranglerPin = pinIn(readIfThere(join(REPO_ROOT, 'package.json')));
+// The repository's own node_modules, never a wrangler off the PATH.
+const wranglerInstalled = versionIn(readIfThere(join(REPO_ROOT, ...INSTALLED_MANIFEST)));
+const wranglerRefusal = pinMismatch(wranglerInstalled, wranglerPin);
+if (wranglerRefusal !== undefined) fail(wranglerRefusal);
+
 if (dryRun) {
   console.log(`\n--dry-run: not uploading. ${DIST} is ready.`);
+  console.log(`checked: the installed wrangler is ${wranglerPin ?? 'unpinned'}, its pin`);
   console.log(
-    `to publish: pnpm dlx ${WRANGLER} pages deploy packages/site/dist --project-name ${project}`,
+    `to publish: pnpm exec wrangler pages deploy packages/site/dist --project-name ${project}`,
   );
   process.exit(0);
 }
@@ -1209,17 +1234,27 @@ if (dryRun) {
 // stops the run here. `--dry-run` and `--check-only` clear it by returning
 // above; nothing clears it on a path that publishes, which is the only kind of
 // path that reaches this line.
-run('pnpm', [
-  'dlx',
-  WRANGLER,
-  'pages',
-  'deploy',
-  'packages/site/dist',
-  '--project-name',
-  project,
-  '--branch',
-  'main',
-]);
+//
+// Its environment is the shell's less everything `.env` supplied, bar wrangler's
+// own names, and with wrangler's usage telemetry off (`uploadEnv`). The Cloudflare
+// credential is wrangler's own `wrangler login` store in the user profile, which
+// the shell's user-profile variables still reach.
+run(
+  'pnpm',
+  [
+    'exec',
+    'wrangler',
+    'pages',
+    'deploy',
+    'packages/site/dist',
+    '--project-name',
+    project,
+    '--branch',
+    'main',
+  ],
+  {},
+  uploadEnv(process.env, loadedEnvKeys),
+);
 
 console.log(`\ndeployed → ${siteUrl}`);
 

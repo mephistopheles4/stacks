@@ -124,6 +124,28 @@ without being able to deploy
 ([#321](https://github.com/mephistopheles4/stacks/issues/321)). Typed by hand it
 is a harmless look at the branch guard, `SITE_URL` and the trend record.
 
+## `pnpm deploy:site` — the upload, and what it refuses
+
+**The upload runs the wrangler the lockfile holds**, through `pnpm exec`, not a
+version fetched at deploy time. wrangler is an exact-pinned root devDependency, so
+the lockfile's release-age window and trust policy cover the one install that
+carries the Cloudflare credential, and G67 (`release-age`) holds the pin and
+holds `scripts/deploy.ts` to that one form
+([ADR-0116](adr/0116-wrangler-is-a-pinned-dev-dependency.md)).
+
+**It refuses before the upload** unless the version in the repository's own
+`node_modules/wrangler/package.json` equals the pin in `package.json`, because
+`pnpm exec` puts `node_modules/.bin` first on the PATH and a stale install would
+otherwise run some other wrangler. Cleared by `pnpm install`; no flag clears it.
+`--dry-run` runs it and prints the version it checked.
+
+**The upload's environment is the shell's, less what `.env` supplied.** The
+Google Books key, the vault path and every other key `loadEnv` set are left out,
+except names starting `CLOUDFLARE_` or `WRANGLER_`, and wrangler's usage
+telemetry is switched off for the call. The Cloudflare credential is wrangler's
+own `wrangler login`, stored in the user profile, which the shell's profile
+variables still reach.
+
 ## `pnpm deploy:site` — what it checks after the upload
 
 **After the upload it asks the live site which build it is serving**, and then
