@@ -35,4 +35,12 @@ Time to ready per G60 boot fell from 3.7 s to 1.0 s. G61's four boots, newly tim
 
 ## C5, the spec's claim that G60 plus G61 take under 250 s, after the merge
 
-First push run on `main` containing the merge: G60 and G61 against run 39051984873's 380.6 s and 124.7 s. The build session, or the lead that started it, adds the times here. At or over 505 s, or a red `main`, the reader opens the revert pull request; under 505 s but at or over 250 s, nothing is reverted and the owner decides (spec S6.2). Once the times are in, one issue is filed: "Should pull requests run G60 and G61 again?" (spec S9).
+Read from the first push run on `main` containing the merge, [run 39076969455](https://github.com/mephistopheles4/stacks/actions/runs/39076969455), which ended `OK`. The revert rule was: at or over 505 s, or a red `main`, open the revert pull request; under 505 s but at or over 250 s, nothing is reverted and the owner decides (spec S6.2).
+
+| Step | Run 39051984873, before | Run 39076969455, after |
+| --- | --- | --- |
+| G60 context-loss-fallback | 380.6 s | 122.7 s |
+| G61 one-shadow-reader | 124.7 s | 36.8 s |
+| G60 plus G61 | 505.3 s | 159.5 s |
+
+C5 holds: 159.5 s is under 250 s and nothing was reverted. The twelve `visit()` boots took 33.7 s to ready and 30.5 s to settled, and G61's four boots 16.2 s and 5.3 s. The `close() found no target` line did not print, so the close took the clean path on this run; the cause of the one CI failure is still not established. One run is one sample. The follow-up issue is [#479](https://github.com/mephistopheles4/stacks/issues/479), "Should pull requests run G60 and G61 again?" (spec S9).
