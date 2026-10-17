@@ -35,8 +35,25 @@ trailing newline that `--jq` adds to the read-back (GitHub keeps the file's own
 final newline, so strip it from the read-back only):
 
 ```bash
-gh api <the posted object's API path> --jq .body
+gh api <the posted object's API path> --jq .body | head -c -1 | diff - body.md && echo match
 ```
+
+The path depends on what was posted. `gh issue create` and `gh pr create` print
+the new URL, whose number is `<n>`; `gh issue comment` prints a URL ending
+`#issuecomment-<id>`; `gh api … -F body=@reply.md` returns the new comment's
+`id` in its response (add `--jq .id`). `gh pr review` prints nothing, so list
+`repos/{owner}/{repo}/pulls/<pr>/reviews` and take the newest review's `id`.
+
+| Posted | API path |
+| --- | --- |
+| Issue | `repos/{owner}/{repo}/issues/<n>` |
+| Pull request | `repos/{owner}/{repo}/pulls/<n>` |
+| Issue or pull-request comment | `repos/{owner}/{repo}/issues/comments/<id>` |
+| Review | `repos/{owner}/{repo}/pulls/<pr>/reviews/<id>` |
+| Review-thread reply or review comment | `repos/{owner}/{repo}/pulls/comments/<id>` |
+
+`head -c -1` is the one newline `--jq` adds; if the body file has CRLF line
+endings, strip them first with `tr -d '\r' < body.md`.
 
 **Six known ways to hand-roll this wrong, and three of them return HTTP 200** —
 `-f body=@reply.md` posts the literal filename, for one. They are enumerated on
@@ -52,14 +69,14 @@ what catches them. Nothing here is a gate and nothing requires it.
 - **Open a pull request**: `gh pr create --body-file`, with the body started
   from [`.github/pull_request_template.md`](../../.github/pull_request_template.md).
   ⚠️ **GitHub applies the template only in the web form**, never to a body posted
-  from here, so run `pnpm exec tsx scripts/check-pr.ts` by hand before `gh pr
-  create`: it checks the title and the template's two questions exactly as G55
-  (`pr-conventions`) will.
+  from here, so run `pnpm exec tsx scripts/check-pr.ts` by hand before
+  `gh pr create`: it checks the title and the template's two questions exactly
+  as G55 (`pr-conventions`) will.
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number>`. If the closing note is more than a few
-  words, post it with `gh issue comment --body-file` first and close without a comment — `gh issue
-  close` has no `--comment-file`, so its `--comment` is the argument-passing
-  form this page has just removed everywhere else.
+  words, post it with `gh issue comment --body-file` first and close without a
+  comment — `gh issue close` has no `--comment-file`, and its `--comment` takes
+  the text inline, which *Posting prose* above rules out.
 - **Claim an issue**: `gh issue edit <number> --add-assignee <login>` — or
   `--add-assignee "@me"` for the account `gh` is authenticated as. **When an
   assignment happened is half of what it means, and no `gh issue` flag carries
