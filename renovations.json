@@ -120,6 +120,14 @@
       "reason": "jscpd moved to 5.4.1. Measured over the identical tree, main at f322cef under 5.3.2 against the bump at cbd508b under 5.4.1, which differ only in package.json and the lockfile: no duplication count moved. The whole tree reads 69 clones, 747 duplicated lines, 88635 total lines and 0 ignored under both, all eight declared scopes are unchanged, and the 69 clone spans were diffed one by one and are identical, not only their totals. So the window is declared preserved, the first true in this file. No code reads a duplication calibration window yet, so this flag does nothing today; it is recorded so the window carries across this bump once #269's reader is wired. One gap: the tree holds no jscpd:ignore block, so how 5.4.1 handles a suppression block was not exercised.",
       "pr": 453,
       "preserves": true
+    },
+    {
+      "date": "2026-10-17",
+      "stamp": "configHash",
+      "value": "sha256:63700ca8e5fde45c63f8a10d083185d6839c09c2af8a10cba499c4694fbcabf2",
+      "reason": "A stale exclusion went with its file: scripts/gh-post.ts was deleted (#461), so its entry in the scripts scope's exclusions went too. Two mutated, tested modules, scripts/lib/github-body.ts and scripts/lib/github-post.ts, were deleted in the same change; that is an ordinary code change the window already sees across trees, and configHash hashes the Stryker configuration, not the files. No declared scope's glob changed. Declared preserved on 2026-10-17 on the owner's decision (q1, relayed by the head chef), which departs from the spec's preserves false. Measured on this branch's tree after the deletions, resolving stryker.config.mjs's mutate array under the old and the new stryker.scopes.json against the tracked files: both read 107 files, identical file for file, and Stryker generates a file's mutants from that file alone, so the mutant inventory is identical too. The same construction on the pre-change tree told them apart, 109 files against 110, the one difference being scripts/gh-post.ts. This compares the resolved file sets and was not a mutation run, so the scores themselves were not re-run.",
+      "pr": 474,
+      "preserves": true
     }
   ]
 }
