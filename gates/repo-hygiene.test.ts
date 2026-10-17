@@ -21,7 +21,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { expectFound, REPO_ROOT, trackedFiles } from './repo.ts';
+import { BINARY, expectFound, REPO_ROOT, trackedFiles } from './repo.ts';
 
 function isIgnored(path: string): boolean {
   try {
@@ -49,8 +49,6 @@ function matchesIgnoreRule(path: string): boolean {
     return false;
   }
 }
-
-const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip)$/i;
 
 /**
  * The only committed binaries, and why each is allowed.

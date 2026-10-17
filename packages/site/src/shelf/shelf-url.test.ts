@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PAINTED_BASE } from './shadow-fallback.ts';
 import { resolveSettings, DEFAULT_SETTINGS, type ShelfSettings } from './shelf-settings.ts';
-import { bookLimit, readSettings, woodSeed, writeSettings } from './shelf-url.ts';
+import {
+  bookLimit,
+  keepSettingsInAddress,
+  readSettings,
+  woodSeed,
+  writeSettings,
+} from './shelf-url.ts';
 
 /**
  * Mostly the reading half.
@@ -407,5 +413,88 @@ describe('writeSettings and the pickup', () => {
 
     writeSettings(DEFAULT_SETTINGS);
     expect(kept).toBe(held);
+  });
+});
+
+describe('keepSettingsInAddress, across a put-back (#426)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const dialled: ShelfSettings = {
+    ...DEFAULT_SETTINGS,
+    renderer: { ...DEFAULT_SETTINGS.renderer, antialias: !DEFAULT_SETTINGS.renderer.antialias },
+  };
+  const AA = `aa=${dialled.renderer.antialias ? '1' : '0'}`;
+
+  /** A window whose address is the entry from before the pickup, as put-back leaves it. */
+  function afterPutBack() {
+    const listeners = new Set<() => void>();
+    const writes: string[] = [];
+    vi.stubGlobal('window', {
+      location: { search: '?debug', pathname: '/' },
+      history: {
+        state: null,
+        replaceState: (_state: unknown, _title: string, url: string) => {
+          writes.push(url);
+        },
+      },
+      addEventListener: (type: string, listener: () => void) => {
+        if (type === 'popstate') listeners.add(listener);
+      },
+      removeEventListener: (type: string, listener: () => void) => {
+        if (type === 'popstate') listeners.delete(listener);
+      },
+    });
+    const pop = (): void => {
+      for (const listener of listeners) listener();
+    };
+    return { writes, pop, listeners };
+  }
+
+  it('writes a setting dialled while held back into the address put-back returns to', () => {
+    const { writes, pop } = afterPutBack();
+    keepSettingsInAddress(() => ({ settings: dialled }));
+
+    pop();
+    expect(writes).toEqual([`?debug&${AA}`]);
+  });
+
+  it('asks what to write on every step, not once when it is installed', () => {
+    // The panel has written nothing when it installs this, so a helper that
+    // read `current` once would never write — the #426 symptom back again.
+    const { writes, pop } = afterPutBack();
+    const panel: { now?: { settings: ShelfSettings } } = {};
+    keepSettingsInAddress(() => panel.now);
+
+    panel.now = { settings: dialled };
+    pop();
+    expect(writes).toEqual([`?debug&${AA}`]);
+  });
+
+  it("diffs against the page's own base, so a painted device's fallback stays out of the link", () => {
+    const { writes, pop } = afterPutBack();
+    keepSettingsInAddress(() => ({ settings: PAINTED_BASE, base: PAINTED_BASE }));
+
+    pop();
+    // Against the shipped defaults the same settings would write `shadows=0`.
+    expect(writes).toEqual(['?debug']);
+  });
+
+  it('leaves the address alone until the panel has written once', () => {
+    const { writes, pop } = afterPutBack();
+    keepSettingsInAddress(() => undefined);
+
+    pop();
+    expect(writes).toEqual([]);
+  });
+
+  it('stops listening when the panel is taken down', () => {
+    const { listeners } = afterPutBack();
+    const forget = keepSettingsInAddress(() => ({ settings: dialled }));
+    expect(listeners.size).toBe(1);
+
+    forget();
+    expect(listeners.size).toBe(0);
   });
 });
