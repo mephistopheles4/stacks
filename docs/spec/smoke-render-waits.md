@@ -94,6 +94,10 @@ left fixed.
    1.5 s settles wait for textures and programs only, and both are readable
    today. No site code changes, and nothing new reaches visitors.
 
+   **What it counts:** requests whose resource type is `image`, which is how
+   `THREE.TextureLoader` fetches covers and woodwork sheets. **Its deadline** is
+   the 30 s floor of §S4.3.
+
    **The counter is installed before navigation.** The helper attaches its
    request listeners to a page before its `goto`, and returns the settle
    function the caller awaits after `ready`. A listener attached after `goto`
@@ -211,19 +215,33 @@ proves little, and the proof needs a planted slowness:
 1. **Two throwaway draft pull requests slow every page.** CI runs only on a
    pull request or a push to `main`, so a pushed branch alone runs nothing.
    Each proof branch is opened as a draft pull request, closed unmerged and
-   deleted afterwards: one cut from `main`, one from the build. Each carries
-   two commits:
-   - the temporary commit from step 2, so that G60 and G61 run;
-   - CDP CPU throttling (`Emulation.setCPUThrottlingRate`) applied in every
-     `newPage`, plus one printed line of `window.__shelf.stats().fps` after
-     `ready` and after the settle. The gate prints no fps today.
+   deleted afterwards: one cut from `main`, one from the build.
+   - **The `main` proof branch** carries two commits of its own: one that
+     empties `SMOKE_ARGS`, so that G60 and G61 run, and the throttle commit
+     below.
+   - **The build's proof branch** carries the build, the temporary commit from
+     step 2, and the throttle commit.
+   - **The throttle commit** reads the rate from an environment variable,
+     `SMOKE_CPU_THROTTLE`, set to **4** as probed. It applies
+     `Emulation.setCPUThrottlingRate` at every place the gate opens a page,
+     through `browser.newPage` and `context.newPage` alike. It prints
+     `window.__shelf.stats().fps` once it reads above zero, by polling
+     `stats().fps > 0`. fps is 0 until its first 500 ms window closes, and
+     `ready` comes before that. It also prints the longest time from a click
+     to `held() !== undefined`, for K8. The gate prints no fps today.
+   - **Each branch runs twice**, once unthrottled (the variable unset) and once
+     throttled, so that every throttled reading has an unthrottled one beside
+     it from the same runner.
 
    ⚠️ **Check that the throttle bites before trusting it.** Locally, 4×
    throttling cut the first frames from about 4 fps to 0.6 fps, then recovered
    to about 16 fps, because SwiftShader rasterises outside the throttled main
    thread. So it slows boot and loading more than steady drawing.
-   - **The throttle bites** when the fps after `ready` is at most half of an
-     unthrottled run's on the same runner.
+   - **The throttle bites** when the throttled run's first non-zero fps is at
+     most half of the unthrottled run's, both read the same way.
+   - **K8's margin:** the throttled build run's longest click-to-pickup time
+     is under 4 s with at least a second to spare. If it is not, K8's
+     deadline goes to the owner before the build is marked ready.
    - **The control bit** when `main` plus the throttle goes red at two or more
      distinct named waits. One red at the main page's fatal `networkidle0`
      alone tests one wait, not the class.
@@ -234,9 +252,12 @@ proves little, and the proof needs a planted slowness:
    - A throttled full-path run may reach the job's 20-minute limit. If it
      does, say so, and read the steps that finished.
 
-   The `main` proof branch also carries one planted no-op `pickUp`. It must end
-   red, with the report printed, inside the 20-minute job, where §S3's story
-   10 actually applies.
+   **The planted no-op `pickUp` runs on the build's proof branch, separately**
+   (q16), after the throttled samples have been read, and never in the same run
+   as the control. The risk it tests, the 30 s floors multiplied over the
+   loops, exists only in the build. Mixed into the control, it would turn
+   several checks red with no slowness at all. It must end red, with the
+   report printed and the step under 20 minutes.
 2. **G60 and G61 run on the pull request.** Pull requests pass
    `--pull-request`, which skips both. The build carries one temporary commit
    that empties `SMOKE_ARGS` in `gates.yml`, so the pull request's own runs
@@ -263,7 +284,10 @@ proves little, and the proof needs a planted slowness:
 5. **The reviewed screenshot is compared.** Download `artifacts/shelf.png` from
    a `main` run and from the build's run, put them side by side on the pull
    request, and ask the owner to look. It is the picture they review by eye
-   (story 11).
+   (story 11). **The owner's verdict on the pair is recorded before the pull
+   request is marked ready.** If the owner sees a change, D1 falls back to
+   q5's alternative, a fixed 1.5 s after the settle, and the picture is
+   compared again.
 6. **After merge, watch `main`'s push run.** It is the first run of G60 and
    G61 on the merged code. A red there is to be reverted first, by
    ADR-0108's rule. **The revert is a push to `main`, so it waits for the
@@ -344,7 +368,7 @@ changing it would ripple into.
 | q13 | "The control bit" when `main` goes red at two or more distinct named waits | One red anywhere | One red at the fatal `networkidle0` alone tests one wait, not the class |
 | q14 | One red CI sample goes back to Build; a second stops the work and goes to the owner | Any red stops at once | Stopping at once costs a round-trip with the owner for what may be one fix |
 | q15 | K11 waits two frames after the refused fetch fails, then reads | Keep the 600 ms sleep | Two frames assume the swap runs in the loader's error callback; if it is ever deferred further, K11 can miss a wrong swap (weaker, not flaky) |
-| q16 | A planted no-op `pickUp` runs on the `main` proof pull request, to prove a red run ends inside 20 minutes | Budget the worst case on paper | Arithmetic from local timings, which run about 3.3× faster than the runner |
+| q16 | A planted no-op `pickUp` runs on the build's proof pull request, on its own, to prove a red run ends inside 20 minutes | Budget the worst case on paper | Arithmetic from local timings, which run about 3.3× faster than the runner |
 
 ## S10. Appendix — the inventory at `0a458e7`
 
@@ -469,5 +493,8 @@ each one, with a recommendation, and waits.
 | Before the pull request is marked ready | Any absence wait a landed #426 adds (§S8) |
 | On a stop condition | Each case in §S5.6, and §S6.1 when the control does not bite |
 | If the build finds one | A gate row that would need a `docs/gates.md` edit (§S4.12) |
+| If the build finds one | A click handler that defers the pickup, or K8's margin under the throttle short of a second (§S6.1, K8) |
+| If the build is over it | The wall-time limit in §S6.4 |
+| Before the pull request is marked ready | The verdict on the before-and-after screenshots (§S6.5), and D1's fallback if the picture changed |
 | At the end | Accepting the work and merging |
 | After merge, on a red `main` | Reverting on `main` (§S6.6) |
