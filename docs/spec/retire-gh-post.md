@@ -4,7 +4,7 @@
 **Tier:** standard · **Record:** [ADR-0115](../adr/0115-the-repo-ships-no-posting-tool.md),
 superseding [ADR-0078](../adr/0078-a-tool-rewrites-prose-before-it-reaches-github.md) ·
 **State:** signed off by the owner on 2026-10-17 (relayed by the head chef);
-waiting for a build session
+**built**
 
 ## S1. Problem statement
 
@@ -183,8 +183,8 @@ request, signed by the build session, and each is the owner's to strike (S12).
 
 - **On the pact's repository**: the poster refuses a body holding a
   hard-wrapped prose paragraph or a repository-relative link, and never
-  rewrites it. This is D2's other half. **Pending on the pact's repository**:
-  on the owner's answer to q6, the pact's own head chef files it, and nothing
+  rewrites it. This is D2's other half. **Filed on the pact's repository** as
+  [the-pact#317](https://github.com/mephistopheles4/the-pact/issues/317); nothing
   here files it.
 - Noted for that ticket: the poster's `issue` surface has no `--parent`, which
   `gh-post.ts` had. That only matters for the pact's own users.

@@ -1,7 +1,7 @@
 # ADR-0115 — The repository ships no posting tool
 
 **Date:** 2026-10-17
-**Status:** proposed, in the spec for [#461](https://github.com/mephistopheles4/stacks/issues/461)
+**Status:** accepted, built in [#461](https://github.com/mephistopheles4/stacks/issues/461)
 **Issue:** [#461](https://github.com/mephistopheles4/stacks/issues/461)
 **Supersedes:** [ADR-0078](0078-a-tool-rewrites-prose-before-it-reaches-github.md), whole
 
@@ -34,15 +34,17 @@ stops carrying one.
 
 ADR-0078's tool rewrote prose before posting. It joined hard-wrapped paragraphs
 onto one line and turned repository-relative links into full URLs. The pact's
-poster does neither: it sends the text as written or refuses it. Hard-wrapped
-bodies were ADR-0078's real failure: fourteen issues went out that way and all
-fourteen verified as identical.
+poster does neither: it sends the text as written, and is to refuse a body
+that breaks the convention once the follow-up below lands. Hard-wrapped bodies
+were the problem ADR-0078 existed to solve: fourteen issues went out that way
+and all fourteen verified as identical.
 
 - **The rewrite goes, and nothing here replaces it.** The convention in
   `docs/agents/issue-tracker.md` is the only guard in this repository.
-- **The pact's side** is a follow-up on the pact's own repository: the poster
-  refuses a body that holds a hard-wrapped paragraph or a repository-relative
-  link. It refuses rather than rewrites, so what you type is what gets posted,
+- **The pact's side** is a follow-up on the pact's own repository,
+  [the-pact#317](https://github.com/mephistopheles4/the-pact/issues/317): the
+  poster is to refuse a body that holds a hard-wrapped paragraph or a
+  repository-relative link. It refuses rather than rewrites, so what you type is what gets posted,
   which removes the cost ADR-0078 existed to state.
 - **The pre-create check of a pull request's title and body** is not lost.
   `scripts/check-pr.ts` runs the same function by hand before `gh pr create`,
