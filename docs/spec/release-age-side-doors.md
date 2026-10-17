@@ -5,8 +5,8 @@ follow-up to [#399](https://github.com/mephistopheles4/stacks/issues/399) and
 [#449](https://github.com/mephistopheles4/stacks/pull/449) (adversarial-lens
 findings F3 to F6). Standard tier: planned on Opus at medium effort, to be built
 on Sonnet at medium. Written on 2026-10-17 by session `spec-459`. The owner
-settled §S4's decisions the same day: D1 to D3 in a grilling, and D4 after the
-spec lenses' review. The spec as a whole waits for the owner's sign-off.
+settled §S4's decisions the same day: D1 to D3 in a grilling, and D4 and D5 after
+the spec lenses' review. The spec as a whole waits for the owner's sign-off.
 
 Every measurement below was taken on pnpm 11.18.0 against a scratch copy of the
 manifests and lockfile on `main` at `4e97f22`. The real lockfile was never
@@ -150,6 +150,10 @@ a time.
   Dependabot can't see a version inside a script string, no longer applies: a
   `package.json` pin is exactly what Dependabot bumps, under the npm entry's
   seven-day cooldown.
+- **D5: the stale-exclude rule, in this build, as C11.** The owner's answer,
+  relayed by the lead: "Yes, as C11". The spec had deferred it, and the
+  executability lens raised the deferral as high. It costs one claim and one
+  test.
 - **D3, door 1: the key, plus the lockfile rule.** The owner's answer, relayed
   by the lead: "Key + lockfile check". The key is defence in depth and costs
   nothing. The lockfile rule closes the door the issue meant.
@@ -193,6 +197,12 @@ with no YAML parser:
   of exact versions. Generalise the reader over the key name.
 - `trustPolicyIgnoreAfter`, if present, fails. Any value narrows the check, and
   nothing here needs it.
+- **The stale-exclude rule (D5).** Every `minimumReleaseAgeExclude` and
+  `trustPolicyExclude` entry must name a `name@version` that `pnpm-lock.yaml`
+  holds as a package key: a line reading `  name@version:`, or
+  `  'name@version':` for a scoped name, at two spaces' indent. An entry the
+  lockfile no longer holds fails, naming it. Otherwise an old exclude would let
+  that exact version back in, unreviewed, the day a later lockfile resolved it.
 - **The lockfile rule.** Every line of `pnpm-lock.yaml` that holds
   `resolution:` must read `resolution: {integrity: <value>}`, with no other key.
   Anything else fails, naming the line. A lockfile with no `resolution:` line
@@ -283,6 +293,9 @@ The acceptance claims, for the build and for the QA pair at Test:
   `pnpm typecheck`, `pnpm build`, `pnpm format:check` and `pnpm lint:md`.
   `pnpm lint:md` reads tracked files only, so `git add` the new log file
   first.
+- **C11.** G67 passes the repository's excludes, since all three trust excludes
+  name lockfile packages. It fails an age or trust exclude whose version the
+  lockfile doesn't hold, a scoped one included.
 
 Each G67 rule is proved the way G67 already proves its own: synthetic workspace
 text, one passing and one failing per form. Count the test cases against the
@@ -312,10 +325,6 @@ The owner chose the standard tier over the sensitive route, so the build
 
 ## S8. Out of scope
 
-- A G67 rule that fails a stale `trustPolicyExclude` or
-  `minimumReleaseAgeExclude` entry naming a version the lockfile no longer
-  holds. It would be worth having, but it is a new rule nobody asked for and
-  would cost tests beyond the limit.
 - Finding out what `minimumReleaseAgeIgnoreMissingTime` covers. Nothing turns
   on it once the lockfile rule exists.
 - A gate on `dependabot.yml`'s cooldowns, for either entry.
