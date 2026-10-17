@@ -2523,7 +2523,7 @@ async function prepared(page: Page): Promise<Page> {
   page.mouse.click = async (x, y, options) => {
     await click(x, y, options);
     const at = performance.now();
-    const held = await searchFor(page, 'window.__shelf?.held() !== undefined', 4000);
+    const held = await until(page, 'window.__shelf?.held() !== undefined', 4000);
     console.log(
       `[probe] click-to-held ${held ? String(Math.round(performance.now() - at)) : 'MISS'}ms`,
     );
