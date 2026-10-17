@@ -246,6 +246,7 @@ async function main(): Promise<void> {
         console.log('main page: close() found no target, cause not established (#397)');
       }
       const spread = await timed('open spread', () => checkSpread(browser, origin));
+      const atRest = await timed('G35 held at rest', () => checkHeldAtRest(browser, origin));
       const lit = await timed('G59 large-library-lit', () =>
         checkLargeLibraryLit(browser, origin, large.origin),
       );
@@ -272,6 +273,7 @@ async function main(): Promise<void> {
         viewer,
         phone,
         spread,
+        atRest,
         lit,
         fallback,
         sampling,
@@ -1436,6 +1438,152 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
   return { lines, failures };
 }
 
+/**
+ * G35, the held page at rest (#426): long Thoughts scroll once the book has
+ * landed and the links row comes into reach, and GSAP's own ticker stays asleep
+ * through the pickup (ADR-0103, commit `019add5`).
+ *
+ * The Thoughts are planted by request interception rather than a fixture, so
+ * no vault carries them: every `notes/<id>.json` the page asks for answers with
+ * `LONG_THOUGHTS`, invented prose far taller than the page. The page fetches
+ * exactly what it would have; only the answer differs.
+ *
+ * The ticker is read as `COUNT_FRAMES` reads G60's loops: GSAP's ticker is a
+ * `requestAnimationFrame` loop of its own, so awake it shows as a second
+ * callback in a frame the shelf draws. Sampled as a **window** from the moment
+ * of the pickup, while the motion runs and before GSAP would auto-sleep, so a
+ * slow runner only stretches the sample in time, never shortens it.
+ */
+const LONG_THOUGHTS = {
+  paragraphs: Array.from(
+    { length: 14 },
+    (_, index) =>
+      `Paragraph ${String(index + 1)} of a note planted by the gate. The lamp was low and the ` +
+      'margins filled with small arrows pointing nowhere in particular, which is how a reader ' +
+      'marks a page they mean to come back to and never does. Nothing here is quoted; the gate ' +
+      'wrote every word so the page has something tall enough to scroll.',
+  ),
+};
+
+interface AtRestChecked {
+  readonly lines: readonly string[];
+  readonly failures: readonly string[];
+}
+
+async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRestChecked> {
+  const context = await browser.createBrowserContext();
+  const lines: string[] = [];
+  const failures: string[] = [];
+  try {
+    const page = await context.newPage();
+    await page.setViewport(VIEWPORT);
+    await page.evaluateOnNewDocument(COUNT_FRAMES);
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/notes/')) {
+        void request.respond({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(LONG_THOUGHTS),
+        });
+      } else {
+        void request.continue();
+      }
+    });
+    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+
+    const library = (await page.evaluate(
+      `fetch('/library.json').then((response) => response.json())`,
+    )) as { books: LibraryBook[] };
+    const count = new Map<string, number>();
+    for (const book of library.books) count.set(book.title, (count.get(book.title) ?? 0) + 1);
+    const ordered = shelfOrder(library.books);
+    const index = ordered.findIndex((b) => b.thoughts === true && count.get(b.title) === 1);
+    if (index === -1) {
+      failures.push('held at rest: library.json flags no uniquely titled book with Thoughts');
+      return { lines, failures };
+    }
+
+    await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+    const loops = (await page.evaluate(LOOPS_PER_FRAME)) as { frames: number; most: number };
+    const asleep = loops.frames === LOOP_SAMPLE_FRAMES && loops.most === 1;
+    lines.push(
+      `GSAP ticker      ${asleep ? 'asleep' : 'AWAKE'} (most ${String(loops.most)} loops a frame ` +
+        `over ${String(loops.frames)} frames of the pickup)`,
+    );
+    if (!asleep) {
+      failures.push(
+        loops.frames < LOOP_SAMPLE_FRAMES
+          ? `held at rest: only ${String(loops.frames)} of ${String(LOOP_SAMPLE_FRAMES)} frames arrived during the pickup`
+          : `held at rest: GSAP's own ticker ran beside the shelf's loop (${String(loops.most)} callbacks in one frame)`,
+      );
+    }
+
+    if (!(await until(page, HELD, 'the long-Thoughts book to come to rest held'))) {
+      failures.push('held at rest: the book never came to rest held');
+      return { lines, failures };
+    }
+    const planted = LONG_THOUGHTS.paragraphs.length;
+    if (
+      !(await until(
+        page,
+        `document.querySelectorAll('.held-page-right .held-thoughts p').length >= ${String(planted)}`,
+        'the planted Thoughts to show',
+      ))
+    ) {
+      failures.push('held at rest: the planted Thoughts never showed');
+      return { lines, failures };
+    }
+
+    const READ_REACH = `(() => {
+      const right = document.querySelector('.held-page-right');
+      const links = right?.querySelector('.card-links');
+      if (!right || !links) return null;
+      const page = right.getBoundingClientRect(), row = links.getBoundingClientRect();
+      return {
+        overflow: getComputedStyle(right).overflowY,
+        tall: right.scrollHeight > right.clientHeight + 1,
+        inReach: row.top >= page.top - 1 && row.bottom <= page.bottom + 1 && row.bottom <= innerHeight + 1,
+        centre: { x: (page.left + page.right) / 2, y: (page.top + page.bottom) / 2 },
+      };
+    })()`;
+    type Reach = {
+      overflow: string;
+      tall: boolean;
+      inReach: boolean;
+      centre: { x: number; y: number };
+    } | null;
+    const before = (await page.evaluate(READ_REACH)) as Reach;
+    if (before === null) {
+      failures.push('held at rest: the right-hand page or its links row is missing');
+      return { lines, failures };
+    }
+    // Scrolled the way a reader does, by the wheel over the page. Each wheel is a
+    // **search** (K8): a step that has not yet reached the row is an answer.
+    let after: Reach = before;
+    for (let step = 0; step < 20 && after !== null && !after.inReach; step += 1) {
+      await page.mouse.move(before.centre.x, before.centre.y);
+      await page.mouse.wheel({ deltaY: 400 });
+      await searchFor(page, `${READ_REACH}?.inReach === true`, 500);
+      after = (await page.evaluate(READ_REACH)) as Reach;
+    }
+    const scrolls = before.overflow === 'auto' && before.tall;
+    const reached = !before.inReach && after?.inReach === true;
+    lines.push(
+      `long Thoughts     ${scrolls ? 'scroll at rest' : `DO NOT SCROLL (overflow ${before.overflow}, ${before.tall ? 'tall' : 'NOT TALL'})`}   ` +
+        `links ${reached ? 'come into reach' : before.inReach ? 'IN REACH UNSCROLLED, the plant is too short' : 'OUT OF REACH'}`,
+    );
+    if (!scrolls)
+      failures.push('held at rest: long Thoughts do not scroll once the book has landed');
+    if (!reached) failures.push('held at rest: the links row never came into reach by scrolling');
+    await putBackAndSettle(page);
+  } finally {
+    await context.close();
+  }
+  return { lines, failures };
+}
+
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -2557,6 +2705,7 @@ function report(result: {
   viewer: ViewerRead | undefined;
   phone: PhoneRead | undefined;
   spread: SpreadChecked;
+  atRest: AtRestChecked;
   lit: LitChecked;
   fallback: FallbackChecked;
   sampling: SamplingChecked;
@@ -2573,6 +2722,7 @@ function report(result: {
     viewer,
     phone,
     spread,
+    atRest,
     lit,
     fallback,
     sampling,
@@ -2660,6 +2810,8 @@ function report(result: {
   );
   console.log('open spread at rest, 1280x800 (§3.6)');
   for (const line of spread.lines) console.log(`  ${line}`);
+  console.log('held page at rest, long Thoughts planted (#426)');
+  for (const line of atRest.lines) console.log(`  ${line}`);
   const above = (page: Lighting): string => {
     const standing = page.bookcase - page.room;
     // -0.004 is no contrast at all; `-0.0` would read as a sign.
@@ -2712,7 +2864,12 @@ function report(result: {
   } else {
     failures.push(...pickupFailures(pickup));
   }
-  failures.push(...viewerFailures(viewer), ...phoneFailures(phone), ...spread.failures);
+  failures.push(
+    ...viewerFailures(viewer),
+    ...phoneFailures(phone),
+    ...spread.failures,
+    ...atRest.failures,
+  );
   // Books inside their own bookcase.
   //
   // The owner found this twice by eye on a phone: a leaning book's bottom corner
