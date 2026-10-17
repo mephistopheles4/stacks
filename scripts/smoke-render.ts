@@ -1977,12 +1977,7 @@ async function checkShadowReaders(
     }
 
     const s = run.snapshot === undefined ? undefined : summarise(run.snapshot);
-    const programs =
-      s === undefined
-        ? '—'
-        : s.fewestPrograms === s.mostPrograms
-          ? String(s.mostPrograms)
-          : `${String(s.fewestPrograms)}–${String(s.mostPrograms)}`;
+    const programs = s === undefined ? '—' : String(s.mostPrograms);
     const verdict =
       page.role === 'control'
         ? found.length === 0
