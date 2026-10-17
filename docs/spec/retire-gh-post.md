@@ -94,7 +94,10 @@ from a full-tree search at `4e97f22`.
 - **`docs/gates.md`**: in the *Not gated, deliberately* row *Prose posted to
   GitHub is safe for a GitHub body*, replace the last sentence, which says
   `gh-post.ts` stands in its place, with one saying no tool in this repository
-  does (ADR-0115). The row stays refused. In the *shelf survives on real
+  does (ADR-0115). Its first cell's parenthetical, *"(the helper in
+  `AGENTS.md`'s Working rules for agents)"*, names the bullet this change
+  deletes, so it becomes *"(a posting helper, retired by ADR-0115)"*. No gate
+  reads that row's text. The row stays refused. In the *shelf survives on real
   hardware* row, rewrite *"the precedent `scripts/gh-post.ts` set"* as history:
   *"a precedent the retired `gh-post.ts` set"*.
 - **`docs/commands.md`** (around its line 975) and the comment in
@@ -107,8 +110,10 @@ from a full-tree search at `4e97f22`.
 ## S6. Acceptance claims
 
 1. `git grep -n "gh-post\|github-body\|github-post\|runExeOutput"` matches only
-   under `docs/adr/`, `docs/log/` and this spec, and in the past-tense
-   precedent sentences of S5.
+   in these places: under `docs/adr/` and `docs/log/`; this spec and its row in
+   `docs/spec/README.md`; the dated `REFRESHED … BY #220` and `BY #461` notes in
+   `stryker.floors.json`; and the past-tense precedent sentences S5 names in
+   `docs/commands.md`, `docs/gates.md` and `scripts/phone-check.ts`.
 2. `AGENTS.md` names no posting tool. `git grep -n "poster\|gh-post" AGENTS.md`
    returns nothing, and its *Working rules for agents* has no bullet about
    posting.
@@ -120,9 +125,13 @@ from a full-tree search at `4e97f22`.
 5. `pnpm typecheck`, `pnpm lint`, `pnpm lint:md` and `pnpm build` are green.
 6. ADR-0078 carries *Superseded by ADR-0115*, and `docs/adr/README.md` has
    ADR-0115's row (G58).
-7. The issue-comment command in `docs/agents/issue-tracker.md`, run once
-   against #461 with a two-paragraph body file, posts a body whose read-back
-   matches the file.
+7. Two of the commands in `docs/agents/issue-tracker.md`, each run once with a
+   two-paragraph body file, post a body whose read-back matches the file. The
+   two are the issue comment, against #461, and the review-thread reply
+   `gh api …/replies -F body=@reply.md`, against one review comment the build
+   session leaves on its own pull request. The reply form is the risky one:
+   it is what `/crfix` uses, and `-f` instead of `-F` posts the literal
+   filename.
 
 ## S7. Testing decisions
 
@@ -130,16 +139,16 @@ No test is added, because the change removes code. The checks that could fail
 are existing gates that go red if an edit is missed: adapter-boundary on a
 missing allowlisted file, G38 on a stale exclusion, G56 on a stale stamp, and
 G58 on an unindexed record. Claim 1's grep catches a stray mention that no gate
-reads. Claim 7 runs the documented command once by hand, because a wrong `gh`
-form in a doc is something no gate reads. ⚠️ That post lands on #461 and is
-signed by the build session.
+reads. Claim 7 runs two documented commands by hand, because no gate reads a wrong
+`gh` form in a doc. ⚠️ Those posts land on #461 and on the build's pull
+request, signed by the build session.
 
 ## S8. Follow-up, not built here
 
 - **On the pact's repository**: the poster refuses a body holding a
   hard-wrapped prose paragraph or a repository-relative link, and never
   rewrites it. This is D2's other half. **Filing it is a ticket cut**, so it
-  goes to the owner through the head chef once this spec is signed off.
+  goes to the owner through the head chef as a question with the sign-off.
 - Noted for that ticket: the poster's `issue` surface has no `--parent`, which
   `gh-post.ts` had. That only matters for the pact's own users.
 
