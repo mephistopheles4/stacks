@@ -193,8 +193,12 @@ C5 is measured after the merge, because pull requests skip G60 and G61 and
 - **A red `smoke:render`.** If the change itself turns `main` red (a check
   line fails, or the new timer code throws on Linux), the reading session
   opens the revert pull request at once, as ADR-0108 asks for a red `main`.
-- **A miss.** *The rule for a run that is faster but not under 250 s is the
-  owner's, and open; see §S13.*
+- **Slower than today.** If G60 plus G61 come in at or over 505 s (run
+  39051984873's 380.6 s plus 124.7 s), the reading session opens the revert
+  pull request.
+- **A miss.** If they come in under 505 s but at or over 250 s, nothing is
+  reverted. The reading session posts the figures on #397 as a miss, and the
+  owner decides what follows by comment. Owner, q4.
 - The revert lands on `main`, so the owner merges it. The reading session
   opens it and tells the owner through the lead.
 
@@ -220,8 +224,9 @@ that entry, beside run 39051984873's.
   and #436's own record that cut waits failed on CI and passed locally.
 - **Measurement before merge against a lasting workflow change.** A manual
   trigger in `gates.yml`, or a temporary commit that drops `--pull-request`,
-  would measure C5 before the merge. This spec measures after it and reverts
-  on a miss. One revert costs less than a trigger that stays.
+  would measure C5 before the merge. This spec measures after it, and reverts
+  only on a red or slower `main` (§S6.2). One revert costs less than a trigger
+  that stays.
 
 ## S8. Business drivers
 
@@ -290,6 +295,9 @@ Each line is a decision, who took it, and what changes if it is reversed.
   §S4.4, each with its measurement.
 - **Target under 250 s.** Owner, the box's restore code. Reversed to "back to
   about 390 s", the target is met by a wider margin, and C5 changes.
+- **Revert only if `main` goes red or gets slower than 505 s; a miss of 250 s
+  goes to the owner.** Owner, q4 = A, relayed by the lead. Reversed: anything
+  at or over 250 s is reverted unless the owner overrides.
 - **No new test; the gate's output is the proof.** `spec-397`'s
   recommendation. Reversed: a test would need a seam in `main()`'s order of
   calls, which does not exist.
@@ -307,8 +315,6 @@ Each line is a decision, who took it, and what changes if it is reversed.
 ## S13. Needs a human
 
 - **Sign-off**: proceed, fix or kill.
-- **The rule for a miss** (§S6.2): what happens when G60 plus G61 come in
-  faster than 505 s but at or over 250 s.
 - **Merging the revert pull request**, if §S6.2 opens one.
 - **Closing #397.** The build's PR can close it, or leave it open for
   `clickToPickUp` and the rest. That is the owner's call at merge.
