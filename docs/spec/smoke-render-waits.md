@@ -90,7 +90,7 @@ left fixed.
    consecutive frames, which the page counts. A local probe under SwiftShader,
    at 1× and 4× CPU throttling, found that the camera does not move after
    `ready` (book projections were identical across 30 samples) and that the
-   texture count (67) and program count (8) were final by network idle. So the
+   texture count (67) and program count (8) were final by the first sample after network idle. So the
    1.5 s settles wait for textures and programs only, and both are readable
    today. No site code changes, and nothing new reaches visitors.
 
@@ -244,19 +244,22 @@ proves little, and the proof needs a planted slowness:
    **Check:** `git diff origin/main -- .github/workflows/gates.yml` is empty on
    the pull request's head. If it is left in, every pull request runs G60 and
    G61, which ADR-0108 moved off pull requests.
-3. **Repeat samples** (*Claude's recommendation*, q7; the open question q1 for
-   the owner). With that commit in, whole runs are re-run with
-   `gh run rerun <run-id>`. Each run gives two job samples, one per Node
-   version. The pull request lists eight green `suite` job runs by id, four on
-   each Node version. `gh run rerun --job` reruns one leg, one sample. A red
-   sample follows §S5.6.
+3. **Repeat samples** (the head chef's call, q7, for the owner to confirm at
+   sign-off). With that commit in, whole runs are re-run with
+   `gh run rerun <run-id>`. The pull request lists **eight green full-path
+   `suite` job samples by id, on the matrix in force when the build runs**.
+   Today that is two legs per run (Node 22 and 24); #444 drops the Node 22
+   leg, after which each run gives one. `gh run rerun --job` reruns one leg,
+   one sample. A red sample follows §S5.6.
 4. **Timings, before and after, against a limit.** The gate already prints its
    step times. The pull request quotes the `smoke:render` step's table from a
    `main` run and from the build's run. **The limit:** the build's
    `smoke:render` step, median over its full-path samples, is no slower than
-   `main`'s last three push runs' median plus 10%, on each Node version. A
-   build over the limit goes back to Build. The settle needs 10 still frames,
-   and the floors only cost time on a red run, so this should hold.
+   `main`'s last three push runs' median plus 20%, on each leg of the matrix.
+   **A build over the limit is brought to the owner with the numbers, not sent
+   back automatically** (q11): runner wall time varies between runs by enough
+   that an automatic red would flake. The settle needs 10 still frames, and
+   the floors only cost time on a red run, so this should hold.
 5. **The reviewed screenshot is compared.** Download `artifacts/shelf.png` from
    a `main` run and from the build's run, put them side by side on the pull
    request, and ask the owner to look. It is the picture they review by eye
@@ -280,7 +283,7 @@ becomes a poll, a frame window or a settle.
 | K5 | `readFrame` (G59), 397 | double `requestAnimationFrame` | frame sync | the drawing buffer clears after each composite; not a wait for state |
 | K6 | `readCanvasStats`, 429 | double `requestAnimationFrame` | frame sync | the same |
 | K7 | `measureSampling` (G61), 2037 | 30 steady frames, 30 s, judged | window, and the row's clause | it is G61's clause 2 itself |
-| K8 | `clickToPickUp`, 512 | 4,000 ms per click | search | a click between books legitimately picks nothing up; 30 s per miss would cost minutes. The search polls `held() !== undefined`, which holds from the click, not from the end of the 1.3 s pickup |
+| K8 | `clickToPickUp`, 512 | 4,000 ms per click | search | a click between books legitimately picks nothing up; 30 s per miss would cost minutes. The search polls `held() !== undefined`, which reads the pickup's state machine and holds once the click handler has started the pickup, not at the end of the 1.3 s lift. If the build finds the handler deferred, K8's reason is wrong and it goes to the owner |
 | K9 | `examinesWithoutHeldCopy`, 1074 | 1,000 ms, result ignored | search, used as cleanup | only lets the view close before the put-back that follows |
 | K10 | `visitForTuner` plain page, 2198 | 1 ms | absence, by design | the pane must not exist without `?debug` |
 | K11 | `examinesWithoutHeldCopy`, after the refused fetch fails (W6) | two frames | absence | once the refusal has failed, two frames let a wrong swap reach the material before "still the shelf copy" is read; the swap runs in the loader's error callback, which the page has run by the next frame |
@@ -332,9 +335,16 @@ changing it would ripple into.
 | q4 | G60's loop count samples 30 frames | Keep the one-second window | G60's printed line, and a sample that shrinks on a slow runner |
 | q5 | The screenshot settles W1 and W2 go, against the letter of ask 2 (D1, D2 in §S7); the main page boots by `domcontentloaded`, `ready` within 60 s, then settle | Keep a fixed 1.5 s *after* the settle, as the ask says | Costs about 5 s on CI per run (W1, plus W2 on three pages); buys insurance against motion the probe did not see |
 | q6 | The first presence timeout ends its loop | Let loops continue past a timeout | A broken pickup runs about 20 min and is killed with no report |
-| q7 | Proof by a throttled control plus eight full-path job samples on the pull request | (a) one full-path run, with the eight samples only if the control does not bite (good-enough-lens); (b) prove only on `main` after merge | (a) saves about three reruns of a job of up to 20 minutes, and rests on the control alone; (b) gives no pre-merge evidence for G60 and G61, and a red `main` gets reverted |
+| q7 | **The head chef's call (2026-10-16, on the lens disagreement):** a throttled control plus eight green full-path job samples, on the matrix in force when the build runs | (B) one full-path run, with the eight samples only if the control does not bite (good-enough-lens); or prove only on `main` after merge | B saves about three reruns of a job of up to 20 minutes, and rests on the control alone; proving only on `main` gives no pre-merge evidence for G60 and G61, and a red `main` gets reverted |
 | q8 | Wall time stays #397's | Fold #397's G60 grouping into this build | A larger diff that changes test isolation, which #397 flags as needing case-by-case checking |
 | q9 | The spec is a file in `docs/spec/`, proposed by a draft pull request that merges on sign-off | A comment on #436 | Nothing indexed survives if the issue is edited; the README's table loses the row |
+| q10 | The click walk (K8) stops after 10 misses in a row | Walk all 60 books, as today | New G35 behaviour no lens has seen. If the first ten aim points all legitimately miss (covered or between books), G35 reports no pickup and goes red where today it would walk on. Today the first or second click lands. The alternative costs up to 4 min on a broken pickup |
+| q11 | Wall-time limit: median plus 20% against `main`'s last three push runs, reported to the owner when exceeded | A hard 10% limit that sends the work back to Build | Runner variance between runs often exceeds 10%, so a hard limit would turn false reds into Build round-trips |
+| q12 | "The throttle bites" when fps after `ready` is at most half an unthrottled run's | Any measurable drop | A looser threshold accepts a control that barely slows the page and proves little |
+| q13 | "The control bit" when `main` goes red at two or more distinct named waits | One red anywhere | One red at the fatal `networkidle0` alone tests one wait, not the class |
+| q14 | One red CI sample goes back to Build; a second stops the work and goes to the owner | Any red stops at once | Stopping at once costs a round-trip with the owner for what may be one fix |
+| q15 | K11 waits two frames after the refused fetch fails, then reads | Keep the 600 ms sleep | Two frames assume the swap runs in the loader's error callback; if it is ever deferred further, K11 can miss a wrong swap (weaker, not flaky) |
+| q16 | A planted no-op `pickUp` runs on the `main` proof pull request, to prove a red run ends inside 20 minutes | Budget the worst case on paper | Arithmetic from local timings, which run about 3.3× faster than the runner |
 
 ## S10. Appendix — the inventory at `0a458e7`
 
@@ -453,8 +463,7 @@ each one, with a recommendation, and waits.
 
 | When | Decision |
 | --- | --- |
-| Before the build starts | Sign off this spec: proceed, fix or kill. That includes the fixed waits in §S7 (K1–K11), the two waits that go against ask 2 (D1, D2), and the override list q1–q9 in §S9 |
-| Before the build starts | The open question q1: how many CI samples §S6.3 needs (§S9 q7) |
+| Before the build starts | Sign off this spec: proceed, fix or kill. That includes the fixed waits in §S7 (K1–K11), the two waits that go against ask 2 (D1, D2), and the override list q1–q16 in §S9, among them q7, which the head chef decided overnight |
 | Before they are opened | The two throwaway proof pull requests in §S6.1, which push branches to the shared repo |
 | Before it is pushed | The temporary `SMOKE_ARGS` commit in §S6.2, which changes what CI runs on that pull request |
 | Before the pull request is marked ready | Any absence wait a landed #426 adds (§S8) |
