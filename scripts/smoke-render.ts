@@ -38,6 +38,8 @@ import {
   type SpreadRead,
   CLOSED_TOLERANCE_DEG,
   type ViewerRead,
+  atRestFailures,
+  AT_REST_FRAMES,
 } from './lib/pickup-gate.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
@@ -1512,18 +1514,11 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
 
     await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
     const loops = (await page.evaluate(LOOPS_PER_FRAME)) as { frames: number; most: number };
-    const asleep = loops.frames === LOOP_SAMPLE_FRAMES && loops.most === 1;
+    const asleep = loops.frames >= AT_REST_FRAMES && loops.most === 1;
     lines.push(
       `GSAP ticker      ${asleep ? 'asleep' : 'AWAKE'} (most ${String(loops.most)} loops a frame ` +
         `over ${String(loops.frames)} frames of the pickup)`,
     );
-    if (!asleep) {
-      failures.push(
-        loops.frames < LOOP_SAMPLE_FRAMES
-          ? `held at rest: only ${String(loops.frames)} of ${String(LOOP_SAMPLE_FRAMES)} frames arrived during the pickup`
-          : `held at rest: GSAP's own ticker ran beside the shelf's loop (${String(loops.most)} callbacks in one frame)`,
-      );
-    }
 
     if (!(await until(page, HELD, 'the long-Thoughts book to come to rest held'))) {
       return stop('the book never came to rest held');
@@ -1577,9 +1572,16 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       `long Thoughts     ${scrolls ? 'scroll at rest' : `DO NOT SCROLL (overflow ${before.overflow}, ${before.tall ? 'tall' : 'NOT TALL'})`}   ` +
         `links ${reached ? 'come into reach' : before.inReach ? 'IN REACH UNSCROLLED, the plant is too short' : 'OUT OF REACH'}`,
     );
-    if (!scrolls)
-      failures.push('held at rest: long Thoughts do not scroll once the book has landed');
-    if (!reached) failures.push('held at rest: the links row never came into reach by scrolling');
+    // Judged by `lib/pickup-gate.ts`, every clause planted red in its spec.
+    const judged = atRestFailures({
+      frames: loops.frames,
+      mostLoops: loops.most,
+      overflow: before.overflow,
+      tall: before.tall,
+      inReachUnscrolled: before.inReach,
+      inReachScrolled: after?.inReach === true,
+    });
+    failures.push(...judged.map((failure) => `held at rest: ${failure}`));
     await putBackAndSettle(page);
   } finally {
     await context.close();

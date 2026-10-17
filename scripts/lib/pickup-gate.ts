@@ -421,3 +421,48 @@ export function spreadFailures(read: SpreadRead | undefined, book: string): stri
   }
   return failures;
 }
+
+/**
+ * The held page at rest (#426), read by `checkHeldAtRest` with long Thoughts
+ * planted through interception. Two reads of the links row, so a plant too
+ * short to scroll cannot pass as a row the wheel brought into reach.
+ */
+export interface AtRestRead {
+  /** Frames sampled from the moment of the pickup, of `AT_REST_FRAMES`. */
+  readonly frames: number;
+  /** The most `requestAnimationFrame` callbacks any one of them ran. */
+  readonly mostLoops: number;
+  /** The right-hand page's computed `overflow-y` once the book has landed. */
+  readonly overflow: string;
+  /** Its content is taller than the page. */
+  readonly tall: boolean;
+  /** The links row sat inside the page and the viewport before any scroll. */
+  readonly inReachUnscrolled: boolean;
+  /** And after the wheel over the page. */
+  readonly inReachScrolled: boolean;
+}
+
+/** The window GSAP's ticker is read over: frames, never time. */
+export const AT_REST_FRAMES = 30;
+
+export function atRestFailures(read: AtRestRead): string[] {
+  const failures: string[] = [];
+  if (read.frames < AT_REST_FRAMES) {
+    failures.push(
+      `only ${String(read.frames)} of ${String(AT_REST_FRAMES)} frames arrived during the pickup`,
+    );
+  } else if (read.mostLoops !== 1) {
+    failures.push(
+      `GSAP's own ticker ran beside the shelf's loop (${String(read.mostLoops)} callbacks in one frame)`,
+    );
+  }
+  if (read.overflow !== 'auto' || !read.tall) {
+    failures.push('long Thoughts do not scroll once the book has landed');
+  }
+  if (read.inReachUnscrolled) {
+    failures.push('the links row was in reach unscrolled, so the planted Thoughts are too short');
+  } else if (!read.inReachScrolled) {
+    failures.push('the links row never came into reach by scrolling');
+  }
+  return failures;
+}
