@@ -147,6 +147,16 @@ and every `main` run finishes ([ADR-0108](adr/0108-g60-and-g61-run-after-merge-n
 The pull-request step measured 2m24s on Node 22 and 2m29s on Node 24, against
 5m42s and 6m59s. Observed red: an unknown argument exits 1 before the build.
 
+**2026-10-16 — the release-age window, stated**
+([#399](https://github.com/mephistopheles4/stacks/issues/399)): G66
+(`release-age`) holds `minimumReleaseAge: 10080` in `pnpm-workspace.yaml`,
+observed red on the real file before the key existed and again with `1440`
+planted. ⚠️ **A frozen install is held to the window**, so a lockfile entry
+under seven days old fails CI, and **an override inside the window fails too**.
+The hatch is `minimumReleaseAgeExclude`. Dependabot gained a seven-day
+`cooldown`, which security updates ignore. See
+[the log](log/2026-10-16-the-window-that-was-not-set.md).
+
 ### Phase 3 evidence
 
 `pnpm gate:public` green: builds for real, then greps every text file that
@@ -515,6 +525,7 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-09-25 — [A large library renders black](./log/2026-09-25-a-large-library-renders-black.md) — [#383](https://github.com/mephistopheles4/stacks/issues/383). The fog's world-unit range painted a 17-shelf bookcase the room colour: the bookcase region measured **22.6**, the luma of `0x1a1613` exactly, against 69.5 with the fog off. The range became a multiple of the framing distance, and G59 (`large-library-lit`) reads the picture, red on the old fog and green on the new.
 - 2026-09-25 — [G61 flakes on a late sheet](./log/2026-09-25-g61-flakes-on-a-late-sheet.md) — [#385](https://github.com/mephistopheles4/stacks/issues/385). The second woodwork sheet to decode switches to a program the first already linked, so nothing links, and G61's settle, which ended at the last link, judged the gap between the decodes as steady. Held back 600 ms, 4 of 4 red; the settle now also ends at the last change of readers, and a standing second reader is still red.
 - 2026-09-26 — [A title lookup carries a different-language edition's ISBN](./log/2026-09-26-title-lookup-foreign-isbn.md) — the plan, its [plan review](./log/2026-09-26-title-lookup-foreign-isbn-plan-review.md) and its [security review](./log/2026-09-26-title-lookup-foreign-isbn-security-review.md). `lookup('Thinking, Fast and Slow')` returned a **Turkish** ISBN, because Open Library's search answers with a *work* whose `isbn` list jumbles 36 editions in 8 languages. A title search now takes every edition-scoped field from the **one** edition the search projects, only when its `language` holds the reading language (`STACKS_LANGUAGE`, default `en`, refused rather than defaulted when unknown); Google's title search drops the ISBN of a volume in another language ([ADR-0094](./adr/0094-a-title-search-takes-one-edition-in-the-reading-language.md)). ⚠️ **It fixes new lookups, not notes already written**, and every cached Open Library search goes cold. ⚠️ **A full G26 re-capture moved an outcome through Google data drift, not this change** — *From Zero to Profit with AI* was refused — so only the five Open Library entries, all still `numFound: 0`, were re-captured. ⚠️ `open-library-search-sparse-sibling.json` was **not** re-captured: a fresh capture no longer holds the authorless twin its test exists for
+- 2026-10-16 — [The window that was not set](./log/2026-10-16-the-window-that-was-not-set.md) — [#399](https://github.com/mephistopheles4/stacks/issues/399). The August nanoid decline was not the release-age window: on the same pnpm 11.18.0, with the window at 0, `pnpm update nanoid` still leaves 3.3.16. Seven days is now set, G66 holds it, and both a frozen install and an override inside the window fail under it
 
 ## Notes to the next session
 

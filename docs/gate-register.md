@@ -6581,3 +6581,32 @@ read after.
 - **Decay** — **gated on a version bump, through the build.** A Tweakpane
   release that moves its stylesheet or its placeholder rule fails the build at
   extraction, before this row runs. Disposition `gated`.
+
+### G66 — `release-age`
+
+**Gate:** [`gates/release-age.test.ts`](../gates/release-age.test.ts)
+**Date:** 2026-10-16
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number was taken against a re-fetched `origin/main` and every open
+pull request immediately before committing**, for G58's reason.
+
+**Observed-red**, twice. The live assertion was written before the key existed
+and went red on the real file: `minimumReleaseAge is not set at the top level`.
+Then `1440` was planted in the real `pnpm-workspace.yaml`, the one-day window
+this row exists to refuse, and it went red again. Both were reverted as separate
+steps.
+
+- **Weakening** — **exposed.** The floor is one constant, `FLOOR`, and lowering
+  it is one edit to this file. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The row reads the key pnpm reads, but
+  not pnpm itself: a key pnpm stopped honouring, or a `.npmrc` or environment
+  value that overrode it, would pass. Measured on #399 that pnpm 11.18.0 reads
+  10080 from this file. Disposition `accepted`.
+- **Routing around** — **gated for this file.** A comment, a nested key, a
+  quoted value and a duplicate all fail closed. A `minimumReleaseAgeExclude`
+  entry is not read, and it is the documented hatch. Disposition `gated`.
+- **Vacuous green** — **gated.** An absent key is a red, not a pass over
+  nothing. Disposition `gated`.
+- **Decay** — **exposed on a pnpm major.** If pnpm renames the key, this row
+  stays green over a key nothing reads. Disposition `accepted`.

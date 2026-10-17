@@ -17,6 +17,28 @@ allowBuilds:
 # CI is unaffected either way: it installs from scratch against a frozen lockfile.
 verifyDepsBeforeRun: warn
 
+# Seven days, stated. pnpm resolves no version published inside this window, and
+# it is the window in which a compromised release usually gets caught. The
+# override blocks below were written assuming seven days was pnpm's default; it
+# was not, and nothing set it until #399. pnpm 11.18.0 left to itself resolved a
+# release two days old, so the policy was whatever pnpm shipped. G66
+# (`release-age`) holds this key at 10080 or more.
+#
+# ⚠️ **A frozen install is held to it too.** pnpm 11 checks the lockfile against
+# this window before it installs, so `pnpm install --frozen-lockfile` fails
+# (ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION) on any entry younger than seven days,
+# even one already committed. Measured on 2026-10-16.
+#
+# ⚠️ **An override does not get past it.** An `overrides` entry naming a version
+# inside the window fails resolution with ERR_PNPM_NO_MATURE_MATCHING_VERSION,
+# exact or caret. **The escape hatch for a security fix inside the window is
+# `minimumReleaseAgeExclude`**, naming the exact `package@version`, together
+# with the override that requires it. Remove the exclude once the version is
+# seven days old. Dependabot's `cooldown` holds its version bumps to the same
+# seven days, but **security updates ignore cooldown**, so a security bump inside
+# the window fails CI until someone adds that exclude entry.
+minimumReleaseAge: 10080
+
 # GHSA-2v37-7h3g-55p8, high: nanoid <3.3.18 loops indefinitely on a custom
 # generator. It arrives four ways, all of them vite>postcss, and postcss@8.5.25
 # already asks for `^3.3.17` in its own latest release — so this override looks
@@ -41,10 +63,27 @@ verifyDepsBeforeRun: warn
 # override is honoured where auto-resolution is not — the policy governs which
 # version pnpm will *pick*, not one it is told to use.
 #
+# ⚠️ **Corrected 2026-10-16 (#399), and kept rather than deleted: three claims
+# in the paragraph above are false.** Nothing set `minimumReleaseAge` then, and
+# pnpm 11.18.0, which this repository has pinned since 2026-07-31, does not
+# default to seven days: its window measured under two days. The window did not
+# hold nanoid back either. Replayed on the August lockfile with the window set to
+# 0, `pnpm update nanoid` still exits 0 and leaves 3.3.16, while a full
+# `pnpm update --recursive --depth Infinity` moves it. The named update never
+# reached that transitive copy. And now that the window is set, an override
+# inside it is **not** honoured: it fails. The hatch is
+# `minimumReleaseAgeExclude`; see the block at the top of this file and
+# docs/log/2026-10-16-the-window-that-was-not-set.md.
+#
 # ⚠️ That cost is why `^3.3.17` did not quietly pick up 3.3.18 on its own. The
 # caret admitted it from 2026-08-07, and quarantine withheld it until 2026-08-14
 # — one day before the amendment made it required. The window and the amendment
 # are independent, and the gap between them is the whole of this incident.
+#
+# ⚠️ **Corrected 2026-10-16: not until 2026-08-14.** Under a window of about a
+# day, 3.3.18 was admitted from about 2026-08-08. On the morning this override
+# was written it was about 21 hours old, which fits `^3.3.17` resolving 3.3.17
+# then. After that the lockfile held it, not the window.
 #
 # So this is deliberately not an `auditConfig.ignoreGhsas` entry. That hatch is
 # for an advisory with no fix published; here the fix existed and only needed
@@ -133,6 +172,10 @@ verifyDepsBeforeRun: warn
 # 3.1.6 shipped 2026-08-23, so the fix was outside the window before this was
 # written.
 #
+# ⚠️ **Corrected 2026-10-16 (#399): "pnpm's seven-day quarantine" was not
+# pnpm's.** Nothing set the window until #399, and pnpm's own default was under
+# two days. The conclusion holds: 3.1.6 was outside seven days as well.
+#
 # ⚠️ **A plain update reaches the fixed line today, and this override still is
 # not redundant** — measured, not guessed: `pnpm update fast-uri --recursive`
 # lands 3.1.7 on its own. What it does not do is leave anything saying why, so
@@ -212,6 +255,13 @@ verifyDepsBeforeRun: warn
 # explicitly rather than waited out. 4.3.0 sits within astro's own declared `^4.2.0`, so
 # this does not force a combination the package does not declare. Remove it when
 # `astro` raises its floor to `^4.3.0`.
+#
+# ⚠️ **Corrected 2026-10-16 (#399): "applies by hand" was the whole of it.**
+# pnpm's own window was under two days, so it never held 4.3.0 back. The
+# repository now sets seven days, and under it **this precedent no longer
+# works**: an override naming a version inside the window fails resolution. The
+# next fix like this one needs a `minimumReleaseAgeExclude` entry beside its
+# override. 4.3.0 is twelve days old today, so this entry needs none.
 
 # GHSA-r4xh-jqrq-34v2, moderate: `smol-toml` 1.8.0 and below parses quadratically,
 # rescanning to the end of the document on each key line. It arrives one way,
