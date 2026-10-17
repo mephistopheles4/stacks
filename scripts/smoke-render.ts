@@ -1500,9 +1500,14 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     for (const book of library.books) count.set(book.title, (count.get(book.title) ?? 0) + 1);
     const ordered = shelfOrder(library.books);
     const index = ordered.findIndex((b) => b.thoughts === true && count.get(b.title) === 1);
-    if (index === -1) {
-      failures.push('held at rest: library.json flags no uniquely titled book with Thoughts');
+    // An early stop says why under the check's own heading, not only in the closing list.
+    const stop = (why: string): AtRestChecked => {
+      lines.push(`STOPPED          ${why}`);
+      failures.push(`held at rest: ${why}`);
       return { lines, failures };
+    };
+    if (index === -1) {
+      return stop('library.json flags no uniquely titled book with Thoughts');
     }
 
     await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
@@ -1521,8 +1526,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     }
 
     if (!(await until(page, HELD, 'the long-Thoughts book to come to rest held'))) {
-      failures.push('held at rest: the book never came to rest held');
-      return { lines, failures };
+      return stop('the book never came to rest held');
     }
     const planted = LONG_THOUGHTS.paragraphs.length;
     if (
@@ -1532,8 +1536,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
         'the planted Thoughts to show',
       ))
     ) {
-      failures.push('held at rest: the planted Thoughts never showed');
-      return { lines, failures };
+      return stop('the planted Thoughts never showed');
     }
 
     const READ_REACH = `(() => {
@@ -1544,7 +1547,8 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       return {
         overflow: getComputedStyle(right).overflowY,
         tall: right.scrollHeight > right.clientHeight + 1,
-        inReach: row.top >= page.top - 1 && row.bottom <= page.bottom + 1 && row.bottom <= innerHeight + 1,
+        inReach: row.top >= page.top - 1 && row.bottom <= page.bottom + 1 &&
+          row.top >= -1 && row.left >= -1 && row.right <= innerWidth + 1 && row.bottom <= innerHeight + 1,
         centre: { x: (page.left + page.right) / 2, y: (page.top + page.bottom) / 2 },
       };
     })()`;
@@ -1556,11 +1560,10 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     } | null;
     const before = (await page.evaluate(READ_REACH)) as Reach;
     if (before === null) {
-      failures.push('held at rest: the right-hand page or its links row is missing');
-      return { lines, failures };
+      return stop('the right-hand page or its links row is missing');
     }
     // Scrolled the way a reader does, by the wheel over the page. Each wheel is a
-    // **search** (K8): a step that has not yet reached the row is an answer.
+    // **search**, like `searchFor`'s other callers: a step that has not yet reached the row is an answer.
     let after: Reach = before;
     for (let step = 0; step < 20 && after !== null && !after.inReach; step += 1) {
       await page.mouse.move(before.centre.x, before.centre.y);
