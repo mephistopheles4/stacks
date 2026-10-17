@@ -93,6 +93,20 @@ from the repository root, where the window applies. With
 `--config.minimum-release-age=10080` on the call, dlx printed 4.149.0 from
 outside the workspace too, with the flag placed either before or after `dlx`.
 
+**Door 3 and the trust policy: dlx does not apply it.** This was measured
+after the spec's lens review asked. Under the final settings of §S5 (both new
+keys and the three excludes), `pnpm dlx wrangler@4 --version` from the
+workspace exits 0. As a canary, `semver@6.3.1`, which the frozen install
+refuses as a trust downgrade, runs through `pnpm dlx` and exits 0, even with
+`--config.trust-policy=no-downgrade` passed on the call. So the new settings
+can't break the deploy's fetch. The flip side is that **the credentialed
+wrangler fetch is the one install the stolen-token check doesn't reach**, and
+no argument puts it in reach. §S9 carries that as an open question.
+
+The measurements ran on the Windows 11 workstation. CI installs on
+`ubuntu-latest`, where platform-only optional packages can resolve that a
+Windows install skips, so C4 is proved there.
+
 **Door 4.** GitHub's Dependabot options reference supports `cooldown`
 `default-days` for the `github-actions` ecosystem, though not its semver-day
 options. It also says cooldown does not apply to security updates.
@@ -110,7 +124,9 @@ a time.
   anywhere. It stays flagged, and the comment beside the exclude carries the
   evidence from §S3. The cost, also accepted: chromium-bidi no longer publishes
   with provenance, so each `puppeteer-core` bump that moves it will fail CI
-  until someone adds the new exact version.
+  until someone adds the new exact version. puppeteer-core travels in
+  Dependabot's weekly `dev-tooling` group, with typescript, vitest and tsx, so
+  that failure holds back the whole group's pull request, not just one bump.
 - **D2, door 3: pass the window on the dlx call**, not just a comment and not
   an exact pin. The owner said yes in chat. It is one argument, it removes the
   dependence on the working directory, and it adds no upkeep. An exact pin was
@@ -130,13 +146,22 @@ a time.
   three exact versions. Each entry gets a comment with its removal condition:
   `semver` and `chokidar` come out when the lockfile stops holding that
   version. chromium-bidi's entry moves to the new exact version on each
-  puppeteer-core bump, after checking who published it. If chromium-bidi
-  publishes with provenance again, the entry comes out.
+  puppeteer-core bump, but **only on the owner's word**, with the evidence of
+  who published it. If chromium-bidi publishes with provenance again, the
+  entry comes out.
+- **Stop conditions, for the build and for every later bump.** If any install
+  fails on an entry other than these three exact versions, or the lockfile
+  holds a resolution that isn't integrity-only, stop and bring it to the owner.
+  Never add or change a trust or age exclude without the owner's word: each
+  one accepts a possible package takeover.
 - **The hatch text** gains one line, in this file and in the Dependabot npm
   note: before excluding a version from the window, check how it was published.
   A token publish where earlier releases had provenance is the stolen-token
   signature, and the trust policy stays on for an excluded version, so a
   failing install is the signal to look, not to add a trust exclude by reflex.
+  The Dependabot note also names the expected failure: a `dev-tooling` group
+  pull request that moves chromium-bidi goes red on `ERR_PNPM_TRUST_DOWNGRADE`,
+  and its remedy is the owner's decision to move the exact exclude.
 
 **`gates/release-age.test.ts` (G67)**, extending its existing readers, still
 with no YAML parser:
@@ -152,7 +177,9 @@ with no YAML parser:
 - **The lockfile rule.** Every line of `pnpm-lock.yaml` that holds
   `resolution:` must read `resolution: {integrity: <value>}`, with no other key.
   Anything else fails, naming the line. A lockfile with no `resolution:` line
-  at all fails as well, so a renamed field can't read as a pass.
+  at all fails as well, so a renamed field can't read as a pass. Split lines on
+  `\r?\n`, as the workspace reader does, since a Windows checkout may carry
+  CRLF.
 - **The deploy rule.** `scripts/deploy.ts` must pass
   `--config.minimum-release-age=` with a value of 10080 or more in the argument
   list of its `dlx` upload call, and in the printed `--dry-run` command. The
@@ -173,6 +200,11 @@ index line, and `docs/log/2026-10-17-release-age-side-doors.md` gets §S3's
 measurements as the investigation narrative. **No ADR**: each setting is cheap
 to reverse, and the reasoning lives in the comments and the log.
 
+**Rollback.** The build lands as one squash commit, and reverting it removes
+the keys, the G67 rules, the deploy argument and the cooldown together. No
+data is touched. If `main` goes red after the merge, revert first, then
+diagnose.
+
 ## S6. Testing decisions
 
 The acceptance claims, for the build and for the QA pair at Test:
@@ -188,9 +220,9 @@ The acceptance claims, for the build and for the QA pair at Test:
   settings, which CI's install step proves on the pull request. With the three
   trust excludes removed, the same install fails with `ERR_PNPM_TRUST_DOWNGRADE`.
   That run is done by hand once, in a scratch copy, and recorded in the log.
-- **C5.** G67 passes today's lockfile and fails a planted `tarball:` key, a
-  `gitHosted:` key, a `type: git` resolution, and a lockfile with no
-  resolutions.
+- **C5.** G67 passes today's lockfile and the same text with CRLF line
+  endings. It fails a planted `tarball:` key, a `gitHosted:` key, a `type: git`
+  resolution, and a lockfile with no resolutions.
 - **C6.** G67 fails `deploy.ts` with the window argument removed, or set under
   10080. `--dry-run` prints a command that carries the argument.
 - **C7.** The github-actions entry in `dependabot.yml` carries `cooldown:
@@ -198,6 +230,16 @@ The acceptance claims, for the build and for the QA pair at Test:
   nothing gates either. A reviewer checks it by reading the diff.
 - **C8.** The hatch text in both files says to check how a version was
   published, and door 1's comment carries §S3's correction.
+- **C9.** On the Windows workstation, with the final `pnpm-workspace.yaml` and
+  run from the repository root, `pnpm dlx --config.minimum-release-age=10080
+  wrangler@4 --version` exits 0 and prints a version at least seven days old.
+  The log records the command, its output and the exit code. **No real deploy
+  runs in this work**; the next one is the owner's.
+- **C10.** Each of these exits 0 on the Windows workstation, and CI's `gates`
+  job is green on the pull request, on Linux: `pnpm test`, `pnpm lint`,
+  `pnpm typecheck`, `pnpm build`, `pnpm format:check` and `pnpm lint:md`.
+  `pnpm lint:md` reads tracked files only, so `git add` the new log file
+  first.
 
 Each G67 rule is proved the way G67 already proves its own: synthetic workspace
 text, one passing and one failing per form. Count the test cases against the
@@ -237,7 +279,14 @@ The owner chose the standard tier over the sensitive route, so the build
 ## S9. Needs a human
 
 - **Sign-off**: proceed, fix or kill.
+- **Accepting the change and merging it are the owner's.** So is the next real
+  deploy, and so is every new trust or age exclude (§S5).
 - **The three trust excludes stay an unrecorded acceptance** until the
   repository has a threat model. Creating one is the owner's decision, and not
   part of this work.
-- **The security pair at Test** is an offer the build makes once (§S6).
+- **The wrangler fetch is outside the trust check** (§S3). Whether to accept
+  that, or bring wrangler into the lockfile as a pinned devDependency, is the
+  owner's call. It is open as this spec's lens review closes.
+- **The security pair at Test** is an offer the build makes once (§S6). The
+  choice of the standard tier over the sensitive route reached this session by
+  relay, through the lead, so it stays open until the owner answers it.
