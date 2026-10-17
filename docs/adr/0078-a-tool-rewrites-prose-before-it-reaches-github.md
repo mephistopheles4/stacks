@@ -2,6 +2,7 @@
 
 **Date:** 2026-08-26
 **Status:** accepted
+**Superseded by:** [ADR-0115](0115-the-repo-ships-no-posting-tool.md)
 **Ticket:** [#220](https://github.com/mephistopheles4/stacks/issues/220)
 
 ## Context

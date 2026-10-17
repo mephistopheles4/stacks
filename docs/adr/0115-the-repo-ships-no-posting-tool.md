@@ -1,7 +1,7 @@
 # ADR-0115 — The repository ships no posting tool
 
 **Date:** 2026-10-17
-**Status:** proposed, in the spec for [#461](https://github.com/mephistopheles4/stacks/issues/461)
+**Status:** accepted, built in [#461](https://github.com/mephistopheles4/stacks/issues/461)
 **Issue:** [#461](https://github.com/mephistopheles4/stacks/issues/461)
 **Supersedes:** [ADR-0078](0078-a-tool-rewrites-prose-before-it-reaches-github.md), whole
 
