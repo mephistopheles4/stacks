@@ -9,9 +9,10 @@ tier, **one build session**, no gate row.
 [`the-ratchet.md`](the-ratchet.md), it names a rule; the values come from the
 record.
 
-⚠️ **Nothing is armed until this spec merges** (§S9, Q0). By the streak rule
-the cap windows are already full and the floor windows fill in early November
-(§S11); with arming held, neither is a deadline for this spec.
+⚠️ **Nothing is armed until this spec merges** (§S9, Q0). Then every bound is
+armed at the rule's value from the windows the record already holds, once
+[#464](https://github.com/mephistopheles4/stacks/issues/464) lands, and the
+slack that leaves is what this spec's clause tightens (§S11, Q9).
 
 ---
 
@@ -224,6 +225,9 @@ also laid out as a morphological box, which is not in this checkout.
 | Q5 | `notes` on a tightening | Optional; a loosening still needs one |
 | Q6 | What ships | This spec and ADR-0111 |
 | Q7 | The test seam | Rows in, printed lines out, in `floors.test.ts` |
+| Q8 | The deploy's short read and the 2026-10-09 renovation | One follow-up, [#464](https://github.com/mephistopheles4/stacks/issues/464), landing before any arming |
+| Q9 | Arm on the preserved windows, leaving slack? | Yes: arm every bound at the rule's value once this merges and #464 lands, and tighten when the clause asks |
+| Q10 | Rescore old commits on CI, or count merge runs, to fill windows faster? | Neither; §10 of `the-ratchet.md` stays as written |
 
 Taken by the spec author as following from those answers, and open to the
 owner's override at sign-off: rounding the named floor **down** (§S4); the
@@ -234,9 +238,11 @@ degraded clause when the resolution is unknown (§S4); no clause beside a breach
 
 - **Moving any bound automatically**, or proposing a move outside the print.
 - **Arming**, and anything that changes what arms a scope.
-- **The window's length**, fixed by ADR-0084.
-- **The trend-page line.** A follow-up issue: it would reach the owner on a day
-  with no deploy, and it files nothing either.
+- **The window's length**, fixed by ADR-0084, and **what counts toward it**:
+  rescoring old commits on CI and counting merge runs were both declined (Q10).
+- **The trend-page line**, [#463](https://github.com/mephistopheles4/stacks/issues/463):
+  it would reach the owner on a day with no deploy, and it files nothing either.
+- **Arming**, and the two fixes it waits on, which are #464.
 - **The duplication caps** in `jscpd.floors.json`, which have no calibration
   window yet ([#269](https://github.com/mephistopheles4/stacks/issues/269)).
   When one exists, this rule is the one to apply to it.
@@ -273,13 +279,33 @@ over all 210 records (63 nightlies), and once over only the 39 records
 | floor, `configHash` `f1e545a1…` | 3/10 trees, 6 days | 3/10 trees |
 
 So by the rule **the cap windows are full today, and the print says `5/10
-trees`**. The floor window restarted on 2026-10-09's `configHash` renovation,
-which declared `preserves: false`; at the record's pace of about one tree per
-2.7 nightlies it fills in early November, not near 2026-10-24.
+trees`**.
 
-§S5's widened read fixes the print as a side effect, but **arming depends on it
-before this spec is built**, so it is the owner's call whether it becomes its
-own issue and lands first.
+**The floor window restarted on 2026-10-09 for no score's sake.** That
+`configHash` renovation declared `preserves: false`, but the stamp moved only
+because two exclusions joined `stryker.scopes.json` — `pickup.ts` and
+`pickup-tuner.ts` — and both files were created in that same commit. Expanding
+both `mutate` arrays over the tree of every nightly under the old stamp selects
+identical files on all seven trees (77 to 97 files each), and on the commit that
+added them, the canary, exactly those two differ. Identical files, tests and
+options are identical Stryker input. Corrected to `preserves: true`, the floor
+window holds **11 trees over 24 days, full**, with no gap over three days and
+no failed nightly inside it.
+
+⚠️ **Those floors are slack, and the owner accepted that** (Q9). The window
+reaches trees from before recent test work: `packages/site/src/shelf`'s window
+lowest is 51.89 against 66.90 over the recent trees alone, `packages/cli/src`
+45.59 against 57.61, and `packages/core/src/adapters` 66.94 against 81.53.
+**Arming at the recent value instead is not available**: choosing which trees
+count after reading their scores is the gameability the rule exists to close,
+in either direction. The clause in this spec is how they come back up, as older
+trees leave the window, at about the date the restarted window would have
+filled anyway, so arming now buys protection in between and costs no
+tightness.
+
+**Both fixes are [#464](https://github.com/mephistopheles4/stacks/issues/464)**
+and land before any arming (Q8): the read to the end of the streak, which §S5
+needs as well, and the corrected renovation.
 
 **Build order.** One ticket, one session: the function, the two render
 functions, the record read in `deploy.ts`, the floors file's `$comment`
