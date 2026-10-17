@@ -141,7 +141,7 @@ describe('G56 — the stamp records the configuration that is really there', () 
         '  ⚠️ Unless the renovation you write for it says otherwise. Since #227 an entry in ' +
         '`renovations.json` may declare `"preserves": true`, which carries the window across ' +
         'the change instead of restarting it — so `0 of 10 trees` is what happens when nothing ' +
-        'preserves the previous stamp, which is every entry in the file today. Claim it only ' +
+        'preserves the previous stamp. Claim it only ' +
         'when you measured that the counts either side are comparable. G57 is the row that ' +
         'asks for that entry at all.',
     ).toBe(derived);

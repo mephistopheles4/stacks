@@ -1253,8 +1253,8 @@ export interface CapCalibration {
  * scope, and nothing in this module writes the floors file.
  *
  * **The window is the floor's window**, walked by the same `streakOf` and
- * counting the same runs: CI nightlies only, twenty consecutive healthy runs,
- * no gap over three days. §4 says the machinery is inherited *verbatim* from
+ * counting the same runs: CI nightlies only, consecutive healthy runs covering
+ * `WINDOW_RUNS` distinct trees, no gap over three days. §4 says the machinery is inherited *verbatim* from
  * `the-ratchet.md`, and sharing the walk is what makes that structural.
  *
  * ⚠️ **A draft counted merges as well, and the reasoning was wrong.** It is
@@ -1302,6 +1302,95 @@ export function capCalibration(
     days,
     highest,
   };
+}
+
+/** The two stamps a deploy's windows count under, each with what its chain accepts. */
+export interface WindowStamps {
+  configHash: string;
+  configAccepted: readonly string[];
+  fixtureHash: string;
+  fixtureAccepted: readonly string[];
+}
+
+/**
+ * Whether the rows read so far are enough for both calibration windows.
+ *
+ * **Enough is two things.** More than `WINDOW_RUNS` nightlies, which is the rule
+ * the read had before #464, kept as a minimum so it never reads less than it
+ * did. And both streaks ended inside the read: the floor's, under `configHash`,
+ * and the caps', under `fixtureHash`. A streak has ended when `streakBack`
+ * stops short of the oldest nightly read, so the read holds the nightly that
+ * broke it, and an empty streak, where the newest nightly is itself the break,
+ * has ended too.
+ *
+ * ⚠️ **The breaking row is kept on purpose.** It is what lets a reader of these
+ * rows tell an exact age from a lower bound with no flag: a streak that reaches
+ * the oldest nightly read was cut short by the cap or by the record's end, and
+ * one that does not reach it was not. #462's age reads exactly that.
+ *
+ * Built on `streakBack` and `countsTowardWindow` rather than a copy of them,
+ * for the drift `tally`'s docstring names.
+ */
+export function windowReadEnough(rows: readonly RunRow[], stamps: WindowStamps): boolean {
+  const ordered = nightliesIn(rows).sort((one, other) => one.timestamp - other.timestamp);
+  if (ordered.length <= WINDOW_RUNS) return false;
+
+  const ended = (stamped: (row: RunRow) => boolean): boolean =>
+    streakBack(ordered, stamped).length < ordered.length;
+  return (
+    ended(countsTowardWindow(stamps.configHash, stamps.configAccepted, (row) => row.configHash)) &&
+    ended(countsTowardWindow(stamps.fixtureHash, stamps.fixtureAccepted, (row) => row.fixtureHash))
+  );
+}
+
+/**
+ * The records a deploy reads for its two calibration windows.
+ *
+ * `names` come newest first. It loads them in order and stops at the first of
+ * three: `windowReadEnough` holds, `cap` names have been tried, or the names
+ * run out. A name that does not load is skipped and still counts toward the
+ * cap, which is what stops a store full of unreadable records turning one
+ * deploy into an unbounded walk.
+ *
+ * ⚠️ **Here rather than in `deploy.ts`, because that script has no test file**,
+ * and a stopping rule left there is one nothing plants (#464).
+ */
+export function readWindow(
+  names: readonly string[],
+  load: (name: string) => ParsedRecord | undefined,
+  stamps: WindowStamps,
+  cap: number,
+): ParsedRecord[] {
+  const read: ParsedRecord[] = [];
+  const rows: RunRow[] = [];
+
+  for (const name of names.slice(0, cap)) {
+    const record = load(name);
+    if (record === undefined) continue;
+
+    read.push(record);
+    rows.push(...runRowsFrom([record]));
+    if (windowReadEnough(rows, stamps)) break;
+  }
+  return read;
+}
+
+/**
+ * The largest hundredth that is not above `value`, compared as `breaches`
+ * compares.
+ *
+ * ⚠️ **Not `⌊value × 100 + 10⁻⁶⌋ / 100`, which #464 first named.** A score is a
+ * stored fraction times 100, so `0.29` arrives as `28.999999999999996`, and that
+ * rule prints `29.00`: a floor typed from it is above the score it came from,
+ * and `breaches` refuses that very run. So the candidate is checked against
+ * `value` directly, a step either way, in the floats `breaches` reads. The
+ * owner chose this rule on #464 (q3), and #462's named value uses it too.
+ */
+export function roundDownToHundredths(value: number): number {
+  let hundredths = Math.floor(value * 100);
+  if ((hundredths + 1) / 100 <= value) hundredths += 1;
+  if (hundredths / 100 > value) hundredths -= 1;
+  return hundredths / 100;
 }
 
 /** A scope where the sweep and the recorded counter disagree, and by how much. */
@@ -1523,7 +1612,7 @@ function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): strin
     const derived =
       lowest === null || lowest === undefined
         ? 'no complete history for this scope'
-        : `lowest ${lowest.toFixed(2)} - armable`;
+        : `lowest ${roundDownToHundredths(lowest).toFixed(2)} - armable`;
     // ⚠️ **The date stays on this line above all others.** A full window is
     // exactly when somebody is deciding what to type into `floor`, and the date
     // is §7's only guard on typing `unarmed` instead. An earlier draft dropped
@@ -1982,7 +2071,7 @@ function noFlag(): string {
  * beside this one reads the same records for different fields, and two parsers
  * of one format drift in the direction nobody checks — ADR-0028's shape. What
  * is different here is the *question*: freshness needs the newest record and
- * stops, and a window needs twenty consecutive ones.
+ * stops, and a window needs consecutive ones covering `WINDOW_RUNS` trees.
  *
  * ⚠️ **A local probe is not a CI run, and the label is what tells them apart.**
  * `pnpm trend:sync` writes surface D's rows into the same store, under the same

@@ -53,10 +53,15 @@
     "re-derive neither. Accepted rather than answered: G47 already reddened that build, so the",
     "human was already required. #328 and #339 are both that case.",
     "",
-    "THE THREE ENTRIES BELOW ARE ALL `false`, AND THAT IS DELIBERATE RATHER THAN LAZY.",
+    "THE THREE SEEDED ENTRIES BELOW ARE ALL `false`, AND THAT IS DELIBERATE RATHER THAN LAZY.",
     "They are history, and ADR-0084 landed the same day saying records are not rewritten and",
     "every window reads 0 of 10 from that commit. Seeding them `true` would silently reverse",
     "an ADR one day old. The mechanism applies FORWARD.",
+    "",
+    "The 2026-10-09 configHash entry is the one `true` that joins a window today. It said",
+    "`false` and was corrected in place on #464, on a measurement and the owner's decision,",
+    "while it was still the newest entry for its stamp. The store already held it, so the",
+    "correction cost one `pnpm trend:sync --rebuild`. An entry above the newest is never edited.",
     "",
     "── order ──────────────────────────────────────────────────────────────────────────",
     "",
@@ -101,9 +106,9 @@
       "date": "2026-10-09",
       "stamp": "configHash",
       "value": "sha256:f1e545a1b0aa12197c00cbd0b38a4c8a9eea5d9d10315728b1827ea202bb73f1",
-      "reason": "Two files join the shelf scope's zero-mutant residuals beside debug-panel.ts, both reached only through boot.ts: pickup-tuner.ts, the pickup tuner behind ?debug, which imports its stylesheet with Vite's ?url that only a Vite build resolves; and pickup.ts, the drawing half of picking a book up, whose rules are tested in the pure modules it calls. card-sheet.ts was deleted with the sheet and was never a residual. No declared scope's glob changed.",
+      "reason": "Two files join the shelf scope's zero-mutant residuals beside debug-panel.ts, both reached only through boot.ts: pickup-tuner.ts, the pickup tuner behind ?debug, which imports its stylesheet with Vite's ?url that only a Vite build resolves; and pickup.ts, the drawing half of picking a book up, whose rules are tested in the pure modules it calls. card-sheet.ts was deleted with the sheet and was never a residual. No declared scope's glob changed. Corrected to preserves true on 2026-10-17 (#464), on the owner's decision: both files were created in this same commit, so on every older tree their two negations match nothing. Measured: neither file exists on any of the 13 nightly trees under the previous value, 171a96f to f1c252c. On f1c252c the shelf scope run under the old and the new configuration found the same 25 files and 2688 mutants, identical mutant for mutant, with not one status different; the same construction on 3c94634 told them apart, 32 files against 30. Correcting this entry in place costs one pnpm trend:sync --rebuild, because the store already held it.",
       "pr": 417,
-      "preserves": false
+      "preserves": true
     },
     {
       "date": "2026-10-17",

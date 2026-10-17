@@ -47,14 +47,14 @@ import {
   stampOf,
 } from './lib/edge-probe.ts';
 import {
-  WINDOW_RUNS,
+  type WindowStamps,
   calibration,
   capCalibration,
   CAPPED_SERIES,
   countedIn,
   floorRefusals,
-  nightliesIn,
   readFloors,
+  readWindow,
   scoredIn,
   renderCapLines,
   renderFloorLines,
@@ -711,10 +711,20 @@ function reportFloors(): void {
   const declared = readDeclarations().scopes;
   const names = declared.map((scope) => scope.name);
 
+  // Before the records, because how far to read depends on them: each window
+  // runs back to the last stamp change its renovations did not preserve.
+  const renovations = readRenovations();
+  const stamps = {
+    configHash: floors.configHash,
+    configAccepted: acceptedValues(renovations, 'configHash', floors.configHash),
+    fixtureHash: floors.fixtureHash,
+    fixtureAccepted: acceptedValues(renovations, 'fixtureHash', floors.fixtureHash),
+  };
+
   // Whatever the last sync left in the object store. This fetches nothing: a
   // deploy asks a question the store can answer offline, and how fresh that
   // answer is has its own refusal rather than a second opinion here.
-  const rows = runRowsFrom(windowRecords(storedRecords()));
+  const rows = runRowsFrom(windowRecords(storedRecords(), stamps));
 
   // ⚠️ **The newest run that *scored*, never the newest record.** `metrics.yml`
   // writes on every push to `main` and a merge record carries no per-scope
@@ -746,19 +756,13 @@ function reportFloors(): void {
   console.log(
     'mutation floors — one line per declared scope; arming is a human judgement, per scope, after its own window fills',
   );
-  const renovations = readRenovations();
   const lines = renderFloorLines({
     floors,
     readings,
     // The renovations that declared they preserve the window widen what counts
-    // toward it, back to the last change that restarted it. `[]` when nothing
-    // declares one, which is every stamp today — ADR-0085.
-    window: calibration(
-      rows,
-      names,
-      floors.configHash,
-      acceptedValues(renovations, 'configHash', floors.configHash),
-    ),
+    // toward it, back to the last change that restarted it, and `[]` when the
+    // newest entry for the stamp does not — ADR-0085.
+    window: calibration(rows, names, stamps.configHash, stamps.configAccepted),
     today: localToday(),
   });
   for (const line of lines) console.log(`  ${line}`);
@@ -797,12 +801,7 @@ function reportFloors(): void {
   const capLines = renderCapLines({
     floors,
     readings: capReadings,
-    window: capCalibration(
-      rows,
-      names,
-      floors.fixtureHash,
-      acceptedValues(renovations, 'fixtureHash', floors.fixtureHash),
-    ),
+    window: capCalibration(rows, names, stamps.fixtureHash, stamps.fixtureAccepted),
     today: localToday(),
   });
   for (const line of capLines) console.log(`  ${line}`);
@@ -840,41 +839,37 @@ function reportFloors(): void {
  * ⚠️ **A separate read from `trendRecords`, and not a duplicate of it.** That
  * one answers *is the record fresh* and stops as soon as it has seen every
  * series plus one more scoring run — one or two records on a healthy machine.
- * This one answers *how far has the window filled*, which needs twenty
- * consecutive nightlies. Same store, same parser, different question.
+ * This one answers *how far has each window filled*, which needs every
+ * nightly back to where both streaks broke. Same store, same parser, different
+ * question.
  *
- * It reads newest-first and stops once it has enough nightlies to fill a
- * window, so a healthy machine pays for twenty-one records rather than for the
- * whole branch. The hard cap is what stops a store full of merge records —
- * which score nothing and are not window members — turning one deploy into an
+ * It reads newest-first and stops once both streaks have ended inside the read,
+ * keeping the row that broke each, and never before one nightly past a window.
+ * ⚠️ **Eleven nightlies was the rule until #464**, written when one nightly was
+ * one sample; since ADR-0084 a sample is a distinct tree, and eleven nightlies
+ * covered about five. The rule is `readWindow`'s, in `lib/floors.ts`, where a
+ * test can plant it. The hard cap is what stops a store full of merge records,
+ * which score nothing and are not window members, turning one deploy into an
  * unbounded walk.
  */
-function windowRecords(store: FetchedRecord | undefined): ParsedRecord[] {
+function windowRecords(store: FetchedRecord | undefined, stamps: WindowStamps): ParsedRecord[] {
   if (store === undefined) return [];
 
   const ordered = store.names
     .map((name) => parseRecordName(name))
     .filter((record) => record !== undefined)
-    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name))
+    .map((record) => record.name);
 
-  const parsed: ParsedRecord[] = [];
-  let nightlies = 0;
-
-  for (const record of ordered.slice(0, WINDOW_RECORD_CAP)) {
-    const bytes = readRecord(store.tip, record.name);
-    if (bytes === undefined) continue;
-
-    const document = parseRecord(bytes);
-    parsed.push(document);
-    // Counted through the same predicate the window uses, rather than a second
-    // copy of the literal: `floors.ts` says these two must not drift and this is
-    // where the drift would have started.
-    nightlies += nightliesIn(runRowsFrom([document])).length;
-    // One past the window, because the print's delta needs the run before the
-    // newest one.
-    if (nightlies > WINDOW_RUNS) break;
-  }
-  return parsed;
+  return readWindow(
+    ordered,
+    (name) => {
+      const bytes = readRecord(store.tip, name);
+      return bytes === undefined ? undefined : parseRecord(bytes);
+    },
+    stamps,
+    WINDOW_RECORD_CAP,
+  );
 }
 
 /**

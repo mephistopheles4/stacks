@@ -44,9 +44,12 @@ import {
   renderFloorLines,
   readFloors,
   readMutatedSource,
+  readWindow,
   restampConfigHash,
+  roundDownToHundredths,
   runRowsFrom,
   scoredIn,
+  windowReadEnough,
   type CapCalibration,
   type RunRow,
 } from './floors.ts';
@@ -2363,5 +2366,214 @@ describe('calibration — a declared renovation may carry the window across', ()
     const rows = [...under(OLD, 6), ...under(NEW, 3, 1_760_000_000 + 6 * DAY)];
 
     expect(calibration(rows, ['packages/core/src'], NEW, []).runs).toBe(3);
+  });
+});
+
+// #464. The read the deploy makes for its two calibration windows, and the
+// armable line it prints from them. docs/spec/a-full-window-read.md, §S5.
+describe('windowReadEnough and readWindow', () => {
+  const DAY = 86_400;
+  const BASE = 1_760_000_000;
+  const STAMPS = {
+    configHash: 'sha256:config',
+    configAccepted: [],
+    fixtureHash: 'sha256:fixture',
+    fixtureAccepted: [],
+  };
+
+  interface Planted {
+    ok?: boolean;
+    commit?: string;
+    config?: string;
+    fixture?: string;
+    score?: number;
+    max?: number;
+    event?: string;
+  }
+
+  /** A nightly `day` days after `BASE`, so a larger day is newer. */
+  function nightly(day: number, planted: Planted = {}): RunRow {
+    return {
+      timestamp: BASE + day * DAY,
+      ok: planted.ok ?? true,
+      event: planted.event ?? 'schedule',
+      configHash: planted.config ?? STAMPS.configHash,
+      fixtureHash: planted.fixture ?? STAMPS.fixtureHash,
+      commit: planted.commit ?? `tree-${String(day)}`,
+      scores: new Map(),
+      counts: new Map(),
+    };
+  }
+
+  /** Healthy nightlies on days `from` to `to`, inclusive. */
+  function healthy(from: number, to: number): RunRow[] {
+    return Array.from({ length: to - from + 1 }, (_, index) => nightly(from + index));
+  }
+
+  it('C1: is not enough until both streaks have ended inside the read', () => {
+    const rows = [...healthy(16, 30), nightly(15, { config: 'sha256:older' })];
+    expect(windowReadEnough(rows, STAMPS)).toBe(false);
+
+    expect(windowReadEnough([...rows, nightly(14, { fixture: 'sha256:older' })], STAMPS)).toBe(
+      true,
+    );
+  });
+
+  it.each([
+    ['a failed nightly', (day: number) => nightly(day, { ok: false })],
+    ['an unaccepted stamp', (day: number) => nightly(day, { config: 'x', fixture: 'y' })],
+  ])('C2: %s ends both streaks, the newest nightly included', (_, end) => {
+    expect(windowReadEnough(healthy(1, 12), STAMPS)).toBe(false);
+    expect(windowReadEnough([...healthy(1, 12), end(0)], STAMPS)).toBe(true);
+    expect(windowReadEnough([end(13), ...healthy(1, 12)], STAMPS)).toBe(true);
+  });
+
+  it('C2: a gap over three days ends both streaks, the newest nightly included', () => {
+    expect(windowReadEnough([...healthy(10, 21), nightly(5)], STAMPS)).toBe(true);
+    expect(windowReadEnough([nightly(30), ...healthy(10, 21)], STAMPS)).toBe(true);
+  });
+
+  it('C3: does not end a streak on a stamp the chain accepts', () => {
+    const accepted = { ...STAMPS, configAccepted: ['sha256:previous'] };
+    const rows = [
+      ...healthy(10, 21),
+      ...healthy(5, 9).map((row) => ({ ...row, configHash: 'sha256:previous' })),
+    ];
+    const fixtureEnded = [...rows, nightly(4, { config: 'sha256:previous', fixture: 'other' })];
+
+    expect(windowReadEnough(fixtureEnded, accepted)).toBe(false);
+    expect(windowReadEnough([...fixtureEnded, nightly(3, { config: 'other' })], accepted)).toBe(
+      true,
+    );
+  });
+
+  it("C4: never stops short of today's minimum, one nightly past the window", () => {
+    const ended = [...healthy(20, 24), nightly(19, { ok: false })];
+    expect(windowReadEnough([...ended, ...healthy(15, 18)], STAMPS)).toBe(false);
+    expect(windowReadEnough([...ended, ...healthy(14, 18)], STAMPS)).toBe(true);
+  });
+
+  /** A CI record, in the text the nightly writes. */
+  function record(day: number, planted: Planted = {}): string {
+    const at = String(BASE + day * DAY);
+    const commit = planted.commit ?? `tree-${String(day)}`;
+    return [
+      '# TYPE stacks_run_ok gauge',
+      `stacks_run_ok ${planted.ok === false ? '0' : '1'} ${at}`,
+      '# TYPE stacks_run_info gauge',
+      `stacks_run_info{commit="${commit}",event="${planted.event ?? 'schedule'}",run_url="u",` +
+        `config_hash="${planted.config ?? STAMPS.configHash}",fixture_hash="${planted.fixture ?? STAMPS.fixtureHash}"} 1 ${at}`,
+      '# TYPE stacks_trend_mutation_score gauge',
+      `stacks_trend_mutation_score{scope="scripts"} ${String(planted.score ?? 0.7)} ${at}`,
+      '# TYPE stacks_trend_complexity_max gauge',
+      `stacks_trend_complexity_max{scope="scripts"} ${String(planted.max ?? 10)} ${at}`,
+      '# EOF',
+      '',
+    ].join('\n');
+  }
+
+  /** A store: names newest first, and a loader over them. */
+  function store(days: ReadonlyMap<number, Planted>): {
+    names: string[];
+    load: (name: string) => ReturnType<typeof parseRecord> | undefined;
+  } {
+    const texts = new Map(
+      [...days].map(([day, planted]) => [`day-${String(day)}`, record(day, planted)]),
+    );
+    const names = [...days.keys()]
+      .sort((one, other) => other - one)
+      .map((day) => `day-${String(day)}`);
+    return {
+      names,
+      load: (name) => {
+        const text = texts.get(name);
+        return text === undefined ? undefined : parseRecord(text);
+      },
+    };
+  }
+
+  it("C6: fills the windows the whole record fills, and reaches each streak's oldest nightly and its break", () => {
+    // Two nightlies per tree, so eleven nightlies cover six trees. The floor's
+    // streak runs back to day 31 and breaks on 30; the caps' runs back to 21 and
+    // breaks on a failed 20; nightlies 1 to 19 lie past both breaks.
+    const planted = new Map<number, Planted>();
+    for (let day = 1; day <= 60; day += 1) {
+      const tree = `tree-${String(Math.ceil(day / 2))}`;
+      planted.set(day, {
+        commit: tree,
+        config: day <= 30 ? 'sha256:older' : STAMPS.configHash,
+        ok: day !== 20,
+        score: day === 41 ? 0.41 : 0.7,
+        max: day === 42 ? 17 : 10,
+      });
+    }
+    const { names, load } = store(planted);
+    const everything = runRowsFrom(
+      names.map((name) => load(name)).filter((one) => one !== undefined),
+    );
+    const read = runRowsFrom(readWindow(names, load, STAMPS, 200));
+
+    const floorOf = (rows: RunRow[]) => {
+      const { runs, full, days, lowest } = calibration(rows, ['scripts'], STAMPS.configHash);
+      return { runs, full, days, lowest };
+    };
+    expect(floorOf(read)).toEqual(floorOf(everything));
+    expect(floorOf(read).full).toBe(true);
+    expect(floorOf(read).lowest.get('scripts')).toBeCloseTo(41);
+    expect(capCalibration(read, ['scripts'], STAMPS.fixtureHash).highest).toEqual(
+      capCalibration(everything, ['scripts'], STAMPS.fixtureHash).highest,
+    );
+
+    const daysRead = new Set(read.map((row) => (row.timestamp - BASE) / DAY));
+    for (const day of [31, 30, 21, 20]) expect(daysRead.has(day), `day ${String(day)}`).toBe(true);
+  });
+
+  it('C7: stops at the cap, or at the end of the record', () => {
+    const planted = new Map(Array.from({ length: 30 }, (_, index) => [index + 1, {}] as const));
+    const { names, load } = store(planted);
+
+    expect(readWindow(names, load, STAMPS, 7)).toHaveLength(7);
+    expect(readWindow(names, load, STAMPS, 200)).toHaveLength(30);
+  });
+});
+
+describe('roundDownToHundredths', () => {
+  it('C5: prints the armable line at or under the lowest, never above it', () => {
+    const floors = parseFloors({
+      configHash: 'sha256:0123456789abcdef',
+      fixtureHash: 'sha256:fedcba9876543210',
+      scopes: { scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] } },
+    });
+    const printed = (lowest: number): string => {
+      const line = renderFloorLines({
+        floors,
+        readings: [{ scope: 'scripts', score: null }],
+        window: {
+          runs: 10,
+          candidates: 10,
+          full: true,
+          days: 18,
+          lowest: new Map([['scripts', lowest]]),
+        },
+        today: '2026-10-17',
+      }).find((one) => one.startsWith('scripts'));
+      return /lowest (\d+\.\d\d)/.exec(line ?? '')?.[1] ?? '';
+    };
+
+    expect(printed(44.116)).toBe('44.11');
+    expect(printed(44.11)).toBe('44.11');
+
+    // 0.29 is stored as 28.999999999999996, and arming at what the line prints
+    // must not refuse the very run the floor came from.
+    const stored = 0.29 * 100;
+    const armed = parseFloors({
+      configHash: 'sha256:0123456789abcdef',
+      fixtureHash: 'sha256:fedcba9876543210',
+      scopes: {
+        scripts: { floor: Number(printed(stored)), armed: '2026-10-17', ignored: 0, notes: [] },
+      },
+    });
+    expect(breaches([{ scope: 'scripts', score: stored }], armed)).toEqual([]);
+    expect(roundDownToHundredths(stored)).toBe(28.99);
   });
 });
