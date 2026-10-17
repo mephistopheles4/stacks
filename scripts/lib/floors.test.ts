@@ -38,6 +38,7 @@ import {
   floorRefusals,
   countDisableDirectives,
   ignoredMismatches,
+  localDay,
   nightliesIn,
   parseFloors,
   renderCapLines,
@@ -49,9 +50,11 @@ import {
   roundDownToHundredths,
   runRowsFrom,
   scoredIn,
+  tightenings,
   windowReadEnough,
   type CapCalibration,
   type RunRow,
+  type WindowStamps,
 } from './floors.ts';
 
 const WELL_FORMED = {
@@ -2590,5 +2593,402 @@ describe('roundDownToHundredths', () => {
     const under = 0.16999999999999998;
     expect(printed(under)).toBe('0.16');
     expect(roundDownToHundredths(under)).toBeLessThanOrEqual(under);
+  });
+});
+
+// #322. The print line that asks to tighten a bound, and never acts.
+// docs/spec/the-ratchet-tightens.md — the line is the contract, so every case
+// below, C9 and the unit checks on the return value aside, reads the printed text.
+describe('the tightening clause', () => {
+  const DAY = 86_400;
+  const BASE = 1_760_000_000;
+  const HASH = 'sha256:config-now';
+  const OLD = 'sha256:config-then';
+  const FIX = 'sha256:counting-now';
+  const OLD_FIX = 'sha256:counting-then';
+  const SCOPE = 'scripts';
+  const STAMPS: WindowStamps = {
+    configHash: HASH,
+    configAccepted: [],
+    fixtureHash: FIX,
+    fixtureAccepted: [],
+  };
+
+  /** Under the floor and over the cap for ten days, then a window that beats every bound below. */
+  const scoreAt = (day: number): number => (day < 10 ? 60 : day === 20 ? 70.126 : 70.5);
+  const countAt = (day: number): number => (day < 10 ? 15 : 11);
+
+  /** `count` healthy nightlies a day apart, each on its own tree, newest last. */
+  function nightlies(count: number, tweak?: (row: RunRow, day: number) => void): RunRow[] {
+    return [...Array(count).keys()].map((day) => {
+      const row: RunRow = {
+        timestamp: BASE + day * DAY,
+        ok: true,
+        event: 'schedule',
+        configHash: HASH,
+        fixtureHash: FIX,
+        commit: `tree-${String(day)}`,
+        scores: new Map([[SCOPE, scoreAt(day)]]),
+        counts: new Map([['complexity-max', new Map([[SCOPE, countAt(day)]])]]),
+      };
+      tweak?.(row, day);
+      return row;
+    });
+  }
+
+  function floorsWith(
+    floor: number | 'unarmed',
+    cap: number | 'unarmed',
+    massCap: number | 'unarmed' = 'unarmed',
+  ) {
+    return parseFloors({
+      configHash: HASH,
+      fixtureHash: FIX,
+      scopes: {
+        [SCOPE]: {
+          floor,
+          armed: '2026-08-19',
+          ignored: 0,
+          notes: [],
+          caps: {
+            'complexity-max': { cap, armed: '2026-08-19', notes: [] },
+            'complexity-mass-over-10': { cap: massCap, armed: '2026-08-19', notes: [] },
+            'cognitive-max': { cap: 'unarmed', armed: '2026-08-19', notes: [] },
+          },
+        },
+      },
+    });
+  }
+
+  interface Case {
+    rows: RunRow[];
+    floor?: number | 'unarmed';
+    cap?: number | 'unarmed';
+    /** The scope's mutant count; `null` for none known. Defaults to one worth 0.08. */
+    mutants?: number | null;
+    score?: number | null;
+    value?: number | null;
+    stamps?: WindowStamps;
+    /** Days after the newest nightly that the deploy runs. Defaults to the same day. */
+    later?: number;
+  }
+
+  /** The floor line and the `complexity-max` line the deploy would print. */
+  function printed(spec: Case): { floor: string; cap: string } {
+    const floors = floorsWith(spec.floor ?? 65, spec.cap ?? 14);
+    const stamps = spec.stamps ?? STAMPS;
+    const newest = spec.rows.at(-1)?.timestamp ?? BASE;
+    const today = localDay(new Date((newest + (spec.later ?? 0) * DAY) * 1000));
+    const mutants = spec.mutants === null ? undefined : (spec.mutants ?? 1250);
+    const readings = [
+      {
+        scope: SCOPE,
+        score: spec.score === undefined ? 70.8 : spec.score,
+        ...(mutants === undefined ? {} : { mutants }),
+      },
+    ];
+    const capReadings = [
+      {
+        scope: SCOPE,
+        series: 'complexity-max' as const,
+        value: spec.value === undefined ? 11 : spec.value,
+      },
+    ];
+    const asked = tightenings({
+      rows: spec.rows,
+      floors,
+      readings,
+      capReadings,
+      stamps,
+      today,
+    });
+    const floorLines = renderFloorLines({
+      floors,
+      readings,
+      window: calibration(spec.rows, [SCOPE], stamps.configHash, stamps.configAccepted),
+      today,
+      tighten: asked.floors,
+    });
+    const capLines = renderCapLines({
+      floors,
+      readings: capReadings,
+      window: capCalibration(spec.rows, [SCOPE], stamps.fixtureHash, stamps.fixtureAccepted),
+      today,
+      tighten: asked.caps,
+    });
+    return {
+      floor: floorLines.find((line) => line.startsWith(SCOPE)) ?? '',
+      cap: capLines.find((line) => line.includes('complexity-max')) ?? '',
+    };
+  }
+
+  it('C1: names a floor the window beats by a mutant, rounded down, and how long it has', () => {
+    const { floor } = printed({ rows: nightlies(25) });
+
+    // 70.126 is the window's lowest and is named as 70.12, never 70.13.
+    expect(floor).toContain('window lowest 70.12 - tightenable for 5 days');
+
+    // The age runs to today, not to the newest nightly: a deploy can come days later.
+    expect(printed({ rows: nightlies(25), later: 2 }).floor).toContain('tightenable for 7 days');
+  });
+
+  it('C2: asks nothing where the window beats the floor by less than a mutant', () => {
+    // 70.12 against 70.05 is seven hundredths, and a mutant here is eight.
+    expect(printed({ rows: nightlies(25), floor: 70.05 }).floor).not.toContain('tightenable');
+    expect(printed({ rows: nightlies(25), floor: 70.04 }).floor).toContain('tightenable');
+  });
+
+  it('C3: names a cap the window sits at least one under, and not one at the cap', () => {
+    const { cap } = printed({ rows: nightlies(25) });
+    expect(cap).toContain('window highest 11 - tightenable for 5 days');
+
+    expect(printed({ rows: nightlies(25), cap: 12 }).cap).toContain('window highest 11');
+    expect(printed({ rows: nightlies(25), cap: 11 }).cap).not.toContain('tightenable');
+  });
+
+  describe('C4: asks nothing', () => {
+    it('on a window that is not full', () => {
+      // Nine nightlies that all beat both bounds, so only fullness keeps the clause away.
+      const lines = printed({
+        rows: nightlies(9, (row) => {
+          row.scores.set(SCOPE, 70.5);
+          row.counts.get('complexity-max')?.set(SCOPE, 11);
+        }),
+      });
+      expect(lines.floor).not.toContain('tightenable');
+      expect(lines.cap).not.toContain('tightenable');
+    });
+
+    it('on a record with no nightly in it', () => {
+      const lines = printed({ rows: [] });
+      expect(lines.floor).not.toContain('tightenable');
+      expect(lines.cap).not.toContain('tightenable');
+    });
+
+    it('on a bound that is unarmed', () => {
+      const lines = printed({ rows: nightlies(25), floor: 'unarmed', cap: 'unarmed' });
+      expect(lines.floor).not.toContain('tightenable');
+      expect(lines.cap).not.toContain('tightenable');
+    });
+
+    it('on a scope with a hole in the window', () => {
+      const rows = nightlies(25, (row, day) => {
+        if (day === 22) {
+          row.scores.delete(SCOPE);
+          row.counts.get('complexity-max')?.delete(SCOPE);
+        }
+      });
+      const lines = printed({ rows });
+      expect(lines.floor).not.toContain('tightenable');
+      expect(lines.cap).not.toContain('tightenable');
+    });
+
+    it('on a bound breached this deploy, which is the refusal’s line', () => {
+      const lines = printed({ rows: nightlies(25), score: 64.9, value: 15 });
+      expect(lines.floor).not.toContain('tightenable');
+      expect(lines.cap).not.toContain('tightenable');
+    });
+  });
+
+  describe('C5: the age', () => {
+    it('counts from the oldest nightly of the unbroken run', () => {
+      // Days 0-9 breach both bounds, so the rule first held when the window left day 9.
+      expect(printed({ rows: nightlies(25) }).floor).toContain('for 5 days');
+    });
+
+    it('restarts after a failed nightly', () => {
+      const rows = nightlies(25, (row, day) => {
+        if (day === 12) row.ok = false;
+      });
+      // After the failed day 12 the first full window ends at day 22, so the age counts from there.
+      expect(printed({ rows }).floor).toContain('for 2 days');
+      expect(printed({ rows }).cap).toContain('for 2 days');
+    });
+
+    it('restarts after a gap over three days', () => {
+      const rows = nightlies(25, (row, day) => {
+        if (day >= 13) row.timestamp += 4 * DAY;
+      });
+      expect(printed({ rows }).floor).toContain('for 2 days');
+    });
+
+    it('restarts across a stamp change nothing preserved', () => {
+      const rows = nightlies(25, (row, day) => {
+        if (day <= 12) {
+          row.configHash = OLD;
+          row.fixtureHash = OLD_FIX;
+        }
+      });
+      const lines = printed({ rows });
+      expect(lines.floor).toContain('for 2 days');
+      expect(lines.cap).toContain('for 2 days');
+    });
+
+    it('asks nothing until the window refills after a stamp change', () => {
+      const rows = nightlies(25, (row, day) => {
+        if (day <= 18) row.configHash = OLD;
+      });
+      expect(printed({ rows }).floor).not.toContain('tightenable');
+      // The cap counts under its own stamp, which did not move.
+      expect(printed({ rows }).cap).toContain('tightenable for 5 days');
+    });
+  });
+
+  it('C6: carries the clause and its age across a stamp change a renovation preserves', () => {
+    const rows = nightlies(25, (row, day) => {
+      if (day <= 12) {
+        row.configHash = OLD;
+        row.fixtureHash = OLD_FIX;
+      }
+    });
+    const lines = printed({
+      rows,
+      stamps: {
+        ...STAMPS,
+        configAccepted: [HASH, OLD],
+        fixtureAccepted: [FIX, OLD_FIX],
+      },
+    });
+
+    expect(lines.floor).toContain('for 5 days');
+    expect(lines.cap).toContain('for 5 days');
+  });
+
+  describe('C7: a floor whose mutant count is unknown', () => {
+    it('degrades to the window lowest with no verdict where a tightening is possible', () => {
+      const { floor } = printed({ rows: nightlies(25), mutants: null });
+      expect(floor).toContain('window lowest 70.12 - run pnpm mutation:run to judge');
+      expect(floor).not.toContain('tightenable');
+    });
+
+    it('says nothing where the window lowest equals the floor', () => {
+      const { floor } = printed({ rows: nightlies(25), mutants: null, floor: 70.12 });
+      expect(floor).not.toContain('window lowest');
+
+      // One hundredth above the floor is the least that asks.
+      expect(printed({ rows: nightlies(25), mutants: null, floor: 70.11 }).floor).toContain(
+        'window lowest 70.12 - run pnpm mutation:run to judge',
+      );
+    });
+
+    it('never degrades a cap', () => {
+      expect(printed({ rows: nightlies(25), mutants: null }).cap).toContain('tightenable for');
+    });
+  });
+
+  describe('C8: the boundary, in whole hundredths', () => {
+    const lowestOf = (lowest: number): RunRow[] =>
+      nightlies(25, (row, day) => {
+        row.scores.set(SCOPE, day < 10 ? 50 : lowest);
+      });
+
+    /** The floor line for a window whose lowest is `lowest`, read at a score above any floor. */
+    const floorLine = (lowest: number, mutants: number): string =>
+      printed({ rows: lowestOf(lowest), floor: 71.55, mutants, score: 80 }).floor;
+
+    it('asks at exactly one mutant when a mutant is eight hundredths', () => {
+      expect(floorLine(71.63, 1250)).toContain('window lowest 71.63 - tightenable');
+      expect(floorLine(71.629, 1250)).not.toContain('tightenable');
+    });
+
+    it('rounds a mutant up, so it never asks on less than one', () => {
+      // 10000 / 1321 is 7.57 hundredths, asked as eight.
+      expect(floorLine(71.63, 1321)).toContain('tightenable');
+      expect(floorLine(71.62, 1321)).not.toContain('tightenable');
+      // 10000 / 1400 is 7.14: rounded to nearest it would be seven and ask on 71.62.
+      expect(floorLine(71.62, 1400)).not.toContain('tightenable');
+    });
+  });
+
+  it('C9: reads its inputs and writes nothing', () => {
+    // Newest first, so an in-place sort of the caller's rows would show. Both cap
+    // series are armed and counted, so a window is asked for twice.
+    const rows = nightlies(25, (row) => {
+      row.counts.set('complexity-mass-over-10', new Map([[SCOPE, 30]]));
+    }).reverse();
+    const floors = floorsWith(65, 14, 40);
+    const snapshot = (): string =>
+      JSON.stringify([rows, [...floors.scopes]], (_key, value: unknown) =>
+        value instanceof Map ? [...value] : value,
+      );
+    const before = snapshot();
+    const ask = (score: number | null, value: number | null, armed = floors) =>
+      tightenings({
+        rows,
+        floors: armed,
+        readings: [{ scope: SCOPE, score, mutants: 1250 }],
+        capReadings: [
+          { scope: SCOPE, series: 'complexity-max', value },
+          { scope: SCOPE, series: 'complexity-mass-over-10', value },
+        ],
+        stamps: STAMPS,
+        today: localDay(new Date((BASE + 24 * DAY) * 1000)),
+      });
+
+    const asked = ask(70.8, 11);
+    expect(asked.caps.get('complexity-mass-over-10')?.get(SCOPE)).toMatchObject({
+      kind: 'tightenable',
+      value: 30,
+    });
+    expect(snapshot()).toBe(before);
+
+    // No reading, or nothing armed: the verdict is empty, whatever the line would print.
+    expect(ask(null, null).floors.size).toBe(0);
+    expect(ask(null, null).caps.size).toBe(0);
+    const unarmed = floorsWith('unarmed', 'unarmed');
+    expect(ask(70.8, 11, unarmed).floors.size).toBe(0);
+    expect(ask(70.8, 11, unarmed).caps.size).toBe(0);
+  });
+
+  // ADR-0111's departure from §S4 (q2): a clause names a value the owner may type
+  // in, so it names nothing while the current reading is already worse than it.
+  it('names nothing while the current reading is worse than the value it would name', () => {
+    // A merge run counting 13 sits beside a window whose highest is 11; the cap is 14.
+    expect(printed({ rows: nightlies(25), value: 13 }).cap).not.toContain('tightenable');
+    expect(printed({ rows: nightlies(25), value: 12 }).cap).not.toContain('tightenable');
+    expect(printed({ rows: nightlies(25), value: 11 }).cap).toContain('window highest 11');
+
+    // The same for a floor, whole and degraded: the window's lowest is 70.12.
+    expect(printed({ rows: nightlies(25), score: 70.11 }).floor).not.toContain('tightenable');
+    expect(printed({ rows: nightlies(25), score: 70.12 }).floor).toContain('window lowest 70.12');
+    expect(printed({ rows: nightlies(25), score: 70.11, mutants: null }).floor).not.toContain(
+      'run pnpm mutation:run',
+    );
+    expect(printed({ rows: nightlies(25), score: 70.12, mutants: null }).floor).toContain(
+      'run pnpm mutation:run',
+    );
+  });
+
+  it('C10: calls the age a lower bound where the rule still holds at the oldest nightly read', () => {
+    // Fourteen nightlies, every one beating the bound: the window first filled
+    // at day 9, which is as far back as the read goes.
+    const rows = nightlies(14, (row) => {
+      row.scores.set(SCOPE, 70.5);
+      row.counts.get('complexity-max')?.set(SCOPE, 11);
+    });
+    const lines = printed({ rows });
+
+    expect(lines.floor).toContain('tightenable for at least 4 days');
+    expect(lines.cap).toContain('tightenable for at least 4 days');
+  });
+
+  describe('C11: the armed line', () => {
+    it('carries no clause where the record holds no reading', () => {
+      const lines = printed({ rows: nightlies(25), score: null, value: null });
+
+      expect(lines.floor).toContain('no score in the record');
+      expect(lines.floor).not.toContain('tightenable');
+      expect(lines.cap).toContain('no count in the record');
+      expect(lines.cap).not.toContain('tightenable');
+    });
+
+    it('puts the clause three spaces after whatever the line already ends with', () => {
+      const lines = printed({ rows: nightlies(25), mutants: null });
+      expect(lines.floor).toMatch(/current 70\.80 {3}window lowest 70\.12 - run/);
+
+      const withMutant = printed({ rows: nightlies(25) });
+      expect(withMutant.floor).toMatch(/1 mutant = 0\.08 {3}window lowest 70\.12 - tightenable/);
+      expect(withMutant.cap).toMatch(/current 11 {3}window highest 11 - tightenable/);
+    });
   });
 });
