@@ -75,16 +75,20 @@ export function mainCheckout(): string | undefined {
  *
  * A real environment variable always wins — the file is a default, not an
  * override, so `STACKS_VAULT=... pnpm stacks build` still does what it says.
+ *
+ * Returns the names of the keys it set, so a caller can tell what came from the
+ * file from what the shell already held. The deploy's upload drops them.
  */
-export function loadEnv(file = '.env'): void {
+export function loadEnv(file = '.env'): string[] {
+  const set: string[] = [];
   const path = envFilePath(file);
-  if (path === undefined) return; // No .env is the normal case, not a problem.
+  if (path === undefined) return set; // No .env is the normal case, not a problem.
 
   let contents: string;
   try {
     contents = readFileSync(path, 'utf8');
   } catch {
-    return; // Unreadable is the same as absent: a default that did not apply.
+    return set; // Unreadable is the same as absent: a default that did not apply.
   }
 
   for (const line of contents.split(/\r?\n/)) {
@@ -105,5 +109,7 @@ export function loadEnv(file = '.env'): void {
       value = value.slice(1, -1);
     }
     process.env[key] = value;
+    set.push(key);
   }
+  return set;
 }

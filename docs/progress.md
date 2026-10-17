@@ -158,6 +158,14 @@ The hatch is `minimumReleaseAgeExclude`. Dependabot gained a seven-day
 `cooldown`, which security updates ignore. See
 [the log](log/2026-10-16-the-window-that-was-not-set.md).
 
+**2026-10-17 — the release-age window's side doors**
+([#459](https://github.com/mephistopheles4/stacks/issues/459)): G67 now also
+holds `minimumReleaseAgeIgnoreMissingTime: false`, `trustPolicy: no-downgrade`
+with three exact excludes, an integrity-only lockfile, wrangler pinned exactly and
+run through `pnpm exec`. ⚠️ **Two of the issue's premises were wrong**: the
+missing-time key does not stop git or tarball dependencies, and `pnpm dlx` does
+apply the window. See [the log](log/2026-10-17-release-age-side-doors.md).
+
 ### Phase 3 evidence
 
 `pnpm gate:public` green: builds for real, then greps every text file that
@@ -528,6 +536,7 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-09-26 — [A title lookup carries a different-language edition's ISBN](./log/2026-09-26-title-lookup-foreign-isbn.md) — the plan, its [plan review](./log/2026-09-26-title-lookup-foreign-isbn-plan-review.md) and its [security review](./log/2026-09-26-title-lookup-foreign-isbn-security-review.md). `lookup('Thinking, Fast and Slow')` returned a **Turkish** ISBN, because Open Library's search answers with a *work* whose `isbn` list jumbles 36 editions in 8 languages. A title search now takes every edition-scoped field from the **one** edition the search projects, only when its `language` holds the reading language (`STACKS_LANGUAGE`, default `en`, refused rather than defaulted when unknown); Google's title search drops the ISBN of a volume in another language ([ADR-0094](./adr/0094-a-title-search-takes-one-edition-in-the-reading-language.md)). ⚠️ **It fixes new lookups, not notes already written**, and every cached Open Library search goes cold. ⚠️ **A full G26 re-capture moved an outcome through Google data drift, not this change** — *From Zero to Profit with AI* was refused — so only the five Open Library entries, all still `numFound: 0`, were re-captured. ⚠️ `open-library-search-sparse-sibling.json` was **not** re-captured: a fresh capture no longer holds the authorless twin its test exists for
 - 2026-10-16 — [The window that was not set](./log/2026-10-16-the-window-that-was-not-set.md) — [#399](https://github.com/mephistopheles4/stacks/issues/399). The August nanoid decline was not the release-age window: on the same pnpm 11.18.0, with the window at 0, `pnpm update nanoid` still leaves 3.3.16. Seven days is now set, G67 holds it, and both a frozen install and an override inside the window fail under it
 - 2026-10-17 — [`smoke:render` waits for state, not for time](./log/2026-10-17-smoke-render-waits-for-state.md) — [#436](https://github.com/mephistopheles4/stacks/issues/436). Every wait in the gate is one of five kinds; a presence is polled to a 30 s floor and the screenshot settles read state.
+- 2026-10-17 — [The release-age window's side doors](./log/2026-10-17-release-age-side-doors.md) — [#459](https://github.com/mephistopheles4/stacks/issues/459). The missing-time key does not stop git or tarball dependencies; a lockfile rule does. The trust policy fails three lockfile entries, so three exact excludes. wrangler became a pinned devDependency because `pnpm dlx` applies the window and never the trust policy
 - 2026-10-17 — [The open main page](./log/2026-10-17-the-open-main-page.md) — [#397](https://github.com/mephistopheles4/stacks/issues/397). G60's 13.5 s to ready per boot on CI was the gate's own main page, left open and drawing; it is closed after the phone check. Locally the twelve `visit()` boots went from 44.6 s to 11.9 s to ready, and G61's boots are timed too.
 
 ## Notes to the next session

@@ -11,6 +11,11 @@ updates:
       interval: weekly
     commit-message:
       prefix: 'ci'
+    # The npm entry's cooldown, for the same reason: a bump to a release a day
+    # old is the one a stolen token publishes. See the note on that entry.
+    # ⚠️ Security updates ignore cooldown here too.
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: npm
     directory: /
@@ -38,6 +43,22 @@ updates:
     # same seven days. ⚠️ **Security updates ignore cooldown**: a security bump
     # inside the window still fails CI until a `minimumReleaseAgeExclude` entry
     # names it, which is the escape hatch that file documents (#399).
+    #
+    # ⚠️ **Before excluding a version, check how it was published.** A token
+    # publish where earlier releases had provenance is the stolen-token
+    # signature, and `trustPolicy: no-downgrade` stays on for an excluded
+    # version, so a failing install is the signal to look, not to add a trust
+    # exclude by reflex. The trust policy only fails a version when an earlier
+    # release had stronger evidence: for a package that never published with
+    # provenance, a passing install says nothing about who published it, and the
+    # window is the only control the hatch removes.
+    #
+    # **Expected failure:** a `dev-tooling` group pull request that moves
+    # chromium-bidi (through puppeteer-core) goes red on
+    # ERR_PNPM_TRUST_DOWNGRADE, because it is token-published. Its remedy is the
+    # owner's decision to move the exact `trustPolicyExclude` entry in
+    # pnpm-workspace.yaml (#459). wrangler is pinned exactly in the root
+    # manifest, so its bumps arrive here under the same cooldown.
     cooldown:
       default-days: 7
     groups:
