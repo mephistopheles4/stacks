@@ -228,18 +228,22 @@ async function main(): Promise<void> {
       const viewer = await timed('examining', () => checkViewer(page));
       const phone = await timed('page at 375x812', () => checkPhone(page));
       // The phone check is the last use of this page, so close it. An open page
-      // keeps drawing the shelf, and every browser context shares one software GPU
-      // process, so each later boot and frame waits behind it: 13.5 s to ready per
-      // G60 boot on CI against 0.7 s with it closed (#397). A check that needs this
-      // page must come above this line. Listeners go first, so a request in flight
-      // when it closes cannot land in `errors` as an aborted one.
+      // keeps drawing the shelf, and every browser context shares one GPU process
+      // (software, under SwiftShader on CI), so each later boot and frame waits
+      // behind it: 13.5 s to ready per G60 boot on CI against 0.7 s with it closed
+      // in a local 4-core probe (#397). A check that needs this page must come
+      // above this line. Listeners go first, so a request in flight when it closes
+      // cannot land in `errors` as an aborted one.
       page.removeAllListeners();
       try {
         await page.close();
       } catch (error) {
-        // A target that is already gone is the state this wants. CI's first run of
-        // this line met it; anything else is still a failure.
+        // CI's first run of this line threw this. Why the target was already gone
+        // is not known (#397), and the error alone does not prove the page closed:
+        // puppeteer may hold a stale id for a page that is still open. So say so in
+        // the log, where C5's reading can see it; anything else is still a failure.
         if (!/No target with given id/.test(String(error))) throw error;
+        console.log('main page: close() found no target, cause not established (#397)');
       }
       const spread = await timed('open spread', () => checkSpread(browser, origin));
       const lit = await timed('G59 large-library-lit', () =>
