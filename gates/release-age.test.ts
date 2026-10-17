@@ -33,7 +33,13 @@
  * key, quoted, or written twice fails closed, like `private:`. A form it does
  * not recognise is a red build, not a pass.
  *
- * What this cannot see: whether pnpm honours the key. That was measured on
+ * What this cannot see: a `registry` or `registries` key in the workspace file
+ * or a root `.npmrc`, which could point installs at a registry that forges
+ * publish times and provenance. Deliberately not gated (#459): the lockfile's
+ * integrity hashes pin what is already locked, and such a key would arrive in a
+ * pull request diff the owner reviews.
+ *
+ * Nor whether pnpm honours the key. That was measured on
  * #399 — `pnpm config get minimumReleaseAge` reads 10080, and a frozen install
  * of a lockfile carrying a four-day-old entry fails under it.
  *

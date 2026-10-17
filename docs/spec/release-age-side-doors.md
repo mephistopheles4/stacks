@@ -453,6 +453,11 @@ The owner chose the standard tier over the sensitive route, so the build
 - Proving whether pnpm config from environment variables or the command line
   overrides `pnpm-workspace.yaml`. Pull-request review of the workflows is the
   control for that.
+- A gate on a registry setting: a `registry` or `registries` key in
+  `pnpm-workspace.yaml` or a root `.npmrc` could point installs at a registry that
+  forges publish times and provenance. The lockfile's integrity hashes pin every
+  package already locked, and such a key would arrive in a pull request diff the
+  owner reviews. Decided with the owner during the build of #477 (a lens finding).
 - A gate on `dependabot.yml`'s cooldowns, for either entry.
 - Investigating chromium-bidi's change of publisher beyond the evidence in §S3.
 
