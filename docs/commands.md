@@ -146,6 +146,14 @@ telemetry is switched off for the call. The Cloudflare credential is wrangler's
 own `wrangler login`, stored in the user profile, which the shell's
 user-profile variables (`USERPROFILE` or `HOME`) still reach.
 
+⚠️ **That narrowing covers the inherited environment only.** wrangler itself
+loads the repository root's `.env` and `.env.local` when it starts, and puts them
+back in its own environment, so where a `.env` sits at the root the Google Books
+key and the vault path still reach wrangler and its packages. Measured by reading
+the pinned wrangler's start-up code, not by a deploy. The owner accepted this
+([#459](https://github.com/mephistopheles4/stacks/issues/459)); the repository has
+no threat model, so it is recorded nowhere else.
+
 **After a wrangler bump merges, run `pnpm install` before the next deploy**: the
 refusal above is that reminder, and it fires after the four gates, so run the
 install first and save the minutes. **The first deploy after this change is also

@@ -15,6 +15,13 @@ upload the deploy refuses unless the wrangler in the repository's own
 key `loadEnv` set, except names starting `CLOUDFLARE_` or `WRANGLER_`, and sets
 `WRANGLER_SEND_METRICS=false`. `allowBuilds` answers `workerd: false`.
 
+⚠️ **The narrowed environment covers what the upload inherits, and no more.**
+wrangler's own start-up loads the repository root's `.env` and `.env.local` and
+puts them back in its environment, so where a `.env` sits at the root the Google
+Books key and the vault path still reach wrangler and its packages. The owner
+accepted that and no code changes for it. The repository has no threat model, so
+the acceptance is recorded here and nowhere else.
+
 ## Why
 
 The deploy's wrangler fetch carries the Cloudflare credential, and it was the one

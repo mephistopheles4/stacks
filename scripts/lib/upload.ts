@@ -65,7 +65,9 @@ const WRANGLER_NAMES = /^(?:CLOUDFLARE_|WRANGLER_)/i;
  *
  * `loadEnv` copies `.env` into `process.env`, and the deploy used to hand all of
  * it to every child, so the upload received the Google Books key and the vault
- * path. The upload needs neither. It drops every key `loadEnv` set — the names
+ * path. The upload needs neither. ⚠️ **This covers the inherited environment
+ * only**: wrangler loads the repository root's `.env` and `.env.local` itself at
+ * start-up, so those keys reach it anyway (accepted by the owner, #459). It drops every key `loadEnv` set — the names
  * it returned — except `CLOUDFLARE_*` and `WRANGLER_*`, so a credential kept in
  * `.env` still reaches wrangler. The shell's own variables all stay, user-profile
  * ones included, because wrangler finds its login store through them.
