@@ -327,6 +327,31 @@ export function writeSettings(
   window.history.replaceState(state, '', query === '' ? window.location.pathname : `?${query}`);
 }
 
+/**
+ * Writes the settings back into the address after every history step, for as
+ * long as `current` has something to write.
+ *
+ * Put-back is a `history.back()` (spec §3.9), and `writeSettings` only ever
+ * replaces the entry it is on — so a setting dialled while a book is held was
+ * written into the pickup's entry, and put-back returned to the entry from
+ * before it, whose address lacks the change. The shelf kept the setting; a
+ * reload or a copied tuning link lost it (#426). `current` returns `undefined`
+ * until the panel has written once, so a history step on an untouched page
+ * leaves a hand-typed address exactly as it was. Returns the remover.
+ */
+export function keepSettingsInAddress(
+  current: () => { readonly settings: ShelfSettings; readonly base?: ShelfSettings } | undefined,
+): () => void {
+  const rewrite = (): void => {
+    const now = current();
+    if (now !== undefined) writeSettings(now.settings, now.base);
+  };
+  window.addEventListener('popstate', rewrite);
+  return () => {
+    window.removeEventListener('popstate', rewrite);
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 
 /** The half of the settings with no historic spelling, as a diff from defaults. */

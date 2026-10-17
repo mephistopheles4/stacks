@@ -120,13 +120,13 @@ describe('G48 — the Markdown check runs on every pull request', () => {
         'the gate; the job is only where it runs',
     ).toContain('pnpm lint:md');
 
-    // The matrix runs two Node versions. A style verdict does not move with
-    // one, so running it there would report the same finding twice — the
+    // The matrix is where Node versions go. A style verdict does not move
+    // with one, so running it there would report the same finding twice — the
     // `audit` job's own stated rule, applied.
     expect(
       jobs().get('style') ?? '',
       `the \`style\` job in ${WORKFLOW} has grown a Node matrix. A Markdown rule break ` +
-        'is the same on Node 22 and Node 24, and this job exists to say it once',
+        'is the same on every Node version, and this job exists to say it once',
     ).not.toMatch(/matrix\.node/);
   });
 

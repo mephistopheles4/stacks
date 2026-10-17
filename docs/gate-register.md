@@ -6586,17 +6586,44 @@ read after.
   release that moves its stylesheet or its placeholder rule fails the build at
   extraction, before this row runs. Disposition `gated`.
 
-### G66 — `release-age`
+### G66 — `control-characters`
+
+**Gate:** [`gates/control-characters.test.ts`](../gates/control-characters.test.ts)
+**Date:** 2026-10-16
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, planted: `x`, U+0007 and `y` appended to `README.md`, a
+tracked file, and the sweep named `README.md:195:2 U+0007`; reverted. The BEL
+it was written for had already been fixed in the same change, so the tree
+itself never ran red here.
+
+- **Weakening** — **exposed.** The sweep reads C0 only. DEL (U+007F), the C1
+  range and the characters that draw as nothing above them (a zero-width space,
+  a bidi override) all pass. None has reached this tree by the route this row
+  guards, and the Thoughts extractor already withholds the invisible ones on
+  its own surface (ADR-0107). Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** A text file given an extension in
+  `BINARY` is skipped. That list is shared with G13, which would then demand an
+  allowlist entry for it, so the route is visible in review. Disposition
+  `accepted`.
+- **Routing around** — **gated.** An untracked file is outside every gate by
+  design; once tracked, it is read, whatever its path or extension. Disposition
+  `gated`.
+- **Vacuous green** — **gated.** A floor of 400 tracked text files, against
+  500-odd today, and five planted cases over synthetic bytes, each built from
+  code points, run the same sweep the tree does. Disposition `gated`.
+- **Decay** — **gated.** Nothing here depends on a tool version: the list
+  comes from `git ls-files`, and the bytes are read raw. Disposition `gated`.
+
+### G67 — `release-age`
 
 **Gate:** [`gates/release-age.test.ts`](../gates/release-age.test.ts)
 **Date:** 2026-10-16
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
-⚠️ **The row number collides, and that is known.** It was taken against
-`origin/main` and the open pull requests, but #448 opened with its own G66
-minutes before this commit and the check missed it. Whichever of the two merges
-second renumbers its gate to G67 at rebase. G41's no-gap rule refuses G67 while
-`main` has no G66, so neither can take G67 early.
+⚠️ **The row number collided, and that is resolved.** This gate was built as
+G66 while #448 opened with its own G66. #448 merged first, so this one
+renumbered to G67 when main was merged in.
 
 **Observed-red**, twice. The live assertion was written before the key existed
 and went red on the real file: `minimumReleaseAge is not set at the top level`.

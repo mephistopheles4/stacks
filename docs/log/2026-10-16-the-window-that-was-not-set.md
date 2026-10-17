@@ -90,14 +90,14 @@ not. Under an explicit 10080 window:
 naming the exact version, beside the override.** It takes patterns too, and they
 are dangerous: under `minimumReleaseAgeExclude: ['*']`, and under a bare
 `postcss`, the same probe resolved 8.5.30 inside the window. One wildcard
-switches the policy off with the key still at 10080, so G66 refuses any entry
+switches the policy off with the key still at 10080, so G67 refuses any entry
 that is not one exact `package@version`. integrity-lens found this.
 
 Two neighbouring settings also switch the window off, and adversarial-lens named
 both. Under `minimumReleaseAgeStrict: false`, pnpm wrote
 `postcss@8.5.30` into `minimumReleaseAgeExclude` by itself and resolved it.
 Under `trustLockfile: true`, the four-day-old lockfile that failed a frozen
-install above went through. G66 refuses both. A duplicate key is not a third
+install above went through. G67 refuses both. A duplicate key is not a third
 route: pnpm refuses to parse a file holding `minimumReleaseAge` twice, quoted or
 not. The claim in the nanoid block
 could not be tested under the default window; no override probe here named a
@@ -115,8 +115,8 @@ version younger than a day.
   reason and the hatch. The nanoid, fast-uri and http-cache-semantics blocks are
   marked corrected in place.
 - `.github/dependabot.yml`: `cooldown: default-days: 7` on the npm entry.
-- `docs/gates.md`: row G66 (`release-age`), and the nanoid lesson marked
-  corrected. `docs/gate-register.md`: G66's entry.
+- `docs/gates.md`: row G67 (`release-age`), and the nanoid lesson marked
+  corrected. `docs/gate-register.md`: G67's entry.
 - [The August log](./2026-08-08-the-update-that-reported-success-and-changed-nothing.md)
   gained a pointer here and nothing else.
 - Two ADRs make the old claim and are left as written, since an ADR records the

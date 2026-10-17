@@ -162,7 +162,7 @@ function readBlock(text: string): ReadResult {
 }
 
 /**
- * Every line of the uditConfig block that is not blank, not a comment and not
+ * Every line of the `auditConfig` block that is not blank, not a comment and not
  * the ignoreGhsas key or one of its items — which the reader therefore did not
  * read. ignoreCves, a nested map, a flow node on its own line: pnpm may honour
  * any of them, so each is a problem and not a skipped line.

@@ -8,7 +8,7 @@ import {
   TONE_MAPPING_NAMES,
   type ShelfSettings,
 } from './shelf-settings.ts';
-import { writeSettings } from './shelf-url.ts';
+import { keepSettingsInAddress, writeSettings } from './shelf-url.ts';
 // The roster, from the module that owns the sheet table — so the menu cannot
 // offer an entry nothing resolves, and a fourth sheet reaches the panel by being
 // added once rather than twice.
@@ -65,6 +65,17 @@ export interface PanelOptions {
    */
   readonly base?: () => ShelfSettings;
 }
+
+/**
+ * Whether any panel on this page has written the address yet.
+ *
+ * ⚠️ **The module's, not a panel's.** A rebuild while a book is held mounts a
+ * fresh panel and puts the book down, and that put-back's history step reaches
+ * the new panel, not the one that wrote — so a flag per panel read `false` there
+ * and lost the setting from the address once more (#426, behaviour-lens on
+ * #448). The module loads once per page, so the flag lives as long as the page.
+ */
+let written = false;
 
 export function mountPanel(host: HTMLElement, options: PanelOptions): () => void {
   const { handle } = options;
@@ -173,6 +184,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   const apply = (next: ShelfSettings): void => {
     const report = handle.applySettings(next);
     settings = next;
+    written = true;
     writeSettings(next, options.base?.());
     for (const hook of afterApply) hook();
     for (const relight of lamps) relight();
@@ -184,6 +196,12 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   };
 
   let pendingRebuild: ShelfSettings | undefined;
+
+  // A put-back steps the history back to an entry from before the change, so
+  // the address is written again after it; see `keepSettingsInAddress`.
+  const forgetAddress = keepSettingsInAddress(() =>
+    written ? { settings, base: options.base?.() } : undefined,
+  );
 
   const rebuildButton = document.createElement('button');
   rebuildButton.textContent = 'rebuild shelf to apply';
@@ -941,6 +959,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
 
   return () => {
     window.clearInterval(timer);
+    forgetAddress();
     root.remove();
   };
 }

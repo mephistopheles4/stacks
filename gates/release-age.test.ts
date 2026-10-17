@@ -1,5 +1,5 @@
 /**
- * G66 — `minimumReleaseAge` is set, at seven days or more.
+ * G67 — `minimumReleaseAge` is set, at seven days or more.
  *
  * For two months this repository's comments called pnpm's quarantine *seven
  * days by default*, and nothing set it. pnpm 11.18.0's own default resolved a
@@ -21,7 +21,7 @@
  * #399 — `pnpm config get minimumReleaseAge` reads 10080, and a frozen install
  * of a lockfile carrying a four-day-old entry fails under it.
  *
- * See docs/gates.md, row G66 (release-age), and pnpm-workspace.yaml.
+ * See docs/gates.md, row G67 (release-age), and pnpm-workspace.yaml.
  */
 
 import { readFileSync } from 'node:fs';
@@ -120,7 +120,7 @@ const problemOf = (text: string): string | undefined => {
 const workspace = (...lines: string[]): string =>
   ['packages:', "  - 'packages/*'", '', ...lines, ''].join('\n');
 
-describe('G66 — the release-age window is stated, at seven days or more', () => {
+describe('G67 — the release-age window is stated, at seven days or more', () => {
   it('passes the repository’s own pnpm-workspace.yaml', () => {
     const text = readFileSync(join(REPO_ROOT, 'pnpm-workspace.yaml'), 'utf8');
     expect(problemOf(text)).toBeUndefined();
@@ -165,7 +165,7 @@ describe('G66 — the release-age window is stated, at seven days or more', () =
   });
 });
 
-describe('G66 — no neighbouring setting switches the window off', () => {
+describe('G67 — no neighbouring setting switches the window off', () => {
   const beside = (line: string): string => workspace('minimumReleaseAge: 10080', line);
 
   it('passes each switch absent, or set to its safe value', () => {
@@ -198,7 +198,7 @@ describe('G66 — no neighbouring setting switches the window off', () => {
   });
 });
 
-describe('G66 — the hatch names one exact version, never a pattern', () => {
+describe('G67 — the hatch names one exact version, never a pattern', () => {
   const withExclude = (...items: string[]): string =>
     workspace('minimumReleaseAge: 10080', 'minimumReleaseAgeExclude:', ...items);
 
