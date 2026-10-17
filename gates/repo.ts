@@ -57,6 +57,16 @@ export function trackedFiles(): string[] {
   return out.split('\n').filter((line) => line.length > 0);
 }
 
+/**
+ * A tracked path whose bytes are not text, by extension.
+ *
+ * It lived in `gates/repo-hygiene.test.ts`, where G13 reads it, until G66
+ * (`control-characters`) needed the other half: every tracked file this does
+ * not match is read as text. So a binary with a new extension reddens both
+ * rows, which is the direction to fail in.
+ */
+export const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip)$/i;
+
 /** Reads a repo-relative file. */
 export function readRepoFile(path: string): string {
   return readFileSync(join(REPO_ROOT, path), 'utf8');
