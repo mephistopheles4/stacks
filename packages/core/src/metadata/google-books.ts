@@ -49,12 +49,13 @@ export async function lookupByIsbn(
 /**
  * Title search, in Google's own order.
  *
- * **A volume in another language keeps everything except its ISBN.** A
- * same-titled translation passes every matcher here, and a Google title result
- * can become the book a note records — so its ISBN would be written into the
- * note as this book's. Dropping only the ISBN leaves ranking, matching and G26
- * exactly as they were. `langRestrict` would have done this in the URL and moved
- * every cached response and every G26 key with it. See ADR-0094.
+ * **A volume in another language is refused whole.** A same-titled translation
+ * passes every matcher here, and a Google title result can become the book a
+ * note records or fill its gaps — so its ISBN, pages, cover, publisher and
+ * description would be written into the note as this book's. Dropping only the
+ * ISBN, as this once did, still let two of 46 real notes take a translation's
+ * fields (#396). `langRestrict` would have done this in the URL and moved every
+ * cached response and every G26 key with it. See ADR-0094 and ADR-0113.
  *
  * `language` is required for the reason Open Library's is: a call site that
  * forgot it is a type error, not a silent English.
@@ -75,8 +76,9 @@ export async function searchByTitle(
     items
       .map((item) => {
         const info = asRecord(asRecord(item)?.['volumeInfo']);
-        const metadata = toMetadata(info, firstString(asRecord(item)?.['id']));
-        return metadata === undefined || isIn(info, language) ? metadata : withoutIsbn(metadata);
+        return isIn(info, language)
+          ? toMetadata(info, firstString(asRecord(item)?.['id']))
+          : undefined;
       })
       .filter((item): item is BookMetadata => item !== undefined)
       // Same trap as Open Library: summaries rank alongside the real book.
@@ -90,17 +92,11 @@ export async function searchByTitle(
  * `language` in `fixtures/api/` is a bare `en`.
  *
  * **A volume that reports no language counts as in it.** Unknown is not a
- * mismatch, and dropping the ISBN of every such volume would cost dedup on all
- * of them.
+ * mismatch, and refusing every such volume would cost the lookup all of them.
  */
 function isIn(info: Record<string, unknown> | undefined, language: ReadingLanguage): boolean {
   const reported = firstString(info?.['language']);
   return reported === undefined || reported.split('-')[0]?.toLowerCase() === language;
-}
-
-function withoutIsbn(metadata: BookMetadata): BookMetadata {
-  const { isbn: _foreign, ...rest } = metadata;
-  return rest;
 }
 
 /**
