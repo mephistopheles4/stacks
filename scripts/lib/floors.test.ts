@@ -2940,6 +2940,25 @@ describe('the tightening clause', () => {
     expect(ask(70.8, 11, unarmed).caps.size).toBe(0);
   });
 
+  // ADR-0111's departure from §S4 (q2): a clause names a value the owner may type
+  // in, so it names nothing while the current reading is already worse than it.
+  it('names nothing while the current reading is worse than the value it would name', () => {
+    // A merge run counting 13 sits beside a window whose highest is 11; the cap is 14.
+    expect(printed({ rows: nightlies(25), value: 13 }).cap).not.toContain('tightenable');
+    expect(printed({ rows: nightlies(25), value: 12 }).cap).not.toContain('tightenable');
+    expect(printed({ rows: nightlies(25), value: 11 }).cap).toContain('window highest 11');
+
+    // The same for a floor, whole and degraded: the window's lowest is 70.12.
+    expect(printed({ rows: nightlies(25), score: 70.11 }).floor).not.toContain('tightenable');
+    expect(printed({ rows: nightlies(25), score: 70.12 }).floor).toContain('window lowest 70.12');
+    expect(printed({ rows: nightlies(25), score: 70.11, mutants: null }).floor).not.toContain(
+      'run pnpm mutation:run',
+    );
+    expect(printed({ rows: nightlies(25), score: 70.12, mutants: null }).floor).toContain(
+      'run pnpm mutation:run',
+    );
+  });
+
   it('C10: calls the age a lower bound where the rule still holds at the oldest nightly read', () => {
     // Fourteen nightlies, every one beating the bound: the window first filled
     // at day 9, which is as far back as the read goes.

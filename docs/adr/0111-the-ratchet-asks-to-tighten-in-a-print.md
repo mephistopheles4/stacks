@@ -83,3 +83,7 @@ anything.
 - **The age can overstate.** It walks back against today's bound, and the
   record does not say when a bound last moved, so a run of slack that began
   before the last tightening is counted whole.
+
+## Amendment, 2026-10-17: nothing while the current reading is worse
+
+The build found that a cap's current count is read from the newest counted run, often a merge run, while the window that names the tighter cap reads nightlies alone, so the print could read `current 13` beside `window highest 11 - tightenable`, and typing 11 would refuse the next deploy. The spec's rule (§S4) produced this, as the armable line already does for arming. **The owner chose, as q2, that the clause names nothing while the current reading is worse than the value it would name**: a cap whose current count is above the window's highest, a floor whose current score is under the window's lowest, whole or degraded. A reading equal to the value still asks. This departs from §S4, which is locked and not edited; this is the only departure from its rule. The arming line is unchanged. Floors cannot hit it today, since a merge run carries no score, so it is guarded rather than observed there.

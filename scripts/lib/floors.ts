@@ -1539,7 +1539,9 @@ function tighterSince(
  *
  * **Asks nothing** for an unarmed bound, a bound with no reading (there is no
  * breach check to make), a hole in the window, or a bound breached this deploy,
- * which is the refusal's line and must not be contradicted beside it. Where a
+ * which is the refusal's line and must not be contradicted beside it, or a
+ * current reading already worse than the value it would name (ADR-0111's
+ * amendment), since typing that value in would breach. Where a
  * floor's mutant count is unknown it degrades to `unjudged` when the window
  * beats the floor by a hundredth, and says nothing when it does not.
  */
@@ -1584,13 +1586,21 @@ export function tightenings(input: TightenInput): Tightenings {
       return Math.round(named * 100) - floorHundredths >= needed ? named : undefined;
     };
 
+    // ⚠️ **Nothing while the current reading is worse than the value named**
+    // (ADR-0111, q2): typing that value in would refuse the next deploy. A
+    // floor's score is only ever under the window's lowest when a run scores
+    // outside the nightlies, which a merge run does not do today.
     if (mutants !== undefined) {
       const tighter = tighterSince(ordered, floorWindows, judge, input.today);
-      if (tighter !== undefined) found.floors.set(scope, { kind: 'tightenable', ...tighter });
+      if (tighter !== undefined && reading.score >= tighter.value) {
+        found.floors.set(scope, { kind: 'tightenable', ...tighter });
+      }
       continue;
     }
     const value = judge(floorWindows(last));
-    if (value !== undefined) found.floors.set(scope, { kind: 'unjudged', value });
+    if (value !== undefined && reading.score >= value) {
+      found.floors.set(scope, { kind: 'unjudged', value });
+    }
   }
 
   for (const [scope, entry] of input.floors.scopes) {
@@ -1609,7 +1619,10 @@ export function tightenings(input: TightenInput): Tightenings {
         },
         input.today,
       );
-      if (tighter === undefined) continue;
+      // The current count comes from the newest counted run, often a merge run, and
+      // the window from nightlies alone, so the count can sit above the window's
+      // highest: naming the highest then would breach on the very next deploy.
+      if (tighter === undefined || reading.value > tighter.value) continue;
 
       const perScope = found.caps.get(series) ?? new Map<string, Tightening>();
       perScope.set(scope, { kind: 'tightenable', ...tighter });
