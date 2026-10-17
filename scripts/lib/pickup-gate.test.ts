@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  atRestFailures,
   phoneFailures,
   pickupFailures,
   spreadFailures,
   viewerFailures,
+  type AtRestRead,
   type PickupRead,
   type SpreadRead,
   type ViewerRead,
@@ -269,5 +271,36 @@ describe('the other two ways down', () => {
   it('fails a back button that left the pickup entry in place', () => {
     const read = { ...good, afterBack: { ...good.afterBack, historyHeld: true } };
     expect(pickupFailures(read).join('\n')).toMatch(/back button left the pickup's history entry/);
+  });
+});
+
+describe('atRestFailures — the held page at rest (#426)', () => {
+  const rest: AtRestRead = {
+    frames: 30,
+    mostLoops: 1,
+    overflow: 'auto',
+    tall: true,
+    inReachUnscrolled: false,
+    inReachScrolled: true,
+  };
+
+  it('passes a sleeping ticker and long Thoughts that scroll the links into reach', () => {
+    expect(atRestFailures(rest)).toEqual([]);
+  });
+
+  it("fails GSAP's own ticker awake, and a window that came up short", () => {
+    expect(atRestFailures({ ...rest, mostLoops: 2 })).toHaveLength(1);
+    expect(atRestFailures({ ...rest, frames: 29 })).toHaveLength(1);
+    expect(atRestFailures({ ...rest, frames: 0, mostLoops: 0 })).toHaveLength(1);
+  });
+
+  it('fails Thoughts that do not scroll at rest', () => {
+    expect(atRestFailures({ ...rest, overflow: 'hidden' })).toHaveLength(1);
+    expect(atRestFailures({ ...rest, tall: false })).toHaveLength(1);
+  });
+
+  it('fails a links row never scrolled into reach, or one in reach unscrolled', () => {
+    expect(atRestFailures({ ...rest, inReachScrolled: false })).toHaveLength(1);
+    expect(atRestFailures({ ...rest, inReachUnscrolled: true })).toHaveLength(1);
   });
 });
