@@ -174,6 +174,7 @@ describe('the pages as built', () => {
       readonly left: FakeElement;
       readonly right: FakeElement;
       showThoughts(paragraphs: readonly string[], fade: boolean): void;
+      setScrollable(scrollable: boolean): void;
     };
 
   it('lands a markup-shaped title and author as text, on the left-hand page', () => {
@@ -212,5 +213,16 @@ describe('the pages as built', () => {
       false,
     );
     expect(markupWrites).toEqual([]);
+  });
+
+  it('scrolls the right-hand page at rest and holds it still in motion (#369)', () => {
+    const pages = build(false);
+
+    pages.setScrollable(true);
+    expect(pages.right.style.overflowY).toBe('auto');
+    pages.setScrollable(false);
+    expect(pages.right.style.overflowY).toBe('hidden');
+    // The left-hand page carries two lines and never scrolls.
+    expect(pages.left.style.overflowY).toBeUndefined();
   });
 });

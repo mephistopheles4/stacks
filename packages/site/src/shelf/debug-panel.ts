@@ -8,7 +8,7 @@ import {
   TONE_MAPPING_NAMES,
   type ShelfSettings,
 } from './shelf-settings.ts';
-import { writeSettings } from './shelf-url.ts';
+import { keepSettingsInAddress, writeSettings } from './shelf-url.ts';
 // The roster, from the module that owns the sheet table — so the menu cannot
 // offer an entry nothing resolves, and a fourth sheet reaches the panel by being
 // added once rather than twice.
@@ -173,6 +173,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   const apply = (next: ShelfSettings): void => {
     const report = handle.applySettings(next);
     settings = next;
+    written = true;
     writeSettings(next, options.base?.());
     for (const hook of afterApply) hook();
     for (const relight of lamps) relight();
@@ -184,6 +185,13 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   };
 
   let pendingRebuild: ShelfSettings | undefined;
+
+  // A put-back steps the history back to an entry from before the change, so
+  // the address is written again after it; see `keepSettingsInAddress`.
+  let written = false;
+  const forgetAddress = keepSettingsInAddress(() =>
+    written ? { settings, base: options.base?.() } : undefined,
+  );
 
   const rebuildButton = document.createElement('button');
   rebuildButton.textContent = 'rebuild shelf to apply';
@@ -941,6 +949,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
 
   return () => {
     window.clearInterval(timer);
+    forgetAddress();
     root.remove();
   };
 }
