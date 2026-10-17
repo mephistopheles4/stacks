@@ -29,7 +29,7 @@ breaks the convention (S8).
 | D1 | Standard tier | the owner, in the spec session's chat |
 | D2 | Nobody rewrites prose. The convention is written down, and the pact poster is asked to refuse a hard-wrapped paragraph or a relative link | the owner, q1, relayed by the head chef |
 | D3 | Retire `gh-post.ts`; `AGENTS.md` refers to no posting tool; the gap closes on the pact side; a new record supersedes ADR-0078 with the owner's reason | the owner's direction, relayed by the head chef |
-| D4 | The convention lives in `docs/agents/issue-tracker.md`, not in `AGENTS.md` | q3, **open**: recommended, not yet answered |
+| D4 | The convention lives in `docs/agents/issue-tracker.md`, not in `AGENTS.md` | the owner, q3, relayed by the head chef |
 | D5 | The two library modules, their tests, and `runExeOutput` in `scripts/lib/run.ts` are deleted, since `gh-post.ts` is their only caller | the spec session, as mechanical |
 | D6 | Prose that cites `gh-post.ts` as a precedent is rewritten in the past tense; ADRs and `docs/log/` stay as written | the spec session, as mechanical |
 
@@ -156,8 +156,7 @@ signed by the build session.
 
 ## S10. Override list
 
-The decisions the owner did not make directly, for striking: D4 (pending q3),
-D5, D6, the `REFRESHED` note's wording, and claim 7's live post on #461.
+The decisions the owner did not make directly, for striking: D5, D6, the `REFRESHED` note's wording, and claim 7's live post on #461.
 
 ## S11. Out of scope
 
