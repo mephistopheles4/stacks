@@ -30,6 +30,11 @@ contract, and neither of these is one.
 
 - [`.claude/skills/phase-gate/SKILL.md`](.claude/skills/phase-gate/SKILL.md) —
   closing out a phase: run the gate, show the output, record before committing.
+- [`.claude/hooks/session-start.sh`](.claude/hooks/session-start.sh) — the
+  SessionStart hook, registered in `.claude/settings.json`. It does nothing
+  outside a Claude Code cloud session; inside one it installs Node 24 and the
+  workspace and readies `smoke:render`. The finding behind it is in
+  `docs/progress.md` under "Environment findings".
 - [`.claude/commands/crfix.md`](.claude/commands/crfix.md) — `/crfix`, which
   works a CodeRabbit review to completion: wait for it, evaluate each finding,
   fix what holds up, reply on each thread. **It is self-contained on purpose.**
