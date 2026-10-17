@@ -104,6 +104,14 @@
       "reason": "Two files join the shelf scope's zero-mutant residuals beside debug-panel.ts, both reached only through boot.ts: pickup-tuner.ts, the pickup tuner behind ?debug, which imports its stylesheet with Vite's ?url that only a Vite build resolves; and pickup.ts, the drawing half of picking a book up, whose rules are tested in the pure modules it calls. card-sheet.ts was deleted with the sheet and was never a residual. No declared scope's glob changed.",
       "pr": 417,
       "preserves": false
+    },
+    {
+      "date": "2026-10-17",
+      "stamp": "duplicationHash",
+      "value": "sha256:fcddde5239f28815a93ccf24c52b74cf6dc174d26cfc8fef58fa73867442dfd5",
+      "reason": "jscpd moved to 5.4.1. Measured over the identical tree, main at f322cef under 5.3.2 against the bump at cbd508b under 5.4.1, which differ only in package.json and the lockfile: no duplication count moved. The whole tree reads 69 clones, 747 duplicated lines, 88635 total lines and 0 ignored under both, all eight declared scopes are unchanged, and the 69 clone spans were diffed one by one and are identical, not only their totals. So the window is declared preserved, the first true in this file. No code reads a duplication calibration window yet, so this flag does nothing today; it is recorded so the window carries across this bump once #269's reader is wired. One gap: the tree holds no jscpd:ignore block, so how 5.4.1 handles a suppression block was not exercised.",
+      "pr": 453,
+      "preserves": true
     }
   ]
 }
