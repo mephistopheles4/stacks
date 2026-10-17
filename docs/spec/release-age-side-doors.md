@@ -325,7 +325,17 @@ That credential is **wrangler's own OAuth login (`wrangler login`), stored in
 the user profile**, as the owner stated on 2026-10-17. It is not a token in
 `.env`, and it never enters the repository, `.env` or CI. The ADR also states
 that the login store sits in reach of every tool the deploy runs, which is
-the point in D1. It names the telemetry flow and that D7 turns it off for the
+the point in D1.
+
+The ADR also carries one short paragraph on wrangler's successor, at the
+owner's request. Cloudflare released `cf`, the CLI that replaces wrangler, in
+open beta on 2026-09-28. When the beta ends, a final wrangler major points
+users to `cf`, and wrangler gets 18 months of maintenance after that. The pin
+covers wrangler's remaining life. The switch to `cf` waits for three things:
+`cf` is stable; it supports Pages deploys, which is unconfirmed, since
+Cloudflare's Wrangler-to-cf reference has no Pages row; and the owner signs in
+with `cf`'s own login, `cf auth login`. A tracking issue, filed by the lead,
+holds the switch. It names the telemetry flow and that D7 turns it off for the
 upload. Take
 the next number free on `main` and on open pull requests at build time. On
 2026-10-17, open pull requests held 0111, 0113 and 0115.
