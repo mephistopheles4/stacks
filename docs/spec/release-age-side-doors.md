@@ -334,8 +334,9 @@ users to `cf`, and wrangler gets 18 months of maintenance after that. The pin
 covers wrangler's remaining life. The switch to `cf` waits for three things:
 `cf` is stable; it supports Pages deploys, which is unconfirmed, since
 Cloudflare's Wrangler-to-cf reference has no Pages row; and the owner signs in
-with `cf`'s own login, `cf auth login`. A tracking issue, filed by the lead,
-holds the switch. It names the telemetry flow and that D7 turns it off for the
+with `cf`'s own login, `cf auth login`.
+[#473](https://github.com/mephistopheles4/stacks/issues/473) tracks the
+switch, and the ADR cites it. It names the telemetry flow and that D7 turns it off for the
 upload. Take
 the next number free on `main` and on open pull requests at build time. On
 2026-10-17, open pull requests held 0111, 0113 and 0115.
