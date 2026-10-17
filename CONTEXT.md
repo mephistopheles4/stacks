@@ -412,6 +412,35 @@ contains what the assertion looks for. The specific failure most of this repo's
 gate design is arranged against.
 *Avoid*: false positive, flaky, silent pass.
 
+**Survivor**:
+A mutant the suite did not detect: `Survived` or `NoCoverage`, and nothing
+else. The job summary and the survivor record use this one meaning, so they
+agree on how many there are. A `Timeout` is detected and is not a survivor,
+which is why one loop decrement flipping between the two moves a night's count
+on unchanged code.
+*Avoid*: live mutant, escaped mutant, undetected mutant.
+
+**Content key**:
+What says two survivors from different nights are the same mutant: its file, its
+mutator, the source text it replaced and its replacement. Never its `id`, which
+is the mutant's position in one run's count, and never its line, which moves
+when anything above it is edited.
+*Avoid*: mutant id, fingerprint.
+
+**Collision**:
+Two survivors in one night that share a content key, such as the same string
+literal surviving on two lines of one file. A diff still counts both, so its
+counts stay right. What a collision loses is which of those lines a survivor is
+on.
+*Avoid*: duplicate, clash.
+
+**Survivor record**:
+One night's survivors written down to outlive the 30-day report artifact. Every
+survivor is kept, collisions included, and is read by content key rather than
+by position. Durable in the sense of [ADR-0055](docs/adr/0055-ci-writes-a-durable-record.md),
+never immutable.
+*Avoid*: survivor list, mutation report, survivor log.
+
 ### The tracker
 
 **Claim**:
