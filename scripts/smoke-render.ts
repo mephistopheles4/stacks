@@ -1746,13 +1746,24 @@ async function visit(page: Page, origin: string, path: string): Promise<void> {
   // the runner's software renderer `networkidle0` inside 30 s failed one case of
   // eight on one Node version of two, with the shelf itself fine — so the wait
   // for quiet is bounded and never fatal, as G61's is.
+  const started = performance.now();
   await page.goto(`${origin}${path}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+  const ready = performance.now();
   await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
   // A hidden page's loss is not the fallback's, by design — so make sure the
   // one under test is the one in front.
   await page.bringToFront();
+  VISITS.count += 1;
+  VISITS.toReady += (ready - started) / 1000;
+  VISITS.toQuiet += (performance.now() - ready) / 1000;
 }
+
+/**
+ * What `visit()`'s cold boots cost in total, printed under the step times: the
+ * share of G60 that is booting rather than testing (#397).
+ */
+const VISITS = { count: 0, toReady: 0, toQuiet: 0 };
 
 async function readState(page: Page): Promise<PageState> {
   return (await page.evaluate(READ_STATE)) as PageState;
@@ -2363,6 +2374,12 @@ function report(result: {
   console.log('step times');
   for (const { label, seconds } of TIMINGS) {
     console.log(`  ${label.padEnd(40)} ${seconds.toFixed(1).padStart(6)} s`);
+  }
+  if (VISITS.count > 0) {
+    console.log(
+      `  of which visit() boots: ${String(VISITS.count)}, ` +
+        `${VISITS.toReady.toFixed(1)} s to ready + ${VISITS.toQuiet.toFixed(1)} s to a quiet network`,
+    );
   }
   console.log(`screenshot        ${OUTPUT}`);
 
