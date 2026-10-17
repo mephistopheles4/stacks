@@ -3,7 +3,8 @@
 **Issue:** [#461](https://github.com/mephistopheles4/stacks/issues/461) ·
 **Tier:** standard · **Record:** [ADR-0115](../adr/0115-the-repo-ships-no-posting-tool.md),
 superseding [ADR-0078](../adr/0078-a-tool-rewrites-prose-before-it-reaches-github.md) ·
-**State:** waiting for the owner's sign-off
+**State:** signed off by the owner on 2026-10-17 (relayed by the head chef);
+waiting for a build session
 
 ## S1. Problem statement
 
