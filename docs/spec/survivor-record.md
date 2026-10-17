@@ -425,8 +425,9 @@ delete it. Nothing reads it, so leaving it costs nothing.
 
 - **A reader beyond the summary line**: a command to diff any two records, or
   to list survivors present on every one of the last N nights. That is the
-  query that finds equivalent mutants. A later ticket, once records exist to
-  query.
+  query that finds equivalent mutants. Filed as
+  [#472](https://github.com/mephistopheles4/stacks/issues/472) on the owner's
+  word (q5), to be built once records exist to query.
 - **Changing what the eight scopes measure, arming anything, or the floors.**
   `stryker.config.mjs`, `stryker.scopes.json` and `stryker.floors.json` are
   untouched.
@@ -460,6 +461,7 @@ delete it. Nothing reads it, so leaving it costs nothing.
 | Warn-only: a failed record never reds the night | owner (Q5) | §S4.5, the `docs/gates.md` row in §S4.8. ⚠️ The summary step is already warn-only in this shape, so this adds a second warn-only step rather than the first. Zero `continue-on-error` stays true |
 | Branch named `survivors` | owner (q1, relayed by the head chef) | every path above |
 | No new entry script: the git half in `commit-metrics.ts`, the record and the line in `mutation-scopes.ts`, pure logic in a mutated lib module | owner (q3, relayed by the head chef) | §S4.5, §S4.8, §S7. Option B would restamp and restart the calibration windows |
+| File the equivalent-mutant reader as a follow-up issue, #472 | owner (q5, relayed by the head chef) | §S7 |
 | Guards for the two `security?` findings: C9 kept out of Stryker's dry run, and the previous record's SHA and date checked before printing | owner (q4, relayed by the head chef) | §S4.4, §S4.8, C8 |
 | One commit path for both branches; never check out the tip | `spec-344`'s recommendation | §S4.6, C9, acceptance 2 |
 | Header with key schema, Stryker version, `configHash` and per-scope counts | `spec-344`'s recommendation, after unstated-lens | §S4.1, §S4.2, C7 |
