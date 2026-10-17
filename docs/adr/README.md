@@ -139,3 +139,4 @@ Two other files hold what these deliberately do not:
 | [0108](./0108-g60-and-g61-run-after-merge-not-on-pull-requests.md) | G60 and G61 run after merge and at deploy, not on pull requests (amends 0023) |
 | [0109](./0109-the-held-book-is-examined-in-3d.md) | The held book is examined in 3D, in the dialog's place (supersedes 0052 in part) |
 | [0110](./0110-node-24-is-the-floor.md) | Node 24 is the floor, and CI tests it alone (supersedes 0023 in part) |
+| [0113](./0113-a-google-volume-in-another-language-is-refused-whole.md) | A Google volume in another language is refused whole (supersedes 0094 in part) |

@@ -551,12 +551,13 @@ describe('a title search takes one edition, in the reading language', () => {
 /**
  * Google's title search, on the same rule.
  *
- * Its volumes carry a `language`, and a volume in another language keeps
- * everything except its ISBN — so ranking, matching and G26 are untouched, and
- * no foreign ISBN can become the one a note records. `langRestrict` would have
- * done it in the URL and moved every cached response with it. See ADR-0094.
+ * Its volumes carry a `language`, and a volume in another language is refused
+ * whole — not a primary, not a contributor — so no translation's ISBN, pages,
+ * cover, publisher or description can reach a note. `langRestrict` would have
+ * done it in the URL and moved every cached response with it. See ADR-0094 and
+ * ADR-0113.
  */
-describe("Google's title search drops the ISBN of a volume in another language", () => {
+describe("Google's title search refuses a volume in another language", () => {
   interface VolumesBody {
     readonly items: readonly { readonly volumeInfo: Record<string, unknown> }[];
   }
@@ -582,12 +583,39 @@ describe("Google's title search drops the ISBN of a volume in another language",
 
   const TURKISH_ISBN = '9789754345315';
 
-  it('keeps the volume and drops its ISBN when it is not in the reading language', async () => {
-    const [best] = await lookup('Thinking, Fast and Slow', googleAnswering('tr'));
+  it('refuses the volume when it is not in the reading language', async () => {
+    const results = await lookup('Thinking, Fast and Slow', googleAnswering('tr'));
+    expect(results.find((each) => each.volumeId === 'rAUFswEACAAJ')).toBeUndefined();
+  });
 
-    expect(best?.source).toBe('google-books');
-    expect(best?.volumeId).toBe('rAUFswEACAAJ');
-    expect(best?.isbn).toBeUndefined();
+  it('refuses a same-titled translation as a contributor to another primary', async () => {
+    // Open Library knows the book but carries no ISBN, so `fillGaps` asks
+    // Google by title — and an invented Italian volume with the same title and
+    // author answers. Before #396 it filled pages, cover and the merged fields.
+    const hit = readApiFixture('open-library-search-hit.json') as {
+      docs: Record<string, unknown>[];
+    };
+    const withoutIsbns = {
+      ...hit,
+      docs: hit.docs.map(({ isbn: _work, editions, ...doc }) => {
+        const inner = editions as { docs: Record<string, unknown>[] };
+        return { ...doc, editions: { ...inner, docs: inner.docs.map(({ isbn: _e, ...e }) => e) } };
+      }),
+    };
+    const rest = fixtureHttpGet({
+      'googleapis.com': 'google-books-volume-translation.json',
+      [OREILLY]: 'oreilly-search-miss.json',
+      [APPLE]: '',
+    });
+    const get: HttpGet = async (url) =>
+      url.includes('/search.json') ? withoutIsbns : await rest(url);
+
+    const [best] = await lookup('Thinking in systems', get);
+
+    expect(best?.source).toBe('open-library');
+    expect(best?.volumeId).toBeUndefined();
+    expect(best?.pages).not.toBe(999);
+    expect(best?.publisher).not.toBe('Editore Inventato');
   });
 
   it('keeps the ISBN of a volume in the reading language', async () => {
@@ -615,12 +643,11 @@ describe("Google's title search drops the ISBN of a volume in another language",
       expect(best?.isbn).toBe(TURKISH_ISBN);
     });
 
-    it('drops the ISBN of an English volume', async () => {
-      const [best] = await lookup('Hızlı ve Yavaş Düşünme', googleAnswering('en'), {
+    it('refuses an English volume', async () => {
+      const results = await lookup('Hızlı ve Yavaş Düşünme', googleAnswering('en'), {
         language: 'tr',
       });
-      expect(best?.volumeId).toBe('rAUFswEACAAJ');
-      expect(best?.isbn).toBeUndefined();
+      expect(results.find((each) => each.volumeId === 'rAUFswEACAAJ')).toBeUndefined();
     });
   });
 });
