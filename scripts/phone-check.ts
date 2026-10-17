@@ -25,8 +25,8 @@
  *
  * **Not a `pnpm` script, deliberately**: it needs adb and a phone with USB
  * debugging on, which no CI runner and few contributors have, and a documented
- * `pnpm` command is one G14 would pin while nothing exercised it. `gh-post.ts`
- * set the precedent. See `docs/commands.md`, which says when to run it.
+ * `pnpm` command is one G14 would pin while nothing exercised it. The retired
+ * `gh-post.ts` set a precedent (ADR-0115). See `docs/commands.md`, which says when to run it.
  *
  * ⚠️ **What it does to the phone**: wakes the screen, dismisses a keyguard that
  * has no PIN, force-stops Chrome (the only thing that clears the block Chrome

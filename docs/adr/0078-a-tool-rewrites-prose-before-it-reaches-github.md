@@ -2,6 +2,7 @@
 
 **Date:** 2026-08-26
 **Status:** accepted
+**Superseded by:** [ADR-0115](0115-the-repo-ships-no-posting-tool.md)
 **Ticket:** [#220](https://github.com/mephistopheles4/stacks/issues/220)
 
 ## Context
@@ -29,10 +30,10 @@ every file here is authored — is the defect.
 ## Decision
 
 **A tool edits the author's words before posting them.**
-[`scripts/lib/github-body.ts`](../../scripts/lib/github-body.ts) reflows each
+[`scripts/lib/github-body.ts`](https://github.com/mephistopheles4/stacks/blob/d51e9d3/scripts/lib/github-body.ts) reflows each
 prose paragraph onto one line, joins a wrapped list item onto its marker, joins a
 run of blockquote lines into one, and rewrites repository-relative link targets
-to absolute URLs. [`scripts/lib/github-post.ts`](../../scripts/lib/github-post.ts)
+to absolute URLs. [`scripts/lib/github-post.ts`](https://github.com/mephistopheles4/stacks/blob/d51e9d3/scripts/lib/github-post.ts)
 then posts the **transformed** text and reads it back, comparing against the
 transformed text and never against what the author wrote.
 
