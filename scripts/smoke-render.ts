@@ -780,7 +780,11 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   // pickup's doing (spec §3.4).
   await page.evaluate('window.__focusBefore = document.activeElement');
   await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
-  await until(page, HELD, 'the book to come to rest held, for the focus read');
+  // A timeout ends the check: the steps below press Escape and the back button,
+  // and the back button with nothing held would leave the page itself.
+  if (!(await until(page, HELD, 'the book to come to rest held, for the focus read'))) {
+    return undefined;
+  }
   const focusUnmoved = (await page.evaluate(
     'document.activeElement === window.__focusBefore',
   )) as boolean;
@@ -794,7 +798,9 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   )) as boolean;
 
   await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
-  await until(page, HELD, 'the book to come to rest held, before the back button');
+  if (!(await until(page, HELD, 'the book to come to rest held, before the back button'))) {
+    return undefined;
+  }
   await page.evaluate('history.back()');
   const afterBack = await putDown(page, sameHref);
 
