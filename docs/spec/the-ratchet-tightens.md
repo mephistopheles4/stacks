@@ -284,6 +284,7 @@ also laid out as a morphological box, which is not in this checkout.
 | Q9 | Arm on the preserved windows, leaving slack? | Yes: arm every bound at the rule's value once this merges and #464 lands, and tighten when the clause asks |
 | Q10 | Rescore old commits on CI, or count merge runs, to fill windows faster? | Neither; §10 of `the-ratchet.md` stays as written |
 | q12 | Where the armable line's round-down fix goes | Into #464, which already gates arming |
+| q13 | Sign-off | Proceed, with the author-taken defaults below; the build runs at the standard tier after #464 lands |
 
 Taken by the spec author as following from those answers, and open to the
 owner's override at sign-off: rounding the named floor **down** (§S4); the
@@ -374,7 +375,6 @@ the row.
 
 | What | From whom | When |
 | --- | --- | --- |
-| Sign-off on this spec: proceed, fix or kill, including §S9's author-taken defaults | the owner | before the build |
 | #464 merged | the owner | before arming, and before this build |
 | Arming every bound at the rule's value (Q9) | the owner, by hand | after this spec merges and #464 lands |
 | The two real-record dry runs (§S8) | the owner, on their machine | at build time, and after arming |
