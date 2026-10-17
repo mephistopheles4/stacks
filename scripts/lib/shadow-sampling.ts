@@ -396,12 +396,8 @@ export function judgeControl(run: SamplingRun, options: JudgeOptions = DEFAULT_J
 export function describeSampling(run: SamplingRun): string {
   if (run.snapshot === undefined) return 'no hook';
   const s = summarise(run.snapshot);
-  const programs =
-    s.fewestPrograms === s.mostPrograms
-      ? String(s.mostPrograms)
-      : `${String(s.fewestPrograms)}–${String(s.mostPrograms)}`;
   return (
-    `${String(s.steady)} steady frames, ${programs} sampling program(s), ` +
+    `${String(s.steady)} steady frames, ${String(s.mostPrograms)} sampling program(s), ` +
     `${String(s.mostSteadyDraws)} sampling draws a steady frame (${String(s.mostDraws)} at most), ` +
     `${String(s.depthDraws)} casting draws, ${String(s.programs)} programs linked`
   );
