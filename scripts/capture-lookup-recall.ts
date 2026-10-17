@@ -1,7 +1,19 @@
 /**
  * Captures the responses the lookup-recall gate replays.
  *
- *     pnpm tsx scripts/capture-lookup-recall.ts [--cache <dir>]
+ *     pnpm tsx scripts/capture-lookup-recall.ts [--cache <dir>] [--only <url-prefix>]...
+ *
+ * **`--only` is the way to refresh the corpus**, and a bare run is not. G26
+ * pins the ranking rule, not the providers' answers on one day (#395): a full
+ * re-capture re-asks every provider, and the last one moved a Google answer far
+ * enough to turn G26 red. When a change moves one provider's URLs, re-capture
+ * that provider alone — `--only https://openlibrary.org/` — and every other
+ * entry is replayed from the committed file and kept as it is. That is the
+ * splice #393 did by hand for its five Open Library entries, done by the script.
+ *
+ * ⚠️ **Pass a fresh `--cache` folder when refreshing.** A selected URL goes
+ * through the cache first, so against a warm one the "re-capture" splices in
+ * whatever was cached on an earlier day.
  *
  * Sibling of `capture-api-fixtures.ts`, and a different shape for a reason.
  * That one pins a handful of URLs written out by hand. This one records whatever
@@ -17,13 +29,14 @@
  * counts. No cover binaries, no book text. The API key is stripped from every
  * recorded URL, and the gate's reader strips it the same way before matching.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { createCachedHttpGet, lookup, type HttpGet } from '../packages/core/src/index.ts';
 // The corpus lives with the gate that owns it: this script exists to feed that
 // gate, so the list of books belongs there and is imported here, not copied.
-import { RECALL_CORPUS, stripKey } from '../gates/recall-corpus.ts';
+import { RECALL_CORPUS } from '../gates/recall-corpus.ts';
+import { parseOnly, selectByPrefix, spliceCapture } from './lib/recall-splice.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const cacheFlag = process.argv.indexOf('--cache');
@@ -42,18 +55,29 @@ if (key === undefined || key.length === 0) {
   console.warn('warning: no GOOGLE_BOOKS_API_KEY — Google will 429 and the corpus will be wrong');
 }
 
-const cached = createCachedHttpGet(cacheDir);
-const recorded: Record<string, unknown> = {};
+const only = parseOnly(process.argv);
 
-const recording: HttpGet = async (url) => {
-  const body = await cached(url);
-  recorded[stripKey(url)] = body ?? null;
-  return body;
+const out = join(REPO_ROOT, 'fixtures', 'api');
+const corpusPath = join(out, 'lookup-recall.json');
+const cached = createCachedHttpGet(cacheDir);
+
+const runCorpus = async (get: HttpGet): Promise<void> => {
+  for (const entry of RECALL_CORPUS) {
+    await lookup(entry.term, get, key === undefined ? {} : { googleBooksKey: key });
+  }
 };
 
-for (const entry of RECALL_CORPUS) {
-  await lookup(entry.term, recording, key === undefined ? {} : { googleBooksKey: key });
-}
+// With no `--only`, everything is selected and nothing is replayed: the full
+// capture, which re-asks every provider.
+const recorded = await spliceCapture({
+  committed:
+    only.length === 0
+      ? {}
+      : (JSON.parse(readFileSync(corpusPath, 'utf8')) as Record<string, unknown>),
+  selected: selectByPrefix(only),
+  live: cached,
+  run: runCorpus,
+});
 
 /**
  * Drops the bulky branches nothing parses — sale terms, snippets, access flags.
@@ -80,12 +104,7 @@ function prune(value: unknown): unknown {
   );
 }
 
-const out = join(REPO_ROOT, 'fixtures', 'api');
 mkdirSync(out, { recursive: true });
-writeFileSync(
-  join(out, 'lookup-recall.json'),
-  `${JSON.stringify(prune(recorded), null, 1)}\n`,
-  'utf8',
-);
+writeFileSync(corpusPath, `${JSON.stringify(prune(recorded), null, 1)}\n`, 'utf8');
 
 console.log(`${Object.keys(recorded).length} responses from ${RECALL_CORPUS.length} lookups`);
