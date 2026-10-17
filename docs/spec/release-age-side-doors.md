@@ -6,7 +6,7 @@ follow-up to [#399](https://github.com/mephistopheles4/stacks/issues/399) and
 findings F3 to F6). Standard tier: planned on Opus at medium effort, to be built
 on Sonnet at medium. Written on 2026-10-17 by session `spec-459`. The owner
 settled §S4's decisions the same day: D1 to D3 in a grilling, D4 and D5 after the
-spec lenses' review, and D6 after the security pair's. The spec as a whole waits for the owner's sign-off.
+spec lenses' review, and D6 and D7 after the security pair's. The spec as a whole waits for the owner's sign-off.
 
 Every measurement below was taken on pnpm 11.18.0 against a scratch copy of the
 manifests and lockfile on `main` at `4e97f22`. The real lockfile was never
@@ -169,7 +169,11 @@ a time.
   deploy loads `.env` into `process.env` and `runShell` passes the whole of it
   to every child, so the upload received the Google Books key and the vault
   path. That predates this change, and data-lens raised it under the security
-  bar.
+  bar. Keeping `CLOUDFLARE_` and `WRANGLER_` names was the spec author's call,
+  and the owner was told.
+- **D7: wrangler's telemetry is off for the upload.** The owner's answer,
+  relayed by the lead: "Turn it off". wrangler sends usage data to Cloudflare
+  by default (§S3), and nothing approved that flow.
 - **D3, door 1: the key, plus the lockfile rule.** The owner's answer, relayed
   by the lead: "Key + lockfile check". The key is defence in depth and costs
   nothing. The lockfile rule closes the door the issue meant.
@@ -297,7 +301,9 @@ finds its login store through the user-profile variables. Today that removes
 The deploy reads `CF_PAGES_PROJECT` and `SITE_URL` itself, before the upload,
 and passes the project as an argument. `runShell` needs a way to take a whole
 environment rather than merging over `process.env`. The deploy's other steps
-are unchanged.
+are unchanged. **Last, the upload's environment sets
+`WRANGLER_SEND_METRICS=false` (D7)**, after every other key, so neither the
+shell nor `.env` can turn telemetry back on for the upload.
 
 **`.github/dependabot.yml`** gives the github-actions entry `cooldown:
 default-days: 7`, with a comment pointing at the npm entry's note, and saying
@@ -315,7 +321,8 @@ join every install, CI's included, and Dependabot opens wrangler bumps. It
 also says what's in reach of the deploy's tools: the Cloudflare credential,
 where it lives (an environment variable or wrangler's own login store, as
 the owner states), that it never enters the repository, `.env` or CI, and the
-point in D1. Take
+point in D1. It names the telemetry flow and that D7 turns it off for the
+upload. Take
 the next number free on `main` and on open pull requests at build time. On
 2026-10-17, open pull requests held 0111, 0113 and 0115.
 
@@ -388,8 +395,9 @@ The acceptance claims, for the build and for the QA pair at Test:
 - **C14.** The environment built for the upload lacks every key `loadEnv` set,
   with `GOOGLE_BOOKS_API_KEY` and `STACKS_VAULT` planted in the test. It keeps
   a planted `CLOUDFLARE_API_TOKEN` that `loadEnv` set, and a variable the shell
-  set before `loadEnv` ran. One test, on the function that builds that
-  environment.
+  set before `loadEnv` ran. It holds `WRANGLER_SEND_METRICS=false`, even with
+  `WRANGLER_SEND_METRICS=true` planted in the shell. One test, on the function
+  that builds that environment.
 
 Each G67 rule is proved the way G67 already proves its own: synthetic workspace
 text, one passing and one failing per form. Count the test cases against the
