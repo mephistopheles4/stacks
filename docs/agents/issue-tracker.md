@@ -30,8 +30,9 @@ gh api "repos/{owner}/{repo}/pulls/<pr>/comments/<id>/replies" -F body=@reply.md
 ```
 
 **Read every post back.** Fetch the posted object and compare its body with the
-file, byte for byte, after normalising line endings to LF and dropping one
-trailing newline:
+file, byte for byte, after normalising line endings to LF and dropping the one
+trailing newline that `--jq` adds to the read-back (GitHub keeps the file's own
+final newline, so strip it from the read-back only):
 
 ```bash
 gh api <the posted object's API path> --jq .body
