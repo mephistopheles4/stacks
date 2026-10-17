@@ -64,13 +64,26 @@ should not meet a file they do not know.
 ## The fetch
 
 The tip is fetched at depth 1, which still downloads every blob at the tip, about
-26 MB a year before deltas. `--filter=blob:none` would avoid that. The build was to
-measure it from a full clone against GitHub; the measurement's outcome is
-recorded under **How this was decided**.
+26 MB a year before deltas. `--filter=blob:none` would avoid that, and **it was not
+measured against GitHub**: the spec's way to measure it needed a scratch branch
+pushed to the public repository, and the owner declined the push (q1, relayed by
+the head chef), so the depth-1 fetch stays. The residual is about 73 KiB more
+download a night, against a budget of 50 MB.
+
+⚠️ **Measured against a local `file://` remote instead, and it did not work.** In a
+full clone that is not a partial clone, `git fetch origin survivors --depth=1
+--filter=blob:none` exits 0 and `git ls-tree` and `git show` of one file succeed,
+but `git cat-file -e` finds every blob at the tip present, the five that arrived
+in the fetch among them. The filter avoided nothing there, so the spec's test for
+"working" (the other blobs absent) fails even before GitHub's behaviour is in
+question. The script ran the commands above with a remote carrying
+`uploadpack.allowFilter`, ten 40 KB files over two commits, and a clone made
+between them.
 
 ## How this was decided
 
 The owner took the shape on #344: a stripped survivor list each night, keyed by
 content, matched as a multiset, on its own orphan branch. The grilling settled the
 rest and [the spec](../spec/survivor-record.md) §S9 lists each choice, who took it
-and what changing it would move.
+and what changing it would move. The fetch question (q1) was put to the owner
+during the build: skip the GitHub measurement and keep the depth-1 fetch.
