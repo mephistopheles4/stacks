@@ -584,8 +584,8 @@ describe("Google's title search refuses a volume in another language", () => {
   const TURKISH_ISBN = '9789754345315';
 
   it('refuses the volume when it is not in the reading language', async () => {
-    const results = await lookup('Thinking, Fast and Slow', googleAnswering('tr'));
-    expect(results.find((each) => each.volumeId === 'rAUFswEACAAJ')).toBeUndefined();
+    // Open Library and O'Reilly both miss, so a whole refusal leaves nothing.
+    expect(await lookup('Thinking, Fast and Slow', googleAnswering('tr'))).toEqual([]);
   });
 
   it('refuses a same-titled translation as a contributor to another primary', async () => {
@@ -614,8 +614,22 @@ describe("Google's title search refuses a volume in another language", () => {
 
     expect(best?.source).toBe('open-library');
     expect(best?.volumeId).toBeUndefined();
-    expect(best?.pages).not.toBe(999);
-    expect(best?.publisher).not.toBe('Editore Inventato');
+    // Google leads `published` and `subjects`, so these are where a kept
+    // contributor would show.
+    expect(best?.published).toBe('2008');
+    expect(best?.subjects ?? []).not.toContain('Invented Category');
+  });
+
+  it('survives a malformed item while refusing by language', async () => {
+    const malformed = { kind: 'books#volumes', items: [null, 'volume', {}] };
+    const rest = fixtureHttpGet({
+      '/search.json': 'open-library-search-miss.json',
+      [OREILLY]: 'oreilly-search-miss.json',
+      [APPLE]: '',
+    });
+    const get: HttpGet = async (url) => (isHost(url, GOOGLE_BOOKS) ? malformed : await rest(url));
+
+    expect(await lookup('Thinking, Fast and Slow', get)).toEqual([]);
   });
 
   it('keeps the ISBN of a volume in the reading language', async () => {
@@ -647,7 +661,7 @@ describe("Google's title search refuses a volume in another language", () => {
       const results = await lookup('Hızlı ve Yavaş Düşünme', googleAnswering('en'), {
         language: 'tr',
       });
-      expect(results.find((each) => each.volumeId === 'rAUFswEACAAJ')).toBeUndefined();
+      expect(results).toEqual([]);
     });
   });
 });
