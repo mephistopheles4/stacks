@@ -234,7 +234,13 @@ async function main(): Promise<void> {
       // page must come above this line. Listeners go first, so a request in flight
       // when it closes cannot land in `errors` as an aborted one.
       page.removeAllListeners();
-      await page.close();
+      try {
+        await page.close();
+      } catch (error) {
+        // A target that is already gone is the state this wants. CI's first run of
+        // this line met it; anything else is still a failure.
+        if (!/No target with given id/.test(String(error))) throw error;
+      }
       const spread = await timed('open spread', () => checkSpread(browser, origin));
       const lit = await timed('G59 large-library-lit', () =>
         checkLargeLibraryLit(browser, origin, large.origin),
