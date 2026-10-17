@@ -195,4 +195,33 @@ export default tseslint.config(
       '@typescript-eslint/no-import-type-side-effects': 'error',
     },
   },
+  {
+    /*
+     * No markup in the site. Every string the shelf puts on screen — a title,
+     * an author, a line of the owner's Thoughts — goes through `textContent`
+     * (see "Tech decisions" in AGENTS.md), and the held page is the one place
+     * a reader meets the most of them at once. A `text()` written with
+     * `innerHTML` passed every check until this rule (#426): `held-page.test.ts`
+     * runs the builder now, and this refuses the sink anywhere in the package.
+     *
+     * ⚠️ **By property name, on any object**, so `el['innerHTML']` and a
+     * destructured `{ innerHTML }` are refused too. It does not reach
+     * `DOMParser` or `document.write`; `provider-marks.ts` uses the first on
+     * build-time constants, and its own comment says why. Observed red on a
+     * planted `innerHTML` assignment in `held-page.ts`, then reverted.
+     */
+    files: ['packages/site/src/**/*.ts'],
+
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        ...['innerHTML', 'outerHTML', 'insertAdjacentHTML'].map((property) => ({
+          property,
+          message:
+            'The site builds every node from text. Use textContent or createElement; ' +
+            'a book title is the owner’s data, not markup. See #426.',
+        })),
+      ],
+    },
+  },
 );
