@@ -1,29 +1,53 @@
 /**
- * Put this run's `.prom` file on the orphan `metrics` branch.
+ * Put this run's record file on an orphan record branch.
  *
- *     pnpm metrics:commit [<directory>]
+ *     pnpm metrics:commit [<directory>] [--branch <name>] [--ext <.ext>] [--previous-to <path>]
  *
- * Called by both halves of `.github/workflows/metrics.yml`, which is the only
- * caller and the only place with `contents: write`. Nothing on `main` is
- * touched: the branch is fetched into a worktree of its own, the file is copied
- * across, and the worktree is thrown away.
+ * With no arguments it puts `metrics/<timestamp>-<sha>.prom` on the orphan
+ * `metrics` branch, as it always has. `.github/workflows/metrics.yml` is the only
+ * caller and the only place with `contents: write`; its nightly job also calls it
+ * with `survivors --branch survivors --ext .jsonl` to put the survivor record on
+ * its own branch (`docs/spec/survivor-record.md` §S4.6). Nothing on `main` is
+ * touched.
+ *
+ * ⚠️ **It never checks out the branch's tree, and that is the point of the
+ * rewrite.** It used to check out the whole tip, which costs nothing for `.prom`
+ * files of a few hundred bytes. The survivor tip grows by about 818 KiB a night
+ * and is never pruned, so the same checkout would write ~300 MB a year to the
+ * runner. The property now is that **it writes exactly one file to disk, the one
+ * it adds**, and it prints the files it found on disk so the claim is read off a
+ * run and not off this comment. Four rules make it hold, and each replaces
+ * something the old script did that would break it:
+ *
+ * 1. The worktree is `--no-checkout` and its index is filled from the fetched
+ *    tip by `git read-tree`, not by `worktree add <tip>`.
+ * 2. The new file is added **by its full path**. In a worktree with no files on
+ *    disk, `git add metrics` would stage the deletion of every earlier record,
+ *    and each night would delete the one before.
+ * 3. A rejected push fetches again, `read-tree`s the new tip, adds the one file,
+ *    commits again and pushes again — up to three times. `pull --rebase` would
+ *    refuse in that worktree, or check the tree out.
+ * 4. An absent branch is made from the same kind of worktree, with a commit that
+ *    has no parent, not by checking out `HEAD` and running `git rm -rf`.
+ *
+ * ⚠️ **The commit is made with `commit-tree`, on a tree from `write-tree`.** That
+ * is what makes rule 4 and the no-op test one code path: the tree is compared
+ * with the tip's, and a branch that does not exist yet has no tip to equal.
  *
  * ⚠️ **This was a bash script first, and TypeScript is not tidiness.** The repo
  * already had one answer for driving git from a script — `gitOutput`,
  * `gitStatus` and `runExe`, whose no-shell rule exists because *"a branch name
  * reaches that call"* ([ADR-0030](../docs/adr/0030-two-spawn-helpers-one-refuses-a-shell.md))
- * — and a shell script bypasses all of it, on a repo whose other fourteen
- * scripts are TypeScript. A code review caught the bypass; it was a real
- * standards breach and not a style note.
+ * — and a shell script bypasses all of it. **The branch name is now an argument**,
+ * so it is checked against a plain-name pattern before it reaches git.
  *
- * ⚠️ **Nothing here ever creates a local branch called `metrics`, and that is
+ * ⚠️ **Nothing here ever creates a local branch of the record's name, and that is
  * not tidiness either.** The first version did `switch -c metrics`, which works
  * once and fails on the second run in the same clone with *"a branch named
  * 'metrics' already exists"* — invisible in CI, where every run is a fresh
  * checkout, and immediate against a scratch remote. **The bug was found by
- * running the thing twice**, which is the only reason the second path is known
- * to work at all. So: detached HEAD, a per-run staging branch where git insists
- * on a name, and a push of `HEAD:refs/heads/metrics`.
+ * running the thing twice**; `commit-metrics.test.ts` still does. So: detached
+ * HEAD, no staging branch at all, and a push of `<commit>:refs/heads/<branch>`.
  *
  * ⚠️ **The branch is created here when it is absent**, rather than being a
  * precondition somebody has to remember. A workflow that needs a branch a human
@@ -32,26 +56,46 @@
  * ref.
  *
  * The push is retried, because a merge and a nightly can land minutes apart.
- * One file per run reduces the race to a ref update, which a rebase resolves
- * without touching bytes; there is no shared file for two runs to contend on.
+ * One file per run reduces the race to a ref update; there is no shared file for
+ * two runs to contend on.
+ *
+ * ⚠️ **It works in the current directory, not in `REPO_ROOT`.** Both callers run
+ * from the repository root, so nothing changed for them, and a test can run it in
+ * a scratch clone, which is how the paths above are checked at all.
+ *
+ * `--previous-to <path>` copies the newest record on the fetched tip to a path
+ * before this run's is committed, for `scripts/mutation-scopes.ts` to diff
+ * against. Newest by the `<timestamp>` in the name, and no file at all when the
+ * branch holds none.
  */
 
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { REPO_ROOT } from './lib/repo-root.ts';
+import { join, resolve } from 'node:path';
+import { parseArgs } from 'node:util';
 import { gitOutput, gitStatus } from './lib/git.ts';
 import { runExe } from './lib/run.ts';
 
-const BRANCH = 'metrics';
-const SOURCE = join(REPO_ROOT, process.argv[2] ?? 'metrics');
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    branch: { type: 'string', default: 'metrics' },
+    ext: { type: 'string', default: '.prom' },
+    'previous-to': { type: 'string' },
+  },
+});
 
-/**
- * Per-run, and never `metrics`. `git switch --orphan` is the one command here
- * that insists on a branch name; the push is what names the branch on the
- * remote, so this name never leaves the machine.
- */
-const STAGING = `metrics-staging-${String(process.pid)}`;
+/** A name that reaches git or the tree: letters, digits and hyphens, no dots or slashes. */
+const PLAIN = /^[a-z][a-z0-9-]*$/;
+
+const BRANCH = values.branch;
+const DIRECTORY = positionals[0] ?? 'metrics';
+const EXTENSION = values.ext;
+const PREVIOUS_TO = values['previous-to'];
+
+const ROOT = process.cwd();
+const SOURCE = join(ROOT, DIRECTORY);
 
 /**
  * The author on the commit, passed per-invocation rather than written into
@@ -68,7 +112,7 @@ const AUTHOR = [
 
 function records(): string[] {
   try {
-    return readdirSync(SOURCE).filter((name) => name.endsWith('.prom'));
+    return readdirSync(SOURCE).filter((name) => name.endsWith(EXTENSION));
   } catch {
     return [];
   }
@@ -77,30 +121,88 @@ function records(): string[] {
 function remoteHasBranch(): boolean {
   // `ls-remote --heads` prints nothing and exits 0 for a branch that is not
   // there, so the output is the answer and the exit code is not.
-  const found = gitOutput(['ls-remote', '--heads', 'origin', BRANCH], REPO_ROOT);
+  const found = gitOutput(['ls-remote', '--heads', 'origin', BRANCH], ROOT);
   return found !== undefined && found !== '';
 }
 
+/** The repository's size on disk in KiB, loose and packed, or 0 if git will not say. */
+function repositoryKiB(): number {
+  const counted = gitOutput(['count-objects', '-v'], ROOT) ?? '';
+  const read = (name: string): number => {
+    const match = new RegExp(`^${name}: (\\d+)$`, 'm').exec(counted);
+    return match === null ? 0 : Number(match[1]);
+  };
+  return read('size') + read('size-pack');
+}
+
 /**
- * `staged` rather than an unconditional delete, because `git branch -D` on a
- * branch that was never created prints `error: branch '…' not found` and the
- * helpers inherit stdio. It is harmless and it is a lie in a CI log, which is
- * how a reader learns to skim past the line that matters.
+ * The branch's tip, fetched at depth 1 and named by SHA.
+ *
+ * The SHA and not `FETCH_HEAD`, because `FETCH_HEAD` belongs to this checkout
+ * and the worktree it is used in does not see it. The growth in the repository's
+ * size is printed because the nightly's budget is read off it (§S4.6).
  */
-function cleanUp(worktree: string, staged: boolean): void {
-  gitStatus(['worktree', 'remove', '--force', worktree], REPO_ROOT);
-  if (staged) gitStatus(['branch', '-D', STAGING], REPO_ROOT);
+function fetchTip(): string {
+  const before = repositoryKiB();
+  runExe('git', ['fetch', 'origin', BRANCH, '--depth=1'], ROOT);
+  const tip = gitOutput(['rev-parse', 'FETCH_HEAD'], ROOT);
+  if (tip === undefined) throw new Error('git could not name the fetched tip');
+  console.log(`fetched about ${String(Math.max(0, repositoryKiB() - before))} KiB`);
+  return tip;
+}
+
+/** The newest record under `DIRECTORY/` on `tip`, by the timestamp in its name. */
+function newestRecord(tip: string): string | undefined {
+  const listing = gitOutput(['ls-tree', '--name-only', tip, `${DIRECTORY}/`], ROOT) ?? '';
+  const pattern = new RegExp(`^${DIRECTORY}/(\\d+)-[0-9a-z]+${EXTENSION.replace('.', '\\.')}$`);
+  let newest: { path: string; timestamp: number } | undefined;
+  for (const path of listing.split('\n')) {
+    const match = pattern.exec(path);
+    const timestamp = Number(match?.[1]);
+    if (match !== null && (newest === undefined || timestamp > newest.timestamp)) {
+      newest = { path, timestamp };
+    }
+  }
+  return newest?.path;
+}
+
+/** Writes the newest record on the tip to `PREVIOUS_TO`, or leaves nothing there. */
+function handBack(tip: string, destination: string): void {
+  rmSync(destination, { force: true });
+  const path = newestRecord(tip);
+  if (path === undefined) return;
+  // Not `gitOutput`, which trims: this is a file's bytes, and it is large.
+  const shown = spawnSync('git', ['show', `${tip}:${path}`], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  if (shown.status !== 0) throw new Error(`git show ${tip}:${path} exited ${String(shown.status)}`);
+  writeFileSync(destination, shown.stdout);
+}
+
+/** Every file on disk under `directory`, `.git` excepted, as `/`-separated paths. */
+function filesOnDisk(directory: string): string[] {
+  return readdirSync(directory, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name !== '.git')
+    .map((entry) => join(entry.parentPath, entry.name).slice(directory.length + 1))
+    .map((path) => path.replaceAll('\\', '/'))
+    .sort();
+}
+
+function cleanUp(worktree: string): void {
+  gitStatus(['worktree', 'remove', '--force', worktree], ROOT);
+  rmSync(join(worktree, '..'), { recursive: true, force: true });
 }
 
 /**
  * The whole flow, as a function returning an exit code.
  *
  * ⚠️ **`process.exit()` does not run a pending `finally` block**, so calling it
- * from inside the `try` below left the temporary worktree registered and the
- * staging branch behind on two paths — the no-op and the exhausted push. Found
- * by review and confirmed by experiment. That leak is invisible in CI, where the
- * runner is thrown away either way, and it is exactly the leak that matters on
- * the machine this was ported to TypeScript to be testable on.
+ * from inside the `try` below left the temporary worktree registered on two
+ * paths — the no-op and the exhausted push. Found by review and confirmed by
+ * experiment. That leak is invisible in CI, where the runner is thrown away
+ * either way, and it is exactly the leak that matters on a machine.
  *
  * So: a return value, and `process.exitCode` at the very end — which lets the
  * process drain naturally instead of being torn down mid-cleanup. Top-level
@@ -108,62 +210,70 @@ function cleanUp(worktree: string, staged: boolean): void {
  * error rather than the CommonJS escape hatch it looks like.
  */
 function main(): number {
+  if (!PLAIN.test(BRANCH) || !PLAIN.test(DIRECTORY) || !/^\.[a-z]+$/.test(EXTENSION)) {
+    console.error('the branch and the directory must be plain names, and the extension `.ext`');
+    return 1;
+  }
+
   const found = records();
   if (found.length === 0) {
     console.error(
-      `no .prom file in ${SOURCE} — emit-metrics.ts writes one per run, so this is a bug`,
+      `no ${EXTENSION} file in ${SOURCE} — the step before this one writes one per run, so this is a bug`,
     );
     return 1;
   }
 
-  const worktree = join(mkdtempSync(join(tmpdir(), 'stacks-metrics-')), 'record');
-  let staged = false;
+  const worktree = join(mkdtempSync(join(tmpdir(), 'stacks-record-')), 'record');
+  const subject = `${BRANCH}: ${process.env.GITHUB_SHA ?? 'local'} (${process.env.GITHUB_EVENT_NAME ?? 'manual'})`;
 
   try {
-    if (remoteHasBranch()) {
-      runExe('git', ['fetch', 'origin', BRANCH, '--depth=1'], REPO_ROOT);
-      runExe('git', ['worktree', 'add', '--detach', worktree, 'FETCH_HEAD'], REPO_ROOT);
-    } else {
-      // `--orphan` rather than branching off main: the record shares no history
-      // with the code, and a metrics branch carrying the whole tree would make
-      // every `trend:sync` fetch the repository twice.
-      runExe('git', ['worktree', 'add', '--detach', worktree, 'HEAD'], REPO_ROOT);
-      runExe('git', ['switch', '--orphan', STAGING], worktree);
-      staged = true;
-      gitStatus(['rm', '-rf', '--quiet', '.'], worktree);
-    }
-
-    const destination = join(worktree, 'metrics');
-    mkdirSync(destination, { recursive: true });
-    for (const name of found) copyFileSync(join(SOURCE, name), join(destination, name));
-
-    runExe('git', ['add', 'metrics'], worktree);
-
-    // `diff --cached --quiet` exits 1 when there *is* something staged, which is
-    // the case this wants to proceed on — an exit code as an answer, which is
-    // exactly what `gitStatus` is for.
-    if (gitStatus(['diff', '--cached', '--quiet'], worktree) === 0) {
-      console.log('nothing new to record');
-      return 0;
-    }
-
-    const subject = `metrics: ${process.env.GITHUB_SHA ?? 'local'} (${process.env.GITHUB_EVENT_NAME ?? 'manual'})`;
-    runExe('git', [...AUTHOR, 'commit', '-m', subject], worktree);
+    // `HEAD` is only a commit to hang the worktree on: nothing is checked out of
+    // it, and no commit made here has it as a parent.
+    runExe('git', ['worktree', 'add', '--no-checkout', '--detach', worktree, 'HEAD'], ROOT);
 
     for (let attempt = 1; attempt <= 3; attempt += 1) {
-      if (gitStatus(['push', 'origin', `HEAD:refs/heads/${BRANCH}`], worktree) === 0) return 0;
+      const tip = remoteHasBranch() ? fetchTip() : undefined;
+      if (attempt === 1 && PREVIOUS_TO !== undefined && tip !== undefined) {
+        handBack(tip, resolve(ROOT, PREVIOUS_TO));
+      }
+
+      // The index only. `--empty` for a branch that does not exist yet.
+      runExe('git', ['read-tree', ...(tip === undefined ? ['--empty'] : [tip])], worktree);
+
+      const destination = join(worktree, DIRECTORY);
+      mkdirSync(destination, { recursive: true });
+      for (const name of found) {
+        copyFileSync(join(SOURCE, name), join(destination, name));
+        runExe('git', ['add', `${DIRECTORY}/${name}`], worktree);
+      }
+      console.log(`on disk: ${filesOnDisk(worktree).join(', ')}`);
+
+      const tree = gitOutput(['write-tree'], worktree);
+      if (tree === undefined) throw new Error('git could not write the tree');
+      if (tip !== undefined && tree === gitOutput(['rev-parse', `${tip}^{tree}`], ROOT)) {
+        console.log('nothing new to record');
+        return 0;
+      }
+
+      const commit = gitOutput(
+        [...AUTHOR, 'commit-tree', tree, ...(tip === undefined ? [] : ['-p', tip]), '-m', subject],
+        worktree,
+      );
+      if (commit === undefined) throw new Error('git could not make the commit');
+
+      if (gitStatus(['push', 'origin', `${commit}:refs/heads/${BRANCH}`], worktree) === 0) return 0;
 
       if (attempt === 3) {
         console.error('could not push the record after three attempts');
         return 1;
       }
-      console.error(`push ${String(attempt)} rejected; rebasing on the branch tip and retrying`);
-      runExe('git', [...AUTHOR, 'pull', '--rebase', 'origin', BRANCH], worktree);
+      // The file already on disk stays, and the next pass adds it again to the
+      // new tip's index.
+      console.error(`push ${String(attempt)} rejected; fetching the branch tip and retrying`);
     }
     return 1;
   } finally {
-    cleanUp(worktree, staged);
-    rmSync(join(worktree, '..'), { recursive: true, force: true });
+    cleanUp(worktree);
   }
 }
 

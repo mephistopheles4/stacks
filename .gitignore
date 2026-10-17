@@ -48,6 +48,11 @@ fixtures/vault-*/
 # it there.
 metrics/
 
+# One night's survivor record, written by scripts/mutation-scopes.ts. It belongs
+# on the orphan `survivors` branch and never on main — scripts/commit-metrics.ts
+# puts it there.
+survivors/
+
 # One coverage run, written only when `--coverage` is passed — which nothing in
 # CI passes. It exists for the opt-in pre-commit CRAP print, which reads it and
 # throws it away; no number in it is ever a floor, a series or a badge.

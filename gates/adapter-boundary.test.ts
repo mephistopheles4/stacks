@@ -151,9 +151,11 @@ const ALLOWED = [
   // is `artifacts/shelf.png`, which the gate renders from the *fixture* vault —
   // it checks that file exists and never looks at a vault at all.
   'scripts/make-readme-image.ts',
-  // Reads the `.prom` files `emit-metrics.ts` wrote and copies them into a
-  // throwaway git worktree. Never opens the vault — it does not know what a book
-  // is; `git` does all of its real work, through `lib/git.ts` and `lib/run.ts`.
+  // Reads the record files `emit-metrics.ts` and `mutation-scopes.ts` wrote
+  // (`.prom` and `.jsonl`), copies the one it adds into a throwaway `--no-checkout`
+  // git worktree, lists that worktree's files, and writes the previous record to a
+  // path it is handed. Never opens the vault — it does not know what a book is;
+  // `git` does all of its real work, through `lib/git.ts` and `lib/run.ts`.
   'scripts/commit-metrics.ts',
   // Writes one CI run's `.prom` record. The only thing it reads from disk is a
   // Stryker report, through `lib/mutation-score.ts`; the only thing it writes is
@@ -200,9 +202,15 @@ const ALLOWED = [
   // `library.json` for what each cover weighs — which is the artifact, never the
   // vault. It does not know what a book is.
   'scripts/trend-sync.ts',
-  // `scripts/mutation-scopes.ts` was here and is gone: its filesystem access
-  // moved into `lib/mutation-score.ts` with the arithmetic, and the rot-catcher
-  // below went red on the spent permission. That is the gate working.
+  // Was here once and left: its filesystem access moved into
+  // `lib/mutation-score.ts` with the arithmetic, and the rot-catcher below went
+  // red on the spent permission — that was the gate working. It is back for one
+  // reason: its `--survivors-write` mode creates a directory and writes one
+  // `.jsonl` file into it, tonight's survivor record. It still reads a Stryker
+  // report and one `package.json` through `lib/mutation-score.ts`, and the file
+  // it writes is gitignored on main and lives on the orphan `survivors` branch.
+  // It does not know what a book is.
+  'scripts/mutation-scopes.ts',
   'scripts/smoke-render.ts',
   // Checks whether a worktree's directory and the shared `.env` are there
   // before creating one. Never opens the vault — it does not know what a book

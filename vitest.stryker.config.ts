@@ -21,6 +21,16 @@ import { cliResolveConditions } from './vitest.cli-conditions.ts';
  * that the string still runs on its own, which `pnpm smoke:render` also makes
  * on every CI run.
  *
+ * ⚠️ **`scripts/commit-metrics.test.ts` is the fifth, and it is the filesystem
+ * warning below made concrete a second time.** It runs `scripts/commit-metrics.ts`
+ * as a child process against a scratch bare remote it creates under the temp
+ * directory, spawning `git` and writing files — and a spec under `scripts/` must
+ * not touch the filesystem inside the sandbox. **Nothing is lost**: the script is
+ * excluded from mutation (no spec imports it), so this spec was never an oracle
+ * for a mutant, and `scripts/lib/survivor-record.test.ts` stays in. The file is
+ * not part of the hashed Stryker config, so `pnpm mutation:stamp --check` does
+ * not move.
+ *
  * ⚠️ **`scripts/lib/complexity-tree.test.ts` is the second, and it is the
  * filesystem warning further down made concrete.** It asserts the complexity of
  * this repository's own source — `parseNote` reads 12 — and the sandbox is a
@@ -122,6 +132,7 @@ export default defineConfig({
       'scripts/lib/complexity-tree.test.ts',
       'gates/ignored-clones.test.ts',
       'scripts/lib/sampling-hook-source.test.ts',
+      'scripts/commit-metrics.test.ts',
     ],
     environment: 'node',
     setupFiles: ['./gates/no-live-network.setup.ts'],

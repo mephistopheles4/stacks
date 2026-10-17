@@ -68,6 +68,12 @@
 # in this repo is warn-only and the property docs/spec/after-the-scoreboard.md
 # verified stays true.
 #
+# ⚠️ The nightly commits to a second orphan branch, `survivors`, through the same
+# `pnpm metrics:commit` script, and two of its steps are warn-only: the job
+# summary step and the `record the survivors` step, each by `set +e` and an
+# `|| echo` into the summary rather than by `continue-on-error`. The final step
+# reads neither. See docs/spec/survivor-record.md.
+#
 # ⚠️ Every action below is pinned by hand to a 40-hex commit SHA. A tag is
 # mutable: whoever controls the action repository can repoint v7 at anything,
 # and it would run here with this workflow's token. This is the one new workflow
@@ -306,6 +312,56 @@ jobs:
             --commit "$COMMIT" \
             >> "$GITHUB_STEP_SUMMARY" \
             || echo "The mutation report could not be rendered; see this step's log." >> "$GITHUB_STEP_SUMMARY"
+
+      # The survivors, kept past the artifact's 30 days: one `survivors/<timestamp>-<sha>.jsonl`
+      # on the orphan `survivors` branch after a clean mutation run on `main`, then one
+      # line under the score table saying what moved since the record before it.
+      # `docs/spec/survivor-record.md` is the spec.
+      #
+      # ⚠️ Warn-only, by the owner's choice (Q5): a failure here leaves the night's
+      # verdict alone, and the final step below does not read this step's status. The
+      # summary line is the only signal that a record stopped arriving — it names the
+      # reason, or the step that failed — and `docs/gates.md` says so under "Not gated,
+      # deliberately". Zero `continue-on-error` stays true: `set +e` and the `|| echo`
+      # are the same shape the summary step above already has.
+      #
+      # ⚠️ After the summary step, so the line lands under the score table, and in
+      # three invocations because only `commit-metrics.ts` runs `git`: write the
+      # record, fetch the tip and commit, then render the line from both records and
+      # the commit's exit status. `pnpm exec tsx`, not a `pnpm` script, so the
+      # Commands list in AGENTS.md does not move; the values travel through `env:`.
+      - name: record the survivors
+        if: always()
+        env:
+          MUTATION_STATUS: ${{ steps.mutation.outputs.status }}
+          REF: ${{ github.ref }}
+          COMMIT: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          start=$SECONDS
+          report=artifacts/stryker/current/mutation.json
+          previous=artifacts/survivors-previous.jsonl
+          pnpm exec tsx scripts/mutation-scopes.ts "$report" \
+            --survivors-write survivors \
+            --mutation-status "$MUTATION_STATUS" --ref "$REF" \
+            --commit "$COMMIT" --event "$EVENT" --run-url "$RUN_URL"
+          commit_status=""
+          record=$(ls survivors/*.jsonl 2>/dev/null | head -n 1)
+          if [ -n "$record" ]; then
+            pnpm exec tsx scripts/commit-metrics.ts survivors \
+              --branch survivors --ext .jsonl --previous-to "$previous"
+            commit_status=$?
+          fi
+          pnpm exec tsx scripts/mutation-scopes.ts "$report" --survivors-line \
+            --mutation-status "$MUTATION_STATUS" --ref "$REF" \
+            --record "$record" --previous "$previous" --commit-status "$commit_status" \
+            >> "$GITHUB_STEP_SUMMARY" \
+            || echo "Survivors: not recorded tonight — the line could not be rendered; see the \"record the survivors\" step's log." >> "$GITHUB_STEP_SUMMARY"
+          # The budget (§S4.6): under 60 s and 50 MB, printed every night.
+          echo "survivor record step: $((SECONDS - start)) s"
+          exit 0
 
       - name: fail if the run did not compute what it declared
         run: |

@@ -17,13 +17,22 @@
  * that arithmetic inside the mutation denominator for the first time: this file
  * is excluded (no spec imports it), and the library is not.
  *
+ * ⚠️ **Two more modes write and read the survivor record**
+ * (`docs/spec/survivor-record.md` §S4.5): `--survivors-write <dir>` writes
+ * tonight's record to `<dir>`, and `--survivors-line` prints the one summary line
+ * about it. This file is excluded from mutation and runs no `git`, so no Stryker
+ * mutant can push; every decision they make is in `lib/survivor-record.ts`.
+ *
  * ⚠️ **Nothing here is a gate and nothing here goes red.** A mutation score is a
  * trend: its failure is a movement a person reads, not an exit code. This prints
  * and exits 0 unless it cannot find its inputs.
  */
 
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import strykerConfig from '../stryker.config.mjs';
+import { configHashOf } from './lib/floors.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import {
   parseReport,
@@ -39,6 +48,7 @@ import {
   totalOf,
   type MutationReport,
 } from './lib/mutation-score.ts';
+import { buildRecord, gateRun, summaryLine } from './lib/survivor-record.ts';
 
 /**
  * `--markdown` prints the nightly's job summary instead of the terminal table,
@@ -54,11 +64,81 @@ const { values, positionals } = parseArgs({
     'mutation-status': { type: 'string', default: '' },
     'artifact-url': { type: 'string', default: '' },
     commit: { type: 'string', default: '' },
+    'survivors-write': { type: 'string' },
+    'survivors-line': { type: 'boolean', default: false },
+    ref: { type: 'string', default: '' },
+    event: { type: 'string', default: '' },
+    'run-url': { type: 'string', default: '' },
+    record: { type: 'string', default: '' },
+    previous: { type: 'string', default: '' },
+    'commit-status': { type: 'string', default: '' },
   },
 });
 
 const REPORT =
   positionals[0] ?? join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+
+/** The installed Stryker's version, which is part of what makes two nights comparable. */
+function strykerVersion(): string {
+  const text = readReportText(
+    join(REPO_ROOT, 'node_modules', '@stryker-mutator', 'core', 'package.json'),
+  );
+  const parsed = text === undefined ? undefined : (JSON.parse(text) as { version?: unknown });
+  return typeof parsed?.version === 'string' ? parsed.version : 'unknown';
+}
+
+/**
+ * The survivor-record modes. Both exit 0 whatever they find, a write that fails
+ * on disk aside: the step around them never fails the job, and a record that was
+ * not written is named by the line, not by an exit code.
+ */
+if (values['survivors-write'] !== undefined) {
+  const gate = gateRun({
+    mutationStatus: values['mutation-status'],
+    ref: values.ref,
+    reportText: readReportText(REPORT),
+  });
+  if (!gate.ok) {
+    console.log(`no survivor record: ${gate.reason}`);
+    process.exit(0);
+  }
+  const text = buildRecord({
+    report: gate.report,
+    scopes: readScopes(),
+    stryker: strykerVersion(),
+    configHash: configHashOf(strykerConfig),
+    commit: values.commit,
+    event: values.event,
+    runUrl: values['run-url'],
+    recordedAt: new Date().toISOString(),
+  });
+  // `<timestamp>-<sha>`, the form `metrics/` uses, so one night's two records
+  // share a name stem.
+  const directory = values['survivors-write'];
+  const stem = `${Math.floor(Date.now() / 1000)}-${values.commit.slice(0, 12)}`;
+  const file = join(directory, `${stem}.jsonl`);
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(file, text, 'utf8');
+  console.log(file);
+  process.exit(0);
+}
+
+if (values['survivors-line']) {
+  const gate = gateRun({
+    mutationStatus: values['mutation-status'],
+    ref: values.ref,
+    reportText: readReportText(REPORT),
+  });
+  console.log(
+    summaryLine({
+      ...(gate.ok ? {} : { skipped: gate.reason }),
+      tonight: readReportText(values.record),
+      previous: values.previous === '' ? undefined : readReportText(values.previous),
+      commitStatus: values['commit-status'],
+    }),
+  );
+  process.exit(0);
+}
 
 /**
  * ⚠️ **Markdown mode exits 0 on every path, a missing report included.** The
