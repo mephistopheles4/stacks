@@ -323,3 +323,22 @@ They were a dated log at the bottom of this file until that log was 85% of it
 by weight and buried the rules above. A lesson about a *gate* rather than a
 decision goes to [`docs/gates.md`](docs/gates.md); an environment finding goes
 to [`docs/progress.md`](docs/progress.md).
+
+## Agent skills
+
+Configuration for the optional [engineering skills](https://github.com/mattpocock/skills).
+**Nothing here is required to work on this repo** — the gates are the contract,
+and a contributor with none of these installed must be able to pass every one of
+them. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+### Issue tracker
+
+GitHub issues on `mephistopheles4/stacks`, via the `gh` CLI. See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+
+### Triage labels
+
+The five canonical roles, each label string equal to its name. All five exist on the repo since August 2026. See [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+
+### Domain docs
+
+Single-context — three packages, one vocabulary. That vocabulary is [`CONTEXT.md`](CONTEXT.md), and it holds only the terms **no gate pins down** — anything a gate already enforces is linked from there, never restated, for [ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md)'s reason. Decisions live in [`docs/adr/`](docs/adr/), one file each, carrying the original reasoning verbatim. See [`docs/agents/domain.md`](docs/agents/domain.md).
