@@ -77,9 +77,14 @@ carries it across exactly as it carries arming.
 - **One unit, never a chosen margin** (Q2). For a floor, one mutant is
   `resolutionOf(mutants)` — the same number the print's `1 mutant = …` shows.
   For a cap, any tighter whole count is already one unit.
-- **Compare in hundredths, as integers.** The floor file stores two decimals;
-  compare `round(value × 100)` integers so that a case on the boundary cannot
-  turn on float error.
+- **Compare in whole hundredths of a point**, so that a case on the boundary
+  cannot turn on float error. The floor file stores two decimals. With `L` the
+  window's lowest score, `F` the floor and `m` the scope's mutant count:
+  - the named value is `N = ⌊L × 100 + 10⁻⁶⌋` hundredths, rounded down;
+  - the floor is `round(F × 100)` hundredths;
+  - one mutant is `⌈10000 / m⌉` hundredths, rounded **up** so that the clause
+    never asks on less than one mutant;
+  - the floor is tightenable when `N − round(F × 100) ≥ ⌈10000 / m⌉`.
 - **Round the named floor down, never to nearest.** A floor typed at a value
   above any score in its window refuses the next deploy on a run the window
   itself contains, because `breaches` is strictly-under. Rounding down keeps the
@@ -175,8 +180,10 @@ The acceptance claims, for the behaviour and integrity lenses at Test:
    across the stamp change it names.
 7. **C7.** A floor with no known mutant count prints the degraded clause, never
    nothing.
-8. **C8.** A boundary case — the lowest exactly `F` plus one resolution in
-   hundredths — prints the clause, and one hundredth less does not.
+8. **C8.** A boundary case prints the clause, and one hundredth less does not:
+   with `m = 1250` (one mutant is exactly 8 hundredths) and `F = 71.55`, a
+   window lowest of `71.63` asks and `71.629` does not; with `m = 1321` (one
+   mutant rounds up to 8 hundredths), `71.63` asks and `71.62` does not.
 9. **C9.** Nothing the function or the print does writes a file: the function
    takes no path and touches no disk, and `stryker.floors.json` is unchanged
    after a `pnpm deploy:site --dry-run`.
@@ -255,13 +262,15 @@ eleven nightlies cover about six trees: the deploy print cannot show
 different commits. Its own docstring still says *"twenty consecutive
 nightlies"*.
 
-**Measured on the `metrics` branch on 2026-10-17**, replaying the streak rule
-by hand over 63 nightlies:
+**Measured on the `metrics` branch on 2026-10-17**, through `calibration` and
+`capCalibration` themselves, with `acceptedValues` from `renovations.json`: once
+over all 210 records (63 nightlies), and once over only the 39 records
+`windowRecords` reads (11 nightlies).
 
-| Window | Unbroken streak | Distinct trees | What the deploy can see |
-| --- | --- | --- | --- |
-| caps, `fixtureHash` `2af72f80…` | 27 nightlies since 2026-09-23 | **11 — already full** | the newest 11 nightlies, **5 trees** |
-| floor, `configHash` `f1e545a1…` | 8 nightlies since 2026-10-11 | 3 | the same 8 |
+| Window | Over every record | Over what the deploy reads |
+| --- | --- | --- |
+| caps, `fixtureHash` `2af72f80…` | **11 trees — full**, streak since 2026-09-23 | **5/10 trees** |
+| floor, `configHash` `f1e545a1…` | 3/10 trees, 6 days | 3/10 trees |
 
 So by the rule **the cap windows are full today, and the print says `5/10
 trees`**. The floor window restarted on 2026-10-09's `configHash` renovation,
