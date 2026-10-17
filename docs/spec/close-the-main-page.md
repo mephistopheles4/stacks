@@ -83,9 +83,15 @@ spread, G59, G60, G61 and G64 each open their own page or context, and
 `report()` reads values the main page produced earlier (`bookCount`,
 `bookcaseOverflow`, `stats`, `cost`).
 
-The page's listeners feed the shared `errors` list. Once it is closed it can
-log nothing more, and that is the point: the checks after it read their own
-pages' errors.
+The page's listeners feed the shared `errors` list, which `report()` judges.
+**Detach them before the close** (`page.removeAllListeners()`, then
+`page.close()`), so a request still in flight when the page closes cannot
+land in `errors` as an aborted request and turn the gate red by itself. The
+checks after it read their own pages' errors.
+
+⚠️ **The main page's error watch now ends at the phone check.** Until now an
+error the idle main page raised during G60 or G61 failed the gate too. That
+window was never a gate row's clause, and the owner accepts losing it (§S12).
 
 A comment beside the close says what it saves and why a check that needs the
 main page must come before it.
@@ -103,9 +109,11 @@ main page must come before it.
 
 `measureSampling`'s boots (G61, four pages) do not go through `visit()`, so the
 `of which visit() boots` line under `step times` counts G60 only. The build
-adds G61's boots to the same count, or prints a second line for them. The
-build picks whichever reads more plainly in the log. Either way, the log shows
-time to ready and time to settled for both checks.
+keeps that line for G60 and prints a second one under it for G61, with the
+same two times: `goto` to ready, and ready to the end of `watchSettle`, the
+same endpoint `visit()` uses. G61's own wait for steady sampling frames comes
+after that and is not counted. A shared count would make the "visit() boots"
+label untrue, because `measureSampling` does not call `visit()`.
 
 ### S4.4 What was measured and dropped
 
@@ -144,35 +152,64 @@ which no unit test reaches, and no new seam is added.
 
 ### S6.1 Acceptance claims
 
-- **C1.** `main()` closes the main page after `checkPhone` and before
-  `checkSpread`, with a comment saying why.
+- **C1.** `main()` detaches the main page's listeners and closes it after
+  `checkPhone` and before `checkSpread`, with a comment saying why.
 - **C2.** Locally, with `CI=true`, `pnpm smoke:render` ends `OK`, and every
   check line matches a run of `main` at the base commit apart from times and
-  counts that vary from run to run (frames, colours, timings).
+  counts that vary from run to run (frames, colours, timings). No
+  `request failed:` or console-error line appears that the base run lacks.
 - **C3.** `pnpm smoke:render --pull-request` ends `OK` on the pull request's CI
-  run.
+  run, and the pull request quotes that run's `step times` for open spread,
+  G59 and G64 beside the same lines from a recent pull-request run of `main`'s
+  code. This is user story 9's claim. Story 2's is C5, because
+  `deploy:site` runs the same gate as a push to `main`.
 - **C4.** The `step times` block shows time to ready and time to settled for
   G61's boots as well as G60's.
 - **C5.** On the first push run to `main` after the merge, G60 plus G61 take
   **under 250 s**, read from that run's `step times` block.
+  ⚠️ **C6 passing does not mean C5 will.** About 150 s of today's G60 is case
+  bodies, partly absence waits the close does not shorten, and G61's boot
+  share has never been measured. A review estimate from §S10's figures puts
+  G60 plus G61 near 200–245 s, close to the line. That is a forecast, not a
+  measurement.
 - **C6.** Before the merge, a local `CI=true` run shows G60's time to ready
   per boot at half or less of a run of the base commit on the same machine,
   both printed in the pull request. On this workstation's 32 cores the probe
   measured about 3.5 s open against 0.9 s closed.
 
-### S6.2 If C5 fails
+### S6.2 Reading C5, and if it fails
 
 C5 is measured after the merge, because pull requests skip G60 and G61 and
-`gates.yml` has no manual trigger. If the first push run shows G60 plus G61 at
-or over 250 s, the merge is reverted first and the cause found after, as
-ADR-0108 already asks for a red `main`. A run that is faster but not under
-250 s is still reverted. The owner can override that by comment on #397.
+`gates.yml` has no manual trigger.
+
+- **Who reads it.** The build session, kept open after the owner merges,
+  watches the first push run on `main` that contains the merge. When that run
+  ends it posts G60's and G61's `step times` lines on #397, beside run
+  39051984873's 380.6 s and 124.7 s. If that session has ended, the lead
+  that started it does the same.
+- **A run that reports no time.** If the run is cancelled, or red at a step
+  before `smoke:render`, C5 is read from the next push run that reports both
+  times. Nothing is reverted until a reading exists.
+- **A red `smoke:render`.** If the change itself turns `main` red (a check
+  line fails, or the new timer code throws on Linux), the reading session
+  opens the revert pull request at once, as ADR-0108 asks for a red `main`.
+- **A miss.** *The rule for a run that is faster but not under 250 s is the
+  owner's, and open; see §S13.*
+- The revert lands on `main`, so the owner merges it. The reading session
+  opens it and tells the owner through the lead.
 
 ### S6.3 Gates
 
 `pnpm test`, `pnpm build`, `pnpm lint`, `pnpm format:check` and
 `pnpm lint:md` green, as every phase asks. The full `smoke:render` locally,
 with free RAM checked first.
+
+### S6.4 The record
+
+The build adds a log entry, `docs/log/<date>-the-open-main-page.md`, with
+§S10's table and C6's figures, and one index line in `docs/progress.md`'s
+spine. Once C5's run is in, the reading session adds its G60 and G61 times to
+that entry, beside run 39051984873's.
 
 ## S7. Trade-off points
 
@@ -261,9 +298,17 @@ Each line is a decision, who took it, and what changes if it is reversed.
   Owner, q2 = A, relayed by the lead. Reversed: this spec would also run G60
   and G61 on pull requests, with a new ADR.
 - **#397's other candidates out of scope.** `spec-397`'s recommendation.
+- **The main page's error watch ends at the phone check.** `spec-397`'s
+  recommendation, put to the owner with the sign-off. Reversed: the main page
+  stays open with its listeners on, and the saving goes.
+- **The main page's listeners are detached before the close.** `spec-397`,
+  from both lenses' findings.
 
 ## S13. Needs a human
 
 - **Sign-off**: proceed, fix or kill.
+- **The rule for a miss** (§S6.2): what happens when G60 plus G61 come in
+  faster than 505 s but at or over 250 s.
+- **Merging the revert pull request**, if §S6.2 opens one.
 - **Closing #397.** The build's PR can close it, or leave it open for
   `clickToPickUp` and the rest. That is the owner's call at merge.
