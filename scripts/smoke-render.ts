@@ -43,6 +43,7 @@ import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
 import { samplingHookSource } from './lib/sampling-hook.ts';
 import { serveDist } from './lib/serve-dist.ts';
+import { hasSettled, RECORD_SETTLE_READINGS } from './lib/settle.ts';
 import {
   BUDGET,
   describeSampling,
@@ -192,26 +193,25 @@ async function main(): Promise<void> {
         if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
       });
 
+      // Before the navigation, so the covers' requests are counted from the first.
+      const settle = watchSettle(page);
       const bootStarted = performance.now();
-      await page.goto(origin, { waitUntil: 'networkidle0', timeout: 30_000 });
+      await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
       try {
-        await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
+        await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
       } catch {
         /**
-         * The shelf never booted, and a bare "waiting failed: 20000ms" says
+         * The shelf never booted, and a bare "waiting failed: 60000ms" says
          * nothing about why. The page errors do — a value import of the core
          * package root once dragged node:fs and sharp into the browser bundle,
          * and this was the only visible symptom.
          */
-        console.error('the shelf never signalled ready. Page errors:');
-        for (const message of errors.length > 0 ? errors : ['(none captured)']) {
-          console.error(`  ${message}`);
-        }
-        process.exit(1);
+        failBoot('the shelf never signalled ready', errors);
       }
-      // Let textures land and the damped camera settle before the shutter.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // The covers are in and the damped camera is where it stays (the probe in
+      // the spec found it does not move after `ready`) before the shutter.
+      if (!(await settle())) failBoot('the shelf never settled', errors);
 
       const bookCount = await page.evaluate('window.__shelf.bookCount');
       const bookcaseOverflow = await page.evaluate('window.__shelf.bookcaseOverflow');
@@ -366,10 +366,11 @@ async function grabFrame(
         `G59 page error at ${url}: ${error instanceof Error ? error.message : String(error)}`,
       );
     });
+    const settle = watchSettle(page);
     await page.goto(url, { waitUntil: 'load', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     // The same settle the main shot takes: textures land, the damped camera stops.
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (!(await settle())) failures.push(`G59 never settled at ${url}`);
 
     const grabbed = (await page.evaluate(readFrame)) as {
       width: number;
@@ -392,7 +393,10 @@ async function grabFrame(
   }
 }
 
-/** `readCanvasStats`'s read, handed back whole, plus the books' rectangle. */
+/**
+ * `readCanvasStats`'s read, handed back whole, plus the books' rectangle.
+ * The double `requestAnimationFrame` is frame sync (K5): not a wait for state.
+ */
 const readFrame = `(async () => {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   const canvas = document.getElementById('shelf-canvas');
@@ -423,7 +427,8 @@ const readFrame = `(async () => {
  *
  * The double `requestAnimationFrame` matters: the drawing buffer is cleared
  * after each composite, so reading outside a frame returns an empty buffer and
- * the gate reports a blank shelf that is actually rendering fine.
+ * the gate reports a blank shelf that is actually rendering fine. A frame sync
+ * and not a wait for state (K6), so it does not depend on the runner's speed.
  */
 const readCanvasStats = `(async () => {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -477,7 +482,72 @@ type ShelfCost = Pick<ShelfStats, 'textures' | 'geometries' | 'programs' | 'call
 const HELD = `window.__shelf.held()?.phase === 'held'`;
 const NOTHING_HELD = `window.__shelf.held() === undefined && document.querySelectorAll('.held-page').length === 0`;
 
-async function until(page: Page, condition: string, timeout = 8000): Promise<boolean> {
+/**
+ * The least any wait for a state is given, whatever its caller asked for — and
+ * where the gate names its five kinds of wait, once. Each has one rule, and
+ * every wait that is not a presence carries a comment naming its kind and why:
+ *
+ * - **Presence**: a state the check needs before it can read anything. Polled
+ *   (`until`, `waitForState`, the settle helper) to this floor; a timeout prints
+ *   what was awaited and what the page read.
+ * - **Absence**: time for something wrong to have happened, so that its absence
+ *   means something. Stays a fixed wait (K1–K4, K10, K11), the owner approves each,
+ *   and a slower runner can only make it weaker, never flaky.
+ * - **Search**: an attempt that may legitimately miss, such as a click between
+ *   books (`searchFor`). Keeps a short deadline, because a miss is an answer.
+ * - **Window**: a sample to judge, such as render-loop callbacks per frame. A
+ *   fixed number of frames, never a fixed time.
+ * - **Frame sync**: the drawing buffer to be readable. The double
+ *   `requestAnimationFrame` stays: it is a correctness device, and speed does not
+ *   touch it.
+ *
+ * Every presence wait is for a state the case *requires* — a rebuild, a record, a
+ * cleared notice — never for an absence, so a longer deadline can only turn a
+ * slow pass green, never a wrong page. The callers' numbers were fitted to this
+ * machine's GPU, and the first CI run on #382 showed what that costs: on the
+ * runner's software renderer four cases reached exactly the state they waited
+ * for a moment after 5 s, and each was reported as a failure it was not.
+ */
+const STATE_WAIT_FLOOR_MS = 30_000;
+
+/**
+ * **Presence** (`until`): a state the check needs before it can read anything.
+ * Polled to the 30 s floor; a timeout prints what was awaited and what the shelf
+ * held, and the answer stays `false` for the judges that read it. Every
+ * timeout is counted, so a loop over books can stop at the first one.
+ */
+let presenceTimeouts = 0;
+
+async function noteTimeout(page: Page, what: string): Promise<void> {
+  presenceTimeouts += 1;
+  let held = '(unreadable)';
+  try {
+    held = String(await page.evaluate('JSON.stringify(window.__shelf?.held?.() ?? null)')).slice(
+      0,
+      300,
+    );
+  } catch {
+    // The page is gone or not a shelf; the line below still names what was awaited.
+  }
+  console.error(`waited ${String(STATE_WAIT_FLOOR_MS)}ms for ${what}; the shelf holds ${held}`);
+}
+
+async function until(page: Page, condition: string, what: string): Promise<boolean> {
+  try {
+    await page.waitForFunction(condition, { timeout: STATE_WAIT_FLOOR_MS, polling: 50 });
+    return true;
+  } catch {
+    await noteTimeout(page, what);
+    return false;
+  }
+}
+
+/**
+ * **Search** (`searchFor`): an attempt that may legitimately miss, such as a
+ * click between books. A miss is an answer, so the deadline stays short and a
+ * timeout prints nothing.
+ */
+async function searchFor(page: Page, condition: string, timeout: number): Promise<boolean> {
   try {
     await page.waitForFunction(condition, { timeout, polling: 50 });
     return true;
@@ -486,18 +556,95 @@ async function until(page: Page, condition: string, timeout = 8000): Promise<boo
   }
 }
 
+/** Frames the settle waits on, and how often the node side reads them. */
+const SETTLE_POLL_MS = 50;
+
+const SETTLERS = new WeakMap<Page, () => Promise<boolean>>();
+
+/**
+ * The settle helper: "the shelf has finished loading" is no image request in
+ * flight and the renderer's texture and program counts held still for
+ * `SETTLE_FRAMES` frames (`lib/settle.ts`). Returns the function the caller
+ * awaits after `ready`.
+ *
+ * ⚠️ **Call it before `goto`.** The request listeners count from then; a
+ * listener attached after would count zero and settle before the covers land.
+ * Asked again for a page it already watches, it hands back the same settler.
+ * A request that fails counts as finished.
+ *
+ * The settler resolves `false` at the 30 s floor, after printing the requests
+ * still in flight and the last readings; what a `false` does is the caller's.
+ */
+function watchSettle(page: Page): () => Promise<boolean> {
+  const known = SETTLERS.get(page);
+  if (known !== undefined) return known;
+  const inFlight = new Set<HTTPRequest>();
+  page.on('request', (request) => {
+    if (request.resourceType() === 'image') inFlight.add(request);
+  });
+  const done = (request: HTTPRequest): void => {
+    inFlight.delete(request);
+  };
+  page.on('requestfinished', done);
+  page.on('requestfailed', done);
+
+  const settle = async (): Promise<boolean> => {
+    await page.evaluate(RECORD_SETTLE_READINGS);
+    const deadline = performance.now() + STATE_WAIT_FLOOR_MS;
+    let readings: string[] = [];
+    while (performance.now() < deadline) {
+      readings = (await page.evaluate('window.__settleReadings ?? []')) as string[];
+      // A reading that is not two numbers means the recorder reads nothing (a renamed
+      // `stats()` field, say): ten frames of "undefined|undefined" are still, and
+      // settling on them would leave only the image counter to wait on.
+      if (inFlight.size === 0 && hasSettled(readings) && readings.every(isCountReading)) {
+        return true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, SETTLE_POLL_MS));
+    }
+    console.error(
+      `waited ${String(STATE_WAIT_FLOOR_MS)}ms for the shelf to settle; ` +
+        `${String(inFlight.size)} image request(s) in flight` +
+        `${[...inFlight].map((request) => `\n    ${request.url()}`).join('')}\n` +
+        `  textures|programs per frame: ${readings.join(' ')}`,
+    );
+    return false;
+  };
+  SETTLERS.set(page, settle);
+  return settle;
+}
+
+const isCountReading = (reading: string): boolean => /^\d+\|\d+$/.test(reading);
+
+function failBoot(what: string, errors: readonly string[]): never {
+  console.error(`${what}. Page errors:`);
+  for (const message of errors.length > 0 ? errors : ['(none captured)']) {
+    console.error(`  ${message}`);
+  }
+  process.exit(1);
+}
+
 /**
  * Clicks book after book by its projected point until `picked` holds.
  *
  * A point the held book's page covers is skipped: the click would land on the
  * page, not the shelf, and report a missing pickup as a failure of the pickup.
+ *
+ * The wait after a click is a **search** (K8): a click between books legitimately
+ * picks nothing up, and 30 s per miss would cost minutes. It polls the pickup's
+ * state machine, which holds once the click handler has started the pickup and
+ * not at the end of its lift. And the walk gives up after `MAX_MISSES` clicks in
+ * a row that picked nothing up, so a broken pickup costs 10 misses and not 60.
  */
+const MAX_MISSES = 10;
+
 async function clickToPickUp(
   page: Page,
   picked: string,
   skip?: number,
 ): Promise<number | undefined> {
-  for (let index = 0; index < 60; index += 1) {
+  let misses = 0;
+  for (let index = 0; index < 60 && misses < MAX_MISSES; index += 1) {
     if (index === skip) continue;
     const point = (await page.evaluate(`window.__shelf.projectBook(${String(index)})`)) as
       { x: number; y: number } | undefined;
@@ -509,7 +656,8 @@ async function clickToPickUp(
     );
     if (open !== true) continue;
     await page.mouse.click(x, y);
-    if (await until(page, picked, 4000)) return index;
+    if (await searchFor(page, picked, 4000)) return index;
+    misses += 1;
   }
   return undefined;
 }
@@ -576,10 +724,19 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   await page.evaluate(WATCH_PAGES);
   const first = await clickToPickUp(page, 'window.__shelf.held() !== undefined');
   if (first === undefined) return undefined;
-  if (!(await until(page, HELD))) return undefined;
+  if (!(await until(page, HELD, 'the clicked book to come to rest held'))) return undefined;
   const hiddenBeforeFade = (await page.evaluate(PAGES_HIDDEN)) === true;
-  // The Thoughts fetch, when the book has some, lands after the click.
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  // The Thoughts fetch lands after the click, but only for a book that has some:
+  // `library.json` says which, by the held book's title when no other book shares
+  // it. Any other book fetches nothing, so there is nothing to wait for.
+  const heldTitle = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
+  const flagged = (await page.evaluate(
+    `fetch('/library.json').then((response) => response.json())`,
+  )) as { books: LibraryBook[] };
+  const sameTitle = flagged.books.filter((book) => book.title === heldTitle);
+  if (sameTitle.length === 1 && sameTitle[0]?.thoughts === true) {
+    await until(page, 'window.__shelf.held()?.thoughts === true', "the held book's Thoughts");
+  }
   const read = (await page.evaluate(READ_PAGE)) as Omit<
     PickupRead,
     | 'hiddenBeforeFade'
@@ -610,10 +767,10 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
         const held = shelf.held();
         return held?.phase === 'held' && held.title !== firstTitle;
       },
-      { timeout: 8000, polling: 50 },
+      { timeout: STATE_WAIT_FLOOR_MS, polling: 50 },
       read.held,
     )
-    .catch(() => undefined);
+    .catch(() => noteTimeout(page, 'the second book to come to rest held'));
   const second = (await page.evaluate(`(() => ({
     held: window.__shelf.held()?.title ?? '',
     announced: document.getElementById('pickup-status')?.textContent ?? '',
@@ -630,7 +787,11 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   // pickup's doing (spec §3.4).
   await page.evaluate('window.__focusBefore = document.activeElement');
   await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
-  await until(page, HELD);
+  // A timeout ends the check: the steps below press Escape and the back button,
+  // and the back button with nothing held would leave the page itself.
+  if (!(await until(page, HELD, 'the book to come to rest held, for the focus read'))) {
+    return undefined;
+  }
   const focusUnmoved = (await page.evaluate(
     'document.activeElement === window.__focusBefore',
   )) as boolean;
@@ -644,7 +805,9 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   )) as boolean;
 
   await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
-  await until(page, HELD);
+  if (!(await until(page, HELD, 'the book to come to rest held, before the back button'))) {
+    return undefined;
+  }
   await page.evaluate('history.back()');
   const afterBack = await putDown(page, sameHref);
 
@@ -687,7 +850,7 @@ async function checkThoughtsShown(page: Page): Promise<boolean | undefined> {
   if (index === -1) return undefined;
 
   await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
-  if (!(await until(page, HELD))) return undefined;
+  if (!(await until(page, HELD, 'the Thoughts book to come to rest held'))) return undefined;
   const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
   // Fails closed when the index did not name the book it was computed for.
   if (title !== ordered[index]?.title) {
@@ -697,7 +860,7 @@ async function checkThoughtsShown(page: Page): Promise<boolean | undefined> {
   const shown = await until(
     page,
     `(() => { const slot = document.querySelector('.held-page-right .held-thoughts'); return Boolean(slot) && !slot.hidden && slot.querySelectorAll('p').length >= 2; })()`,
-    3000,
+    "the held page's Thoughts to show",
   );
   await putBackAndSettle(page);
   return shown;
@@ -715,7 +878,7 @@ function shelfOrder(books: readonly LibraryBook[]): LibraryBook[] {
 
 /** Waits for the book to be back in its slot, then reads what the page says. */
 async function putDown(page: Page, sameHref: () => Promise<boolean>): Promise<PutDown> {
-  await until(page, NOTHING_HELD);
+  await until(page, NOTHING_HELD, 'the book to be back in its slot');
   const read = (await page.evaluate(`(() => ({
     held: window.__shelf.held() !== undefined,
     announced: document.getElementById('pickup-status')?.textContent ?? '',
@@ -765,11 +928,15 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
   let pathInPage = false;
   let coverlessOpens: boolean | undefined;
   const books = Number(await page.evaluate('window.__shelf.bookCount'));
-  for (let index = 0; index < books; index += 1) {
+  // A presence timeout ends the loop: another 41 books at 30 s each would run the
+  // job out of its time before the report prints. What it gathered is judged as
+  // it stands, and anything it did not reach fails as not found.
+  const timeoutsBefore = presenceTimeouts;
+  for (let index = 0; index < books && presenceTimeouts === timeoutsBefore; index += 1) {
     const covered = withHeld !== undefined && withoutHeld !== undefined;
     if (covered && coverlessOpens !== undefined) break;
     await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
-    if (!(await until(page, HELD))) continue;
+    if (!(await until(page, HELD, `book ${String(index)} to come to rest held`))) break;
     const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
     const expected = title === undefined ? undefined : coverFor.get(title);
     const hasControl = (await page.evaluate(
@@ -790,7 +957,7 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
         await putBackAndSettle(page);
         fellBack = await examinesWithoutHeldCopy(page, index, title);
         await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
-        await until(page, HELD);
+        await until(page, HELD, `book ${String(index)} to come to rest held, to be examined`);
       }
       const checked = await examineOne(page, title, expected.held, fullReading === undefined);
       fullReading ??= checked;
@@ -829,25 +996,34 @@ const PAGE_SHOWN = `document.querySelector('.held-page-right')?.style.visibility
 /** Opens the view from the page's control. */
 async function opensView(page: Page): Promise<boolean> {
   await page.click(EXAMINE_CONTROL);
-  return until(page, `${DIALOG}?.open === true`, 3000);
+  return until(page, `${DIALOG}?.open === true`, 'the view to open');
 }
 
 /**
+ * Time for a wrong put-back to have registered, so that the book still being held
+ * means something. An **absence** wait (K1, K2), fixed on purpose: a put-back
+ * started by an exit goes through the history, a moment later, and a poll for
+ * the view closing returns before that and would let the defect through.
+ * ⚠️ A slower runner can only make this weaker, never flaky: a put-back that
+ * arrives after the wait is missed and the check passes. That residual is
+ * accepted.
+ */
+const PUT_BACK_CHANCE_MS = 200;
+
+/**
  * Leaves the open view by `how` and reads that it closed, that the book is
- * still held and that the page showed again. The fixed wait is on purpose: what
- * is read is that the book is *still* held, so it must be read after a
- * put-back started by this exit would have registered (it goes through the
- * history, a moment later). A poll for the view closing returns before that and
- * would let the defect through.
+ * still held and that the page showed again. The view closing is a presence,
+ * polled; the book *still* held is an absence, read after the fixed wait above.
  */
 async function leavesBy(page: Page, how: () => Promise<void>): Promise<boolean> {
   await how();
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await until(page, `!${DIALOG}?.open`, 'the view to close');
+  await new Promise((resolve) => setTimeout(resolve, PUT_BACK_CHANCE_MS));
   const read = (await page.evaluate(`({
     open: Boolean(${DIALOG}?.open),
     held: window.__shelf.held() !== undefined,
   })`)) as { open: boolean; held: boolean };
-  return !read.open && read.held && (await until(page, PAGE_SHOWN, 3000));
+  return !read.open && read.held && (await until(page, PAGE_SHOWN, 'the held page to show again'));
 }
 
 /**
@@ -864,7 +1040,9 @@ async function examineOne(
 ): Promise<Examined> {
   // Examining fetches nothing new: the covers are on the book already. Counted
   // from the click, once the held copy has landed, to the first exit.
-  if (held !== undefined) await until(page, 'window.__shelf.held()?.cover === "held"', 3000);
+  if (held !== undefined) {
+    await until(page, 'window.__shelf.held()?.cover === "held"', 'the held copy to land');
+  }
   const fetched: string[] = [];
   const onRequest = (request: HTTPRequest): void => {
     const path = new URL(request.url()).pathname;
@@ -872,6 +1050,32 @@ async function examineOne(
   };
   page.on('request', onRequest);
   const opened = await opensView(page);
+  if (!opened) {
+    // The view never opened, so every wait below would run out its own floor: about
+    // a dozen of them in a row, which a red run cannot afford. Everything not read
+    // is reported as it failed, and the printed timeout names the cause.
+    page.off('request', onRequest);
+    return {
+      opened,
+      namedForBook: false,
+      closedAngle: undefined,
+      escapeClosedViewer: false,
+      heldAfterEscape: false,
+      pageVisibleAfterEscape: false,
+      held,
+      showedHeld: false,
+      showedOwn: false,
+      fetchedNothing: fetched.length === 0,
+      turned: false,
+      keyTurned: false,
+      focusInside: false,
+      focusReturned: false,
+      leftByTap: false,
+      leftByButton: false,
+      reducedCuts: false,
+      emptiedCloses: false,
+    };
+  }
   const named = (await page.evaluate(
     `(${DIALOG}?.getAttribute('aria-label') ?? '').includes(${JSON.stringify(title)})`,
   )) as boolean;
@@ -882,7 +1086,7 @@ async function examineOne(
   await until(
     page,
     `Math.abs(window.__shelf.held()?.boardAngle ?? 90) <= ${String(CLOSED_TOLERANCE_DEG)}`,
-    3000,
+    'the book to finish closing',
   );
   const closedAngle = (await page.evaluate('window.__shelf.held()?.boardAngle')) as
     number | undefined;
@@ -890,7 +1094,11 @@ async function examineOne(
   // asynchronous, else the shelf copy — read off the material's texture, so a
   // book with no texture at all is not the shelf copy.
   const wears = held === undefined ? 'shelf' : 'held';
-  const worn = await until(page, `window.__shelf.held()?.cover === ${JSON.stringify(wears)}`, 3000);
+  const worn = await until(
+    page,
+    `window.__shelf.held()?.cover === ${JSON.stringify(wears)}`,
+    `the ${wears} cover to be worn`,
+  );
 
   let turned = true;
   let keyTurned = true;
@@ -929,18 +1137,19 @@ async function examineOne(
 
   // Escape: the view leaves, and *only* the view.
   await page.keyboard.press('Escape');
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await until(page, `!${DIALOG}?.open`, 'the view to close on Escape');
+  await new Promise((resolve) => setTimeout(resolve, PUT_BACK_CHANCE_MS));
   const after = (await page.evaluate(`(() => ({
     viewerOpen: Boolean(${DIALOG}?.open),
     held: window.__shelf.held() !== undefined,
   }))()`)) as { viewerOpen: boolean; held: boolean };
   page.off('request', onRequest);
   // The book opens again, and then the page shows and takes focus back.
-  const pageVisible = await until(page, PAGE_SHOWN, 3000);
+  const pageVisible = await until(page, PAGE_SHOWN, 'the held page to show after Escape');
   const focusReturned = await until(
     page,
     `document.activeElement === document.querySelector(${JSON.stringify(EXAMINE_CONTROL)})`,
-    1500,
+    'focus to return to the examine control',
   );
 
   let leftByTap = true;
@@ -972,10 +1181,10 @@ async function examineOne(
     reducedCuts = closedAtOnce && openedAtOnce;
 
     // The hand empties while examining, by the back button: the view goes with it.
-    await until(page, PAGE_SHOWN, 3000);
+    await until(page, PAGE_SHOWN, 'the held page to show, before the back button');
     await opensView(page);
     await page.evaluate('history.back()');
-    const emptied = await until(page, NOTHING_HELD, 3000);
+    const emptied = await until(page, NOTHING_HELD, 'the hand to empty on the back button');
     emptiedCloses = emptied && !((await page.evaluate(`Boolean(${DIALOG}?.open)`)) as boolean);
   }
 
@@ -1008,16 +1217,26 @@ async function examineOne(
  * agree at once, and with a tween the flag stays up for its 0.6 s.
  */
 async function noTweenWhenExamining(page: Page, examining: boolean): Promise<boolean> {
-  return (await page.evaluate(`new Promise((resolve) => {
+  // A presence poll with the floor as its deadline; `'timeout'` is told apart from
+  // a tween in flight so the timeout can be counted and named.
+  const read = (await page.evaluate(`new Promise((resolve) => {
     const started = performance.now();
     const tick = () => {
       const h = window.__shelf.held();
       if (h && h.examining === ${String(examining)}) resolve(h.easing === false);
-      else if (performance.now() - started > 3000) resolve(false);
+      else if (performance.now() - started > ${String(STATE_WAIT_FLOOR_MS)}) resolve('timeout');
       else setTimeout(tick, 0);
     };
     tick();
-  })`)) as boolean;
+  })`)) as boolean | 'timeout';
+  if (read === 'timeout') {
+    await noteTimeout(
+      page,
+      `the view to be ${examining ? 'examining' : 'left'} under reduced motion`,
+    );
+    return false;
+  }
+  return read;
 }
 
 /**
@@ -1030,7 +1249,7 @@ async function examinesCoverless(page: Page): Promise<boolean> {
   const closed = await until(
     page,
     `Math.abs(window.__shelf.held()?.boardAngle ?? 90) <= ${String(CLOSED_TOLERANCE_DEG)}`,
-    3000,
+    'the coverless book to finish closing',
   );
   const left = await leavesBy(page, () => page.keyboard.press('Escape'));
   return opened && closed && left;
@@ -1058,12 +1277,43 @@ async function examinesWithoutHeldCopy(page: Page, index: number, title: string)
   };
   await page.setRequestInterception(true);
   page.on('request', refuse);
+  // Armed before the pickup, because the refusal happens inside it. The caller
+  // only reaches this for a book `library.json` gives a held copy, so the request
+  // always comes.
+  let refusalFailed: () => void = () => undefined;
+  const failedRefusal = new Promise<void>((resolve) => {
+    refusalFailed = resolve;
+  });
+  const onFailed = (request: HTTPRequest): void => {
+    if (new URL(request.url()).pathname.startsWith('/held-covers/')) refusalFailed();
+  };
+  page.on('requestfailed', onFailed);
   try {
     await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
-    if (!(await until(page, HELD))) return false;
-    // The refused fetch fails asynchronously: give it the time it needs to have
-    // swapped something in, if it were going to.
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    if (!(await until(page, HELD, `book ${String(index)} to come to rest held, copy refused`))) {
+      return false;
+    }
+    // The refused fetch fails asynchronously: wait for it to have failed (a
+    // presence), not for a time.
+    let timer: NodeJS.Timeout | undefined;
+    const arrived = await Promise.race([
+      failedRefusal.then(() => true),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), STATE_WAIT_FLOOR_MS);
+      }),
+    ]);
+    clearTimeout(timer);
+    if (!arrived) {
+      await noteTimeout(page, 'the refused held-copy request to fail');
+      return false;
+    }
+    // K11, an absence: the swap, were it going to happen, runs in the loader's
+    // error callback, which the page has run by the next frame, so two frames let
+    // a wrong swap reach the material before it is read. ⚠️ If that swap is ever
+    // deferred further this can miss it: weaker, never flaky.
+    await page.evaluate(
+      'new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
+    );
     const opened = await opensView(page);
     // `shelf` is the material still carrying the shelf texture; a fallback that
     // blanked the cover reads `none`.
@@ -1071,10 +1321,13 @@ async function examinesWithoutHeldCopy(page: Page, index: number, title: string)
       `window.__shelf.held()?.title === ${JSON.stringify(title)} && window.__shelf.held()?.cover === 'shelf'`,
     )) as boolean;
     await page.keyboard.press('Escape');
-    await until(page, `!${DIALOG}?.open`, 1000);
+    // Search, used as cleanup (K9): its answer is ignored; it only lets the view
+    // close before the put-back that follows.
+    await searchFor(page, `!${DIALOG}?.open`, 1000);
     return opened && shelfCopy;
   } finally {
     page.off('request', refuse);
+    page.off('requestfailed', onFailed);
     await page.setRequestInterception(false);
     await putBackAndSettle(page);
   }
@@ -1082,7 +1335,7 @@ async function examinesWithoutHeldCopy(page: Page, index: number, title: string)
 
 async function putBackAndSettle(page: Page): Promise<void> {
   await page.evaluate('window.__shelf.putBack()');
-  await until(page, NOTHING_HELD);
+  await until(page, NOTHING_HELD, 'the book to be put back');
 }
 
 /**
@@ -1097,9 +1350,10 @@ async function checkPhone(page: Page): Promise<PhoneRead | undefined> {
   await until(
     page,
     '(() => { const s = window.__shelf.stats(); return s.bufferWidth < s.bufferHeight * 0.9; })()',
+    'the shelf to resize to the upright viewport',
   );
   await page.evaluate('window.__shelf.pickUp(0)');
-  if (!(await until(page, HELD))) return undefined;
+  if (!(await until(page, HELD, 'book 0 to come to rest held at phone size'))) return undefined;
   const read = (await page.evaluate(`(() => {
     const right = document.querySelector('.held-page-right');
     const control = right?.querySelector('.held-put-back');
@@ -1139,9 +1393,10 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     for (const index of SPREAD_BOOKS) {
       await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
-      if (!(await until(page, HELD))) {
+      if (!(await until(page, HELD, `book ${String(index)} to come to rest held, open spread`))) {
+        // A timeout ends the loop: the rest would each wait out the floor too.
         failures.push(`open spread: book ${String(index)} never came to rest`);
-        continue;
+        break;
       }
       const title = (await page.evaluate('window.__shelf.held().title')) as string;
       const read = (await page.evaluate('window.__shelf.spread() ?? null')) as SpreadRead | null;
@@ -1222,9 +1477,12 @@ const REAL_TIME_PATH = DEFAULT_SETTINGS.shadows.enabled ? '/' : '/?shadows=1';
  * Counts `requestAnimationFrame` callbacks per frame, installed before any page
  * script runs. Callbacks that run in one frame share its timestamp, so a
  * disposed shelf's render loop still running beside the new one shows as 2.
+ * The unwrapped function is kept for the gate's own settle recorder, which must
+ * not read as a loop (`lib/settle.ts`).
  */
 const COUNT_FRAMES = `(() => {
   const original = window.requestAnimationFrame.bind(window);
+  window.__rawRaf = original;
   const perFrame = new Map();
   window.__callbacksPerFrame = perFrame;
   window.requestAnimationFrame = (callback) =>
@@ -1298,11 +1556,23 @@ const BREAK_PROGRAMS = `(() => {
  */
 const LINK_FAILED = 'THREE program would not link:';
 
-/** The most render-loop callbacks any one frame ran, over a second of frames. */
+/**
+ * A **window**: the most render-loop callbacks any one frame ran, over the first
+ * `LOOP_SAMPLE_FRAMES` frames after the record is cleared. A fixed number of
+ * frames and never a fixed time, so the sample no longer shrinks on a slow
+ * runner. Polling for them is a presence wait, with the floor as its deadline;
+ * short of the count, `frames` says how many arrived.
+ */
+const LOOP_SAMPLE_FRAMES = 30;
+
 const LOOPS_PER_FRAME = `(async () => {
-  window.__callbacksPerFrame.clear();
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  const counts = [...window.__callbacksPerFrame.values()];
+  const perFrame = window.__callbacksPerFrame;
+  perFrame.clear();
+  const deadline = performance.now() + ${String(STATE_WAIT_FLOOR_MS)};
+  while (perFrame.size < ${String(LOOP_SAMPLE_FRAMES)} && performance.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  const counts = [...perFrame.values()].slice(0, ${String(LOOP_SAMPLE_FRAMES)});
   return { frames: counts.length, most: counts.length === 0 ? 0 : Math.max(...counts) };
 })()`;
 
@@ -1478,8 +1748,22 @@ async function noRestore(page: Page, origin: string): Promise<string> {
   // The new element is a clone of one hidden while the notice was up.
   must(state.canvasShown, 'the new canvas is drawn and still hidden');
 
-  // Textures land and the ResizeObserver sizes the new element.
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  // Textures land and the ResizeObserver sizes the new element: the settle helper
+  // for the first, counted afresh from the new shelf's frames, and the buffer
+  // matching the canvas's CSS size times the pixel ratio (both in device pixels)
+  // for the second.
+  await page.evaluate('window.__settleReadings.length = 0');
+  must(await watchSettle(page)(), 'the new canvas never settled');
+  await waitForState(
+    page,
+    `(() => {
+      const s = window.__shelf.stats();
+      const canvas = document.getElementById('shelf-canvas');
+      return s.bufferWidth === Math.round(canvas.clientWidth * s.pixelRatio);
+    })()`,
+    5000,
+    "the new canvas's buffer to match its size",
+  );
   const stats = (await page.evaluate(readCanvasStats)) as Stats;
   must(
     stats.distinctColours >= 40 && stats.nonBackgroundPct >= 10,
@@ -1544,7 +1828,10 @@ async function paintedLoss(page: Page, origin: string): Promise<string> {
 
   await page.evaluate(LOSE);
   await waitForState(page, `document.querySelector('.shelf-notice') !== null`, 5000, 'lost notice');
-  // Past the wait, so a rebuild that should not happen has had its chance to.
+  // An **absence** wait (K3), fixed on purpose: past the page's own restore
+  // window, so a rebuild that should not happen has had its chance to. ⚠️ A slower
+  // runner can only make this weaker, never flaky: a rebuild arriving after it is
+  // missed and the check passes — the residual #397's cause 2 left, accepted.
   await new Promise((resolve) => setTimeout(resolve, RESTORE_WAIT_MS + 500));
 
   const lost = await readState(page);
@@ -1742,28 +2029,30 @@ async function linkFailure(page: Page, origin: string): Promise<string> {
 }
 
 async function visit(page: Page, origin: string, path: string): Promise<void> {
-  // Ready is the state every case needs; a quiet network is only a courtesy. On
-  // the runner's software renderer `networkidle0` inside 30 s failed one case of
-  // eight on one Node version of two, with the shelf itself fine — so the wait
-  // for quiet is bounded and never fatal, as G61's is.
+  // Ready is the state every case needs, and then the settle helper: the covers
+  // in, the counts still. On the runner's software renderer `networkidle0` inside
+  // 30 s failed one case of eight on one Node version of two, with the shelf
+  // itself fine, which is why the settle reads state and not a quiet network. A
+  // shelf that never settles is this case's failure, which the loop records.
+  const settle = watchSettle(page);
   const started = performance.now();
   await page.goto(`${origin}${path}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
   const ready = performance.now();
-  await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
+  must(await settle(), `${path} never settled`);
   // A hidden page's loss is not the fallback's, by design — so make sure the
   // one under test is the one in front.
   await page.bringToFront();
   VISITS.count += 1;
   VISITS.toReady += (ready - started) / 1000;
-  VISITS.toQuiet += (performance.now() - ready) / 1000;
+  VISITS.toSettled += (performance.now() - ready) / 1000;
 }
 
 /**
  * What `visit()`'s cold boots cost in total, printed under the step times: the
  * share of G60 that is booting rather than testing (#397).
  */
-const VISITS = { count: 0, toReady: 0, toQuiet: 0 };
+const VISITS = { count: 0, toReady: 0, toSettled: 0 };
 
 async function readState(page: Page): Promise<PageState> {
   return (await page.evaluate(READ_STATE)) as PageState;
@@ -1784,26 +2073,18 @@ async function mustSample(page: Page): Promise<void> {
 
 async function oneLoop(page: Page, when: string): Promise<string> {
   const loops = (await page.evaluate(LOOPS_PER_FRAME)) as { frames: number; most: number };
-  must(loops.frames > 0, `no frame was drawn in a second ${when}`);
+  must(
+    loops.frames === LOOP_SAMPLE_FRAMES,
+    `${String(loops.frames)} of ${String(LOOP_SAMPLE_FRAMES)} frames were drawn in ` +
+      `${String(STATE_WAIT_FLOOR_MS)}ms ${when}`,
+  );
   must(
     loops.most === 1,
     `${String(loops.most)} render-loop callbacks in one frame ${when} — a disposed shelf's loop ` +
       'is still running beside the live one',
   );
-  return `${String(loops.frames)} frames, 1 loop`;
+  return `${String(LOOP_SAMPLE_FRAMES)} frames, 1 loop`;
 }
-
-/**
- * The least any state wait is given, whatever its caller asked for.
- *
- * Every wait here is for a state the case *requires* — a rebuild, a record, a
- * cleared notice — never for an absence, so a longer deadline can only turn a
- * slow pass green, never a wrong page. The callers' numbers were fitted to this
- * machine's GPU, and the first CI run on #382 showed what that costs: on the
- * runner's software renderer four cases reached exactly the state they waited
- * for a moment after 5 s, and each was reported as a failure it was not.
- */
-const STATE_WAIT_FLOOR_MS = 30_000;
 
 async function waitForState(
   page: Page,
@@ -2024,20 +2305,24 @@ async function measureSampling(
     // A hidden page gets no animation frames, and a page with no frames settles
     // into a vacuous verdict — so the page under measurement is the one in front.
     await page.bringToFront();
+    const settle = watchSettle(page);
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     // The woodwork's sheets arrive after `ready`, and the bookcase changes program as
-    // each one lands. The settle below counts from the last change it has seen, so it
-    // cannot wait out a sheet still in flight: until the second one lands, the old
-    // program and the new one both draw, and a verdict read then is red (#385).
-    // `networkidle0` inside `goto` is what once waited for that, and it stalled on
-    // this machine's GPU for a reason never isolated; as its own step it only bounds
-    // the wait, and a page that never idles is judged on the frames the settle below
-    // still requires.
-    await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
+    // each one lands. The sampling settle below counts from the last change it has
+    // seen, so it cannot wait out a sheet still in flight: until the second one
+    // lands, the old program and the new one both draw, and a verdict read then is
+    // red (#385). The settle helper is what waits for that now: no image request in
+    // flight, the counts still. `networkidle0` inside `goto` once did, and it
+    // stalled on this machine's GPU for a reason never isolated. A page that never
+    // settles is recorded among the page's errors, and still judged on the frames
+    // the sampling settle requires.
+    if (!(await settle())) errors.push('the page never settled: textures or image requests moved');
     if (hold) {
       await page.evaluate('window.__shelf.pickUp(3)');
-      if (!(await until(page, HELD))) errors.push('the book held for this page never came to rest');
+      if (!(await until(page, HELD, 'the book held for this page to come to rest'))) {
+        errors.push('the book held for this page never came to rest');
+      }
     }
     try {
       await page.waitForFunction(
@@ -2195,15 +2480,22 @@ async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit>
     await page.evaluateOnNewDocument(RECORD_VIOLATIONS);
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    // An **absence** of further fetches (K4): what this row judges is what the
+    // network carried, so "the network went quiet" is the state it needs. Bounded
+    // and never fatal: a slow runner can only weaken the check, never flake it.
     await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
-    // The pane exists only behind ?debug; on the plain page this times out by design.
-    await page
-      .waitForFunction(
-        `(() => { const pane = document.querySelector('${TUNER_MARKER}');
-          return pane !== null && getComputedStyle(pane).backgroundColor !== 'rgba(0, 0, 0, 0)'; })()`,
-        { timeout: url.includes('debug') ? 15_000 : 1 },
-      )
-      .catch(() => undefined);
+    // The pane exists only behind ?debug. On the plain page this times out by
+    // design, and that is the check itself (K10, an **absence**). On the ?debug page
+    // it is a **presence** wait: the floor, and a timeout prints what was awaited
+    // and leaves the reading to the judges, which find the pane missing or unstyled.
+    const debug = url.includes('debug');
+    const paneStyled = `(() => { const pane = document.querySelector('${TUNER_MARKER}');
+          return pane !== null && getComputedStyle(pane).backgroundColor !== 'rgba(0, 0, 0, 0)'; })()`;
+    if (debug) {
+      await until(page, paneStyled, 'the tuner pane to be drawn with its own background');
+    } else {
+      await page.waitForFunction(paneStyled, { timeout: 1 }).catch(() => undefined);
+    }
 
     const styled = (await page.evaluate(`(() => {
       const pane = document.querySelector('${TUNER_MARKER}');
@@ -2373,7 +2665,7 @@ function report(result: {
   if (VISITS.count > 0) {
     console.log(
       `  of which visit() boots: ${String(VISITS.count)}, ` +
-        `${VISITS.toReady.toFixed(1)} s to ready + ${VISITS.toQuiet.toFixed(1)} s to a quiet network`,
+        `${VISITS.toReady.toFixed(1)} s to ready + ${VISITS.toSettled.toFixed(1)} s to settled`,
     );
   }
   console.log(`screenshot        ${OUTPUT}`);
