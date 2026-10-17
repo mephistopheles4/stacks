@@ -16,6 +16,7 @@ import {
   judgeSampling,
   MIN_STEADY_FRAMES,
   steadyFrames,
+  summarise,
   type FrameBucket,
   type ProgramVerdict,
   type SamplingRun,
@@ -439,8 +440,7 @@ describe('describeSampling', () => {
   it('prints one count of programs, since a change of readers ends the steady window', () => {
     // Steady frames disagreed once — 1–2 programs — and that was the #385 flake:
     // the frames before a late sheet landed. A change now restarts the window,
-    // so a settled page holds one set; a range needs a snapshot whose change
-    // record was lost, and the hook no longer produces one.
+    // so a settled page holds one set, and the range form is gone (#390).
     const base = snapshot();
     const frames = base.frames.map((bucket) =>
       bucket.frame === 5 ? { ...bucket, samplingPrograms: [WOOD, 8] } : bucket,
@@ -448,6 +448,43 @@ describe('describeSampling', () => {
     expect(
       describeSampling({ snapshot: { ...base, frames }, bookCount: BOOKS, threeCalls: CALLS }),
     ).toContain('35 steady frames, 1 sampling program(s)');
+  });
+
+  it('can never print a range: every steady frame holds one set of readers (#390)', () => {
+    // The hook numbers frames without repeats, oldest first, and may drop some
+    // past its cap; anything else about a snapshot is free. Over every such
+    // snapshot the steady frames agree, so `describeSampling` keeps no range.
+    let seed = 390;
+    const next = (bound: number): number => {
+      seed = (seed * 48271) % 2147483647;
+      return seed % bound;
+    };
+    const sets: readonly (readonly number[])[] = [[], [WOOD], [WOOD, 8], [8]];
+    for (let trial = 0; trial < 2000; trial += 1) {
+      let at = 0;
+      const frames = Array.from({ length: 1 + next(30) }, () => {
+        at += 1 + next(3);
+        return frame(at, {
+          samplingPrograms: sets[next(sets.length)],
+          links: next(6) === 0 ? 1 : 0,
+        });
+      });
+      const pick = (): number | null => (next(3) === 0 ? null : next(at + 2));
+      const page = snapshot({
+        frames,
+        readyFrame: pick(),
+        lastLinkFrame: pick(),
+        lastSetChangeFrame: pick(),
+      });
+      const readers = new Set(
+        steadyFrames(page).map((bucket) => bucket.samplingPrograms.join(',')),
+      );
+      expect(readers.size, `trial ${String(trial)}`).toBeLessThanOrEqual(1);
+      // And the count printed is the one count, with an empty window at 0.
+      const s = summarise(page);
+      expect(s.fewestPrograms, `trial ${String(trial)}`).toBe(s.mostPrograms);
+      expect(Number.isFinite(s.mostPrograms), `trial ${String(trial)}`).toBe(true);
+    }
   });
 
   it('says there was no hook', () => {
