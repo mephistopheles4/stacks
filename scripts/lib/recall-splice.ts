@@ -28,6 +28,34 @@ export interface SpliceInputs {
   readonly run: (get: HttpGet) => Promise<void>;
 }
 
+/**
+ * The `--only` prefixes on a command line.
+ *
+ * ⚠️ **`--only=<prefix>` is refused, not ignored.** Ignoring it would select
+ * nothing, which is the full capture — the one run the frozen corpus must not
+ * get by accident.
+ */
+export function parseOnly(argv: readonly string[]): string[] {
+  const prefixes: string[] = [];
+  argv.forEach((arg, i) => {
+    if (arg.startsWith('--only=')) {
+      throw new Error('write `--only <url-prefix>`, with a space');
+    }
+    if (arg !== '--only') return;
+    const prefix = argv[i + 1] ?? '';
+    if (prefix.length === 0 || prefix.startsWith('--')) {
+      throw new Error('--only takes a URL prefix');
+    }
+    prefixes.push(prefix);
+  });
+  return prefixes;
+}
+
+/** Selects a URL under any prefix; with no prefix, every URL. */
+export function selectByPrefix(prefixes: readonly string[]): (url: string) => boolean {
+  return (url) => prefixes.length === 0 || prefixes.some((prefix) => url.startsWith(prefix));
+}
+
 /** The new corpus, in the order the lookups asked for each URL. */
 export async function spliceCapture(inputs: SpliceInputs): Promise<Record<string, unknown>> {
   const recorded: Record<string, unknown> = {};

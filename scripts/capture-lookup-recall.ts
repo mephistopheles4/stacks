@@ -11,6 +11,10 @@
  * entry is replayed from the committed file and kept as it is. That is the
  * splice #393 did by hand for its five Open Library entries, done by the script.
  *
+ * ⚠️ **Pass a fresh `--cache` folder when refreshing.** A selected URL goes
+ * through the cache first, so against a warm one the "re-capture" splices in
+ * whatever was cached on an earlier day.
+ *
  * Sibling of `capture-api-fixtures.ts`, and a different shape for a reason.
  * That one pins a handful of URLs written out by hand. This one records whatever
  * `lookup()` *actually asks for* across a corpus of real titles — two providers,
@@ -32,7 +36,7 @@ import { createCachedHttpGet, lookup, type HttpGet } from '../packages/core/src/
 // The corpus lives with the gate that owns it: this script exists to feed that
 // gate, so the list of books belongs there and is imported here, not copied.
 import { RECALL_CORPUS } from '../gates/recall-corpus.ts';
-import { spliceCapture } from './lib/recall-splice.ts';
+import { parseOnly, selectByPrefix, spliceCapture } from './lib/recall-splice.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const cacheFlag = process.argv.indexOf('--cache');
@@ -51,12 +55,7 @@ if (key === undefined || key.length === 0) {
   console.warn('warning: no GOOGLE_BOOKS_API_KEY — Google will 429 and the corpus will be wrong');
 }
 
-const only = process.argv.flatMap((arg, i) =>
-  arg === '--only' ? [process.argv[i + 1] ?? ''] : [],
-);
-if (only.some((prefix) => prefix.length === 0)) {
-  throw new Error('--only takes a URL prefix');
-}
+const only = parseOnly(process.argv);
 
 const out = join(REPO_ROOT, 'fixtures', 'api');
 const corpusPath = join(out, 'lookup-recall.json');
@@ -75,7 +74,7 @@ const recorded = await spliceCapture({
     only.length === 0
       ? {}
       : (JSON.parse(readFileSync(corpusPath, 'utf8')) as Record<string, unknown>),
-  selected: (url) => only.length === 0 || only.some((prefix) => url.startsWith(prefix)),
+  selected: selectByPrefix(only),
   live: cached,
   run: runCorpus,
 });

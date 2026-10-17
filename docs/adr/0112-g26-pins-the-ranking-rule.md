@@ -38,6 +38,9 @@ expectation against a fresh one.
 
 - `--only` refuses an unselected URL that the committed file does not hold,
   and never fetches it. A refresh that reaches a new URL outside its prefix
-  fails loudly; widen the prefix to take it.
+  fails loudly; widen the prefix to take it. `--only=<prefix>` is refused too,
+  because ignoring it would select nothing and run the full capture.
+- A selected URL goes through the on-disk cache first, so a refresh passes a
+  fresh `--cache` folder, or it splices in an answer cached on an earlier day.
 - `fixtures/api/open-library-search-sparse-sibling.json` is already kept the
   same way, for ADR-0037's regression.
