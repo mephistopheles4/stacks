@@ -306,8 +306,8 @@ Each line is a decision, who took it, and what changes if it is reversed.
   Owner, q2 = A, relayed by the lead. Reversed: this spec would also run G60
   and G61 on pull requests, with a new ADR.
 - **#397's other candidates out of scope.** `spec-397`'s recommendation.
-- **The main page's error watch ends at the phone check.** `spec-397`'s
-  recommendation, put to the owner with the sign-off. Reversed: the main page
+- **The main page's error watch ends at the phone check.** Owner, q5 = A,
+  relayed by the lead. Reversed: the main page
   stays open with its listeners on, and the saving goes.
 - **The main page's listeners are detached before the close.** `spec-397`,
   from both lenses' findings.
