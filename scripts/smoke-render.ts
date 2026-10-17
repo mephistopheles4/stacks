@@ -171,7 +171,7 @@ async function main(): Promise<void> {
     });
 
     try {
-      const page = await browser.newPage();
+      const page = await prepared(await browser.newPage());
       await page.setViewport(VIEWPORT);
 
       const errors: string[] = [];
@@ -358,7 +358,7 @@ async function grabFrame(
   url: string,
   failures: string[],
 ): Promise<{ frame: Frame; books: number }> {
-  const page = await browser.newPage();
+  const page = await prepared(await browser.newPage());
   try {
     await page.setViewport(LIT_VIEWPORT);
     page.on('pageerror', (error: unknown) => {
@@ -1348,7 +1348,7 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
   const lines: string[] = [];
   const failures: string[] = [];
   try {
-    const page = await context.newPage();
+    const page = await prepared(await context.newPage());
     await page.setViewport(SPREAD_VIEWPORT);
     await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
@@ -1591,7 +1591,7 @@ async function checkContextLossFallback(
     const context = await browser.createBrowserContext();
     const errors: string[] = [];
     try {
-      const page = await context.newPage();
+      const page = await prepared(await context.newPage());
       await page.setViewport(VIEWPORT);
       page.on('pageerror', (error: unknown) => {
         errors.push(error instanceof Error ? error.message : String(error));
@@ -2248,7 +2248,7 @@ async function measureSampling(
   const context = await browser.createBrowserContext();
   const errors: string[] = [];
   try {
-    const page = await context.newPage();
+    const page = await prepared(await context.newPage());
     await page.setViewport(SAMPLING_VIEWPORT);
     page.on('pageerror', (error: unknown) => {
       errors.push(`page error: ${error instanceof Error ? error.message : String(error)}`);
@@ -2421,7 +2421,7 @@ async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit>
   const errors: string[] = [];
   const reads: Promise<Fetched | undefined>[] = [];
   try {
-    const page = await context.newPage();
+    const page = await prepared(await context.newPage());
     await page.setViewport(VIEWPORT);
     page.on('pageerror', (error: unknown) => {
       errors.push(
@@ -2744,3 +2744,39 @@ function findChrome(): string {
 }
 
 await main();
+
+/**
+ * PROOF ONLY (#436, spec S6.1), never merged. Throttles the CPU of every page
+ * the gate opens by `SMOKE_CPU_THROTTLE` (unset: not at all), prints the first
+ * non-zero fps once the shelf reads one, and prints each click's time to a held
+ * book. The probe lines start `[probe]`.
+ */
+async function prepared(page: Page): Promise<Page> {
+  const rate = Number(process.env['SMOKE_CPU_THROTTLE'] ?? '1');
+  if (rate > 1) {
+    const client = await page.createCDPSession();
+    await client.send('Emulation.setCPUThrottlingRate', { rate });
+  }
+  await page.evaluateOnNewDocument(`(() => {
+    const started = performance.now();
+    const poll = () => {
+      const fps = window.__shelf?.stats().fps ?? 0;
+      if (fps > 0) console.log('[probe] fps ' + fps + ' after ' + Math.round(performance.now() - started) + 'ms');
+      else setTimeout(poll, 50);
+    };
+    poll();
+  })()`);
+  page.on('console', (message) => {
+    if (message.text().startsWith('[probe]')) console.log(message.text());
+  });
+  const click = page.mouse.click.bind(page.mouse);
+  page.mouse.click = async (x, y, options) => {
+    await click(x, y, options);
+    const at = performance.now();
+    const held = await searchFor(page, 'window.__shelf?.held() !== undefined', 4000);
+    console.log(
+      `[probe] click-to-held ${held ? String(Math.round(performance.now() - at)) : 'MISS'}ms`,
+    );
+  };
+  return page;
+}
