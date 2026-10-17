@@ -1167,6 +1167,30 @@ function countsTowardWindow(
 }
 
 /**
+ * The lowest score a scope has across a window, or `null` where the window is
+ * empty or any run in it carries no score for the scope — a hole is not a
+ * score, and a minimum over the rest would hide it.
+ */
+function lowestOver(window: readonly RunRow[], scope: string): number | null {
+  const seen = window.map((row) => row.scores.get(scope));
+  return window.length === 0 || seen.some((score) => score === undefined)
+    ? null
+    : Math.min(...(seen as number[]));
+}
+
+/** `lowestOver`'s twin for a capped series: the highest count, or `null` on a hole. */
+function highestOver(
+  window: readonly RunRow[],
+  series: CappedSeries,
+  scope: string,
+): number | null {
+  const seen = window.map((row) => row.counts.get(series)?.get(scope));
+  return window.length === 0 || seen.some((value) => value === undefined)
+    ? null
+    : Math.max(...(seen as number[]));
+}
+
+/**
  * How far a window has filled, and what it would arm each scope at.
  *
  * > **Floor for a scope = the lowest score observed for that scope across the
@@ -1206,15 +1230,7 @@ export function calibration(
   );
 
   const lowest = new Map<string, number | null>();
-  for (const name of scopes) {
-    const seen = window.map((row) => row.scores.get(name));
-    lowest.set(
-      name,
-      window.length === 0 || seen.some((score) => score === undefined)
-        ? null
-        : Math.min(...(seen as number[])),
-    );
-  }
+  for (const name of scopes) lowest.set(name, lowestOver(window, name));
 
   return {
     runs: samples,
@@ -1283,15 +1299,7 @@ export function capCalibration(
   const highest = new Map<CappedSeries, Map<string, number | null>>();
   for (const series of CAPPED_SERIES) {
     const perScope = new Map<string, number | null>();
-    for (const name of scopes) {
-      const seen = window.map((row) => row.counts.get(series)?.get(name));
-      perScope.set(
-        name,
-        window.length === 0 || seen.some((value) => value === undefined)
-          ? null
-          : Math.max(...(seen as number[])),
-      );
-    }
+    for (const name of scopes) perScope.set(name, highestOver(window, series, name));
     highest.set(series, perScope);
   }
 
@@ -1394,6 +1402,219 @@ export function roundDownToHundredths(value: number): number {
   return hundredths / 100;
 }
 
+/** A date as `YYYY-MM-DD` in the machine's own timezone — the calendar `deploy.ts`'s `localToday` reads. */
+export function localDay(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${String(date.getFullYear())}-${month}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * A bound the evidence says could be tighter.
+ *
+ * `unjudged` is the degraded case: a floor's window beats it by at least a
+ * hundredth and no mutant count is known to say whether that is a mutant.
+ * `days` is how long the rule has held; `atLeast` marks it a lower bound
+ * because the read ran out before the rule stopped holding.
+ */
+export type Tightening =
+  | { kind: 'tightenable'; value: number; days: number; atLeast: boolean }
+  | { kind: 'unjudged'; value: number };
+
+/** What `tightenings` found, keyed as the print looks it up. */
+export interface Tightenings {
+  floors: Map<string, Tightening>;
+  caps: Map<CappedSeries, Map<string, Tightening>>;
+}
+
+export interface TightenInput {
+  rows: readonly RunRow[];
+  floors: Floors;
+  readings: readonly PrintReading[];
+  capReadings: readonly CapReading[];
+  stamps: WindowStamps;
+  /** Today, as `YYYY-MM-DD`. Passed in: a function that judges is not where a clock belongs. */
+  today: string;
+}
+
+/** The window as it stood ending at one nightly. */
+interface WindowAt {
+  full: boolean;
+  /** Whether the streak ran back to the oldest nightly read, so a shortfall is the read's edge. */
+  reachesStart: boolean;
+  window: RunRow[];
+}
+
+/** Each nightly's window under one stamp, computed once however many bounds ask. */
+function windowsEndingAt(
+  ordered: readonly RunRow[],
+  stamped: (row: RunRow) => boolean,
+): (end: number) => WindowAt {
+  const cache = new Map<number, WindowAt>();
+  return (end) => {
+    const cached = cache.get(end);
+    if (cached !== undefined) return cached;
+
+    const slice = ordered.slice(0, end + 1);
+    const streak = streakBack(slice, stamped);
+    const made = {
+      full: samplesIn(streak) >= WINDOW_RUNS,
+      reachesStart: streak.length === slice.length,
+      window: newestTrees(streak),
+    };
+    cache.set(end, made);
+    return made;
+  };
+}
+
+/**
+ * The value a bound could be tightened to and how long that has been so, or
+ * `undefined` when it cannot be tightened now.
+ *
+ * `judge` is the rule for one window: the value it names, or `undefined`. It is
+ * asked of the newest nightly's window first, then of each older one against
+ * today's bound, newest back, until it stops holding.
+ */
+function tightenedBy(
+  ordered: readonly RunRow[],
+  at: (end: number) => WindowAt,
+  judge: (window: WindowAt) => number | undefined,
+  today: string,
+): { value: number; days: number; atLeast: boolean } | undefined {
+  const newestFirst = ordered.map((row, end) => ({ row, end })).reverse();
+  let value: number | undefined;
+  let since: RunRow | undefined;
+  let atLeast = false;
+
+  for (const { row, end } of newestFirst) {
+    const window = at(end);
+    const named = judge(window);
+    if (named === undefined) {
+      // ⚠️ **A shortfall at the edge of the read is not the rule failing.** A
+      // window ending at an old nightly has only the nightlies read before it, so
+      // it cannot fill however slack the bound was — and reading that as the
+      // rule stopping would print an age the record does not show (#464 §S4).
+      atLeast = !window.full && window.reachesStart;
+      break;
+    }
+    value ??= named;
+    since = row;
+  }
+  if (since === undefined || value === undefined) return undefined;
+
+  return {
+    value,
+    days: days(localDay(new Date(since.timestamp * 1000)), today),
+    atLeast,
+  };
+}
+
+/**
+ * Every armed bound that the record says could be tighter, each with the value
+ * to tighten it to and how long that has held.
+ *
+ * > **A floor is tightenable when the window's lowest score, rounded down to
+ * > hundredths, is at least the floor plus one mutant. A cap is tightenable
+ * > when the window's highest count is at most the cap less one.**
+ *
+ * ⚠️ **This asks and never acts.** It takes rows and returns a verdict per
+ * bound; it takes no path, writes nothing and files nothing, which is what
+ * keeps the print inside the standing constraint `renderFloorLines` names
+ * (ADR-0111). The owner tightens by hand, in a pull request.
+ *
+ * **The window is arming's window**, walked by the same `streakBack` under the
+ * same two stamps with the same accepted values, so a window that is not full,
+ * a stamp change nothing preserved, a failed nightly and a gap over three days
+ * each ask nothing and each restart the age, with no rule of their own.
+ *
+ * **Compared in whole hundredths**, so a case on the boundary cannot turn on
+ * float error: the named value is `roundDownToHundredths` (never to nearest,
+ * which can name a floor above a score its own window holds, and `breaches`
+ * would refuse the run it came from), and one mutant is `⌈10000 / m⌉`
+ * hundredths, rounded up so it never asks on less than one.
+ *
+ * **Asks nothing** for an unarmed bound, a bound with no reading (there is no
+ * breach check to make), a hole in the window, or a bound breached this deploy,
+ * which is the refusal's line and must not be contradicted beside it. Where a
+ * floor's mutant count is unknown it degrades to `unjudged` when the window
+ * beats the floor by a hundredth, and says nothing when it does not.
+ */
+export function tightenings(input: TightenInput): Tightenings {
+  const found: Tightenings = { floors: new Map(), caps: new Map() };
+  const ordered = nightliesIn(input.rows).sort((one, other) => one.timestamp - other.timestamp);
+  if (ordered.length === 0) return found;
+
+  const last = ordered.length - 1;
+  const floorWindows = windowsEndingAt(
+    ordered,
+    countsTowardWindow(
+      input.stamps.configHash,
+      input.stamps.configAccepted,
+      (row) => row.configHash,
+    ),
+  );
+  const capWindows = windowsEndingAt(
+    ordered,
+    countsTowardWindow(
+      input.stamps.fixtureHash,
+      input.stamps.fixtureAccepted,
+      (row) => row.fixtureHash,
+    ),
+  );
+
+  for (const [scope, entry] of input.floors.scopes) {
+    const floor = entry.floor;
+    const reading = input.readings.find((one) => one.scope === scope);
+    if (floor === UNARMED || reading === undefined) continue;
+    if (reading.score === null || reading.score < floor) continue;
+
+    const mutants =
+      reading.mutants !== undefined && reading.mutants > 0 ? reading.mutants : undefined;
+    const floorHundredths = Math.round(floor * 100);
+    // One mutant where it is known; one hundredth otherwise, the least that
+    // could ever be tightenable, so the degraded case asks only where it can.
+    const needed = mutants === undefined ? 1 : Math.ceil(10_000 / mutants);
+    const judge = (at: WindowAt): number | undefined => {
+      const lowest = at.full ? lowestOver(at.window, scope) : null;
+      if (lowest === null) return undefined;
+      const named = roundDownToHundredths(lowest);
+      return Math.round(named * 100) - floorHundredths >= needed ? named : undefined;
+    };
+
+    if (mutants !== undefined) {
+      const tighter = tightenedBy(ordered, floorWindows, judge, input.today);
+      if (tighter !== undefined) found.floors.set(scope, { kind: 'tightenable', ...tighter });
+      continue;
+    }
+    const value = judge(floorWindows(last));
+    if (value !== undefined) found.floors.set(scope, { kind: 'unjudged', value });
+  }
+
+  for (const [scope, entry] of input.floors.scopes) {
+    for (const [series, cap] of entry.caps) {
+      const reading = input.capReadings.find((one) => one.scope === scope && one.series === series);
+      if (cap.cap === UNARMED || reading === undefined) continue;
+      if (reading.value === null || reading.value > cap.cap) continue;
+
+      const limit = cap.cap;
+      const tighter = tightenedBy(
+        ordered,
+        capWindows,
+        (at) => {
+          const highest = at.full ? highestOver(at.window, series, scope) : null;
+          return highest !== null && highest <= limit - 1 ? highest : undefined;
+        },
+        input.today,
+      );
+      if (tighter === undefined) continue;
+
+      const perScope = found.caps.get(series) ?? new Map<string, Tightening>();
+      perScope.set(scope, { kind: 'tightenable', ...tighter });
+      found.caps.set(series, perScope);
+    }
+  }
+  return found;
+}
+
 /** A scope where the sweep and the recorded counter disagree, and by how much. */
 export interface IgnoredMismatch {
   scope: string;
@@ -1457,6 +1678,8 @@ export interface PrintInput {
   window: Calibration;
   /** Today, as `YYYY-MM-DD`. Passed in: a print is not where a clock belongs. */
   today: string;
+  /** What `tightenings` found, by scope. Absent reads as nothing to ask. */
+  tighten?: ReadonlyMap<string, Tightening>;
 }
 
 function days(from: string, to: string): number {
@@ -1513,7 +1736,9 @@ export function renderFloorLines(input: PrintInput): string[] {
     const reading = scores.get(name);
 
     return `${padded(name, width)}${
-      entry.floor === UNARMED ? unarmedState(name, entry, input) : armedState(entry.floor, reading)
+      entry.floor === UNARMED
+        ? unarmedState(name, entry, input)
+        : armedState(entry.floor, reading, input.tighten?.get(name))
     }`;
   });
 
@@ -1558,7 +1783,25 @@ function stampLine(configHash: string): string {
   return `counting under ${abbreviated(configHash)} — a run counts toward these windows only if it carries this stamp`;
 }
 
-function armedState(floor: number, reading: PrintReading | undefined): string {
+/**
+ * The clause an armed line ends with when its bound could be tighter.
+ *
+ * ⚠️ **Three spaces after whatever the line already ends with**, the separator
+ * the line uses between its other parts. It asks and does nothing else (ADR-0111).
+ */
+function tightenClause(what: 'lowest' | 'highest', found: Tightening, value: string): string {
+  const named = `   window ${what} ${value} - `;
+  if (found.kind === 'unjudged') return `${named}run pnpm mutation:run to judge`;
+
+  const age = `${found.atLeast ? 'at least ' : ''}${String(found.days)} days`;
+  return `${named}tightenable for ${age}`;
+}
+
+function armedState(
+  floor: number,
+  reading: PrintReading | undefined,
+  tighten: Tightening | undefined,
+): string {
   const parts = [padded(`armed ${floor.toFixed(2)}`, 14)];
 
   if (reading === undefined || reading.score === null) {
@@ -1578,6 +1821,7 @@ function armedState(floor: number, reading: PrintReading | undefined): string {
   if (reading.mutants !== undefined && reading.mutants > 0) {
     parts.push(`   1 mutant = ${resolutionOf(reading.mutants).toFixed(2)}`);
   }
+  if (tighten !== undefined) parts.push(tightenClause('lowest', tighten, tighten.value.toFixed(2)));
   return parts.join('');
 }
 
@@ -1645,6 +1889,8 @@ export interface CapPrintInput {
   window: CapCalibration;
   /** Today, as `YYYY-MM-DD`. Passed in: a print is not where a clock belongs. */
   today: string;
+  /** What `tightenings` found, by series then scope. Absent reads as nothing to ask. */
+  tighten?: ReadonlyMap<CappedSeries, ReadonlyMap<string, Tightening>>;
 }
 
 /**
@@ -1716,7 +1962,7 @@ export function renderCapLines(input: CapPrintInput): string[] {
         `${padded(name, width)}${padded(series, seriesWidth)}${
           cap.cap === UNARMED
             ? capUnarmedState(name, series, cap, input, stateWidth)
-            : capArmedState(cap.cap, reading, stateWidth)
+            : capArmedState(cap.cap, reading, stateWidth, input.tighten?.get(series)?.get(name))
         }`,
       );
     }
@@ -1740,6 +1986,7 @@ function capArmedState(
   cap: number,
   reading: CapPrintReading | undefined,
   stateWidth: number,
+  tighten: Tightening | undefined,
 ): string {
   const parts = [padded(`armed ${String(cap)}`, stateWidth)];
 
@@ -1752,6 +1999,9 @@ function capArmedState(
   if (reading.previous !== undefined) {
     const delta = reading.value - reading.previous;
     parts.push(`  (${delta >= 0 ? '+' : ''}${String(delta)})`);
+  }
+  if (tighten !== undefined) {
+    parts.push(tightenClause('highest', tighten, String(tighten.value)));
   }
   return parts.join('');
 }

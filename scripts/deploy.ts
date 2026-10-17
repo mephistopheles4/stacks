@@ -59,6 +59,7 @@ import {
   renderCapLines,
   renderFloorLines,
   runRowsFrom,
+  tightenings,
 } from './lib/floors.ts';
 import { acceptedValues, readRenovations } from './lib/renovations.ts';
 import { gitOutput } from './lib/git.ts';
@@ -749,31 +750,6 @@ function reportFloors(): void {
     mutants: mutants.get(scope),
   }));
 
-  console.log('');
-  // ⚠️ **Stateless, on purpose.** This said "every scope is unarmed", which is
-  // true today and goes false the moment somebody arms one — a decaying claim
-  // printed above a table that states the real answer per scope anyway.
-  console.log(
-    'mutation floors — one line per declared scope; arming is a human judgement, per scope, after its own window fills',
-  );
-  const lines = renderFloorLines({
-    floors,
-    readings,
-    // The renovations that declared they preserve the window widen what counts
-    // toward it, back to the last change that restarted it, and `[]` when the
-    // newest entry for the stamp does not — ADR-0085.
-    window: calibration(rows, names, stamps.configHash, stamps.configAccepted),
-    today: localToday(),
-  });
-  for (const line of lines) console.log(`  ${line}`);
-
-  if (newest === undefined) {
-    console.log('');
-    console.log(
-      '  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.',
-    );
-  }
-
   // The newest run that *counted*, which is a different row from the newest
   // that scored. The judgement is `countedIn`'s, in `lib/floors.ts`, where a
   // spec can reach it — this script is a thin caller, and a filter written here
@@ -794,6 +770,43 @@ function reportFloors(): void {
     }),
   );
 
+  // The arming rule run again in the tightening direction, from the same rows
+  // and the same two stamps. It asks and writes nothing (ADR-0111).
+  const asked = tightenings({
+    rows,
+    floors,
+    readings,
+    capReadings,
+    stamps,
+    today: localToday(),
+  });
+
+  console.log('');
+  // ⚠️ **Stateless, on purpose.** This said "every scope is unarmed", which is
+  // true today and goes false the moment somebody arms one — a decaying claim
+  // printed above a table that states the real answer per scope anyway.
+  console.log(
+    'mutation floors — one line per declared scope; arming is a human judgement, per scope, after its own window fills',
+  );
+  const lines = renderFloorLines({
+    floors,
+    readings,
+    // The renovations that declared they preserve the window widen what counts
+    // toward it, back to the last change that restarted it, and `[]` when the
+    // newest entry for the stamp does not — ADR-0085.
+    window: calibration(rows, names, stamps.configHash, stamps.configAccepted),
+    today: localToday(),
+    tighten: asked.floors,
+  });
+  for (const line of lines) console.log(`  ${line}`);
+
+  if (newest === undefined) {
+    console.log('');
+    console.log(
+      '  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.',
+    );
+  }
+
   console.log('');
   console.log(
     'complexity caps — one line per capped series per scope; a cap only falls, and raising one costs a notes entry',
@@ -803,6 +816,7 @@ function reportFloors(): void {
     readings: capReadings,
     window: capCalibration(rows, names, stamps.fixtureHash, stamps.fixtureAccepted),
     today: localToday(),
+    tighten: asked.caps,
   });
   for (const line of capLines) console.log(`  ${line}`);
 
