@@ -594,7 +594,12 @@ function watchSettle(page: Page): () => Promise<boolean> {
     let readings: string[] = [];
     while (performance.now() < deadline) {
       readings = (await page.evaluate('window.__settleReadings ?? []')) as string[];
-      if (inFlight.size === 0 && hasSettled(readings)) return true;
+      // A reading that is not two numbers means the recorder reads nothing (a renamed
+      // `stats()` field, say): ten frames of "undefined|undefined" are still, and
+      // settling on them would leave only the image counter to wait on.
+      if (inFlight.size === 0 && hasSettled(readings) && readings.every(isCountReading)) {
+        return true;
+      }
       await new Promise((resolve) => setTimeout(resolve, SETTLE_POLL_MS));
     }
     console.error(
@@ -608,6 +613,8 @@ function watchSettle(page: Page): () => Promise<boolean> {
   SETTLERS.set(page, settle);
   return settle;
 }
+
+const isCountReading = (reading: string): boolean => /^\d+\|\d+$/.test(reading);
 
 function failBoot(what: string, errors: readonly string[]): never {
   console.error(`${what}. Page errors:`);
@@ -1043,6 +1050,32 @@ async function examineOne(
   };
   page.on('request', onRequest);
   const opened = await opensView(page);
+  if (!opened) {
+    // The view never opened, so every wait below would run out its own floor: about
+    // a dozen of them in a row, which a red run cannot afford. Everything not read
+    // is reported as it failed, and the printed timeout names the cause.
+    page.off('request', onRequest);
+    return {
+      opened,
+      namedForBook: false,
+      closedAngle: undefined,
+      escapeClosedViewer: false,
+      heldAfterEscape: false,
+      pageVisibleAfterEscape: false,
+      held,
+      showedHeld: false,
+      showedOwn: false,
+      fetchedNothing: fetched.length === 0,
+      turned: false,
+      keyTurned: false,
+      focusInside: false,
+      focusReturned: false,
+      leftByTap: false,
+      leftByButton: false,
+      reducedCuts: false,
+      emptiedCloses: false,
+    };
+  }
   const named = (await page.evaluate(
     `(${DIALOG}?.getAttribute('aria-label') ?? '').includes(${JSON.stringify(title)})`,
   )) as boolean;
@@ -2012,14 +2045,14 @@ async function visit(page: Page, origin: string, path: string): Promise<void> {
   await page.bringToFront();
   VISITS.count += 1;
   VISITS.toReady += (ready - started) / 1000;
-  VISITS.toQuiet += (performance.now() - ready) / 1000;
+  VISITS.toSettled += (performance.now() - ready) / 1000;
 }
 
 /**
  * What `visit()`'s cold boots cost in total, printed under the step times: the
  * share of G60 that is booting rather than testing (#397).
  */
-const VISITS = { count: 0, toReady: 0, toQuiet: 0 };
+const VISITS = { count: 0, toReady: 0, toSettled: 0 };
 
 async function readState(page: Page): Promise<PageState> {
   return (await page.evaluate(READ_STATE)) as PageState;
@@ -2451,15 +2484,18 @@ async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit>
     // network carried, so "the network went quiet" is the state it needs. Bounded
     // and never fatal: a slow runner can only weaken the check, never flake it.
     await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
-    // The pane exists only behind ?debug; on the plain page this times out by
-    // design, and that is the check itself (K10, an **absence**).
-    await page
-      .waitForFunction(
-        `(() => { const pane = document.querySelector('${TUNER_MARKER}');
-          return pane !== null && getComputedStyle(pane).backgroundColor !== 'rgba(0, 0, 0, 0)'; })()`,
-        { timeout: url.includes('debug') ? 15_000 : 1 },
-      )
-      .catch(() => undefined);
+    // The pane exists only behind ?debug. On the plain page this times out by
+    // design, and that is the check itself (K10, an **absence**). On the ?debug page
+    // it is a **presence** wait: the floor, and a timeout prints what was awaited
+    // and leaves the reading to the judges, which find the pane missing or unstyled.
+    const debug = url.includes('debug');
+    const paneStyled = `(() => { const pane = document.querySelector('${TUNER_MARKER}');
+          return pane !== null && getComputedStyle(pane).backgroundColor !== 'rgba(0, 0, 0, 0)'; })()`;
+    if (debug) {
+      await until(page, paneStyled, 'the tuner pane to be drawn with its own background');
+    } else {
+      await page.waitForFunction(paneStyled, { timeout: 1 }).catch(() => undefined);
+    }
 
     const styled = (await page.evaluate(`(() => {
       const pane = document.querySelector('${TUNER_MARKER}');
@@ -2629,7 +2665,7 @@ function report(result: {
   if (VISITS.count > 0) {
     console.log(
       `  of which visit() boots: ${String(VISITS.count)}, ` +
-        `${VISITS.toReady.toFixed(1)} s to ready + ${VISITS.toQuiet.toFixed(1)} s to a quiet network`,
+        `${VISITS.toReady.toFixed(1)} s to ready + ${VISITS.toSettled.toFixed(1)} s to settled`,
     );
   }
   console.log(`screenshot        ${OUTPUT}`);

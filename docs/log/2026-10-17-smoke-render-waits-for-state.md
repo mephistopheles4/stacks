@@ -56,6 +56,33 @@ opens through CDP. Both were closed unmerged and their branches deleted.
   390.5 s on the build against 272.6 s on `main`, because each of its twelve
   boots now waits for 10 still frames.
 
+## What the proof rests on, and the owner's calls
+
+- **The CI proof is eight green samples plus the planted breaks**, not a control
+  that bit. The control did not meet the spec's own test, so the case went to the
+  owner, who chose one stronger throttle and then, whatever it showed, to accept
+  the samples. The samples are the eight attempts of run 39036079082, `suite
+  (node 24)`, all green, with G60 and G61 running on the pull request through the
+  temporary empty `SMOKE_ARGS`, since reverted.
+- **The wall time is under the spec's limit by 1.6 s.** The build's median over
+  the eight samples is 692.7 s against 694.3 s (`main`'s last three push runs'
+  median of 578.6 s, plus 20%). That is +19.7%, and four of the eight samples
+  are individually over. Nearly all of it is G60, which waits for 10 still frames
+  at each of its twelve boots. Winning that time back is
+  [#397](https://github.com/mephistopheles4/stacks/issues/397)'s work.
+- **The owner accepted the before-and-after screenshot as unchanged**, so D1's
+  settle stands and no fixed 1.5 s was put back. The two pictures differ in the
+  bookcase's wood figure only, which is expected: `main` takes the shot with no
+  `woodSeed` and the scene draws a fresh seed when none is given.
+- **ADR-0108's words about these waits no longer hold.** It said the two 1.5 s
+  settles stand for textures landing and a damped camera stopping, that the shelf
+  exposes no state for either, and so a poll would be only a shorter guess, and
+  that the 300 ms Thoughts wait has no state either. The spec's probe overturned
+  that: the counts `window.__shelf.stats()` already returns, with the image
+  requests in flight, are the state for the first, the camera does not move after
+  `ready`, and `held().thoughts` is the state for the second. ADR-0108's decision
+  to keep G60 and G61 off pull requests is untouched.
+
 ## A full-path local run, before the proof on CI
 
 `pnpm smoke:render` with no flag, on the workstation (GPU), green:
