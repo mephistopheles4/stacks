@@ -15,7 +15,8 @@ import { RECALL_CORPUS, stripKey } from './recall-corpus.ts';
  *
  * The corpus is real books with real answers, replayed from real captured
  * responses (`fixtures/api/lookup-recall.json`, written by
- * `scripts/capture-lookup-recall.ts`). Live calls are forbidden — G21 — and the
+ * `scripts/capture-lookup-recall.ts`, and refreshed by splicing with its `--only`
+ * flag, ADR-0112). Live calls are forbidden — G21 — and the
  * reader below throws on a URL it has no recording for, so a change that starts
  * asking a new question fails loudly instead of quietly taking the not-found
  * path and passing for the wrong reason.
@@ -31,8 +32,9 @@ const replay: HttpGet = async (url) => {
   if (!(key in RECORDINGS)) {
     throw new Error(
       `no recorded response for ${key}\n` +
-        'The lookup asked something the corpus has never seen. Re-run ' +
-        '`pnpm tsx scripts/capture-lookup-recall.ts` if that is deliberate.',
+        'The lookup asked something the corpus has never seen. If that is ' +
+        'deliberate, splice it in with `pnpm tsx scripts/capture-lookup-recall.ts ' +
+        '--cache <fresh dir> --only <url-prefix>` — never a bare run (ADR-0112).',
     );
   }
   // `null` is a recorded *miss*, which is not the same as an unrecorded URL.
