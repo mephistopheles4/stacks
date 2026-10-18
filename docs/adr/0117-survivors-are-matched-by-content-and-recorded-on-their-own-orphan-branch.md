@@ -61,11 +61,14 @@ should not meet a file they do not know.
   gated, deliberately*).
 - **About 818 KiB raw a night, never pruned**, at most 25.9 MiB a year before git
   finds any similarity. The cost that grows with it is not only the record step's
-  fetch: both jobs check out with `fetch-depth: 0`, which fetches every branch,
-  `survivors` included, so every push to `main` and every nightly downloads the
-  whole branch. The step prints the repository's size before it runs so that cost
-  can be read; narrowing the checkout is open (see the pull request). A plain
-  `git clone` or `git fetch` on a developer machine pulls it too;
+  fetch: both jobs in `metrics.yml` used to check out with `fetch-depth: 0`, which
+  fetches every branch, `survivors` included, so every push to `main` and every
+  nightly would have downloaded the whole branch, outside the step's budget. Both
+  now check out at depth 1 and run `git fetch --no-tags --unshallow origin <ref>`,
+  which deepens the one ref being run (the emitter's PR window needs that ref's
+  history) and nothing else; `survivors` is fetched once, at depth 1, by the record
+  step. The step prints the repository's size before it runs. A plain `git clone`
+  or `git fetch` on a developer machine pulls the branch too;
   `git clone --single-branch` or a narrowed `remote.origin.fetch` opts out.
 - **Mutated source is copied verbatim and kept.** The `original` field is the text
   of the mutated code at that night's commit. Removing a leaked value from

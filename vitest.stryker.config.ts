@@ -29,7 +29,9 @@ import { cliResolveConditions } from './vitest.cli-conditions.ts';
  * excluded from mutation (no spec imports it), so this spec was never an oracle
  * for a mutant, and `scripts/lib/survivor-record.test.ts` stays in. The file is
  * not part of the hashed Stryker config, so `pnpm mutation:stamp --check` does
- * not move.
+ * not move. **`scripts/mutation-scopes.test.ts` is the sixth, for the same
+ * reason**: it runs `scripts/mutation-scopes.ts` as a child process and writes a
+ * scratch directory, and that script is excluded from mutation too.
  *
  * ⚠️ **`scripts/lib/complexity-tree.test.ts` is the second, and it is the
  * filesystem warning further down made concrete.** It asserts the complexity of
@@ -133,6 +135,7 @@ export default defineConfig({
       'gates/ignored-clones.test.ts',
       'scripts/lib/sampling-hook-source.test.ts',
       'scripts/commit-metrics.test.ts',
+      'scripts/mutation-scopes.test.ts',
     ],
     environment: 'node',
     setupFiles: ['./gates/no-live-network.setup.ts'],
