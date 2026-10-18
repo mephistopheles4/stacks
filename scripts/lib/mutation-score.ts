@@ -64,11 +64,14 @@ export interface ReportedMutant {
   static?: boolean;
   mutatorName?: string;
   replacement?: string;
-  location?: { start: { line: number; column?: number } };
+  location?: {
+    start: { line: number; column?: number };
+    end?: { line: number; column?: number };
+  };
 }
 
 export interface MutationReport {
-  files: Record<string, { mutants: ReportedMutant[] }>;
+  files: Record<string, { source?: string; mutants: ReportedMutant[] }>;
 }
 
 export interface Tally {
@@ -381,8 +384,19 @@ export interface FileSurvivors {
   mutants: SurvivingMutant[];
 }
 
+/**
+ * The one definition of a survivor: `Survived` or `NoCoverage`.
+ *
+ * Shared with `./survivor-record.ts`, because the record and the job summary
+ * have to agree on what a survivor is, and two predicates would agree only
+ * until the day one of them changed.
+ */
+export function isSurviving(status: string): status is 'Survived' | 'NoCoverage' {
+  return status === 'Survived' || status === 'NoCoverage';
+}
+
 function surviving(mutant: ReportedMutant): SurvivingMutant | null {
-  if (mutant.status !== 'Survived' && mutant.status !== 'NoCoverage') return null;
+  if (!isSurviving(mutant.status)) return null;
   return {
     line: mutant.location?.start.line ?? null,
     status: mutant.status,

@@ -68,6 +68,13 @@
 # in this repo is warn-only and the property docs/spec/after-the-scoreboard.md
 # verified stays true.
 #
+# ⚠️ The nightly commits to a second orphan branch, `survivors`, through the same
+# script, scripts/commit-metrics.ts (called by `pnpm exec tsx`, not by
+# `pnpm metrics:commit`), and two of its steps are warn-only, neither by
+# `continue-on-error`: the job summary step by a single command ending in
+# `|| echo`, and the `record the survivors` step by `set +e`, an `|| echo` and a
+# final `exit 0`. The final step reads neither. See docs/spec/survivor-record.md.
+#
 # ⚠️ Every action below is pinned by hand to a 40-hex commit SHA. A tag is
 # mutable: whoever controls the action repository can repoint v7 at anything,
 # and it would run here with this workflow's token. This is the one new workflow
@@ -121,13 +128,22 @@ jobs:
       # which pushes — would break the write half of the trend layer here.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The whole history, because the emitter derives the PR window —
-          # `git log <previous record's commit>..HEAD` — and the default depth of
-          # 1 has no such range. ⚠️ It would not fail: `subjectsBetween` reports
-          # *no answer* and the window renders `unknown`, which is honest and
-          # useless. Panel 1 is built around this value; a permanently unknown
-          # one is a dead column nobody would think to blame the checkout for.
-          fetch-depth: 0 # zizmor: ignore[artipacked]
+          # Depth 1 here and the history of this one ref in the next step, and not
+          # `fetch-depth: 0`, which would fetch every branch and tag and so the
+          # whole of the ever-growing `survivors` branch on every push to main.
+          fetch-depth: 1 # zizmor: ignore[artipacked]
+
+      # The whole history of the ref being run, because the emitter derives the PR
+      # window — `git log <previous record's commit>..HEAD` — and a depth of 1 has
+      # no such range. ⚠️ It would not fail: `subjectsBetween` reports *no answer*
+      # and the window renders `unknown`, which is honest and useless. Panel 1 is
+      # built around this value; a permanently unknown one is a dead column nobody
+      # would think to blame the checkout for.
+      - name: fetch the history of this ref only
+        env:
+          REF: ${{ github.ref }}
+        run: git fetch --no-tags --unshallow origin "$REF"
+
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -198,13 +214,26 @@ jobs:
       # which pushes — would break the write half of the trend layer here.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The whole history, because the emitter derives the PR window —
-          # `git log <previous record's commit>..HEAD` — and the default depth of
-          # 1 has no such range. ⚠️ It would not fail: `subjectsBetween` reports
-          # *no answer* and the window renders `unknown`, which is honest and
-          # useless. Panel 1 is built around this value; a permanently unknown
-          # one is a dead column nobody would think to blame the checkout for.
-          fetch-depth: 0 # zizmor: ignore[artipacked]
+          # Depth 1 here and the history of this one ref in the next step, and not
+          # `fetch-depth: 0`: that fetches every branch and tag, and the `survivors`
+          # branch grows by about 818 KiB a night and is never pruned, so a full
+          # fetch would download all of it on every nightly (#344, the lens review).
+          fetch-depth: 1 # zizmor: ignore[artipacked]
+
+      # The whole history of the ref being run, because the emitter derives the PR
+      # window — `git log <previous record's commit>..HEAD` — and a depth of 1 has
+      # no such range. ⚠️ It would not fail: `subjectsBetween` reports *no answer*
+      # and the window renders `unknown`, which is honest and useless. Panel 1 is
+      # built around this value; a permanently unknown one is a dead column nobody
+      # would think to blame the checkout for. `--unshallow` on the one ref and
+      # `--no-tags`, so no other branch comes with it; the emitter reads the
+      # `metrics` branch by its own anonymous fetch, and the record step fetches
+      # `survivors` at depth 1 itself.
+      - name: fetch the history of this ref only
+        env:
+          REF: ${{ github.ref }}
+        run: git fetch --no-tags --unshallow origin "$REF"
+
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -306,6 +335,72 @@ jobs:
             --commit "$COMMIT" \
             >> "$GITHUB_STEP_SUMMARY" \
             || echo "The mutation report could not be rendered; see this step's log." >> "$GITHUB_STEP_SUMMARY"
+
+      # The survivors, kept past the artifact's 30 days: one `survivors/<timestamp>-<sha>.jsonl`
+      # on the orphan `survivors` branch after a clean mutation run on `main`, then one
+      # line under the score table saying what moved since the record before it.
+      # `docs/spec/survivor-record.md` is the spec.
+      #
+      # ⚠️ Warn-only, by the owner's choice (Q5): a failure here leaves the night's
+      # verdict alone, and the final step below does not read this step's status. The
+      # summary line is the only signal that a record stopped arriving — it names the
+      # reason, or the step that failed — and `docs/gates.md` says so under "Not gated,
+      # deliberately". Zero `continue-on-error` stays true: `set +e`, the `|| echo`
+      # and the final `exit 0` do it here, and the summary step above does it with
+      # its `|| echo` alone. `timeout 300` bounds the one step that fetches a tip
+      # anyone with write access can fill: a hang ends as a failed commit, which the
+      # line names, instead of spending the job's timeout and reddening the night.
+      #
+      # ⚠️ The budget (§S4.6) is read here and in `commit-metrics.ts`'s output: the
+      # seconds below, and `fetched about N KiB` there (repository growth, absent
+      # on the night the branch is created). The checkout fetches one ref's history
+      # and no other branch, so `survivors` arrives only here, at depth 1; the size
+      # line printed first is what the job holds before it. A night past 60 s adds a
+      # warning to the summary.
+      #
+      # ⚠️ After the summary step, so the line lands under the score table, and in
+      # three invocations because only `commit-metrics.ts` runs `git`: write the
+      # record, fetch the tip and commit, then render the line from both records and
+      # the commit's exit status. `pnpm exec tsx`, not a `pnpm` script, so the
+      # Commands list in AGENTS.md does not move; the values travel through `env:`.
+      - name: record the survivors
+        if: always()
+        env:
+          MUTATION_STATUS: ${{ steps.mutation.outputs.status }}
+          REF: ${{ github.ref }}
+          COMMIT: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          start=$SECONDS
+          report=artifacts/stryker/current/mutation.json
+          previous=artifacts/survivors-previous.jsonl
+          echo "repository before the step (the checkout's fetch included):"
+          git count-objects -vH | grep -E '^(size|size-pack):'
+          pnpm exec tsx scripts/mutation-scopes.ts "$report" \
+            --survivors-write survivors \
+            --mutation-status "$MUTATION_STATUS" --ref "$REF" \
+            --commit "$COMMIT" --event "$EVENT" --run-url "$RUN_URL"
+          commit_status=""
+          record=$(ls survivors/*.jsonl 2>/dev/null | head -n 1)
+          if [ -n "$record" ]; then
+            timeout 300 pnpm exec tsx scripts/commit-metrics.ts survivors \
+              --branch survivors --ext .jsonl --previous-to "$previous"
+            commit_status=$?
+          fi
+          pnpm exec tsx scripts/mutation-scopes.ts "$report" --survivors-line \
+            --mutation-status "$MUTATION_STATUS" --ref "$REF" \
+            --record "$record" --previous "$previous" --commit-status "$commit_status" \
+            >> "$GITHUB_STEP_SUMMARY" \
+            || echo "Survivors: the summary line could not be rendered, and the record may still have been committed; see the \"record the survivors\" step's log." >> "$GITHUB_STEP_SUMMARY"
+          # The budget (§S4.6): under 60 s and 50 MB, printed every night.
+          elapsed=$((SECONDS - start))
+          echo "survivor record step: $elapsed s"
+          if [ "$elapsed" -gt 60 ]; then
+            echo "Survivors: the record step took $elapsed s, past its 60 s budget (spec §S11 stop condition)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 0
 
       - name: fail if the run did not compute what it declared
         run: |
