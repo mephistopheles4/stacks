@@ -13,7 +13,7 @@ import { survivorsOf } from './mutation-score.ts';
 import {
   buildRecord,
   diffRecords,
-  gateRun,
+  shouldRecord,
   parseRecord,
   summaryLine,
   type BuildInput,
@@ -143,6 +143,25 @@ describe('C1: what a survivor is', () => {
     expect(only).toMatchObject({ original: null, replacement: null, start: null, end: null });
   });
 
+  it('reads a partial or impossible location as original null, never a wrong slice', () => {
+    const noColumn: ReportedMutant = {
+      status: 'Survived',
+      mutatorName: 'A',
+      location: { start: { line: 1 }, end: { line: 1, column: 5 } },
+    };
+    const pastTheEnd = mutant('Survived', [99, 1], [99, 4], 'B');
+    const files: Files = {
+      'src/a.ts': { source: SOURCE, mutants: [noColumn, pastTheEnd] },
+      // A report file that carries no source at all.
+      'src/b.ts': {
+        source: undefined as unknown as string,
+        mutants: [mutant('Survived', [1, 1], [1, 4], 'C')],
+      },
+    };
+    const survivors = parseRecord(tonight({ report: report(files) })).survivors;
+    expect(survivors.map((line) => line.original)).toEqual([null, null, null]);
+  });
+
   it('leaves out a file no scope claims, and one the scopes exclude', () => {
     const files: Files = {
       'other/c.ts': { source: SOURCE, mutants: [mutant('Survived', [1, 11], [1, 16])] },
@@ -170,6 +189,8 @@ describe('C1: what a survivor is', () => {
       'counts',
     ]);
     expect(header).toMatchObject({ record: 'survivors', keySchema: 1, commit: SHA_A });
+    expect(first).toMatchObject({ start: { line: 1, column: 11 }, end: { line: 1, column: 16 } });
+    expect(tonight().endsWith('}\n')).toBe(true);
     expect(Object.keys(first ?? {})).toEqual([
       'file',
       'scope',
@@ -191,7 +212,12 @@ describe('C2: the record depends on content, not order', () => {
         mutants: [
           mutant('Survived', [1, 11], [1, 16]),
           mutant('Survived', [2, 11], [2, 16]),
+          // Collides with the first on file, mutator, original and replacement:
+          // only the location tie-break orders the pair.
+          mutant('Survived', [3, 11], [3, 16]),
           mutant('NoCoverage', [3, 11], [3, 16], 'BooleanLiteral', 'true'),
+          // No mutator name at all, so a null sorts against a string.
+          { status: 'Survived', location: mutant('x', [2, 11], [2, 16]).location },
         ],
       },
       'lib/b.ts': { source: SOURCE, mutants: [mutant('Survived', [3, 11], [3, 16])] },
@@ -278,6 +304,17 @@ describe('C5: the diff control', () => {
     const less = parseRecord(tonight({ report: fewer }));
     expect(diffRecords(full, less)).toEqual({ kind: 'diff', added: 0, gone: 1 });
     expect(diffRecords(less, full)).toEqual({ kind: 'diff', added: 1, gone: 0 });
+
+    // Same count, different survivor: only the content key can tell, and a diff
+    // that compared totals would read this as no movement.
+    const other = report({
+      'src/a.ts': { source: SOURCE, mutants: [mutant('Survived', [2, 11], [2, 16])] },
+    });
+    expect(diffRecords(less, parseRecord(tonight({ report: other })))).toEqual({
+      kind: 'diff',
+      added: 1,
+      gone: 1,
+    });
   });
 });
 
@@ -288,6 +325,7 @@ describe('C6: multi-line originals', () => {
       'src/a.ts': { source, mutants: [mutant('Survived', [1, 11], [2, 3], 'StringLiteral', '``')] },
     };
     const text = tonight({ report: report(files) });
+    expect(text.endsWith('\n')).toBe(true);
     expect(text.split('\n').filter((line) => line !== '')).toHaveLength(2);
     const [only] = parseRecord(text).survivors;
     expect(only?.original).toBe('`a\nb`');
@@ -362,6 +400,17 @@ describe('C8: the summary line, one form per case', () => {
     );
   });
 
+  it('names every cause when more than one moved', () => {
+    const line = summaryLine({
+      ...base,
+      tonight: tonight({ stryker: '9.7.0', configHash: 'sha256:other' }),
+      previous: previous(),
+    });
+    expect(line).toBe(
+      'Survivors: 2 tonight — not compared with bbbbbbb (2026-10-17): the Stryker version and config hash changed.',
+    );
+  });
+
   it('gives tonight’s total only for a previous record that does not parse', () => {
     const line = summaryLine({ ...base, tonight: tonight(), previous: '{not json\n' });
     expect(line).toBe('Survivors: 2 tonight — the previous record could not be read, so no diff.');
@@ -376,10 +425,34 @@ describe('C8: the summary line, one form per case', () => {
       previous: `${JSON.stringify(header)}\n`,
     });
     expect(line).toContain('could not be read');
+
+    // No keySchema is unreadable too, and not a "key schema changed".
+    const noSchema = lines(previous())[0] as Record<string, unknown>;
+    delete noSchema.keySchema;
+    const second = summaryLine({
+      ...base,
+      tonight: tonight(),
+      previous: `${JSON.stringify(noSchema)}\n`,
+    });
+    expect(second).toBe(
+      'Survivors: 2 tonight — the previous record could not be read, so no diff.',
+    );
+  });
+
+  it('gives tonight’s total only when a survivor line of the previous record is malformed', () => {
+    const [header] = previous().split('\n');
+    for (const bad of ['{"file":1,"status":"Survived"}', '{"file":"a.ts","status":"Killed"}']) {
+      const line = summaryLine({ ...base, tonight: tonight(), previous: `${header}\n${bad}\n` });
+      expect(line).toBe(
+        'Survivors: 2 tonight — the previous record could not be read, so no diff.',
+      );
+    }
   });
 
   it.each([
     ['a commit that is not 40 hex characters', { commit: '[x](http://evil)' }],
+    ['a commit with junk before 40 hex characters', { commit: `](http://evil)${'a'.repeat(40)}` }],
+    ['a commit with junk after 40 hex characters', { commit: `${'a'.repeat(40)}](http://evil)` }],
     ['a commit of the wrong length', { commit: 'abc123' }],
     ['a recordedAt that is not ISO 8601 UTC', { recordedAt: '*bold* yesterday' }],
     ['a recordedAt without the UTC marker', { recordedAt: '2026-10-17T02:00:00' }],
@@ -395,7 +468,7 @@ describe('C8: the summary line, one form per case', () => {
     expect(line).not.toContain('bold');
   });
 
-  it('names a commit that failed after the diff was computed', () => {
+  it('names a commit that failed, ahead of any diff', () => {
     const line = summaryLine({ tonight: tonight(), previous: previous(), commitStatus: '1' });
     expect(line).toBe(
       'Survivors: not recorded tonight — the record could not be committed to the survivors branch.',
@@ -410,6 +483,10 @@ describe('C8: the summary line, one form per case', () => {
   it('names a record that is missing though nothing was skipped', () => {
     const line = summaryLine({ tonight: undefined, previous: undefined, commitStatus: '0' });
     expect(line).toBe('Survivors: not recorded tonight — the record was not written.');
+    // Tonight's own record on disk, but unreadable.
+    expect(summaryLine({ tonight: '{', previous: undefined, commitStatus: '0' })).toBe(
+      "Survivors: not recorded tonight — tonight's record could not be read back.",
+    );
   });
 
   it('names the skip reason ahead of anything else', () => {
@@ -438,43 +515,49 @@ describe('C8: when a record is written at all', () => {
   const ok = { mutationStatus: '0', ref: 'refs/heads/main', reportText: json };
 
   it('lets a clean run on main through, with its report', () => {
-    const gate = gateRun(ok);
-    expect(gate.ok).toBe(true);
+    const decision = shouldRecord(ok);
+    expect(decision.ok).toBe(true);
   });
 
   it('refuses a non-zero mutation status, by number', () => {
-    expect(gateRun({ ...ok, mutationStatus: '1' })).toEqual({
+    expect(shouldRecord({ ...ok, mutationStatus: '1' })).toEqual({
       ok: false,
       reason: 'the mutation run exited with status 1',
     });
   });
 
   it('refuses a mutation step that did not run', () => {
-    expect(gateRun({ ...ok, mutationStatus: '' })).toEqual({
+    expect(shouldRecord({ ...ok, mutationStatus: '' })).toEqual({
       ok: false,
       reason: 'the mutation step did not run',
     });
   });
 
   it('refuses a status that is not a plain number, without echoing it', () => {
-    const gate = gateRun({ ...ok, mutationStatus: '[x](http://evil)' });
-    expect(gate).toEqual({
+    const reason = 'the mutation run ended with an unrecognised status';
+    for (const mutationStatus of ['[x](http://evil)', '1[x](http://evil)', '[x](http://evil)1']) {
+      expect(shouldRecord({ ...ok, mutationStatus })).toEqual({ ok: false, reason });
+    }
+  });
+
+  it('reads a three-digit status as a number', () => {
+    expect(shouldRecord({ ...ok, mutationStatus: '137' })).toEqual({
       ok: false,
-      reason: 'the mutation run ended with an unrecognised status',
+      reason: 'the mutation run exited with status 137',
     });
   });
 
   it('refuses a report that does not parse, or is missing', () => {
     const reason = 'the mutation report could not be read';
-    expect(gateRun({ ...ok, reportText: '{"files":' })).toEqual({ ok: false, reason });
-    expect(gateRun({ ...ok, reportText: '{"nope":1}' })).toEqual({ ok: false, reason });
-    expect(gateRun({ ...ok, reportText: undefined })).toEqual({ ok: false, reason });
+    expect(shouldRecord({ ...ok, reportText: '{"files":' })).toEqual({ ok: false, reason });
+    expect(shouldRecord({ ...ok, reportText: '{"nope":1}' })).toEqual({ ok: false, reason });
+    expect(shouldRecord({ ...ok, reportText: undefined })).toEqual({ ok: false, reason });
   });
 
   it.each(['refs/heads/feature', 'refs/tags/main', 'main', ''])(
     'refuses the ref %j: only the default branch writes a record',
     (ref) => {
-      expect(gateRun({ ...ok, ref })).toEqual({ ok: false, reason: 'the run is not on main' });
+      expect(shouldRecord({ ...ok, ref })).toEqual({ ok: false, reason: 'the run is not on main' });
     },
   );
 });

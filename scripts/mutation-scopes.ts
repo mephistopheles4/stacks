@@ -48,7 +48,7 @@ import {
   totalOf,
   type MutationReport,
 } from './lib/mutation-score.ts';
-import { buildRecord, gateRun, summaryLine } from './lib/survivor-record.ts';
+import { buildRecord, shouldRecord, summaryLine } from './lib/survivor-record.ts';
 
 /**
  * `--markdown` prints the nightly's job summary instead of the terminal table,
@@ -71,6 +71,7 @@ const { values, positionals } = parseArgs({
     'run-url': { type: 'string', default: '' },
     record: { type: 'string', default: '' },
     previous: { type: 'string', default: '' },
+    // The exit status of the step that committed the record, not of any code commit.
     'commit-status': { type: 'string', default: '' },
   },
 });
@@ -93,17 +94,17 @@ function strykerVersion(): string {
  * not written is named by the line, not by an exit code.
  */
 if (values['survivors-write'] !== undefined) {
-  const gate = gateRun({
+  const decision = shouldRecord({
     mutationStatus: values['mutation-status'],
     ref: values.ref,
     reportText: readReportText(REPORT),
   });
-  if (!gate.ok) {
-    console.log(`no survivor record: ${gate.reason}`);
+  if (!decision.ok) {
+    console.log(`no survivor record: ${decision.reason}`);
     process.exit(0);
   }
   const text = buildRecord({
-    report: gate.report,
+    report: decision.report,
     scopes: readScopes(),
     stryker: strykerVersion(),
     configHash: configHashOf(strykerConfig),
@@ -112,8 +113,9 @@ if (values['survivors-write'] !== undefined) {
     runUrl: values['run-url'],
     recordedAt: new Date().toISOString(),
   });
-  // `<timestamp>-<sha>`, the form `metrics/` uses, so one night's two records
-  // share a name stem.
+  // `<timestamp>-<sha>`, the form `metrics/` uses. ⚠️ The two records of one night
+  // share the `<sha>` half and not the timestamp: `emit-metrics.ts` and this mode
+  // each read their own clock, steps apart. Pair them by commit, not by stem.
   const directory = values['survivors-write'];
   const stem = `${Math.floor(Date.now() / 1000)}-${values.commit.slice(0, 12)}`;
   const file = join(directory, `${stem}.jsonl`);
@@ -124,14 +126,16 @@ if (values['survivors-write'] !== undefined) {
 }
 
 if (values['survivors-line']) {
-  const gate = gateRun({
+  const decision = shouldRecord({
     mutationStatus: values['mutation-status'],
     ref: values.ref,
     reportText: readReportText(REPORT),
   });
   console.log(
     summaryLine({
-      ...(gate.ok ? {} : { skipped: gate.reason }),
+      ...(decision.ok ? {} : { skipped: decision.reason }),
+      // `readReportText` is the one text reader, whatever the file: here it reads
+      // tonight's record and the previous one, `undefined` when there is none.
       tonight: readReportText(values.record),
       previous: values.previous === '' ? undefined : readReportText(values.previous),
       commitStatus: values['commit-status'],

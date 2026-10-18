@@ -113,7 +113,7 @@ describe.each(BRANCHES)('$branch', ({ branch, directory, extension, args }) => {
   const second = `200-bbbbbbbbbbbb${extension}`;
 
   it(
-    'creates the branch, lands both records over two runs, and writes one file to disk',
+    'creates the branch, lands both records over two runs, and writes one file into the worktree',
     () => {
       const handed = join(root, 'previous');
       record(directory, first, 'one\n');
@@ -122,6 +122,8 @@ describe.each(BRANCHES)('$branch', ({ branch, directory, extension, args }) => {
       // no previous record to hand back.
       expect(tipFiles(branch)).toEqual([`${directory}/${first}`]);
       expect(existsSync(handed)).toBe(false);
+      // An orphan: one commit, with no parent in the code's history.
+      expect(git(remote, 'rev-list', '--count', branch)).toBe('1');
 
       // A fresh directory, as on a fresh runner: if the second commit staged the
       // directory rather than the one file, it would delete the first record.
@@ -132,12 +134,15 @@ describe.each(BRANCHES)('$branch', ({ branch, directory, extension, args }) => {
       expect(tipFiles(branch)).toEqual([`${directory}/${first}`, `${directory}/${second}`]);
       expect(result.out).toContain(`on disk: ${directory}/${second}\n`);
       expect(readFileSync(handed, 'utf8')).toBe('one\n');
+      expect(git(remote, 'rev-list', '--count', branch)).toBe('2');
       expect(git(remote, 'log', '-1', '--format=%s', branch)).toBe(`${branch}: c0ffee (schedule)`);
 
-      // A record the tip already holds is a no-op, and moves nothing.
+      // A record the tip already holds is a no-op, and moves nothing. With two
+      // records on the tip, the one handed back is the newer.
       const tip = git(remote, 'rev-parse', branch);
-      expect(run(args).out).toContain('nothing new to record');
+      expect(run([...args, '--previous-to', handed]).out).toContain('nothing new to record');
       expect(git(remote, 'rev-parse', branch)).toBe(tip);
+      expect(readFileSync(handed, 'utf8')).toBe('two\n');
 
       // No worktree and no staging branch left behind.
       expect(git(clone, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
@@ -199,9 +204,12 @@ describe('the arguments', () => {
     'refuses a name that is not plain, and fails when there is no record to commit',
     () => {
       record('metrics', '1-a.prom', 'x\n');
-      expect(run(['--branch', '../evil']).status).not.toBe(0);
-      expect(run(['..']).status).not.toBe(0);
-      expect(run(['--ext', '.prom/../x']).status).not.toBe(0);
+      // Each is refused by the script's own guard, not by whatever git would say.
+      for (const bad of [['--branch', '../evil'], ['..'], ['--ext', '.prom/../x']]) {
+        const refused = run(bad);
+        expect(refused.status).not.toBe(0);
+        expect(refused.out).toContain('must be plain names');
+      }
       expect(git(clone, 'ls-remote', '--heads', 'origin')).not.toContain('evil');
 
       mkdirSync(join(clone, 'empty'));

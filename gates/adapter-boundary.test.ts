@@ -207,9 +207,10 @@ const ALLOWED = [
   // red on the spent permission — that was the gate working. It is back for one
   // reason: its `--survivors-write` mode creates a directory and writes one
   // `.jsonl` file into it, tonight's survivor record. It still reads a Stryker
-  // report and one `package.json` through `lib/mutation-score.ts`, and the file
-  // it writes is gitignored on main and lives on the orphan `survivors` branch.
-  // It does not know what a book is.
+  // report and one `package.json` through `lib/mutation-score.ts`, and its
+  // `--survivors-line` mode reads tonight's record and the previous one at the
+  // paths it is handed, the same way. The file it writes is gitignored on main
+  // and lives on the orphan `survivors` branch. It does not know what a book is.
   'scripts/mutation-scopes.ts',
   'scripts/smoke-render.ts',
   // Checks whether a worktree's directory and the shared `.env` are there

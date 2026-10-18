@@ -8,7 +8,10 @@
  * process: `scripts/mutation-scopes.ts` reads and writes, `scripts/commit-metrics.ts`
  * runs `git`, and both are excluded from mutation. Every branch with a decision
  * in it lives here, where `./survivor-record.test.ts` reaches it in-process —
- * and no mutant of this file can push, because nothing here can run `git`.
+ * and no mutant of this file can push, because nothing here can run `git`. The one
+ * exception is which record on the branch is the previous one: `newestRecord` in
+ * `scripts/commit-metrics.ts` picks it from `ls-tree`'s output, because that needs
+ * `git`.
  *
  * ⚠️ **The key is file + mutator + original + replacement, and never `id` or
  * position.** Stryker numbers a mutant by its place in one run's count, so one
@@ -161,7 +164,7 @@ function compareLines(a: SurvivorLine, b: SurvivorLine): number {
  * order. Files come from `assignFiles`, so a file is in the same scope here as in
  * the score table, and one no scope claims is not here at all.
  */
-function survivorsOf(
+function recordLinesOf(
   report: MutationReport,
   scopes: Scope[],
 ): { survivors: SurvivorLine[]; counts: Record<string, ScopeCounts> } {
@@ -200,7 +203,7 @@ function survivorsOf(
  * and the header's inputs, never of the order the report lists its mutants in.
  */
 export function buildRecord(input: BuildInput): string {
-  const { survivors, counts } = survivorsOf(input.report, input.scopes);
+  const { survivors, counts } = recordLinesOf(input.report, input.scopes);
   const header: RecordHeader = {
     record: 'survivors',
     keySchema: KEY_SCHEMA,
@@ -347,9 +350,9 @@ export function diffRecords(previous: ParsedRecord, current: ParsedRecord): Comp
   return { kind: 'diff', added, gone };
 }
 
-export type Gate = { ok: true; report: MutationReport } | { ok: false; reason: string };
+export type RecordDecision = { ok: true; report: MutationReport } | { ok: false; reason: string };
 
-export interface GateInput {
+export interface RecordDecisionInput {
   /** The mutation step's exit status as the workflow recorded it; `''` if none. */
   mutationStatus: string;
   /** `github.ref`. */
@@ -366,7 +369,7 @@ export interface GateInput {
  * from the default branch: a dispatch can target any ref, and its record would
  * become the next night's baseline. The status is a number or it is not echoed.
  */
-export function gateRun(input: GateInput): Gate {
+export function shouldRecord(input: RecordDecisionInput): RecordDecision {
   if (input.mutationStatus === '') return { ok: false, reason: 'the mutation step did not run' };
   if (!/^\d{1,3}$/.test(input.mutationStatus)) {
     return { ok: false, reason: 'the mutation run ended with an unrecognised status' };
@@ -394,7 +397,7 @@ function nameList(names: string[]): string {
 }
 
 export interface LineInput {
-  /** The reason the gate gave, when it refused; the line is then the not-written form. */
+  /** The reason the decision gave, when it refused; the line is then the not-written form. */
   skipped?: string;
   /** Tonight's record as it is on disk, or `undefined` when none is. */
   tonight: string | undefined;

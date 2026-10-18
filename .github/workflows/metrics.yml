@@ -69,10 +69,11 @@
 # verified stays true.
 #
 # ⚠️ The nightly commits to a second orphan branch, `survivors`, through the same
-# `pnpm metrics:commit` script, and two of its steps are warn-only: the job
-# summary step and the `record the survivors` step, each by `set +e` and an
-# `|| echo` into the summary rather than by `continue-on-error`. The final step
-# reads neither. See docs/spec/survivor-record.md.
+# script, scripts/commit-metrics.ts (called by `pnpm exec tsx`, not by
+# `pnpm metrics:commit`), and two of its steps are warn-only, neither by
+# `continue-on-error`: the job summary step by a single command ending in
+# `|| echo`, and the `record the survivors` step by `set +e`, an `|| echo` and a
+# final `exit 0`. The final step reads neither. See docs/spec/survivor-record.md.
 #
 # ⚠️ Every action below is pinned by hand to a 40-hex commit SHA. A tag is
 # mutable: whoever controls the action repository can repoint v7 at anything,
@@ -322,8 +323,17 @@ jobs:
       # verdict alone, and the final step below does not read this step's status. The
       # summary line is the only signal that a record stopped arriving — it names the
       # reason, or the step that failed — and `docs/gates.md` says so under "Not gated,
-      # deliberately". Zero `continue-on-error` stays true: `set +e` and the `|| echo`
-      # are the same shape the summary step above already has.
+      # deliberately". Zero `continue-on-error` stays true: `set +e`, the `|| echo`
+      # and the final `exit 0` do it here, and the summary step above does it with
+      # its `|| echo` alone. `timeout 300` bounds the one step that fetches a tip
+      # anyone with write access can fill: a hang ends as a failed commit, which the
+      # line names, instead of spending the job's timeout and reddening the night.
+      #
+      # ⚠️ The budget (§S4.6) is read here and in `commit-metrics.ts`'s output: the
+      # seconds below, and `fetched about N KiB` there (repository growth, absent
+      # on the night the branch is created). The checkout above fetches every branch
+      # (`fetch-depth: 0`), `survivors` included, so the size line printed first is
+      # what that already cost. A night past 60 s adds a warning to the summary.
       #
       # ⚠️ After the summary step, so the line lands under the score table, and in
       # three invocations because only `commit-metrics.ts` runs `git`: write the
@@ -343,6 +353,8 @@ jobs:
           start=$SECONDS
           report=artifacts/stryker/current/mutation.json
           previous=artifacts/survivors-previous.jsonl
+          echo "repository before the step (the checkout's fetch included):"
+          git count-objects -vH | grep -E '^(size|size-pack):'
           pnpm exec tsx scripts/mutation-scopes.ts "$report" \
             --survivors-write survivors \
             --mutation-status "$MUTATION_STATUS" --ref "$REF" \
@@ -350,7 +362,7 @@ jobs:
           commit_status=""
           record=$(ls survivors/*.jsonl 2>/dev/null | head -n 1)
           if [ -n "$record" ]; then
-            pnpm exec tsx scripts/commit-metrics.ts survivors \
+            timeout 300 pnpm exec tsx scripts/commit-metrics.ts survivors \
               --branch survivors --ext .jsonl --previous-to "$previous"
             commit_status=$?
           fi
@@ -358,9 +370,13 @@ jobs:
             --mutation-status "$MUTATION_STATUS" --ref "$REF" \
             --record "$record" --previous "$previous" --commit-status "$commit_status" \
             >> "$GITHUB_STEP_SUMMARY" \
-            || echo "Survivors: not recorded tonight — the line could not be rendered; see the \"record the survivors\" step's log." >> "$GITHUB_STEP_SUMMARY"
+            || echo "Survivors: the summary line could not be rendered, and the record may still have been committed; see the \"record the survivors\" step's log." >> "$GITHUB_STEP_SUMMARY"
           # The budget (§S4.6): under 60 s and 50 MB, printed every night.
-          echo "survivor record step: $((SECONDS - start)) s"
+          elapsed=$((SECONDS - start))
+          echo "survivor record step: $elapsed s"
+          if [ "$elapsed" -gt 60 ]; then
+            echo "Survivors: the record step took $elapsed s, past its 60 s budget (spec §S11 stop condition)." >> "$GITHUB_STEP_SUMMARY"
+          fi
           exit 0
 
       - name: fail if the run did not compute what it declared

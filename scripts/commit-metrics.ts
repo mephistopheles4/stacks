@@ -14,16 +14,21 @@
  * rewrite.** It used to check out the whole tip, which costs nothing for `.prom`
  * files of a few hundred bytes. The survivor tip grows by about 818 KiB a night
  * and is never pruned, so the same checkout would write ~300 MB a year to the
- * runner. The property now is that **it writes exactly one file to disk, the one
- * it adds**, and it prints the files it found on disk so the claim is read off a
- * run and not off this comment. Four rules make it hold, and each replaces
+ * runner. The property now is that **it writes exactly one file into the
+ * worktree, the one it adds** (and `--previous-to`'s file, elsewhere), and it
+ * prints the files it found in the worktree so the claim is read off a run and
+ * not off this comment. Four rules make it hold, and each replaces
  * something the old script did that would break it:
  *
  * 1. The worktree is `--no-checkout` and its index is filled from the fetched
  *    tip by `git read-tree`, not by `worktree add <tip>`.
- * 2. The new file is added **by its full path**. In a worktree with no files on
- *    disk, `git add metrics` would stage the deletion of every earlier record,
- *    and each night would delete the one before.
+ * 2. The new file is added **by its full path, as a literal**: its blob is written
+ *    with `hash-object --no-filters` and put in the index with `update-index`.
+ *    In a worktree with no files on disk, `git add metrics` would stage the
+ *    deletion of every earlier record, and each night would delete the one
+ *    before; and `git add <name>` reads the name as a pattern and applies the
+ *    attribute rules in the fetched tip's own tree, which is a branch anyone with
+ *    write access can change.
  * 3. A rejected push fetches again, `read-tree`s the new tip, adds the one file,
  *    commits again and pushes again — up to three times. `pull --rebase` would
  *    refuse in that worktree, or check the tree out.
@@ -58,6 +63,10 @@
  * The push is retried, because a merge and a nightly can land minutes apart.
  * One file per run reduces the race to a ref update; there is no shared file for
  * two runs to contend on.
+ *
+ * ⚠️ **One bare `spawnSync('git', …)` stays, in `showBlob`**, and ADR-0117 says
+ * why: `gitOutput` trims, and this reads a file's bytes. It keeps the no-shell
+ * half of ADR-0030 and not the one-home half.
  *
  * ⚠️ **It works in the current directory, not in `REPO_ROOT`.** Both callers run
  * from the repository root, so nothing changed for them, and a test can run it in
@@ -118,11 +127,15 @@ function records(): string[] {
   }
 }
 
+/** The full ref, so that a tag of the same name cannot stand in for the branch. */
+const REF = `refs/heads/${BRANCH}`;
+
 function remoteHasBranch(): boolean {
-  // `ls-remote --heads` prints nothing and exits 0 for a branch that is not
-  // there, so the output is the answer and the exit code is not.
-  const found = gitOutput(['ls-remote', '--heads', 'origin', BRANCH], ROOT);
-  return found !== undefined && found !== '';
+  // `ls-remote` prints nothing and exits 0 for a ref that is not there, so the
+  // output is the answer and the exit code is not. It is asked for the full ref
+  // and the line is read for exactly that ref: a bare name is a tail match.
+  const found = gitOutput(['ls-remote', 'origin', REF], ROOT);
+  return found?.split('\n').some((line) => line.endsWith(`\t${REF}`)) === true;
 }
 
 /** The repository's size on disk in KiB, loose and packed, or 0 if git will not say. */
@@ -144,33 +157,57 @@ function repositoryKiB(): number {
  */
 function fetchTip(): string {
   const before = repositoryKiB();
-  runExe('git', ['fetch', 'origin', BRANCH, '--depth=1'], ROOT);
+  runExe('git', ['fetch', 'origin', REF, '--depth=1'], ROOT);
   const tip = gitOutput(['rev-parse', 'FETCH_HEAD'], ROOT);
   if (tip === undefined) throw new Error('git could not name the fetched tip');
   console.log(`fetched about ${String(Math.max(0, repositoryKiB() - before))} KiB`);
   return tip;
 }
 
-/** The newest record under `DIRECTORY/` on `tip`, by the timestamp in its name. */
+/** A day of slack for a clock that runs ahead, and no more: see `newestRecord`. */
+const FUTURE_SLACK_SECONDS = 24 * 60 * 60;
+
+/**
+ * The newest record under `DIRECTORY/` on `tip`, by the timestamp in its name.
+ *
+ * A name dated in the future is skipped: the branch is unprotected, and one
+ * planted name would otherwise stay "the previous record" for good.
+ */
 function newestRecord(tip: string): string | undefined {
   const listing = gitOutput(['ls-tree', '--name-only', tip, `${DIRECTORY}/`], ROOT) ?? '';
   const pattern = new RegExp(`^${DIRECTORY}/(\\d+)-[0-9a-z]+${EXTENSION.replace('.', '\\.')}$`);
+  const latest = Date.now() / 1000 + FUTURE_SLACK_SECONDS;
   let newest: { path: string; timestamp: number } | undefined;
   for (const path of listing.split('\n')) {
     const match = pattern.exec(path);
     const timestamp = Number(match?.[1]);
-    if (match !== null && (newest === undefined || timestamp > newest.timestamp)) {
+    if (match === null || timestamp > latest) continue;
+    if (newest === undefined || timestamp > newest.timestamp) {
       newest = { path, timestamp };
     }
   }
   return newest?.path;
 }
 
-/** Writes the newest record on the tip to `PREVIOUS_TO`, or leaves nothing there. */
+/**
+ * Writes the newest record on the tip to `PREVIOUS_TO`, or leaves nothing there.
+ *
+ * Optional, so it never stops tonight's record: an entry `git show` cannot print
+ * is a warning, and the line then reads as a first record.
+ */
 function handBack(tip: string, destination: string): void {
   rmSync(destination, { force: true });
   const path = newestRecord(tip);
   if (path === undefined) return;
+  try {
+    writeFileSync(destination, showBlob(tip, path));
+  } catch (error) {
+    rmSync(destination, { force: true });
+    console.error(`could not hand back the previous record: ${String(error)}`);
+  }
+}
+
+function showBlob(tip: string, path: string): string {
   // Not `gitOutput`, which trims: this is a file's bytes, and it is large.
   const shown = spawnSync('git', ['show', `${tip}:${path}`], {
     cwd: ROOT,
@@ -178,7 +215,7 @@ function handBack(tip: string, destination: string): void {
     maxBuffer: 256 * 1024 * 1024,
   });
   if (shown.status !== 0) throw new Error(`git show ${tip}:${path} exited ${String(shown.status)}`);
-  writeFileSync(destination, shown.stdout);
+  return shown.stdout;
 }
 
 /** Every file on disk under `directory`, `.git` excepted, as `/`-separated paths. */
@@ -231,10 +268,15 @@ function main(): number {
     // it, and no commit made here has it as a parent.
     runExe('git', ['worktree', 'add', '--no-checkout', '--detach', worktree, 'HEAD'], ROOT);
 
+    let handedBack = false;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       const tip = remoteHasBranch() ? fetchTip() : undefined;
-      if (attempt === 1 && PREVIOUS_TO !== undefined && tip !== undefined) {
+      if (tip === undefined) console.log('fetched 0 KiB (the branch does not exist yet)');
+      // On the first tip seen, and never again: the previous record is the one
+      // before ours, and a retry's tip may already hold somebody else's.
+      if (!handedBack && PREVIOUS_TO !== undefined && tip !== undefined) {
         handBack(tip, resolve(ROOT, PREVIOUS_TO));
+        handedBack = true;
       }
 
       // The index only. `--empty` for a branch that does not exist yet.
@@ -243,8 +285,15 @@ function main(): number {
       const destination = join(worktree, DIRECTORY);
       mkdirSync(destination, { recursive: true });
       for (const name of found) {
-        copyFileSync(join(SOURCE, name), join(destination, name));
-        runExe('git', ['add', `${DIRECTORY}/${name}`], worktree);
+        const file = join(destination, name);
+        copyFileSync(join(SOURCE, name), file);
+        const blob = gitOutput(['hash-object', '-w', '--no-filters', file], worktree);
+        if (blob === undefined) throw new Error('git could not store the record');
+        runExe(
+          'git',
+          ['update-index', '--add', '--cacheinfo', `100644,${blob},${DIRECTORY}/${name}`],
+          worktree,
+        );
       }
       console.log(`on disk: ${filesOnDisk(worktree).join(', ')}`);
 

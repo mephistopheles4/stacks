@@ -614,6 +614,16 @@ force-pushable, and append-only is enforced by nothing. Both claims are stated
 once, in [ADR-0055](adr/0055-ci-writes-a-durable-record.md), rather than a sixth
 time here.
 
+**The survivor record is the nightly's second branch, and reading it is two
+commands.** After a clean mutation run on `main`, the nightly commits one
+`survivors/<timestamp>-<sha>.jsonl` to the orphan **`survivors`** branch
+([ADR-0117](adr/0117-survivors-are-matched-by-content-and-recorded-on-their-own-orphan-branch.md),
+[the spec](spec/survivor-record.md)). To read one, run `git fetch origin survivors`,
+then `git show origin/survivors:survivors/<file>`; line 1 is the header and every
+later line is one survivor. The night's job summary carries the one line saying
+what moved, or why there is no record. A plain clone pulls the branch and its
+growth forever; `git clone --single-branch` leaves it out.
+
 ## `pnpm trend:sync` — the reading half, and surface D
 
 **One command, run by hand, when you want to look.** It fetches the `metrics`
