@@ -32,6 +32,8 @@ and custom plugins only; no patching of Tweakpane's DOM.
 
 The rest of the `?debug` page stays plain code until tuning the motion is done.
 
+*Amended by [ADR-0118](0118-one-pane-for-every-debug-instrument.md): the rest of the `?debug` page joins the same pane, one instrument per ticket.*
+
 ## Why on the live site
 
 The phone that crashes is checked against the deployed shelf, which is why

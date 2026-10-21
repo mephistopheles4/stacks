@@ -114,8 +114,12 @@
           "mechanism": "Picking a book up: the drawing half, reached only through `boot.ts`. Same browser-only chain. Its rules are tested where they live, in `pickup-state.ts`, `pickup-motion.ts`, `open-spread.ts`, `held-page.ts` and `notes.ts`."
         },
         {
+          "path": "packages/site/src/shelf/debug-pane.ts",
+          "mechanism": "The debug pane's shell, lazily imported by `boot.ts` behind `?debug`: the one file that holds the real `Pane`. Same browser-only chain, and it imports its stylesheet with Vite's `?url`, which only a Vite build resolves. Its ordering rules are tested where they live, in `pane-slots.ts`."
+        },
+        {
           "path": "packages/site/src/shelf/pickup-tuner.ts",
-          "mechanism": "The pickup tuner, lazily imported by `boot.ts` behind `?debug`. Same browser-only chain, and it imports its stylesheet with Vite's `?url`, which only a Vite build resolves."
+          "mechanism": "The pickup tuner's view, mounted by `debug-pane.ts` behind `?debug`: a loop of Tweakpane calls. Same browser-only chain; the oracle is the real pane in the styled-pane gate. Its logic is tested where it lives, in `pickup-motion.ts`."
         },
         {
           "path": "packages/site/src/shelf/diagnostics.ts",

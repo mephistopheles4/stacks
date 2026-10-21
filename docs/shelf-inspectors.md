@@ -99,23 +99,34 @@ is where the backboard's is held to carrying the root.
 
 ## The debug panel — `?debug`
 
-Loads a **black box**, a **tuning panel** and the **pickup tuner** onto the
-ordinary page. None of them exists for a visitor who does not ask.
+Loads a **black box**, a **tuning panel** and the **debug pane**, whose first
+instrument is the **pickup tuner**, onto the ordinary page. None of them exists for a visitor who does not ask.
 
 - **The black box** (`diagnostics.ts`) records a crash that leaves no error
   behind, and is a **static** import: it has to be running before the thing it
   measures fails. See [The mobile crash](log/2026-08-01-the-mobile-crash-g15.md).
 - **The panel** (`debug-panel.ts`) is every setting the shelf has, live, and is
   **lazy**: its 8.8 KB is paid only by a page that asked for it.
-- **The pickup tuner** (`pickup-tuner.ts`) is Tweakpane with its essentials
-  plugin, **lazy** the same way: it scrubs the held book's timeline, shapes the
-  eases with the curve editor, and exports `PICKUP_MOTION` as the constant to
-  paste back into `shelf-settings.ts`, which is where the values live
+- **The debug pane** (`debug-pane.ts`) is one Tweakpane `Pane`, titled, collapsed
+  at 700px wide or less, and **lazy** behind one dynamic import from `boot.ts`.
+  It is **the only file that imports `tweakpane`, the essentials plugin and the
+  stylesheet as values**, and it gives each instrument a folder through
+  `pane-slots.ts`, which holds the ordering and is unit-tested: an instrument is
+  a view file with a `mount(folder)` that returns its dispose, importing no
+  Tweakpane, plus a pure model file where it has logic. A slot can dispose one
+  instrument's folder and add it again at the same index while the others keep
+  theirs, which the tuning panel's rebuild needs. To remove an instrument, delete
+  its view file and its one `slots.add` line in the shell
+  ([ADR-0118](adr/0118-one-pane-for-every-debug-instrument.md)).
+- **The pickup tuner** (`pickup-tuner.ts`, the pane's first instrument) scrubs
+  the held book's timeline, shapes the eases with the curve editor, and exports
+  `PICKUP_MOTION` as the constant to paste back into `shelf-settings.ts`, which
+  is where the values live
   ([ADR-0104](adr/0104-tweakpane-tunes-the-pickup-behind-debug.md)). Its layout
-  is the owner's to shape in use. It is styled under the page's CSP through two
-  empty `<style data-tp-style>` placeholders and a lazy `<link>`, with the CSS
-  extracted from the packages' text at build time (`tuner-css.ts`). Two gates
-  hold that: one asserts no tuner byte reaches a page without `?debug`, and one
+  is the owner's to shape in use. The pane is styled under the page's CSP through
+  two empty `<style data-tp-style>` placeholders and a lazy `<link>`, with the
+  CSS extracted from the packages' text at build time (`tuner-css.ts`). Two gates
+  hold that: one asserts no pane byte reaches a page without `?debug`, and one
   that the pane is styled with zero violations.
 
 Everything the shelf looks like is one object — `ShelfSettings` in

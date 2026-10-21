@@ -482,13 +482,13 @@ export async function boot(
     if (handle !== undefined) showPanel(handle);
 
     /**
-     * The pickup tuner, the same way: a dynamic import, so Tweakpane, its
-     * essentials plugin and their stylesheet stay out of every page that did
-     * not ask for `?debug`. The tuner-split gate holds that, since #376
-     * measured a plain CSS import hoisted onto every page as silent.
+     * The debug pane, the same way: one dynamic import, so Tweakpane, its
+     * essentials plugin, their stylesheet and every instrument in it stay out of
+     * every page that did not ask for `?debug`. The tuner-split gate holds that,
+     * since #376 measured a plain CSS import hoisted onto every page as silent.
      */
-    const { mountPickupTuner } = await import('./pickup-tuner.ts');
-    mountPickupTuner(host, live.tunable);
+    const { mountDebugPane } = await import('./debug-pane.ts');
+    mountDebugPane(host, { tunable: live.tunable });
   }
 
   watchForRebuilds();

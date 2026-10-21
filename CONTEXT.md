@@ -289,12 +289,21 @@ The staged file of the **held tier**, in `held-covers/`. It exists only for a
 book whose vault cover is larger than 512 px.
 *Avoid*: full cover, large cover.
 
+**Debug pane**:
+The one Tweakpane `Pane` behind `?debug`, titled *Debug pane*: a shell
+(`debug-pane.ts`) that holds the `Pane` and gives each instrument a folder of its
+own, behind one dynamic import ([ADR-0118](docs/adr/0118-one-pane-for-every-debug-instrument.md)).
+It starts collapsed at 700px wide or less. The *pickup tuner* is its first
+instrument; the tuning panel and the black box's readout move in after it.
+*Avoid*: panel on its own (the glossary gives that word to the backboard),
+debug panel for the pane.
+
 **Pickup tuner**:
-The Tweakpane panel behind `?debug` that scrubs the pickup motion and shapes its
+The instrument in the *debug pane* that scrubs the pickup motion and shapes its
 eases ([ADR-0104](docs/adr/0104-tweakpane-tunes-the-pickup-behind-debug.md)). It
 edits `PICKUP_MOTION` live and exports it; it is never where the values live.
 The rest of the `?debug` page is the *debug panel*, or *tuning panel*; either
-name is fine for that one.
+name is fine for that one, until it too joins the pane.
 *Avoid*: panel on its own (the glossary gives that word to the backboard),
 timeline editor.
 

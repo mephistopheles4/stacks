@@ -13,7 +13,7 @@ import { REPO_ROOT } from './repo-root.ts';
  * Vite's `?url` turns into a hashed asset that a lazy `<link>` loads — the one
  * route #376 measured styled under the CSP with nothing reaching a visitor
  * without `?debug`. So the build reads the packages as text, extracts, and
- * writes the result here; `pickup-tuner.ts` imports it with `?url`.
+ * writes the result here; `debug-pane.ts` imports it with `?url`.
  *
  * **Gitignored and regenerated on every build and dev start**, from the pinned
  * packages in `node_modules`, so a version bump changes it with no hand step and
