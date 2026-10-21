@@ -78,7 +78,7 @@ against it two seeds move 507,396 samples at worst Δ 99. A harness asserting
 byte identity has to say which renderer it means, or it will read a GPU's noise
 floor as a seed that did not hold.
 
-⚠️ **No default, and never in `?tune=`.** A default would quietly make every
+⚠️ **No default, and never in the settings diff (`?debug=<json>`).** A default would quietly make every
 render reproducible while the shipped shelf was not, so the refusal lives in the
 harness rather than in the page. And a shareable settings link that froze the
 dice would be a control that lies about a shelf which is supposed to be alive —
@@ -122,11 +122,16 @@ Everything the shelf looks like is one object — `ShelfSettings` in
 `shelf-settings.ts` — and the panel exports it as JSON you paste back into
 `DEFAULT_SETTINGS`. `shelf-url.ts` owns the query string in both directions: the
 ten historic probes keep their flat spellings because `docs/progress.md`
-documents them with measured results, and everything else rides in `?tune=`.
-`?receivers=all` joined them as an eleventh, for their reason: it is how
+documents them with measured results.
+`?receivers=all` joined the ten probes as an eleventh, for their reason: it is how
 `?shadows=1` still reaches what it drew before the books stopped reading the map
 ([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)), and
-it is G61's control. ⚠️ **To re-test the crash by hand, open
+it is G61's control.
+Everything else rides in `?debug=<json>`, a diff from the defaults in the
+value of the parameter that mounts the instruments — so a page without `?debug`
+cannot be tuned by a link. `?tune=` is retired: a page ignores it and prints one
+console line naming the new spelling
+([ADR-0118](adr/0118-the-settings-diff-rides-in-debug.md)). ⚠️ **To re-test the crash by hand, open
 `?shadows=1&receivers=all`, never `?receivers=all` alone**: it is inert while
 shadows are off, and a device carrying a lost-context record starts painted, so
 the page reads no map, survives, and looks like a fixed driver.

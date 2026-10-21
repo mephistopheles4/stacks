@@ -135,7 +135,7 @@ describe('G53 — a default page resolves to exactly one woodwork sheet', () => 
 
     expect(
       wrong.map(({ name, got }) => `${name} → ${got.species}, refused=${String(got.refused)}`),
-      'off-roster names that did not fall back to the default *and say so*. `?tune=` carries ' +
+      'off-roster names that did not fall back to the default *and say so*. `?debug=` carries ' +
         'arbitrary JSON so these are real arrivals, and `__proto__` and `toString` are here ' +
         'because an `in` check would have accepted them as species and resolved to something',
     ).toEqual([]);
