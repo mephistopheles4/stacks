@@ -2634,6 +2634,9 @@ async function checkTuner(browser: Browser, origin: string): Promise<TunerChecke
   for (const error of [...plain.errors, ...debug.errors, ...narrow.errors]) {
     failures.push(`tuner: ${error}`);
   }
+  if (plain.hookPublished) {
+    failures.push('black box hook: window.__blackbox is published on a page without ?debug');
+  }
 
   const reading = debug.pane;
   lines.push(
@@ -2746,6 +2749,8 @@ interface TunerVisit {
     readonly emptyHash: boolean;
   };
   readonly pane: PaneReading;
+  /** Whether `window.__blackbox` was published: behind `?debug` only. */
+  readonly hookPublished: boolean;
   readonly errors: readonly string[];
 }
 
@@ -2841,7 +2846,8 @@ async function visitForTuner(
         : await readPaneAtRest(page);
 
     const fetched = (await Promise.all(reads)).filter((asset) => asset !== undefined);
-    return { fetched, styled, pane, errors };
+    const hookPublished = (await page.evaluate('window.__blackbox !== undefined')) as boolean;
+    return { fetched, styled, pane, hookPublished, errors };
   } finally {
     await context.close();
   }
@@ -2905,6 +2911,9 @@ interface ReadoutReading {
   readonly folder: boolean;
   readonly folderExpanded: boolean;
   readonly monitor: string | null;
+  /** The folder's `forget` button: found, and under a hidden blade. */
+  readonly forgetFound: boolean;
+  readonly forgetHidden: boolean;
   /**
    * Whether the monitor was seen equal to the hook. A moment, not a state: the
    * monitor reads the port on its own tick, so it trails the hook by up to one
@@ -2925,6 +2934,8 @@ const FIND_FOLDER = `(() => {
 const READ_READOUT = `(() => {
   const plain = document.querySelector('.shelf-diagnostics');
   const folder = ${FIND_FOLDER};
+  const forget = folder === undefined ? undefined : [...folder.querySelectorAll('.tp-btnv_b')]
+    .find((b) => b.textContent === 'forget');
   return {
     hook: window.__blackbox === undefined ? null : window.__blackbox.text(),
     plainShown: plain !== null && plain.checkVisibility(),
@@ -2934,6 +2945,8 @@ const READ_READOUT = `(() => {
     folder: folder !== undefined,
     folderExpanded: folder?.classList.contains('tp-fldv-expanded') === true,
     monitor: folder?.querySelector('textarea')?.value ?? null,
+    forgetFound: forget !== undefined,
+    forgetHidden: forget?.closest('.tp-v-hidden') != null,
   };
 })()`;
 
@@ -2950,6 +2963,8 @@ interface ReadoutVisit {
   readonly blockPane?: boolean;
   /** Seed the record of a session that died, before any script runs. */
   readonly seedDeath?: boolean;
+  /** Seed the record of a session that ended cleanly: it must not open anything. */
+  readonly seedClean?: boolean;
   /** The pane is expected: wait for it and for the monitor to catch up. */
   readonly awaitPane: boolean;
 }
@@ -2980,10 +2995,11 @@ async function visitReadout(
         }
       });
     }
-    if (how.seedDeath === true) {
+    if (how.seedDeath === true || how.seedClean === true) {
+      const record = how.seedClean === true ? { ...DEAD_RECORD, clean: true } : DEAD_RECORD;
       await page.evaluateOnNewDocument(
         `localStorage.setItem(${JSON.stringify(BLACKBOX_KEY)}, ${JSON.stringify(
-          JSON.stringify(DEAD_RECORD),
+          JSON.stringify(record),
         )})`,
       );
     }
@@ -3018,7 +3034,13 @@ async function checkReadout(browser: Browser, origin: string): Promise<TunerChec
     blockPane: true,
     awaitPane: false,
   });
-  const loaded = await visitReadout(browser, origin, { viewport: VIEWPORT, awaitPane: true });
+  // Narrow and after a clean exit: the previous session is in the text, and nothing
+  // may open on its account.
+  const loaded = await visitReadout(browser, origin, {
+    viewport: PANE_NARROW_VIEWPORT,
+    seedClean: true,
+    awaitPane: true,
+  });
   const died = await visitReadout(browser, origin, {
     viewport: PANE_NARROW_VIEWPORT,
     seedDeath: true,
@@ -3028,7 +3050,9 @@ async function checkReadout(browser: Browser, origin: string): Promise<TunerChec
   const lines = [
     `no pane      chunk aborted ${String(none.aborted)}x   plain readout ${none.plainShown ? 'shown' : 'NOT SHOWN'}   ` +
       `hook ${none.hook === null ? 'ABSENT' : `${String(none.hook.length)} chars`}`,
-    `pane loaded  monitor ${loaded.monitor === null ? 'NOT FOUND' : `${String(loaded.monitor.length)} chars`}   ` +
+    `pane loaded after a clean exit at ${String(PANE_NARROW_VIEWPORT.width)}px   pane ${loaded.paneExpanded ? 'OPEN' : 'collapsed'}   forget ${
+      loaded.forgetFound ? (loaded.forgetHidden ? 'hidden' : 'SHOWN') : 'NOT FOUND'
+    }   monitor ${loaded.monitor === null ? 'NOT FOUND' : `${String(loaded.monitor.length)} chars`}   ` +
       `${loaded.matched ? 'equals' : 'DIFFERS FROM'} the hook   ` +
       `plain readout ${loaded.plainShown ? 'STILL SHOWN' : 'stepped aside'}`,
     `staged death at ${String(PANE_NARROW_VIEWPORT.width)}px   pane ${died.paneExpanded ? 'open' : 'CLOSED'}   ` +
@@ -3087,12 +3111,25 @@ function judgeReadout(
       'readout (pane loaded): the plain readout still shows beside the folder, so nothing claimed it',
     );
   }
+  if (loaded.paneExpanded) {
+    failures.push('readout (pane loaded): a clean exit opened the pane at 700px');
+  }
+  if (!loaded.forgetFound || !loaded.forgetHidden) {
+    failures.push(
+      'readout (pane loaded): the forget button is missing or shown with no lost-context record to forget',
+    );
+  }
 
   // A death opens the pane and the folder at a width where the pane starts closed.
   if (!died.paneExpanded) failures.push('readout (staged death): the pane is collapsed at 700px');
   if (!died.folderExpanded) failures.push('readout (staged death): the Black box folder is closed');
   if (died.monitor?.includes('PREVIOUS SESSION DIED') !== true) {
     failures.push('readout (staged death): the folder does not show the death line');
+  }
+  if (!died.matched) {
+    failures.push(
+      'readout (staged death): the monitor never equalled window.__blackbox.text() with a record part in it',
+    );
   }
   return failures;
 }

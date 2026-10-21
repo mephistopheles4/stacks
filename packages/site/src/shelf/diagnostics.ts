@@ -182,7 +182,10 @@ export interface DiagnosticsPort {
   canForget(): boolean;
   /** Forgets the lost-context record; returns the sentence to show. */
   forget(): string;
-  /** Hides the plain readout: the holder shows it instead. */
+  /**
+   * Hides the plain readout: the holder shows it instead. A flag and not a
+   * count, for one holder at a time: `release` shows it again whoever else holds.
+   */
   claim(): void;
   /** Shows the plain readout again. */
   release(): void;

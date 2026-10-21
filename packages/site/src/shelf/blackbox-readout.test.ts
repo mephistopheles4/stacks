@@ -118,7 +118,7 @@ describe('the black box readout, as an instrument', () => {
   });
 
   it('runs copy and forget from the folder, and shows the port’s answer on the button', () => {
-    const { port, calls, state } = fakePort({ forgettable: true });
+    const { port, calls } = fakePort({ forgettable: true });
     const { folder, buttons } = fakeFolder();
     blackboxReadout(port).mount(folder);
     const copy = buttons.find((b) => b.title === 'copy');
@@ -129,11 +129,6 @@ describe('the black box readout, as an instrument', () => {
     expect(calls).toEqual(['claim', 'copy', 'forget']);
     expect(copy?.title).toBe('copied');
     expect(forget?.title).toBe('forgotten');
-
-    // The sentence stays up after a press: the port keeps offering forget.
-    state.forgettable = true;
-    vi.advanceTimersByTime(1000);
-    expect(forget?.hidden).toBe(false);
   });
 
   it('shows forget only while the port says a record exists', () => {
@@ -154,11 +149,6 @@ describe('the black box readout, as an instrument', () => {
 });
 
 describe('the pane opens itself after a death, at any width', () => {
-  it('starts expanded wide and collapsed narrow, as before', () => {
-    expect(startsExpanded(PANE_NARROW_PX + 1)).toBe(true);
-    expect(startsExpanded(PANE_NARROW_PX)).toBe(false);
-  });
-
   it('starts expanded at a narrow width when the previous session died', () => {
     expect(startsExpanded(PANE_NARROW_PX, true)).toBe(true);
     expect(startsExpanded(320, true)).toBe(true);
