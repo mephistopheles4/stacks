@@ -2473,7 +2473,7 @@ function applyLive(
      *
      * A diffuse map **multiplies** `color`, so `bindSheet` sets the material
      * white once the sheet decodes. Repainting it here with the knob's own value
-     * — one tick of the debug panel, one `?tune=` — would put a dark colour back
+     * — one tick of the debug panel, one `?debug=` — would put a dark colour back
      * under a live sheet and darken the whole bookcase at a third of the
      * brightness somebody judged. Once the sheet is bound the knob is the
      * fallback and nothing else, and the report says so rather than claiming a
@@ -2587,7 +2587,7 @@ function applyLive(
    * ⚠️ **Resolved from `next`, not read off `bookcase.resolved`.** The two
    * differ exactly when a species change is waiting for a rebuild, and the
    * refusal has to reach the report *when the value is set* rather than one
-   * rebuild later — a typo in a `?tune=` would otherwise show the default shelf
+   * rebuild later — a typo in a `?debug=` would otherwise show the default shelf
    * and say nothing at all until somebody happened to press rebuild.
    *
    * The words themselves are `describeWoodwork`'s, in a module with no Three.js
