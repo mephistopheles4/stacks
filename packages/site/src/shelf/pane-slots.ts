@@ -16,8 +16,12 @@
 /** At this width or less the pane starts collapsed, as the tuning panel did. */
 export const PANE_NARROW_PX = 700;
 
-export function startsExpanded(viewportWidth: number): boolean {
-  return viewportWidth > PANE_NARROW_PX;
+/**
+ * Wide enough, or the previous session died: a pane collapsed on a phone would
+ * put `PREVIOUS SESSION DIED` behind a tap (#488).
+ */
+export function startsExpanded(viewportWidth: number, previousDied = false): boolean {
+  return previousDied || viewportWidth > PANE_NARROW_PX;
 }
 
 /**
@@ -34,6 +38,10 @@ export interface Changeable<T> {
   on(event: 'change', handler: (event: { readonly value: T }) => void): Changeable<T>;
 }
 export interface Clickable {
+  /** The label on the button; set to show an outcome. */
+  title: string;
+  /** Tweakpane's blade `hidden`. */
+  hidden: boolean;
   on(event: 'click', handler: () => void): Clickable;
 }
 export interface FolderSlice {
