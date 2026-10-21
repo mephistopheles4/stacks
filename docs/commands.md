@@ -1132,9 +1132,10 @@ fails outright with a network error instead of quietly reaching a server.
   does not.
 - **`smoke` sets `CI=true` and runs Chromium with `--no-sandbox`.** `CI=true` is
   what makes `smoke-render.ts` ask for SwiftShader; without it there is no GPU
-  and no WebGL context. `--no-sandbox` is because athanor starts the container
-  with `no-new-privileges`, under which Chromium cannot make its own sandbox and
-  refuses to launch. `/usr/bin/google-chrome` in the image is a wrapper that
+  and no WebGL context. `--no-sandbox` is because Docker's default seccomp
+  profile, which athanor leaves in place, stops Chromium making its own sandbox,
+  so it refuses to launch: measured under a plain `docker run` too, and it
+  starts only with `--security-opt seccomp=unconfined`. `/usr/bin/google-chrome` in the image is a wrapper that
   adds it. The container is the sandbox: no network, nothing mounted, and the
   only page loaded is the fixture site the run just built. ⚠️ **It is an
   accepted risk, on the owner's word** (ADR-0122): if `smoke` is ever pointed at

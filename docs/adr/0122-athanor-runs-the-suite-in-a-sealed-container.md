@@ -31,12 +31,16 @@ Keying the image on the manifests rather than the source keeps a source edit
 from rebuilding it.
 
 **`--no-sandbox` is the surprising part, and it was measured, not assumed.**
-The first `smoke` run failed at launch with Chromium's "No usable sandbox!":
-athanor starts every container with `no-new-privileges`, and Chromium cannot
-make its user-namespace sandbox under it. The other ways out were worse.
-Changing athanor's container options is a security-sensitive change to athanor
-itself (its ADR 0005), and leaving `smoke` out loses the one gate that drives a
-browser. The container carries the isolation the sandbox would: no network,
+The first `smoke` run failed at launch with Chromium's "No usable sandbox!".
+The cause is Docker's default seccomp profile, which athanor does not change,
+and not athanor's `no-new-privileges`: launched by hand in the same image,
+Chromium fails the same way under a plain `docker run` and under one with only
+`no-new-privileges`, and starts only with `--security-opt seccomp=unconfined`.
+The first draft of this record named `no-new-privileges`; that was inferred
+from the flag list, and the measurement corrected it. The other ways out were
+worse. Running the container unconfined is a security-sensitive change to
+athanor itself (its ADR 0005), and weakens every repo's runs to fix one, and
+leaving `smoke` out loses the one gate that drives a browser. The container carries the isolation the sandbox would: no network,
 no mount, and the only page loaded is the fixture site that same run built.
 
 `CI=true` is what already makes `smoke-render.ts` choose SwiftShader. With no

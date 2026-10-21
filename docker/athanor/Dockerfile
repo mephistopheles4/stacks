@@ -1,4 +1,4 @@
-# The image `athanor run` tests stacks in: see docs/commands.md and ADR-0118.
+# The image `athanor run` tests stacks in: see docs/commands.md and ADR-0122.
 #
 # athanor untars the working tree into $HOME/work and runs the command there,
 # with no network. So the workspace is installed into that same folder here,
@@ -10,8 +10,9 @@ FROM node:24-bookworm-slim
 # gates that call `git ls-files`. Chromium for `smoke`, at the path
 # smoke-render.ts probes.
 #
-# ⚠️ --no-sandbox: athanor starts the container with no-new-privileges, so
-# Chromium cannot make its user-namespace sandbox and refuses to launch. The
+# ⚠️ --no-sandbox: Docker's default seccomp profile, which athanor leaves in
+# place, stops Chromium making its user-namespace sandbox, so it refuses to
+# launch. The
 # container is the sandbox here: no network, nothing mounted, and the only page
 # it loads is the fixture site the run itself just built. The owner accepted
 # this risk on 2026-10-21; ADR-0122 records it.
