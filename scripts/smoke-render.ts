@@ -2895,6 +2895,7 @@ const TUNING_HELPERS = `(() => {
       label: r.querySelector('.tp-lblv_l')?.textContent ?? '',
       disabled: r.classList.contains('tp-v-disabled') || input?.disabled === true,
       value: input?.value ?? '',
+      knob: r.querySelector('.tp-sldv_k')?.style.width ?? '',
       options: r.querySelector('select') === null ? [] : [...r.querySelector('select').options].map((o) => o.textContent),
     };
   };
@@ -2921,6 +2922,8 @@ interface TuningRead {
   readonly label: string;
   readonly disabled: boolean;
   readonly value: string;
+  /** A slider's knob, as a share of its track: the rendered range. */
+  readonly knob: string;
   readonly options: readonly string[];
 }
 
@@ -3107,6 +3110,14 @@ async function checkTuningPanel(browser: Browser, origin: string): Promise<Tuner
       `(() => { const r = window.__t.read('exposure'); return r !== null && Number(r.value) === 1 && r.disabled && r.label.includes('pick a tone mapping first'); })()`,
       'exposure back to 1 and disabled after a reset',
     );
+    // The stretched range is gone: a 1 on a 0.1–3 track sits a third of the way
+    // along, where on the 0.1–5 track it was planted on it sits a fifth.
+    const reset = await read(page, 'exposure');
+    if (reset === null || Math.abs(parseFloat(reset.knob) - ((1 - 0.1) / (3 - 0.1)) * 100) > 1) {
+      fail(
+        `after a reset exposure's knob is at ${reset?.knob ?? '(no row)'}, so its range did not shrink back`,
+      );
+    }
     const url = decodeURIComponent((await page.evaluate('location.search')) as string);
     if (url !== '?debug') fail(`after a reset the address is "${url}", not "?debug"`);
     lines.push(
