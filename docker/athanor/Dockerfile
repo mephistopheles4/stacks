@@ -13,8 +13,8 @@ FROM node:24-bookworm-slim
 # ⚠️ --no-sandbox: athanor starts the container with no-new-privileges, so
 # Chromium cannot make its user-namespace sandbox and refuses to launch. The
 # container is the sandbox here: no network, nothing mounted, and the only page
-# it loads is the fixture site the run itself just built. ADR-0122, where this
-# wrapper is still waiting on the owner's word.
+# it loads is the fixture site the run itself just built. The owner accepted
+# this risk on 2026-10-21; ADR-0122 records it.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates chromium fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/* \

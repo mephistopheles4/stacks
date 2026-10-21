@@ -1,11 +1,12 @@
 # ADR-0122 — athanor runs the suite in a sealed container, from an image that holds the installed workspace
 
 **Date:** 2026-10-21
-**Status:** proposed. The image and the four other commands stand; **the
-`--no-sandbox` wrapper waits on the owner's word**, because it accepts a risk,
-and the repository has no threat model to record that in. Until then `smoke`
-is named but not accepted. If the answer is no, the wrapper and the `smoke`
-command come out together.
+**Status:** accepted. **The `--no-sandbox` wrapper is an accepted risk, on the
+owner's word**, given in chat on 2026-10-21 in the session that built this:
+Chromium in this image runs without its own sandbox, accepted because the
+container is offline, has nothing mounted, and loads only the fixture site the
+run itself built. The repository has no threat model, so this record is where
+that acceptance lives, as ADR-0116's is.
 
 ## Decision
 

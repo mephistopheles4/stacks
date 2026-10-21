@@ -1136,9 +1136,9 @@ fails outright with a network error instead of quietly reaching a server.
   with `no-new-privileges`, under which Chromium cannot make its own sandbox and
   refuses to launch. `/usr/bin/google-chrome` in the image is a wrapper that
   adds it. The container is the sandbox: no network, nothing mounted, and the
-  only page loaded is the fixture site the run just built. ⚠️ **That wrapper
-  is still waiting on the owner's word** (ADR-0122); if the answer is no, it
-  and the `smoke` command come out together.
+  only page loaded is the fixture site the run just built. ⚠️ **It is an
+  accepted risk, on the owner's word** (ADR-0122): if `smoke` is ever pointed at
+  a page from outside the run, that reasoning stops holding.
 - **The screenshot does not come back.** `artifacts/shelf.png` is written inside
   the container and removed with it. `athanor run smoke` answers whether the
   gate passes; a picture to review still needs `pnpm smoke:render` on the host.
