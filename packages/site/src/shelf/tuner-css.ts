@@ -1,5 +1,5 @@
 /**
- * The pickup tuner's stylesheet, read out of the two packages **as text**.
+ * The debug pane's stylesheet, read out of the two packages **as text**.
  *
  * Tweakpane and `@tweakpane/plugin-essentials` ship no `.css` file. Each carries
  * its stylesheet as a string literal and injects it as a runtime `<style>`

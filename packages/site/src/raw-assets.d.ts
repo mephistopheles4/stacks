@@ -19,7 +19,7 @@ declare module '*.svg?raw' {
 /**
  * `import … from './x.css?url'` — Vite's URL loader: the hashed path of a
  * stylesheet emitted as its own file, never inlined and never hoisted onto the
- * page. The pickup tuner's CSS reaches the page this way; see `pickup-tuner.ts`.
+ * page. The debug pane's CSS reaches the page this way; see `debug-pane.ts`.
  */
 declare module '*.css?url' {
   const url: string;
