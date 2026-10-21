@@ -198,7 +198,7 @@ describe('G54 — an unrecognised species is refused out loud, never silently de
 
     expect(
       refused,
-      'refusals for a species nobody has rendered. Silence here is a `?tune=` typo showing ' +
+      'refusals for a species nobody has rendered. Silence here is a `?debug=` typo showing ' +
         'the default shelf and claiming it was applied',
     ).toHaveLength(1);
     expect(refused[0], 'the refusal must name what was asked for').toContain('walnut');

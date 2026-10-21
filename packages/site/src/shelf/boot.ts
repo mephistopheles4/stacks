@@ -36,7 +36,7 @@ import {
   UNAVAILABLE_MESSAGE,
 } from './shelf-notice.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
-import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
+import { bookLimit, readSettings, retiredTuneHint, soloBook } from './shelf-url.ts';
 
 /**
  * Wires the page up: load the library, mount the shelf, pick a book up on click.
@@ -144,6 +144,8 @@ export async function boot(
   const all = await loadLibrary();
   const books = limit === undefined ? all : all.slice(0, limit);
   const debug = params.has('debug');
+  const retired = retiredTuneHint(params);
+  if (retired !== undefined) console.info(retired);
 
   /**
    * The lost-context record, read before anything is drawn.

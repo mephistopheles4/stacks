@@ -336,8 +336,8 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
      * ⚠️ **A `<select>` whose value matches no option renders blank**, and blank
      * is a *third* state that reads as a bug: an empty box is what a visitor
      * sees when a menu failed to populate. The case is real —
-     * `?tune={"materials":{"woodSpecies":"walnut"}}` reaches the panel with
-     * `walnut` genuinely in the settings, because `readTune` validates
+     * `?debug={"materials":{"woodSpecies":"walnut"}}` reaches the panel with
+     * `walnut` genuinely in the settings, because `readDiff` validates
      * `toneMapping` against its name list and checks `exposure` is finite but
      * passes `materials` through as an opaque record. So the settings object can
      * hold a string no option offers, and it must: #300 requires an
@@ -372,7 +372,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
       // changed does not need resyncing from itself, and `resync` is for a bulk
       // settings load. But the stray option below is the one part of this
       // control that is *not* about the value that just changed: without this
-      // call, picking a real species off a typo'd `?tune=` leaves `walnut` in
+      // call, picking a real species off a typo'd `?debug=` leaves `walnut` in
       // the list for the life of the page, naming a setting nothing holds any
       // more. Cosmetic, and still a control saying something untrue.
       show();

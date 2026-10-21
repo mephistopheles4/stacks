@@ -242,10 +242,10 @@ export type WoodSpecies = 'rosewood' | 'sapele' | 'flat';
  * resolved — and the distinction is load-bearing rather than pedantic.
  *
  * ⚠️ **`ShelfSettings` can genuinely hold a string off this roster.**
- * `readTune` validates `toneMapping` against `TONE_MAPPING_NAMES` and checks
+ * `readDiff` validates `toneMapping` against `TONE_MAPPING_NAMES` and checks
  * `exposure` is finite, but passes `materials` through as an opaque record —
- * `isRecord(tune.materials) ? tune.materials : {}` and nothing more — so
- * `?tune={"materials":{"woodSpecies":"walnut"}}` arrives with `walnut` in the
+ * `isRecord(diff.materials) ? diff.materials : {}` and nothing more — so
+ * `?debug={"materials":{"woodSpecies":"walnut"}}` arrives with `walnut` in the
  * settings object. Typing the field as the roster alone would be **the type
  * asserting something the runtime does not guarantee**, which is a control
  * lying in the one place nothing can go red.
@@ -381,7 +381,7 @@ export const ALL_SHEETS: readonly Sheet[] = [WOODWORK_SHEET, SAPELE_SHEET, BACKB
  * An unrecognised name still has to render *something* — there is no bookcase
  * with no colour on it — so it falls back to the default. What it must not do is
  * fall back **quietly**: `refused` is the string `applySettings` puts in
- * `ApplyReport.refused`, so a `?tune=` carrying a typo shows the default shelf
+ * `ApplyReport.refused`, so a `?debug=` carrying a typo shows the default shelf
  * and *says* it is showing the default shelf. A silent fallback is the shape of
  * every defect in the paragraph above.
  *
@@ -392,14 +392,14 @@ export const ALL_SHEETS: readonly Sheet[] = [WOODWORK_SHEET, SAPELE_SHEET, BACKB
  * not lie** and a dropped value looks like a value that was applied.
  *
  * ⚠️ **And nothing upstream would catch it, which is why the refusal has to be
- * here.** `readTune` validates `toneMapping` against `TONE_MAPPING_NAMES` and
+ * here.** `readDiff` validates `toneMapping` against `TONE_MAPPING_NAMES` and
  * checks `exposure` is a finite number, but passes `materials` through as an
- * opaque record — `isRecord(tune.materials) ? tune.materials : {}` and nothing
+ * opaque record — `isRecord(diff.materials) ? diff.materials : {}` and nothing
  * more. Every other `materials` key is a number or a nested object of numbers,
  * so `woodSpecies` is the **first string-valued key in there and the first one
  * where an invalid value can mean something**. That asymmetry is why
- * `?tune={"materials":{"woodSpecies":"walnut"}}` arrives here intact while
- * `?tune={"toneMapping":"walnut"}` never would, and the next string-valued
+ * `?debug={"materials":{"woodSpecies":"walnut"}}` arrives here intact while
+ * `?debug={"toneMapping":"walnut"}` never would, and the next string-valued
  * `materials` key will meet it too.
  */
 export interface ResolvedWoodwork {
@@ -555,7 +555,7 @@ export function describeWoodwork(
       (fibreInForce === fibreAsked ? '' : ` (asked for ${String(fibreAsked)})`),
   ];
 
-  // Refused *and* reported, never silently defaulted. `?tune=` carries arbitrary
+  // Refused *and* reported, never silently defaulted. `?debug=` carries arbitrary
   // JSON, so this key can arrive holding a typo; dropping it would look exactly
   // like a value that was applied.
   return { resolved, refused: wanted.refused === undefined ? [] : [wanted.refused] };
@@ -690,7 +690,7 @@ export function worldSpaceUvs(geometry: THREE.BoxGeometry, sheet: SheetLay, grai
  *
  * ⚠️ **`applySettings` has to route through this, and that is the trap.** It
  * repaints the material on any change to `materials.wood`; unrouted, one tick of
- * the debug panel or one `?tune=` would put a dark colour back under a decoded
+ * the debug panel or one `?debug=` would put a dark colour back under a decoded
  * sheet and darken the whole bookcase. Once the sheet is bound the knob is a
  * fallback and nothing else, and the `ApplyReport` says so rather than claiming
  * a change the eye cannot find — the map's standing rule that **a control must
