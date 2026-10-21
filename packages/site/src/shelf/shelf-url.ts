@@ -30,8 +30,11 @@ import {
  * that rule: it is how `?shadows=1` still reaches what it drew before the books
  * stopped reading the map.
  *
- * **Everything else rides in `?tune=`**, a URI-encoded JSON *diff from the
- * defaults*. Lights, colours, fog, tone mapping and materials have no historic
+ * **Everything else rides in `?debug=<json>`**, a URI-encoded JSON *diff from
+ * the defaults* — the value of the one parameter that already mounts the
+ * instruments, so a page without `?debug` cannot be tuned by a link
+ * (ADR-0118). It was `?tune=` until then; `retiredTuneHint` says so to anyone
+ * holding an old link. Lights, colours, fog, tone mapping and materials have no historic
  * spelling, there are thirty of them, and inventing thirty more parameters would
  * produce a URL nobody could read anyway. A diff rather than the whole object so
  * a shelf running defaults has a clean address, and so the parameter stays short
@@ -67,7 +70,7 @@ export function bookLimit(params: URLSearchParams): number | undefined {
  * `?solo=N` — one book, alone, with no bookcase and an unclamped orbit.
  *
  * A flat spelling, joining the ten historic probes rather than riding in
- * `?tune=`, for their reason: it is typed by hand while you are looking at
+ * `?debug=`, for their reason: it is typed by hand while you are looking at
  * something, and it is a *mode* rather than a setting. `?solo` on its own is the
  * first book. See `book-inspector.ts`.
  *
@@ -87,11 +90,11 @@ export function soloBook(params: URLSearchParams): number | undefined {
 /**
  * `?woodSeed=<token>` — the root every member's dice are drawn off.
  *
- * A flat spelling, beside `?solo` and `?debug` rather than inside `?tune=`, for
+ * A flat spelling, beside `?solo` and `?debug` rather than inside `?debug=`, for
  * their reason and one of its own: a seed is an **instrument**, not a setting.
  * [#287](https://github.com/mephistopheles4/stacks/issues/287) settled that a
  * member of the bookcase has no identity — the dice are thrown fresh on every
- * page load and the promise is one page load only — and a shareable `?tune=`
+ * page load and the promise is one page load only — and a shareable `?debug=`
  * link that froze them would be a control that lies about a shelf which is
  * supposed to be alive. `?woodSeed=` exists so the render harness can hold the
  * dice still and have two frames differ by the arm under test.
@@ -151,7 +154,7 @@ export function woodSeed(params: URLSearchParams): string | undefined {
  * silently defaulted one.
  */
 export function readSettings(params: URLSearchParams): SettingsPatch {
-  const patch = readTune(params);
+  const patch = readDiff(params);
 
   /**
    * `?aa=0` — MSAA resolve is the expensive path on a tile-based GPU, and a
@@ -308,16 +311,16 @@ export function writeSettings(
   probe('shadowfetch', s.fetch !== d.shadows.fetch, s.fetch ? '1' : '0');
   probe('painted', s.painted !== d.shadows.painted, s.painted ? '1' : '0');
 
-  const tune = tuneDiff(settings);
-  if (tune === undefined) params.delete('tune');
-  else params.set('tune', tune);
+  // `set` keeps `debug` where it already sat, so a diff does not reorder the query.
+  params.set('debug', diffText(settings) ?? '');
+  params.delete('tune');
 
   /**
-   * `?debug` is written back without a value.
+   * An empty diff writes `?debug` without a value.
    *
-   * `URLSearchParams.toString()` renders a valueless parameter as `debug=`, and
+   * `URLSearchParams.toString()` renders an empty value as `debug=`, and
    * `?debug=&aa=0` reads as broken to anyone about to paste it into an issue.
-   * The parameter is a switch, not a value, and the URL should say so.
+   * With no diff the parameter is a switch, not a value, and the URL should say so.
    */
   const query = params.toString().replace(/(^|&)debug=(&|$)/, '$1debug$2');
   // The current entry's state passes through untouched: a held book owns it
@@ -355,7 +358,7 @@ export function keepSettingsInAddress(
 /* -------------------------------------------------------------------------- */
 
 /** The half of the settings with no historic spelling, as a diff from defaults. */
-interface Tune {
+interface Diff {
   effects?: unknown;
   lighting?: unknown;
   scene?: unknown;
@@ -365,9 +368,9 @@ interface Tune {
   exposure?: number;
 }
 
-function tuneDiff(settings: ShelfSettings): string | undefined {
+function diffText(settings: ShelfSettings): string | undefined {
   const d = DEFAULT_SETTINGS;
-  const tune: Tune = {
+  const diff: Diff = {
     ...(same(settings.lighting, d.lighting) ? {} : { lighting: settings.lighting }),
     ...(same(settings.scene, d.scene) ? {} : { scene: settings.scene }),
     ...(same(settings.materials, d.materials) ? {} : { materials: settings.materials }),
@@ -381,11 +384,42 @@ function tuneDiff(settings: ShelfSettings): string | undefined {
       : { exposure: settings.renderer.exposure }),
   };
 
-  return Object.keys(tune).length === 0 ? undefined : JSON.stringify(tune);
+  return Object.keys(diff).length === 0 ? undefined : JSON.stringify(diff);
 }
 
 /**
- * Reads `?tune=`, and refuses anything it does not recognise.
+ * The sentence a page prints for a `?tune=` link, or `undefined` when there is
+ * none. `?tune=` is retired and changes nothing; a link that still carries it
+ * would otherwise show the shipped shelf with no word about why. The caller
+ * prints it, so this stays pure and a Node test can hold it.
+ */
+export function retiredTuneHint(params: URLSearchParams): string | undefined {
+  if (!params.has('tune')) return undefined;
+  return '?tune= is retired and was ignored — the settings diff now rides in ?debug=<json>.';
+}
+
+/**
+ * Whether a query string asks for anything beyond turning the instruments on.
+ *
+ * Bare `?debug` mounts the black box and the panel and changes no renderer
+ * setting, so it is the safe address. Any other parameter is a configuration,
+ * and so is a `?debug=<json>` whose diff changes at least one setting — a
+ * value that reads as no diff is bare `?debug` by another spelling. A crash
+ * record implicates a configuration (`diagnostics.ts`).
+ */
+export function carriesSettings(query: string): boolean {
+  const params = new URLSearchParams(query);
+  if (hasSettings(readDiff(params))) return true;
+  params.delete('debug');
+  return [...params.keys()].length > 0;
+}
+
+function hasSettings(patch: SettingsPatch): boolean {
+  return Object.values(patch).some((section) => Object.keys(section as object).length > 0);
+}
+
+/**
+ * Reads the diff from the value of `?debug`, and refuses anything it does not recognise.
  *
  * The parameter is hand-editable and survives a paste through chat clients that
  * mangle characters, so it is validated rather than trusted: a malformed value
@@ -393,18 +427,18 @@ function tuneDiff(settings: ShelfSettings): string | undefined {
  * right here for the same reason a malformed `?books=` shows the whole shelf —
  * an unreadable setting must not look like a deliberate one.
  */
-function readTune(params: URLSearchParams): SettingsPatch {
-  const raw = params.get('tune');
-  if (raw === null) return {};
+function readDiff(params: URLSearchParams): SettingsPatch {
+  const raw = params.get('debug');
+  if (raw === null || raw === '') return {};
 
-  const tune = tuneObject(raw);
-  if (tune === undefined) return {};
+  const diff = diffObject(raw);
+  if (diff === undefined) return {};
 
-  return { renderer: tuneRenderer(tune), ...tuneSections(tune) };
+  return { renderer: diffRenderer(diff), ...diffSections(diff) };
 }
 
-/** `?tune=`'s value as an object, or `undefined` when it is not JSON or not an object. */
-function tuneObject(raw: string): Tune | undefined {
+/** `?debug`'s value as an object, or `undefined` when it is not JSON or not an object. */
+function diffObject(raw: string): Diff | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -415,27 +449,27 @@ function tuneObject(raw: string): Tune | undefined {
 }
 
 /** The two renderer keys, each kept only when it is a value the renderer accepts. */
-function tuneRenderer(tune: Tune): Partial<ShelfSettings['renderer']> {
+function diffRenderer(diff: Diff): Partial<ShelfSettings['renderer']> {
   return {
-    ...(tune.toneMapping !== undefined && TONE_MAPPING_NAMES.includes(tune.toneMapping)
-      ? { toneMapping: tune.toneMapping }
+    ...(diff.toneMapping !== undefined && TONE_MAPPING_NAMES.includes(diff.toneMapping)
+      ? { toneMapping: diff.toneMapping }
       : {}),
-    ...(typeof tune.exposure === 'number' && Number.isFinite(tune.exposure)
-      ? { exposure: tune.exposure }
+    ...(typeof diff.exposure === 'number' && Number.isFinite(diff.exposure)
+      ? { exposure: diff.exposure }
       : {}),
   };
 }
 
 /** The five sections, each kept only when it is an object. */
-function tuneSections(tune: Tune): Omit<SettingsPatch, 'renderer'> {
+function diffSections(diff: Diff): Omit<SettingsPatch, 'renderer'> {
   return {
-    ...(isRecord(tune.lighting) ? { lighting: tune.lighting as SettingsPatch['lighting'] } : {}),
-    ...(isRecord(tune.scene) ? { scene: tune.scene as SettingsPatch['scene'] } : {}),
-    ...(isRecord(tune.materials)
-      ? { materials: tune.materials as SettingsPatch['materials'] }
+    ...(isRecord(diff.lighting) ? { lighting: diff.lighting as SettingsPatch['lighting'] } : {}),
+    ...(isRecord(diff.scene) ? { scene: diff.scene as SettingsPatch['scene'] } : {}),
+    ...(isRecord(diff.materials)
+      ? { materials: diff.materials as SettingsPatch['materials'] }
       : {}),
-    ...(isRecord(tune.books) ? { books: tune.books as SettingsPatch['books'] } : {}),
-    ...(isRecord(tune.effects) ? { effects: tune.effects as SettingsPatch['effects'] } : {}),
+    ...(isRecord(diff.books) ? { books: diff.books as SettingsPatch['books'] } : {}),
+    ...(isRecord(diff.effects) ? { effects: diff.effects as SettingsPatch['effects'] } : {}),
   };
 }
 

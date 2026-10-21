@@ -112,7 +112,7 @@ describe('litFailures', () => {
   });
 
   it('fails on the instrument when the plant does not read black', () => {
-    // A plant that did nothing — the tune ignored, say — measures like the real
+    // A plant that did nothing — the diff ignored, say — measures like the real
     // page. The large library's own verdict must not stand on that.
     const failures = litFailures({ control, large: lit(70), planted: lit(70) });
 

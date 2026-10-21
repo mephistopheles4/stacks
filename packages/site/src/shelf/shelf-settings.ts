@@ -280,7 +280,7 @@ export interface MaterialSettings {
    * visitor nothing.
    *
    * ⚠️ **An unrecognised name is refused and reported, never silently
-   * defaulted.** `?tune=` carries arbitrary JSON, so this key can arrive holding
+   * defaulted.** `?debug=` carries arbitrary JSON, so this key can arrive holding
    * a typo; `resolveWoodwork` falls back to `rosewood` and hands
    * `applySettings` a refusal to name. A dropped value looks exactly like a
    * value that was applied, and the standing rule is that a control must not
@@ -289,7 +289,7 @@ export interface MaterialSettings {
   /**
    * ⚠️ **`RequestedSpecies` and not `WoodSpecies`, because this is what was
    * *asked for* rather than what is in force.** `readTune` passes `materials`
-   * through as an opaque record, so a `?tune=` can genuinely put `walnut` here
+   * through as an opaque record, so a `?debug=` can genuinely put `walnut` here
    * — and it must be able to, since an unrecognised species is refused *and
    * reported*, and a refusal can only name what was asked for if the value
    * survived. `resolveWoodwork` is the one place it becomes a `WoodSpecies`.

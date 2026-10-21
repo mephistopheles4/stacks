@@ -334,7 +334,7 @@ async function checkLargeLibraryLit(
 ): Promise<LitChecked> {
   const failures: string[] = [];
   const seed = `woodSeed=${LIT_SEED}`;
-  const plant = `tune=${encodeURIComponent(JSON.stringify(FOG_OVER_THE_BOOKCASE))}`;
+  const plant = `debug=${encodeURIComponent(JSON.stringify(FOG_OVER_THE_BOOKCASE))}`;
 
   const control = await grabFrame(browser, `${main}/?${seed}`, failures);
   const largePage = await grabFrame(browser, `${large}/?${seed}`, failures);
