@@ -50,7 +50,7 @@ panel has to guard against it, and how is set out below.
 | **Status lines** | **Public API** | `addBinding(status, 'text', { readonly: true, multiline: true, rows: 4, interval: 0 })`, then `pane.refresh()` after each apply. A string monitor's buffer defaults to 1 (l. 7195–7196), so it shows **only the latest value**, with its own `\n`s, not a log. `interval: 0` makes a `ManualTicker` (l. 7171–7175), so it moves only on `refresh()`. **Spike:** `line one\nline two` became `line three` after a refresh. The textarea is a fixed `rows` high and scrolls past that |
 | **Copy-JSON** | **Public API** | `addButton({ title: 'copy settings JSON' }).on('click', …)`, and `button.title = 'copied — paste into shelf-settings.ts'` for the 2.5 s confirmation. `ButtonApi.title` has a setter (l. 1483–1489). **Spike:** the title changed |
 | **Reset** | **Public API** | A button, as above, then the resync path |
-| **fps / draws / textures readout as monitor bindings** | **Public API** (essentials adds a graph if wanted) | One readonly number monitor per figure, bound to an object the 250 ms tick fills from `handle.stats()`. Either `interval: 250`, which polls the object itself, or `interval: 0` plus a `refresh()` from the existing timer. **Spike:** with `interval: 0`, the monitor read `60.00` until a refresh, then `30.00`. A number monitor formats with two decimals, so pass `format: (v) => v.toFixed(0)` to keep today's whole numbers. Essentials' `fpsgraph` blade measures the page's own frames (`begin` / `end`) and would be a second fps figure, not the shelf's. **Do not** use it as the readout. `buffer WxH @ratio` is a string monitor |
+| **fps / draws / textures readout as monitor bindings** | **Public API** (essentials adds a graph if wanted) | One readonly number monitor per figure, bound to an object the 250 ms tick fills from `handle.stats()`. Either `interval: 250`, which polls the object itself, or `interval: 0` plus a `refresh()` from the existing timer. **Spike:** with `interval: 0`, the monitor read `60.00` until a refresh, then `30.00`. A number monitor formats with two decimals. It accepts `format` (`monitor-number`'s parser, l. 6997–6998), so pass `format: (v) => v.toFixed(0)` to keep today's whole numbers. Essentials' `fpsgraph` blade computes its own fps from `begin()` / `end()` calls (essentials dist l. 7845–7878). It would be a second computation that needs a hook into the shelf's frame loop, not a view of `handle.stats().fps`, so it is not the readout. `buffer WxH @ratio` is a string monitor |
 | **Collapsed by default at ≤ 700 px** | **Public API** | `new Pane({ title: '…', expanded: window.innerWidth > 700, container })`. `PaneConfig.expanded` and `title` are typed (`pane-config.d.ts`). **Spike:** `pane.expanded === false`, root class `tp-rotv-cpl`. ⚠️ **A title is required**: without one the root has no fold button (`tp-rotv-not` hides `.tp-rotv_b`, l. 7838). Folders take `expanded` per folder too |
 | **Woodwork sheet `choice`, compared through `speciesPending`** | **Public API**. It is plain TypeScript | The lamp's `stale(built, now)` comparison is panel logic, not view: `speciesPending(handle.mountedWith.materials.woodSpecies, settings.materials.woodSpecies)` decides `🟠` against `🟢`, then sets `binding.label`. It follows whichever lamp route wins. The list itself is the stray-option row above |
 
@@ -76,15 +76,18 @@ constraint does it**:
 (**spike**, `sliderConstraint` and `listStray`)
 
 - **Out of range:** `DefiniteRangeConstraint` clamps, and `push()` writes the
-  clamp back into the object. The second event comes from the step constraint
-  re-rounding the clamped value against its origin.
+  clamp back into the object. The second event, `7.999999999999999` while the
+  object reads `8`, was observed and not traced.
 - **Off the step grid:** this is safe. `createStepConstraint` takes the
   *initial* value as its origin (l. 782–786, `StepConstraint` l. 352–361), so an
   initial off-grid value is the grid.
 
-`readTune` passes `materials` through as an opaque record (the comment at
-`debug-panel.ts` l. 339–346), so a `?tune=` value outside a slider's range is
-reachable, not hypothetical. A guarded handler stops the clamp being *applied*,
+A `?tune=` value outside a slider's range is reachable, not hypothetical.
+`readTune` in `packages/site/src/shelf/shelf-url.ts` checks `exposure` only for
+being a finite number (`tuneRenderer`), and passes `lighting`, `scene` and
+`materials` through as opaque records (`tuneSections`). `resolveSettings` in
+`shelf-settings.ts` spreads the patch over the base and clamps nothing. So
+`?tune={"exposure":5}` reaches a slider whose range is 0.1–3. A guarded handler stops the clamp being *applied*,
 but the mirror and the slider would still show `8` while the shelf runs `20`.
 **That is the control lying.** The build therefore needs one of these, decided
 per control:
@@ -111,9 +114,12 @@ per control:
   bundled `2.0.5` (l. 1619).
 - **So it adds a dependency** (AGENTS.md: noted in an ADR) and **a third copy of
   core in the lazy chunk.** Vite would tree-shake that copy to what the plugin
-  imports, but list and slider controllers pull in much of it. ADR-0104 put
-  Tweakpane plus essentials at about 63 KB gzip, with essentials' own copy of
-  core. **The size of a third copy was not measured** (see below).
+  imports, but list and slider controllers pull in much of it. **A ceiling:**
+  `tweakpane.min.js`, which is core plus the default plugins, is 30,814 bytes
+  at `gzip -9`. Essentials' min file, with its own copy of core, is 30,851. The
+  two together (about 62 KB) agree with ADR-0104's 63 KB. So a custom plugin
+  adds **at most about 31 KB gzip** to the lazy chunk. Its tree-shaken size was
+  not measured.
 - **How it is typed.** Adding `@tweakpane/core` gives a plugin real types for
   `InputBindingPlugin`, `createPlugin` and the controllers. The repo's declared
   `Pane` slice in `pickup-tuner.ts` exists because `tweakpane`'s `.d.ts` imports
@@ -170,7 +176,8 @@ report). Where the checks live is #488's question.
 
 ## Could not verify
 
-- **The size a custom plugin adds to the lazy chunk.** It would need
+- **The tree-shaken size a custom plugin adds to the lazy chunk.** Only the
+  ceiling (about 31 KB gzip) was measured. The real figure needs
   `@tweakpane/core` installed and a build. It was not installed here, so no
   package was downloaded.
 - **Whether installing `@tweakpane/core` makes `tweakpane`'s own `.d.ts`
