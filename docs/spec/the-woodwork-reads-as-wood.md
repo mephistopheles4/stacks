@@ -33,7 +33,7 @@ bookcase**, not by a document.
 | **Grain direction** | every member along its own long axis; the backboard vertical | [#285](https://github.com/mephistopheles4/stacks/issues/285) |
 | **Per-member variation** | offset, mirror, per-axis scale, ±10% tint, ~3.4° runout, drawn fresh per load | [#287](https://github.com/mephistopheles4/stacks/issues/287) |
 | **Backboard sheet** | Poly Haven `dark_wood`, diffuse at 512, the drawn fibre turned to run with its grain | [#297](https://github.com/mephistopheles4/stacks/issues/297) |
-| **Forced seed** | `?woodSeed=<token>`, no default, never in `?debug=` | [#298](https://github.com/mephistopheles4/stacks/issues/298) |
+| **Forced seed** | `?woodSeed=<token>`, no default, never in the settings diff (`?debug=<json>`) | [#298](https://github.com/mephistopheles4/stacks/issues/298) |
 
 **Cost, measured rather than predicted**: +3 textures, **+0 draw calls**, about
 **320 KB** on the wire — rosewood's figure at 1024 is 266.5 KB, `dark_wood`'s at

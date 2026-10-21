@@ -90,7 +90,7 @@ export function soloBook(params: URLSearchParams): number | undefined {
 /**
  * `?woodSeed=<token>` — the root every member's dice are drawn off.
  *
- * A flat spelling, beside `?solo` and `?debug` rather than inside `?debug=`, for
+ * A flat spelling, beside `?solo` and `?debug` rather than inside the settings diff in `?debug=<json>`, for
  * their reason and one of its own: a seed is an **instrument**, not a setting.
  * [#287](https://github.com/mephistopheles4/stacks/issues/287) settled that a
  * member of the bookcase has no identity — the dice are thrown fresh on every
@@ -267,8 +267,9 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
  * hundred history entries and make the back button useless.
  *
  * Only differences from the shipped defaults are written, so a shelf running
- * defaults has a clean address and a dialled one has a URL you can read, paste
- * into an issue, or send to a phone.
+ * defaults has a clean address — bare `?debug`, which this always writes, since
+ * only the panel calls it and the panel mounts only behind `?debug` — and a
+ * dialled one has a URL you can read, paste into an issue, or send to a phone.
  *
  * ⚠️ **The probes diff against `base`, the settings this page started from**,
  * which is `PAINTED_BASE` on a device carrying a lost-context record. Diffing
@@ -327,7 +328,7 @@ export function writeSettings(
   // (`pickup-state.ts`), and a `null` here would erase the entry the back
   // button puts the book down with (spec §3.9).
   const state: unknown = window.history.state;
-  window.history.replaceState(state, '', query === '' ? window.location.pathname : `?${query}`);
+  window.history.replaceState(state, '', `?${query}`);
 }
 
 /**
@@ -402,15 +403,20 @@ export function retiredTuneHint(params: URLSearchParams): string | undefined {
  * Whether a query string asks for anything beyond turning the instruments on.
  *
  * Bare `?debug` mounts the black box and the panel and changes no renderer
- * setting, so it is the safe address. Any other parameter is a configuration,
- * and so is a `?debug=<json>` whose diff changes at least one setting — a
- * value that reads as no diff is bare `?debug` by another spelling. A crash
- * record implicates a configuration (`diagnostics.ts`).
+ * setting, so it is the safe address. Any other parameter is a configuration —
+ * `?woodSeed` and the flat probes included, though the first is an instrument —
+ * except the retired `?tune=`, which changes nothing. So is a `?debug=<json>`
+ * whose diff changes at least one setting; a value that reads as no diff is
+ * bare `?debug` by another spelling. A crash record implicates a
+ * configuration (`diagnostics.ts`).
  */
 export function carriesSettings(query: string): boolean {
   const params = new URLSearchParams(query);
   if (hasSettings(readDiff(params))) return true;
+  // `tune` is retired and changes nothing, so a crash on an old link is not one
+  // its settings can be blamed for.
   params.delete('debug');
+  params.delete('tune');
   return [...params.keys()].length > 0;
 }
 
@@ -428,8 +434,13 @@ function hasSettings(patch: SettingsPatch): boolean {
  * an unreadable setting must not look like a deliberate one.
  */
 function readDiff(params: URLSearchParams): SettingsPatch {
-  const raw = params.get('debug');
-  if (raw === null || raw === '') return {};
+  // The last non-empty value, so `?debug&debug=<json>` — a diff added by hand to
+  // an address that already switches the instruments on — still applies.
+  const raw = params
+    .getAll('debug')
+    .filter((value) => value !== '')
+    .at(-1);
+  if (raw === undefined) return {};
 
   const diff = diffObject(raw);
   if (diff === undefined) return {};

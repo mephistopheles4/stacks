@@ -153,7 +153,7 @@ describe('?debug=<json>', () => {
 
   it('carries the books category, which is the first new top-level key since this was written', () => {
     // `books` is not one of the ten historic probe spellings, so a URL is the
-    // only way to hand a phone a dialled mixture — and `readTune` has to have
+    // only way to hand a phone a dialled mixture — and `readDiff` has to have
     // been taught the key or a pasted URL silently renders the shipped shelf
     // with nothing saying so, which is the failure this file's header describes.
     const query = `debug=${encodeURIComponent(JSON.stringify({ books: { paperbackRatio: 0.2, headCap: 0 } }))}`;
@@ -163,7 +163,7 @@ describe('?debug=<json>', () => {
 
   it('carries a nested profile without flattening it or losing its sibling', () => {
     // `spineProfile` is the first *nested object* inside `materials`; every other
-    // key there is a flat scalar, so the cast in `readTune` had never been asked
+    // key there is a flat scalar, so the cast in `readDiff` had never been asked
     // to carry one.
     const query = `debug=${encodeURIComponent(
       JSON.stringify({ materials: { spineProfile: { paperback: { roll: 0.5 } } } }),
@@ -184,7 +184,7 @@ describe('?debug=<json>', () => {
     // `materials.woodFibre` is the map's second knob and it rides `?debug=` like
     // the rest of `materials` — there is no `?woodFibre=`, deliberately, because
     // the ten flat probes exist for things typed on a phone against a crash. A
-    // key `readTune` had not been taught would render the shipped shelf with
+    // key `readDiff` had not been taught would render the shipped shelf with
     // nothing saying so, which is this file's own header complaint.
     const query = `debug=${encodeURIComponent(JSON.stringify({ materials: { woodFibre: 0 } }))}`;
     const settings = read(query);
@@ -237,8 +237,8 @@ describe('?debug=<json>', () => {
     // dialled URL on a phone must get the painted shelf. ⚠️ It appended
     // `&shadows=1` until real-time shadows became the default, and then passed
     // with the probe deleted: a probe that asks for the default proves nothing.
-    const tune = encodeURIComponent(JSON.stringify({ lighting: { key: { intensity: 4.5 } } }));
-    const settings = read(`debug=${tune}&shadows=0`);
+    const diff = encodeURIComponent(JSON.stringify({ lighting: { key: { intensity: 4.5 } } }));
+    const settings = read(`debug=${diff}&shadows=0`);
 
     expect(settings.shadows.enabled).toBe(false);
     expect(settings.lighting.key.intensity).toBe(4.5);
@@ -248,13 +248,14 @@ describe('?debug=<json>', () => {
 describe('the diff rides in ?debug, and only there', () => {
   const diff = encodeURIComponent(JSON.stringify({ lighting: { key: { intensity: 4.5 } } }));
 
-  it('reads the diff from the value of ?debug', () => {
-    expect(read(`debug=${diff}`).lighting.key.intensity).toBe(4.5);
-  });
-
   it('reads ?debug with no value, or an empty one, as no diff', () => {
     expect(read('debug')).toEqual(DEFAULT_SETTINGS);
     expect(read('debug=')).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('applies a diff added by hand after a bare ?debug', () => {
+    expect(read(`debug&debug=${diff}`).lighting.key.intensity).toBe(4.5);
+    expect(read(`debug=${diff}&debug`).lighting.key.intensity).toBe(4.5);
   });
 
   it('does not read the diff from ?tune= any more', () => {
@@ -288,6 +289,10 @@ describe('carriesSettings', () => {
     expect(carriesSettings('?debug=%7Bbroken')).toBe(false);
   });
 
+  it('is false for a retired ?tune= link, which changes nothing', () => {
+    expect(carriesSettings(`?debug&tune=${diff}`)).toBe(false);
+  });
+
   it('is true for any probe beside ?debug', () => {
     expect(carriesSettings('?debug&shadows=0')).toBe(true);
   });
@@ -318,7 +323,7 @@ describe('writeSettings writes the diff into ?debug', () => {
   };
 
   it('puts the diff in the value of ?debug and never writes tune', () => {
-    const url = write(dialled, '?debug');
+    const url = write(dialled, `?debug&tune=${encodeURIComponent('{"exposure":2}')}`);
     expect(url).toBe(`?debug=${encodeURIComponent('{"exposure":1.4}')}`);
     expect(url).not.toContain('tune');
   });
@@ -399,7 +404,7 @@ describe('woodSeed', () => {
     expect(woodSeed(new URLSearchParams('woodSeed=&woodSeed=fixed'))).toBe('fixed');
   });
 
-  it('is not a setting, so it can never reach ?debug=', () => {
+  it('is not a setting, so it can never reach the settings diff', () => {
     // The instrument/setting line: a `?debug=` link that froze the dice would be
     // a control that lies about a shelf which is supposed to be alive.
     expect(readSettings(new URLSearchParams('woodSeed=k3f9'))).toEqual(
@@ -408,7 +413,7 @@ describe('woodSeed', () => {
   });
 
   it('has nowhere in ShelfSettings to hide', () => {
-    // `tuneDiff` writes whatever `ShelfSettings` holds, so the structural half
+    // `diffText` writes whatever `ShelfSettings` holds, so the structural half
     // of the promise is that the seed is not in there at any depth. This is what
     // would go red the day somebody added `materials.woodSeed`.
     expect(JSON.stringify(DEFAULT_SETTINGS).toLowerCase()).not.toContain('seed');

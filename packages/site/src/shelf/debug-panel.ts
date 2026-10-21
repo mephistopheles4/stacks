@@ -337,7 +337,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
      * is a *third* state that reads as a bug: an empty box is what a visitor
      * sees when a menu failed to populate. The case is real —
      * `?debug={"materials":{"woodSpecies":"walnut"}}` reaches the panel with
-     * `walnut` genuinely in the settings, because `readTune` validates
+     * `walnut` genuinely in the settings, because `readDiff` validates
      * `toneMapping` against its name list and checks `exposure` is finite but
      * passes `materials` through as an opaque record. So the settings object can
      * hold a string no option offers, and it must: #300 requires an

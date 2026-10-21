@@ -288,7 +288,7 @@ export interface MaterialSettings {
    */
   /**
    * ⚠️ **`RequestedSpecies` and not `WoodSpecies`, because this is what was
-   * *asked for* rather than what is in force.** `readTune` passes `materials`
+   * *asked for* rather than what is in force.** `readDiff` passes `materials`
    * through as an opaque record, so a `?debug=` can genuinely put `walnut` here
    * — and it must be able to, since an unrecognised species is refused *and
    * reported*, and a refusal can only name what was asked for if the value

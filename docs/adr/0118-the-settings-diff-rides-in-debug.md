@@ -9,16 +9,20 @@
 The URL-encoded JSON diff from the defaults, which rode in `?tune=`, rides in
 the value of `?debug`. `readSettings` reads it from there and from nowhere else;
 `writeSettings` writes it there, and writes bare `debug` when the diff is empty.
-A page ignores `?tune=` and prints one console line naming the new spelling
+When `debug` appears more than once the last non-empty value is the diff, so
+`?debug&debug=<json>` applies. A page ignores `?tune=` and prints one console line naming the new spelling
 (`retiredTuneHint`, called from `boot.ts`). `?woodSeed` and the flat probes stay
 where they were, and no setting writes `tune`.
 
 `carriesSettings` moved from `diagnostics.ts` to `shelf-url.ts`, beside the
 reader it must agree with, and is exported so a Node test can fail on it. A
-`?debug=<json>` whose diff changes a setting counts as carrying settings, bare
-`?debug` and a value that reads as no diff do not, and any other parameter still
-does. It used to delete `debug` first, which would have made the crash warning
+`?debug=<json>` with a non-empty diff counts as carrying settings; bare
+`?debug`, a value that reads as no diff and a retired `?tune=` do not; any other
+parameter still does. It used to delete `debug` first, which would have made the crash warning
 silent for every link that now carries its settings in that value.
+
+This supersedes in part [ADR-0035](0035-books-is-a-settings-category.md), whose
+consequence that `books` rides in `?tune=` now reads `?debug=<json>`.
 
 ## Why
 

@@ -307,7 +307,7 @@ import    import a library export into the vault   (audible)
 Three query-string instruments, none of which exists for a visitor who does not
 ask: `?solo` mounts one book on an unclamped turntable, `?debug` loads the black
 box, the tuning panel and the pickup tuner, and `?woodSeed=<token>` pins the root the bookcase's
-per-member figure is drawn off — no default, and never in `?debug=`. **Read
+per-member figure is drawn off — no default, and never in the settings diff (`?debug=<json>`). **Read
 [`docs/shelf-inspectors.md`](docs/shelf-inspectors.md) before changing the
 renderer, the debug panel, or `shelf-settings.ts`** — it carries why each exists,
 what only they can see, and the rule that a control must not lie.

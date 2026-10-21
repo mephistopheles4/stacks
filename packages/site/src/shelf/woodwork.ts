@@ -242,7 +242,7 @@ export type WoodSpecies = 'rosewood' | 'sapele' | 'flat';
  * resolved — and the distinction is load-bearing rather than pedantic.
  *
  * ⚠️ **`ShelfSettings` can genuinely hold a string off this roster.**
- * `readTune` validates `toneMapping` against `TONE_MAPPING_NAMES` and checks
+ * `readDiff` validates `toneMapping` against `TONE_MAPPING_NAMES` and checks
  * `exposure` is finite, but passes `materials` through as an opaque record —
  * `isRecord(diff.materials) ? diff.materials : {}` and nothing more — so
  * `?debug={"materials":{"woodSpecies":"walnut"}}` arrives with `walnut` in the
@@ -392,7 +392,7 @@ export const ALL_SHEETS: readonly Sheet[] = [WOODWORK_SHEET, SAPELE_SHEET, BACKB
  * not lie** and a dropped value looks like a value that was applied.
  *
  * ⚠️ **And nothing upstream would catch it, which is why the refusal has to be
- * here.** `readTune` validates `toneMapping` against `TONE_MAPPING_NAMES` and
+ * here.** `readDiff` validates `toneMapping` against `TONE_MAPPING_NAMES` and
  * checks `exposure` is a finite number, but passes `materials` through as an
  * opaque record — `isRecord(diff.materials) ? diff.materials : {}` and nothing
  * more. Every other `materials` key is a number or a nested object of numbers,
