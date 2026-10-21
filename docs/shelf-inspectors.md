@@ -116,8 +116,8 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   the black box publishes `window.__blackbox.text()`, apart from `window.__shelf`,
   returning exactly that string, and G60 reads it in place of the element's text
   (a Tweakpane monitor draws into a `<textarea>`, which `textContent` cannot
-  read). When the previous record has no clean exit, the pane and the folder
-  open themselves at any width. `diagnostics.ts` imports nothing from the pane
+  read). The folder starts open. When the previous record has no clean exit, the
+  pane opens itself too, at any width. `diagnostics.ts` imports nothing from the pane
   and the readout takes only `import type` from it (G68), so Tweakpane never
   reaches the eager bundle
   ([#488](https://github.com/mephistopheles4/stacks/issues/488)).

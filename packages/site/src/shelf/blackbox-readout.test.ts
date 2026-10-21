@@ -83,8 +83,9 @@ describe('the black box readout, as an instrument', () => {
     vi.useRealTimers();
   });
 
-  it('is titled for the black box and opens itself only after a death', () => {
-    expect(blackboxReadout(fakePort().port).expanded).toBe(false);
+  it('is titled for the black box and starts open whether or not the last session died', () => {
+    expect(blackboxReadout(fakePort().port).title).toBe('Black box');
+    expect(blackboxReadout(fakePort().port).expanded).toBe(true);
     expect(blackboxReadout(fakePort({ died: true }).port).expanded).toBe(true);
   });
 

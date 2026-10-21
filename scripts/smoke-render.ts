@@ -3114,6 +3114,11 @@ function judgeReadout(
   if (loaded.paneExpanded) {
     failures.push('readout (pane loaded): a clean exit opened the pane at 700px');
   }
+  if (!loaded.folderExpanded) {
+    failures.push(
+      'readout (pane loaded): the Black box folder starts closed, where it starts open',
+    );
+  }
   if (!loaded.forgetFound || !loaded.forgetHidden) {
     failures.push(
       'readout (pane loaded): the forget button is missing or shown with no lost-context record to forget',

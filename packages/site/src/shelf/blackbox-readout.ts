@@ -27,13 +27,14 @@ const READ_MS = 500;
 const ROWS = 16;
 
 /**
- * The readout as an instrument. It opens itself after a death — the pane does
- * too (`startsExpanded`) — so `PREVIOUS SESSION DIED` is never behind a tap.
+ * The readout as an instrument. The folder starts open, as the plain readout it
+ * replaces was always up (the owner's call on #494); after a death the pane opens
+ * itself too (`startsExpanded`), so `PREVIOUS SESSION DIED` is never behind a tap.
  */
 export function blackboxReadout(port: DiagnosticsPort): Instrument {
   return {
     title: 'Black box',
-    expanded: port.died,
+    expanded: true,
     mount(folder) {
       const live = { text: port.text() };
       folder.addBinding(live, 'text', { readonly: true, multiline: true, rows: ROWS, label: null });
