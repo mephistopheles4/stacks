@@ -334,7 +334,7 @@ async function checkLargeLibraryLit(
 ): Promise<LitChecked> {
   const failures: string[] = [];
   const seed = `woodSeed=${LIT_SEED}`;
-  const plant = `tune=${encodeURIComponent(JSON.stringify(FOG_OVER_THE_BOOKCASE))}`;
+  const plant = `debug=${encodeURIComponent(JSON.stringify(FOG_OVER_THE_BOOKCASE))}`;
 
   const control = await grabFrame(browser, `${main}/?${seed}`, failures);
   const largePage = await grabFrame(browser, `${large}/?${seed}`, failures);
@@ -2538,6 +2538,13 @@ async function measureSampling(
  *   background, not a browser default; no `securitypolicyviolation` fired; and
  *   `style-src` carries the empty string's hash, which the two placeholders in
  *   `index.astro` depend on (spec §3.7).
+ * - **pane**: the debug pane's own rows, read off the rendered page, one per
+ *   field the view writes, because a check that only mounts the pane cannot
+ *   fail when the view stops copying one (ADR-0119): its title; that it starts
+ *   expanded at 1440px and collapsed at 700px; the tuner's scrub, which reads
+ *   0 with nothing held and the timeline's own progress once a book is held,
+ *   and its `held` line; and the export, which writes the constant into its
+ *   read-only text. None of these exists on a page without `?debug`.
  */
 interface TunerChecked {
   readonly lines: readonly string[];
@@ -2574,6 +2581,7 @@ async function checkTuner(browser: Browser, origin: string): Promise<TunerChecke
 
   const plain = await visitForTuner(browser, `${origin}/`);
   const debug = await visitForTuner(browser, `${origin}/?debug`);
+  const narrow = await visitForTuner(browser, `${origin}/?debug`, PANE_NARROW_VIEWPORT);
 
   const tunerOn = (page: TunerVisit, kind: Fetched['kind']): number =>
     page.fetched.filter((asset) => asset.kind === kind && asset.tuner).length;
@@ -2621,9 +2629,110 @@ async function checkTuner(browser: Browser, origin: string): Promise<TunerChecke
         'empty placeholders need',
     );
   }
-  for (const error of [...plain.errors, ...debug.errors]) failures.push(`tuner: ${error}`);
+  for (const error of [...plain.errors, ...debug.errors, ...narrow.errors]) {
+    failures.push(`tuner: ${error}`);
+  }
+
+  const reading = debug.pane;
+  lines.push(
+    `debug pane     title "${reading.title}"   expanded at ${String(VIEWPORT.width)}px ${String(reading.expanded)}, ` +
+      `at ${String(PANE_NARROW_VIEWPORT.width)}px ${String(narrow.pane.expanded)}   scrub ` +
+      `${reading.scrubBefore} nothing held, ${reading.scrubAfter} held   held line "${reading.heldAfter}"   ` +
+      `export ${String(reading.exportText.length)} chars`,
+  );
+  failures.push(...judgePane(reading, narrow.pane));
 
   return { lines, failures };
+}
+
+/** At this width or less the debug pane starts collapsed (`pane-slots.ts`). */
+const PANE_NARROW_VIEWPORT = { width: 700, height: 900 };
+
+interface PaneReading {
+  readonly title: string;
+  /** Tweakpane's own `tp-rotv-expanded` on the root, the rendered state. */
+  readonly expanded: boolean;
+  readonly scrubBefore: string;
+  readonly heldBefore: string;
+  readonly scrubAfter: string;
+  readonly heldAfter: string;
+  readonly exportText: string;
+}
+
+/** What the pane shows, against what the view is meant to copy onto it. */
+function judgePane(wide: PaneReading, narrow: PaneReading): string[] {
+  const failures: string[] = [];
+  if (wide.title !== 'Debug pane') {
+    failures.push(`debug pane: titled "${wide.title}", not "Debug pane"`);
+  }
+  if (!wide.expanded) failures.push('debug pane: collapsed at 1440px, where it starts expanded');
+  if (narrow.expanded) failures.push('debug pane: expanded at 700px, where it starts collapsed');
+  if (Number(wide.scrubBefore) !== 0 || wide.heldBefore !== 'nothing held') {
+    failures.push(
+      `debug pane: with nothing held the scrub reads ${wide.scrubBefore} and the held line "${wide.heldBefore}"`,
+    );
+  }
+  if (!(Number(wide.scrubAfter) > 0) || !wide.heldAfter.includes(' · ')) {
+    failures.push(
+      `debug pane: with a book held the scrub reads ${wide.scrubAfter} and the held line ` +
+        `"${wide.heldAfter}", so the timeline's progress is not read back`,
+    );
+  }
+  if (!wide.exportText.includes('export const PICKUP_MOTION')) {
+    failures.push('debug pane: the export button did not write the constant into its text');
+  }
+  return failures;
+}
+
+/** Only the rest state: title and expanded, for a visit that asks about nothing else. */
+async function readPaneAtRest(page: Page): Promise<PaneReading> {
+  const now = (await page.evaluate(READ_PANE)) as PaneNow | null;
+  return now === null ? NO_PANE : { ...NO_PANE, title: now.title, expanded: now.expanded };
+}
+
+interface PaneNow {
+  readonly title: string;
+  readonly expanded: boolean;
+  readonly scrub: string;
+  readonly held: string;
+  readonly exportText: string;
+}
+
+/**
+ * The whole reading: the rows with nothing held, then with a book picked up, then
+ * after the export button is pressed. Each step waits on the page's own state
+ * rather than a sleep, and a timeout leaves the reading it has, for the judge.
+ */
+async function readPane(page: Page): Promise<PaneReading> {
+  const before = (await page.evaluate(READ_PANE)) as PaneNow | null;
+  if (before === null) return NO_PANE;
+  await page.evaluate('window.__shelf.pickUp(0)');
+  await until(page, HELD, 'the pane read-back: a book held');
+  await until(
+    page,
+    `(() => { const i = document.querySelector('.tp-rotv input.tp-txtv_i'); return i !== null && Number(i.value) > 0; })()`,
+    'the pane read-back: the scrub following the timeline',
+  );
+  const after = (await page.evaluate(READ_PANE)) as PaneNow | null;
+  await page.evaluate(`(() => {
+    const button = [...document.querySelectorAll('.tp-rotv .tp-btnv_b')].find((b) => b.textContent === 'Export PICKUP_MOTION');
+    button?.click();
+  })()`);
+  await until(
+    page,
+    `(document.querySelector('.tp-rotv textarea')?.value ?? '').includes('PICKUP_MOTION')`,
+    'the pane export text',
+  );
+  const exported = (await page.evaluate(READ_PANE)) as PaneNow | null;
+  return {
+    title: before.title,
+    expanded: before.expanded,
+    scrubBefore: before.scrub,
+    heldBefore: before.held,
+    scrubAfter: after?.scrub ?? '',
+    heldAfter: after?.held ?? '',
+    exportText: exported?.exportText ?? '',
+  };
 }
 
 interface TunerVisit {
@@ -2634,16 +2743,48 @@ interface TunerVisit {
     readonly violations: readonly string[];
     readonly emptyHash: boolean;
   };
+  readonly pane: PaneReading;
   readonly errors: readonly string[];
 }
 
-async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit> {
+const NO_PANE: PaneReading = {
+  title: '',
+  expanded: false,
+  scrubBefore: '',
+  heldBefore: '',
+  scrubAfter: '',
+  heldAfter: '',
+  exportText: '',
+};
+
+/**
+ * The pane's rows as the page renders them: the root's `tp-rotv_t` title and
+ * its `tp-rotv-expanded` class, the tuner's scrub (the first text input) and
+ * `held` line (the first single-line monitor), and the read-only export text.
+ */
+const READ_PANE = `(() => {
+  const root = document.querySelector('.tp-rotv');
+  if (root === null) return null;
+  return {
+    title: root.querySelector('.tp-rotv_t')?.textContent ?? '',
+    expanded: root.classList.contains('tp-rotv-expanded'),
+    scrub: root.querySelector('input.tp-txtv_i')?.value ?? '',
+    held: root.querySelector('input.tp-sglv_i')?.value ?? '',
+    exportText: root.querySelector('textarea')?.value ?? '',
+  };
+})()`;
+
+async function visitForTuner(
+  browser: Browser,
+  url: string,
+  viewport: { readonly width: number; readonly height: number } = VIEWPORT,
+): Promise<TunerVisit> {
   const context = await browser.createBrowserContext();
   const errors: string[] = [];
   const reads: Promise<Fetched | undefined>[] = [];
   try {
     const page = await context.newPage();
-    await page.setViewport(VIEWPORT);
+    await page.setViewport(viewport);
     page.on('pageerror', (error: unknown) => {
       errors.push(
         `page error at ${url}: ${error instanceof Error ? error.message : String(error)}`,
@@ -2691,8 +2832,14 @@ async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit>
       };
     })()`)) as TunerVisit['styled'];
 
+    const pane = !debug
+      ? NO_PANE
+      : viewport === VIEWPORT
+        ? await readPane(page)
+        : await readPaneAtRest(page);
+
     const fetched = (await Promise.all(reads)).filter((asset) => asset !== undefined);
-    return { fetched, styled, errors };
+    return { fetched, styled, pane, errors };
   } finally {
     await context.close();
   }

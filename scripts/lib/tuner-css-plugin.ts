@@ -5,7 +5,7 @@ import { extractTunerCss } from '../../packages/site/src/shelf/tuner-css.ts';
 import { REPO_ROOT } from './repo-root.ts';
 
 /**
- * Writes the pickup tuner's stylesheet where the site imports it, before Vite
+ * Writes the debug pane's stylesheet where the site imports it, before Vite
  * resolves a single module.
  *
  * The CSS lives inside the two packages' JavaScript (`tuner-css.ts` says why
@@ -13,7 +13,7 @@ import { REPO_ROOT } from './repo-root.ts';
  * Vite's `?url` turns into a hashed asset that a lazy `<link>` loads — the one
  * route #376 measured styled under the CSP with nothing reaching a visitor
  * without `?debug`. So the build reads the packages as text, extracts, and
- * writes the result here; `pickup-tuner.ts` imports it with `?url`.
+ * writes the result here; `debug-pane.ts` imports it with `?url`.
  *
  * **Gitignored and regenerated on every build and dev start**, from the pinned
  * packages in `node_modules`, so a version bump changes it with no hand step and

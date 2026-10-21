@@ -33,7 +33,7 @@ bookcase**, not by a document.
 | **Grain direction** | every member along its own long axis; the backboard vertical | [#285](https://github.com/mephistopheles4/stacks/issues/285) |
 | **Per-member variation** | offset, mirror, per-axis scale, ±10% tint, ~3.4° runout, drawn fresh per load | [#287](https://github.com/mephistopheles4/stacks/issues/287) |
 | **Backboard sheet** | Poly Haven `dark_wood`, diffuse at 512, the drawn fibre turned to run with its grain | [#297](https://github.com/mephistopheles4/stacks/issues/297) |
-| **Forced seed** | `?woodSeed=<token>`, no default, never in `?tune=` | [#298](https://github.com/mephistopheles4/stacks/issues/298) |
+| **Forced seed** | `?woodSeed=<token>`, no default, never in the settings diff (`?debug=<json>`) | [#298](https://github.com/mephistopheles4/stacks/issues/298) |
 
 **Cost, measured rather than predicted**: +3 textures, **+0 draw calls**, about
 **320 KB** on the wire — rosewood's figure at 1024 is 266.5 KB, `dark_wood`'s at
@@ -153,7 +153,7 @@ nothing: one species sheet, not four.
 ## 5. Contract edits
 
 **Two new `ShelfSettings` knobs**, both on `materials`, both reaching
-`applySettings` with an honest `ApplyReport` and `?tune=` via `shelf-url.ts` —
+`applySettings` with an honest `ApplyReport` and `?debug=` via `shelf-url.ts` —
 the map's standing rule that **a control must not lie**.
 
 - **`materials.woodSpecies`** — the *woodwork's* sheet. Roster: `rosewood`
@@ -179,7 +179,7 @@ reads and the two are coupled), the fibre's period, and each sheet's world size.
 
 **One instrument, not a setting**: `?woodSeed=<token>`, a flat spelling beside
 `?solo` and `?debug` in `shelf-url.ts`, with **no default** and **never in
-`?tune=`** — see [`../shelf-inspectors.md`](../shelf-inspectors.md).
+`?debug=`** — see [`../shelf-inspectors.md`](../shelf-inspectors.md).
 
 ---
 

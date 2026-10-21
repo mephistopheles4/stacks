@@ -12,8 +12,8 @@ export default defineConfig({
   output: 'static',
   devToolbar: { enabled: false },
 
-  // The pickup tuner's stylesheet, extracted from Tweakpane's JavaScript as
-  // text and written where `pickup-tuner.ts` imports it with `?url`. Neither
+  // The debug pane's stylesheet, extracted from Tweakpane's JavaScript as
+  // text and written where `debug-pane.ts` imports it with `?url`. Neither
   // package ships a `.css` file; see `scripts/lib/tuner-css-plugin.ts`.
   vite: { plugins: [tunerCssPlugin()] },
 

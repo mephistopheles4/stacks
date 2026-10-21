@@ -128,6 +128,14 @@
       "reason": "A stale exclusion went with its file: scripts/gh-post.ts was deleted (#461), so its entry in the scripts scope's exclusions went too. Two mutated, tested modules, scripts/lib/github-body.ts and scripts/lib/github-post.ts, were deleted in the same change; that is an ordinary code change the window already sees across trees, and configHash hashes the Stryker configuration, not the files. No declared scope's glob changed. Declared preserved on 2026-10-17 on the owner's decision, recorded on #461 and the pull request, which departs from the spec's preserves false. Every floor was still unarmed at this change. Measured on this branch's tree after the deletions, resolving stryker.config.mjs's mutate array under the old and the new stryker.scopes.json against the tracked files: both read 107 files, identical file for file, and Stryker generates a file's mutants from that file alone, so the mutant inventory is identical too. The same construction on the pre-change tree told them apart, 109 files against 110, the one difference being scripts/gh-post.ts. This compares the resolved file sets and was not a mutation run, so the scores themselves were not re-run.",
       "pr": 474,
       "preserves": true
+    },
+    {
+      "date": "2026-10-21",
+      "stamp": "configHash",
+      "value": "sha256:243cf77a6464adcbca55318bfeeefacfa8d1b69788b49bab5ea6d43969d55e24",
+      "reason": "The pickup tuner's browser-only exclusion in the shelf scope was joined by one for the new debug pane shell, debug-pane.ts, the only file that holds the real Tweakpane Pane and imports its stylesheet with Vite's ?url (#493, ADR-0119), and the tuner's own mechanism text changed to name it a view mounted by the shell. Both are zero-mutant residuals of the kind the 2026-10-09 entry declared; the ordering rules the shell leans on went into pane-slots.ts, a new measured file, which is an ordinary code change. Measured: the shelf scope's mutated file set, from git ls-tree of the base tree fccb204 with each configuration's exclusions applied and test files left out, is 33 files under the old configuration and the same 33 under the new, none different; the control on this change's tree tells them apart, debug-pane.ts alone, so the construction can see the difference. Mutant counts were not run.",
+      "pr": 501,
+      "preserves": true
     }
   ]
 }

@@ -59,6 +59,22 @@ verifyDepsBeforeRun: warn
 # window is the only control this hatch removes.
 minimumReleaseAge: 10080
 
+# The hatch above, used for the first time, on the owner's word on 2026-10-21.
+# markdown-it 15.0.3 is the only release fixing GHSA-gfr2-rv44-r23c and was
+# published 2026-10-16T01:25Z; see the markdown-it block above `overrides:`.
+# **Remove this entry after 2026-10-23T01:25Z**, when 15.0.3 is seven days old.
+#
+# argparse 3.0.3 rides along, on the owner's word the same day: markdown-it
+# 15.0.3 asks for `^3.0.3`, and it was published 2026-10-15T21:58Z. Same
+# publisher, no provenance on any release, and its diff from 3.0.2 is one
+# character of one regex (a ReDoS fix). markdown-it reaches it only from its
+# own command-line entry point, which markdownlint never loads. **Remove it
+# after 2026-10-22T21:58Z.** Nothing checks either date, so the next
+# dependency change after them should.
+minimumReleaseAgeExclude:
+  - markdown-it@15.0.3
+  - argparse@3.0.3
+
 # ⚠️ **This does not do what the issue for it (#459) assumed.** Measured on pnpm
 # 11.18.0 with the key at `false` and read back by `pnpm config get`: a `github:`
 # dependency and a codeload.github.com tarball dependency both still installed.
@@ -355,6 +371,36 @@ trustPolicyExclude:
 # `.toml` config file or an inline configure-file comment, and this repository
 # has neither. If one is ever added, check it parses. Remove this when
 # `markdownlint-cli2` pins `smol-toml` at 1.9.0 or later.
+
+# GHSA-r7fv-28h4-cvq7 and GHSA-gfr2-rv44-r23c, high, and GHSA-vfgh-jcmw-g37q,
+# low: `markdown-it` 15.0.0 to below 15.0.3 goes quadratic on smartquotes,
+# multi-line link reference definitions and inline HTML. It arrives one way,
+# `markdownlint-cli2`, which pins it **exactly** at 15.0.1, and runs only in
+# `pnpm lint:md` over docs this repository writes. Nothing that ships imports
+# it; that bounds the blast radius and does not answer the gate.
+#
+# ⚠️ **Dependabot opened no pull request, and this is why.** Its log reads
+# `update_not_possible`: the exact pin leaves no transitive move, and the one
+# parent carrying the fix, `markdownlint-cli2` 0.24.0, was published
+# 2026-10-21T06:59Z, after its last run. That bump is not taken here: it brings
+# `markdownlint` 0.42.0, which moves the one `micromark` this tree shares with
+# `@stacks/core`, the Thoughts extractor's parser (ADR-0107), so it is its own
+# change on the security route.
+#
+# ⚠️ **The fix is inside the seven-day window**, so this override comes with an
+# exact `minimumReleaseAgeExclude` entry for `markdown-it@15.0.3`; see that
+# block. No 15.x release carries provenance and all three came from one
+# account, so the trust policy checks nothing here and the window was the only
+# control this lifts. What stood in for the wait: the published 15.0.1 to
+# 15.0.3 diff, read before this was written, is the three parser fixes
+# upstream's commits between those tags describe, plus brace reformatting, with
+# no new import, I/O or install script.
+#
+# Crossing the exact pin is a combination the package does not declare, checked
+# as the smol-toml block was: `pnpm lint:md` reports the same findings before
+# and after, and a planted violation is still reported. Scoped to the 15 major,
+# for the brace-expansion block's reason; caret, for the nanoid block's. Remove
+# it when `markdownlint-cli2` pins `markdown-it` at 15.0.3 or later.
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.16.0'
@@ -363,6 +409,7 @@ overrides:
   source-map-js: '^1.2.2'
   http-cache-semantics: '^4.3.0'
   smol-toml: '^1.9.0'
+  'markdown-it@15': '^15.0.3'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #

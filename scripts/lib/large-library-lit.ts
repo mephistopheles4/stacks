@@ -15,7 +15,7 @@
  *   fixture, of which 41 books survive the public build;
  * - **the large library** — the page being judged;
  * - **the plant** — the large library with the fog pulled over the bookcase
- *   through `?tune=`, which is the defect itself, on every run.
+ *   through `?debug=`, which is the defect itself, on every run.
  *
  * ⚠️ **The plant is the half that makes the other half mean anything.** A zero
  * needs a control through the same pipe: a measurement that cannot tell a black

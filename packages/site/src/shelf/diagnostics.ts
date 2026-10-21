@@ -1,4 +1,5 @@
 import type { ShelfHandle } from './scene.ts';
+import { carriesSettings } from './shelf-url.ts';
 
 /**
  * A black box, for a crash that leaves no error behind.
@@ -364,19 +365,6 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
   }
 
   return lines.join('\n');
-}
-
-/**
- * Whether a query string asks for anything beyond turning the instruments on.
- *
- * `?debug` alone is the safe address: it mounts the black box and the panel and
- * changes no renderer setting. Anything else is a configuration, and a
- * configuration is what a crash record implicates.
- */
-function carriesSettings(query: string): boolean {
-  const params = new URLSearchParams(query);
-  params.delete('debug');
-  return [...params.keys()].length > 0;
 }
 
 /**

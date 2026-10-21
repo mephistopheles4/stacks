@@ -36,7 +36,7 @@ import {
   UNAVAILABLE_MESSAGE,
 } from './shelf-notice.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
-import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
+import { bookLimit, readSettings, retiredTuneHint, soloBook } from './shelf-url.ts';
 
 /**
  * Wires the page up: load the library, mount the shelf, pick a book up on click.
@@ -144,6 +144,8 @@ export async function boot(
   const all = await loadLibrary();
   const books = limit === undefined ? all : all.slice(0, limit);
   const debug = params.has('debug');
+  const retired = retiredTuneHint(params);
+  if (retired !== undefined) console.info(retired);
 
   /**
    * The lost-context record, read before anything is drawn.
@@ -482,13 +484,13 @@ export async function boot(
     if (handle !== undefined) showPanel(handle);
 
     /**
-     * The pickup tuner, the same way: a dynamic import, so Tweakpane, its
-     * essentials plugin and their stylesheet stay out of every page that did
-     * not ask for `?debug`. The tuner-split gate holds that, since #376
-     * measured a plain CSS import hoisted onto every page as silent.
+     * The debug pane, the same way: one dynamic import, so Tweakpane, its
+     * essentials plugin, their stylesheet and every instrument in it stay out of
+     * every page that did not ask for `?debug`. The tuner-split gate holds that,
+     * since #376 measured a plain CSS import hoisted onto every page as silent.
      */
-    const { mountPickupTuner } = await import('./pickup-tuner.ts');
-    mountPickupTuner(host, live.tunable);
+    const { mountDebugPane } = await import('./debug-pane.ts');
+    mountDebugPane(host, { tunable: live.tunable });
   }
 
   watchForRebuilds();

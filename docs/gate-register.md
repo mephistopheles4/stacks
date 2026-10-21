@@ -6658,3 +6658,31 @@ planted in the real file.
   nothing. Disposition `gated`.
 - **Decay** — **exposed on a pnpm major.** If pnpm renames the key, this row
   stays green over a key nothing reads. Disposition `accepted`.
+
+### G68 — `debug-pane-imports`
+
+**Gate:** [`gates/debug-pane-imports.test.ts`](../gates/debug-pane-imports.test.ts)
+**Date:** 2026-10-21
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, twice, on the real files and reverted as separate steps:
+`void import('./pickup-tuner.ts')` appended to `boot.ts` went red with
+`reaches the instrument ./pickup-tuner.ts on its own`, and
+`import { Pane } from 'tweakpane'` planted in `pickup-tuner.ts` went red with
+`pickup-tuner.ts → tweakpane`. G64 and typecheck stayed green under both.
+
+- **Weakening** — **exposed.** The gate reads value imports. A view that imports
+  Tweakpane as a type passes, though ADR-0119 asks for none, and
+  `import { type X } from 'tweakpane'` fails for the reason G6 gives. Disposition
+  `accepted`.
+- **Satisfying the letter** — **exposed.** An `import()` whose specifier is built
+  at run time, not written as a string, is not matched. No view does it, and a
+  reviewer reads it. Disposition `accepted`.
+- **Routing around** — **exposed.** Only `packages/site/src/**/*.ts` is read, so
+  a `.astro` file importing Tweakpane is outside it. Logic does not belong in
+  `.astro` files in any case (`astro-no-logic`). Disposition `accepted`.
+- **Vacuous green** — **gated.** The shell must yield at least one instrument and
+  three library imports, and the scan at least 20 site files, and every form of
+  import is planted on synthetic sources. Disposition `gated`.
+- **Decay** — **gated.** Nothing here depends on a tool version; a moved shell
+  fails the vacuity guard, because the file is read by path. Disposition `gated`.
