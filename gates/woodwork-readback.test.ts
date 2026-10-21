@@ -53,6 +53,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { panelView } from '../packages/site/src/shelf/panel-model.ts';
+import type { ApplyReport } from '../packages/site/src/shelf/scene.ts';
 import { DEFAULT_SETTINGS } from '../packages/site/src/shelf/shelf-settings.ts';
 import {
   DEFAULT_SPECIES,
@@ -269,20 +271,50 @@ describe('G54 — the shelf actually consumes the read-back', () => {
     }
   });
 
-  it('states the read-back on the `ApplyReport` the panel renders', () => {
+  it('states the read-back on the `ApplyReport` the panel model renders', () => {
     // The last link in the chain: a category the type carries and the panel
-    // drops is a read-back nobody can see. The panel is what the owner actually
-    // looks at, so a report field it never renders is the same silence.
+    // drops is a read-back nobody can see. This used to search the panel's source
+    // for `report.resolved` as text, which stayed green with the line commented
+    // into a string. It now gives the model a report and reads what comes out
+    // (#495): each resolved line must reach the status text the panel shows.
     const scene = codeOf('packages/site/src/shelf/scene.ts');
-    const panel = codeOf('packages/site/src/shelf/debug-panel.ts');
-
     expect(
       /readonly resolved:\s*readonly string\[\]/.test(scene),
       '`ApplyReport` must carry the `resolved` list',
     ).toBe(true);
+
+    const resolved = describeWoodwork(resolveWoodwork('sapele'), 'rosewood', 0.5, 0.5).resolved;
+    expectFound(resolved, 'read-back lines');
+    const report: ApplyReport = {
+      applied: [],
+      needsRebuild: [],
+      needsReload: [],
+      refused: [],
+      resolved,
+    };
+
+    const shown = panelView({
+      settings: DEFAULT_SETTINGS,
+      mountedWith: DEFAULT_SETTINGS,
+      canRebuild: true,
+      report,
+    }).statusText;
+
+    for (const line of resolved) {
+      expect(
+        shown,
+        `the panel's status text must carry the read-back line, or it reaches nobody: ${line}`,
+      ).toContain(line);
+    }
+    // And it is the only thing reporting them: a report with nothing resolved
+    // shows no read-back line, so the lines above cannot have come from elsewhere.
     expect(
-      panel.includes('report.resolved'),
-      'the debug panel must render `report.resolved`, or the read-back reaches nobody',
-    ).toBe(true);
+      panelView({
+        settings: DEFAULT_SETTINGS,
+        mountedWith: DEFAULT_SETTINGS,
+        canRebuild: true,
+        report: { ...report, resolved: [] },
+      }).statusText,
+    ).toBe('');
   });
 });
