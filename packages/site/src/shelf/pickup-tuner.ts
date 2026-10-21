@@ -5,7 +5,7 @@
  * and imports nothing from Tweakpane as a value. The pane, the essentials
  * plugin and the stylesheet belong to the shell, which is loaded by one dynamic
  * import from `boot.ts`, so a visitor without `?debug` downloads none of it; the
- * tuner-split gate holds that (ADR-0104, ADR-0118). The tuner's logic is in
+ * tuner-split gate holds that (ADR-0104, ADR-0119). The tuner's logic is in
  * `pickup-motion.ts`.
  *
  * **The honesty floor (ADR-0104):** a control shows what the shelf applied,

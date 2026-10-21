@@ -117,7 +117,7 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   instrument's folder and add it again at the same index while the others keep
   theirs, which the tuning panel's rebuild needs. To remove an instrument, delete
   its view file and its one `slots.add` line in the shell
-  ([ADR-0118](adr/0118-one-pane-for-every-debug-instrument.md)).
+  ([ADR-0119](adr/0119-one-pane-for-every-debug-instrument.md)).
 - **The pickup tuner** (`pickup-tuner.ts`, the pane's first instrument) scrubs
   the held book's timeline, shapes the eases with the curve editor, and exports
   `PICKUP_MOTION` as the constant to paste back into `shelf-settings.ts`, which

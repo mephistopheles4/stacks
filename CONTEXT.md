@@ -292,7 +292,7 @@ book whose vault cover is larger than 512 px.
 **Debug pane**:
 The one Tweakpane `Pane` behind `?debug`, titled *Debug pane*: a shell
 (`debug-pane.ts`) that holds the `Pane` and gives each instrument a folder of its
-own, behind one dynamic import ([ADR-0118](docs/adr/0118-one-pane-for-every-debug-instrument.md)).
+own, behind one dynamic import ([ADR-0119](docs/adr/0119-one-pane-for-every-debug-instrument.md)).
 It starts collapsed at 700px wide or less. The *pickup tuner* is its first
 instrument; the tuning panel and the black box's readout move in after it.
 *Avoid*: panel on its own (the glossary gives that word to the backboard),

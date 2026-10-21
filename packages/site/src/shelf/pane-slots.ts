@@ -5,7 +5,7 @@
  * No Tweakpane and no DOM, so the ordering is a unit test. `debug-pane.ts` is
  * the one file that owns the real `Pane` and hands it to `createSlots` as the
  * `PaneHost` below; an instrument is a view file that takes a `FolderSlice` and
- * imports nothing from Tweakpane (ADR-0118).
+ * imports nothing from Tweakpane (ADR-0119).
  *
  * The tuning panel's rebuild needs this: it disposes its own folder and adds it
  * again at the same index with the new handle, while the pickup tuner and the
