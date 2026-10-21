@@ -194,8 +194,6 @@ export async function boot(
   let handle: ShelfHandle | undefined;
   /** Made once, after the first shelf comes up, and moved onto every later one. */
   const held: { pickup?: Pickup } = {};
-  /** Torn down and remade when the panel rebuilds the shelf. */
-  let unmountPanel: (() => void) | undefined;
   /** Set once the panel's chunk has loaded, and only behind `?debug`. */
   let showPanel: ((current: ShelfHandle) => void) | undefined;
   /**
@@ -447,50 +445,42 @@ export async function boot(
   publish(handle, () => fallback().kind, live);
 
   /**
-   * The panel, loaded only if asked for.
+   * The debug pane, loaded only if asked for.
    *
    * A dynamic import so Vite splits it into its own chunk: an ordinary visitor
-   * downloads neither the panel nor anything it drags in. That matters more the
+   * downloads neither Tweakpane, its essentials plugin, their stylesheet nor
+   * any instrument in it. The tuner-split gate holds that, since #376 measured
+   * a plain CSS import hoisted onto every page as silent. That matters more the
    * moment postprocessing joins the graph — see #42, which measured a bloom
    * chain at +4.7 KB gzip and adding ambient occlusion at +12.5 KB.
    */
   if (debug) {
-    const { mountPanel } = await import('./debug-panel.ts');
-
-    showPanel = (current: ShelfHandle): void => {
-      unmountPanel?.();
-      unmountPanel = mountPanel(host, {
-        handle: current,
-        base: () => base,
-        onRebuild: (settings) => {
-          // Dispose before mounting: two live renderers on one canvas is two
-          // contexts, and the browser hands out a limited number of those.
-          current.dispose();
-          const next = mount(settings);
-          if (next === undefined) {
-            handle = undefined;
-            showNotice(surface, failure);
-            return;
-          }
-          // Adopted so the black box's getter — and anything else holding one —
-          // follows the live shelf rather than the disposed one.
-          adopt(next);
-        },
-      });
+    const { mountDebugPane } = await import('./debug-pane.ts');
+    const pane = mountDebugPane(host, {
+      tunable: live.tunable,
+      base: () => base,
+      rebuild: (current, settings) => {
+        // Dispose before mounting: two live renderers on one canvas is two
+        // contexts, and the browser hands out a limited number of those.
+        current.dispose();
+        const next = mount(settings);
+        if (next === undefined) {
+          handle = undefined;
+          showNotice(surface, failure);
+          return;
+        }
+        // Adopted so the black box's getter — and anything else holding one —
+        // follows the live shelf rather than the disposed one.
+        adopt(next);
+      },
+    });
+    showPanel = (current) => {
+      pane.adopt(current);
     };
 
     // Read again after the import: a fallback while the chunk was in flight has
     // already replaced the shelf, or left none.
     if (handle !== undefined) showPanel(handle);
-
-    /**
-     * The debug pane, the same way: one dynamic import, so Tweakpane, its
-     * essentials plugin, their stylesheet and every instrument in it stay out of
-     * every page that did not ask for `?debug`. The tuner-split gate holds that,
-     * since #376 measured a plain CSS import hoisted onto every page as silent.
-     */
-    const { mountDebugPane } = await import('./debug-pane.ts');
-    mountDebugPane(host, { tunable: live.tunable });
   }
 
   watchForRebuilds();

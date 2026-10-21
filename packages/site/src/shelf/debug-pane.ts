@@ -22,17 +22,29 @@
 import { Pane } from 'tweakpane';
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials';
 import tunerCss from '../generated/tuner.css?url';
-import { createSlots, startsExpanded, type PaneHost, type Slots } from './pane-slots.ts';
+import { createSlots, startsExpanded, type PaneHost, type Slot, type Slots } from './pane-slots.ts';
 import { pickupTuner, type TunablePickup } from './pickup-tuner.ts';
+import type { ShelfHandle } from './scene.ts';
+import type { ShelfSettings } from './shelf-settings.ts';
+import { tuningPanel } from './tuning-panel.ts';
 
 /** What the instruments are given to work on. */
 export interface PaneSources {
   readonly tunable: TunablePickup | undefined;
+  /** The settings this page started from; a getter, because a fallback moves it. */
+  readonly base: () => ShelfSettings;
+  /** Remount the shelf `current` with `settings`: the page owns the canvas. */
+  readonly rebuild: (current: ShelfHandle, settings: ShelfSettings) => void;
 }
 
 export interface DebugPane {
   /** The instruments' slots: dispose one and mount it again in place. */
   readonly slots: Slots;
+  /**
+   * A shelf became the live one, at boot or after a rebuild or a fallback. Only
+   * the tuning panel's folder is replaced, at its index; the others stay.
+   */
+  adopt(handle: ShelfHandle): void;
   dispose(): void;
 }
 
@@ -75,9 +87,21 @@ export function mountDebugPane(host: HTMLElement, sources: PaneSources): DebugPa
 
   const slots = createSlots(pane);
   slots.add(pickupTuner(sources.tunable));
+  let tuning: Slot | undefined;
 
   return {
     slots,
+    adopt: (handle) => {
+      const instrument = tuningPanel({
+        handle,
+        base: sources.base,
+        onRebuild: (settings) => {
+          sources.rebuild(handle, settings);
+        },
+      });
+      if (tuning === undefined) tuning = slots.add(instrument);
+      else tuning.remount(instrument);
+    },
     dispose: () => {
       slots.disposeAll();
       pane.dispose();

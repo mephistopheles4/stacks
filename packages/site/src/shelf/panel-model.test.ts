@@ -49,7 +49,7 @@ const NO_REPORT: ApplyReport = {
 };
 
 describe('claim 1 — every row of the panel has an entry and a class', () => {
-  // Written out by hand from `debug-panel.ts` as it stood, so a row dropped or
+  // Written out by hand from the hand-rolled panel as it stood, so a row dropped or
   // reclassified in the model is a disagreement and not a recount of itself.
   const EXPECTED: readonly (readonly [group: string, label: string, klass: string])[] = [
     ['key light', 'colour', 'live'],

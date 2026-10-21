@@ -15,8 +15,8 @@
  *
  *   - `boot.ts` makes exactly one import of `./debug-pane.ts`, and names no
  *     instrument — a file `debug-pane.ts` itself imports, other than the pane's
- *     own bookkeeping. `boot.ts` has other lazy imports (the inspector, the
- *     tuning panel until it joins the pane); those are not this row's concern.
+ *     own bookkeeping. `boot.ts` has another lazy import (the inspector); it is
+ *     not this row's concern.
  *   - no file under `packages/site/src` other than `debug-pane.ts` imports
  *     `tweakpane`, `@tweakpane/*` or a `.css?url` as a value, statically or by
  *     `import()`. A statement-level `import type` is erased and passes, as in G6.

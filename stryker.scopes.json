@@ -106,8 +106,8 @@
           "mechanism": "The `?solo` turntable, imported only by `boot.ts`. Same browser-only chain."
         },
         {
-          "path": "packages/site/src/shelf/debug-panel.ts",
-          "mechanism": "The `?debug` panel, lazily imported by `boot.ts`. Same browser-only chain."
+          "path": "packages/site/src/shelf/tuning-panel.ts",
+          "mechanism": "The tuning panel's view, mounted by `debug-pane.ts` behind `?debug`: a loop that copies `panel-model.ts`'s output onto Tweakpane. Same browser-only chain; the oracle is the real pane in `smoke:render`, one check per field it writes. Its logic is tested where it lives, in `panel-model.ts`, and its write order against a fake of the pane in `tuning-panel.test.ts`."
         },
         {
           "path": "packages/site/src/shelf/pickup.ts",
