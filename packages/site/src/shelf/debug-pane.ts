@@ -7,7 +7,8 @@
  * without `?debug` never downloads; the tuner-split gate holds that (ADR-0104).
  * Each instrument is a view file that takes a folder and has a `mount` that
  * returns its dispose, plus a pure model file where it has logic; an
- * instrument leaves the pane in one file and one line here (ADR-0119).
+ * instrument leaves the pane in one file and one line here (ADR-0119); the tuning
+ * panel is the exception, mounted by `adopt` after every rebuild.
  *
  * **Styled under the CSP without loosening it.** Tweakpane injects a runtime
  * `<style>` per bundle unless it finds one already carrying its id. The page

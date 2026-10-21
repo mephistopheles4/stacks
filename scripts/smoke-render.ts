@@ -3010,8 +3010,8 @@ async function checkTuningPanel(browser: Browser, origin: string): Promise<Tuner
     }
     await wait(
       page,
-      `(window.__t.read('status')?.value ?? '').includes('✓')`,
-      'the status text to report what was applied',
+      `(() => { const t = window.__t.read('status')?.value ?? ''; return t.includes('✓') && t.includes('= '); })()`,
+      'the status text to report what was applied and what is running',
     );
 
     // A list drops the stray once a real value is picked.

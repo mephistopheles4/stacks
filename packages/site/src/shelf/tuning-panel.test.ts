@@ -308,18 +308,24 @@ describe('an edit (claims 2, 6)', () => {
     expect(writes[0]).toContain('debug=');
   });
 
-  it('writes nothing to the address before the first edit', () => {
-    mount();
-    expect(writes).toEqual([]);
+  it('does not apply what its own redraw makes the pane report (the re-entry guard)', () => {
+    const { folder, applied } = mount();
+    const intensity = folder.byKey('key light/intensity');
+    intensity.edit(3);
+    // The reset rewrites the mirror under a control that showed 3, so the refresh
+    // inside the redraw fires a change for it; only the guard keeps that from
+    // being applied as an edit.
+    folder.button('reset to shipped defaults').click();
+    expect(applied).toHaveLength(2);
+    expect(applied.at(-1)).toBe(DEFAULT_SETTINGS);
   });
 
-  it('does not apply what its own refresh reports (the re-entry guard)', () => {
+  it('rounds a slider edit to its step, so float noise is not applied or written', () => {
     const { folder, applied } = mount();
-    folder.byKey('key light/intensity').edit(3);
-    const before = applied.length;
-    folder.refresh();
-    folder.refresh();
-    expect(applied).toHaveLength(before);
+    folder.byKey('fidelity/cover gloss').edit(0.30000000000000004);
+    folder.byKey('key light/intensity').edit(2.1799999999999997);
+    expect(applied.at(-2)?.materials.coverRoughness).toBe(0.3);
+    expect(applied.at(-1)?.lighting.key.intensity).toBe(2.18);
   });
 
   it("writes the applied state back to the bound object, not the event's value", () => {

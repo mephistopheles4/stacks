@@ -11,9 +11,10 @@
  * here needs a browser check of its own in `pnpm smoke:render`, which reads the
  * rendered state once for each field this file writes.
  *
- * "Removable in one file" is now **two files and one line in the shell**: this
- * view and `panel-model.ts` (the model stays when the view goes, as the pickup
- * tuner's does), and the `slots.add` in `debug-pane.ts`.
+ * "Removable in one file" is now **two files and the shell's wiring**: this view
+ * and `panel-model.ts`, and in the shell the tuning panel is not one `slots.add`
+ * line but `adopt` (which `boot.ts` calls after every rebuild or fallback) with the
+ * `base` and `rebuild` sources `boot.ts` hands over.
  *
  * ## The one rule this exists to keep
  *

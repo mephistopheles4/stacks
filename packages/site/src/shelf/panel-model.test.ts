@@ -6,6 +6,7 @@ import { writeSettings } from './shelf-url.ts';
 import {
   createPanelModel,
   listOptions,
+  onStep,
   panelView,
   rowLabel,
   statusLines,
@@ -515,3 +516,19 @@ function fakeHandle(
   };
   return handle;
 }
+
+describe('onStep — a slider value without the float noise Tweakpane lands it with', () => {
+  it('rounds to the step decimals', () => {
+    expect(onStep(0.29999999999999993, 0.01)).toBe(0.3);
+    expect(onStep(0.30000000000000004, 0.01)).toBe(0.3);
+    expect(onStep(1.9999999999999998, 0.05)).toBe(2);
+    expect(onStep(0.12500000000000003, 0.005)).toBe(0.125);
+  });
+
+  it('leaves a whole-number step, a non-number and a non-finite number alone', () => {
+    expect(onStep(7, 1)).toBe(7);
+    expect(onStep('aces', 0.01)).toBe('aces');
+    expect(onStep(true, 0.01)).toBe(true);
+    expect(onStep(Number.POSITIVE_INFINITY, 0.01)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
