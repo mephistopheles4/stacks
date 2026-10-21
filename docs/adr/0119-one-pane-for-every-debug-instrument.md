@@ -48,9 +48,10 @@ must read the rendered state for each field the view writes (#489).
   the address has been written yet, must stay in a module that loads once per
   page. It is not in the shell today; it moves in, or stays where it is, with
   the tuning panel's ticket, and a re-mount must not reset it.
-- **Nothing guards the import rule** (only the shell value-imports Tweakpane;
-  views import none). It is held by review. G64 would not notice a view that
-  imported Tweakpane, because the view is lazy behind the shell either way.
+- **G68 (`debug-pane-imports`) guards the import rule** for value imports:
+  `boot.ts` imports the shell once and no instrument, and only the shell
+  value-imports Tweakpane, its plugin or the stylesheet. A view that imported
+  Tweakpane as a type would pass; that half is held by review.
 - **Disposing a slot disposes the folder**, not only detaches it: Tweakpane's
   `remove` leaves a read-only row's polling timer running, and only a dispose
   clears it (found by running the real pane in a browser, #493).
