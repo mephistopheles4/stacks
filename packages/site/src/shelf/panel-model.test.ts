@@ -107,6 +107,16 @@ describe('claim 1 — every row of the panel has an entry and a class', () => {
       [...g.rows, ...(g.folder?.rows ?? [])].map((r) => [g.title, r.label, r.klass] as const),
     );
     expect(got.map(([g, l, k]) => [g, l, k])).toEqual(EXPECTED.map(([g, l, k]) => [g, l, k]));
+
+    // A view picks the control by `kind`, so a wrong one is a wrong control.
+    const kinds = Object.fromEntries(rows(view()).map((r) => [r.id, r.kind]));
+    expect(kinds['key light/colour']).toBe('colour');
+    expect(kinds['key light/x  (right +)']).toBe('slider');
+    expect(kinds['bloom/enabled']).toBe('toggle');
+    expect(kinds['shadows/filter']).toBe('choice');
+    expect(Object.values(kinds).filter((k) => k === 'toggle')).toHaveLength(8);
+    expect(Object.values(kinds).filter((k) => k === 'choice')).toHaveLength(5);
+    expect(Object.values(kinds).filter((k) => k === 'colour')).toHaveLength(6);
   });
 
   it('gives every row a unique id', () => {
@@ -120,6 +130,13 @@ describe('claim 2 — the lamp, from the mounted state', () => {
     expect(rowOf(view(), 'books/head cap').lamp).toBe('on');
     const noCap = resolveSettings({ books: { headCap: 0 } });
     expect(rowOf(view(noCap), 'books/head cap').lamp).toBe('off');
+    // A toggle is on exactly when it is set; inert rows read off, not on.
+    const bloom = resolveSettings({ effects: { bloom: { enabled: true } } });
+    expect(rowOf(view(bloom), 'bloom/enabled').lamp).toBe('on');
+    expect(rowOf(view(), 'bloom/enabled').lamp).toBe('off');
+    expect(rowOf(view(), 'fidelity/exposure').lamp).toBe('off');
+    expect(rowOf(view(bloom), 'renderer/antialias').lamp).toBe('off');
+    expect(rowOf(view(), 'renderer/antialias').lamp).toBe('on');
   });
 
   it('is pending for a rebuild row that has moved off what was built, and stays so', () => {
@@ -127,6 +144,9 @@ describe('claim 2 — the lamp, from the mounted state', () => {
     expect(rowOf(view(now, DEFAULT_SETTINGS), 'fidelity/cover metal').lamp).toBe('pending');
     // A standing comparison against the build, not against the previous value.
     expect(rowOf(view(now, now), 'fidelity/cover metal').lamp).toBe('on');
+    // The default comparison reads each row's own getter.
+    const glossy = resolveSettings({ materials: { coverRoughness: 0.9 } });
+    expect(rowOf(view(glossy, DEFAULT_SETTINGS), 'fidelity/cover gloss').lamp).toBe('pending');
   });
 
   it('never says pending for a live row, however far it has moved', () => {
@@ -201,11 +221,18 @@ describe('claim 3 — a row that would do nothing is disabled, with the reason i
     const outside = group?.rows ?? [];
     expect(outside.map((r) => r.label)).toEqual(['painted', 'real-time']);
     for (const r of outside) expect(r.disabled, r.label).toBe(false);
+    // Only the shadows group has a folder.
+    expect(
+      view(painted)
+        .groups.filter((g) => g.folder !== undefined)
+        .map((g) => g.title),
+    ).toEqual(['shadows']);
   });
 
   it('enables the group again when real-time is on', () => {
     const group = view().groups.find((g) => g.title === 'shadows');
     expect(group?.folder?.disabled).toBe(false);
+    expect(group?.folder?.title).toBe('real-time shadow controls');
     for (const r of group?.folder?.rows ?? []) expect(r.disabled, r.label).toBe(false);
   });
 });
@@ -268,6 +295,14 @@ describe('claim 5 — an out-of-range number stretches the slider and says so (#
     expect(row.labelText).toContain('5');
     expect(row.labelText).toContain('beyond the usual 0.1–3');
     expect(row.disabled).toBe(false);
+    // And below: the minimum widens at the row too, not only in stretchRange.
+    const low = rowOf(
+      view(resolveSettings({ renderer: { toneMapping: 'aces', exposure: 0.05 } })),
+      'fidelity/exposure',
+    );
+    expect(low.min).toBe(0.05);
+    expect(low.max).toBe(3);
+    expect(low.labelText).toContain('beyond the usual 0.1–3');
   });
 
   it('shrinks back, and drops the label, once the value is inside again', () => {
@@ -290,6 +325,9 @@ describe('claim 6 — the rebuild button', () => {
   it('is hidden until something needs a rebuild', () => {
     const model = createPanelModel({ handle: fakeHandle(), canRebuild: true });
     expect(model.view().rebuildHidden).toBe(true);
+    // Nothing applied yet, so nothing to report.
+    expect(model.view().statusText).toBe('');
+    expect(model.view().status).toEqual([]);
   });
 
   it('shows when the report asks for a rebuild and rebuild is available', () => {
@@ -325,17 +363,17 @@ describe('claim 6 — the rebuild button', () => {
 describe('claim 7 — the status lines render every ApplyReport field', () => {
   const full: ApplyReport = {
     applied: ['a1', 'a2'],
-    needsRebuild: ['b1'],
-    needsReload: ['c1'],
-    refused: ['d1'],
+    needsRebuild: ['b1', 'b2'],
+    needsReload: ['c1', 'c2'],
+    refused: ['d1', 'd2'],
     resolved: ['woodwork sheet: rosewood (x)', 'wood fibre: 1'],
   };
 
   it('renders refused, reload, rebuild, applied, then resolved last', () => {
     expect(statusLines(full, true)).toEqual([
-      '✗ d1',
-      '⟳ reload to apply: c1',
-      '⃝ not applied yet: b1',
+      '✗ d1, d2',
+      '⟳ reload to apply: c1, c2',
+      '⃝ not applied yet: b1, b2',
       '✓ a1, a2',
       '= woodwork sheet: rosewood (x), wood fibre: 1',
     ]);
@@ -343,7 +381,7 @@ describe('claim 7 — the status lines render every ApplyReport field', () => {
 
   it('says plainly when there is no rebuild to press', () => {
     expect(statusLines(full, false)).toContain(
-      '⚠ not applied yet: b1 (no rebuild available — reload)',
+      '⚠ not applied yet: b1, b2 (no rebuild available — reload)',
     );
   });
 
@@ -375,6 +413,10 @@ describe('claim 8 — resync after a reset, and the base() rule', () => {
     expect(rowOf(after, 'bookcase & room/woodwork sheet').options).toHaveLength(3);
     expect(rowOf(after, 'key light/intensity').value).toBe(DEFAULT_SETTINGS.lighting.key.intensity);
     expect(handle.applied.at(-1)).toBe(DEFAULT_SETTINGS);
+    // Every row, not two: each reads a value, and it is the default's.
+    const defaults = rows(view(DEFAULT_SETTINGS)).map((r) => [r.id, r.value]);
+    expect(defaults.filter(([, value]) => value === undefined)).toEqual([]);
+    expect(rows(after).map((r) => [r.id, r.value])).toEqual(defaults);
   });
 
   it('applies a row change through the settings it came from', () => {
@@ -383,6 +425,14 @@ describe('claim 8 — resync after a reset, and the base() rule', () => {
     const v = model.set('key light/intensity', 4);
     expect(handle.applied.at(-1)?.lighting.key.intensity).toBe(4);
     expect(rowOf(v, 'key light/intensity').value).toBe(4);
+    // Every row's setter writes the path its getter reads: feeding each row its
+    // own value back leaves the settings as they were.
+    for (const r of rows(view())) {
+      const own = createPanelModel({ handle: fakeHandle(), canRebuild: true });
+      own.set(r.id, r.value);
+      expect(own.address().settings, r.id).toEqual(DEFAULT_SETTINGS);
+    }
+    expect(() => model.set('no/such row', 1)).toThrow('no row no/such row');
   });
 
   describe('the address is a diff against base(), read fresh each time', () => {
