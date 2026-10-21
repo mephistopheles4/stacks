@@ -7,9 +7,10 @@
  * `PaneHost` below; an instrument is a view file that takes a `FolderSlice` and
  * imports nothing from Tweakpane (ADR-0119).
  *
- * The tuning panel's rebuild needs this: it disposes its own folder and adds it
- * again at the same index with the new handle, while the pickup tuner and the
- * readout keep their folders, their timers and their state.
+ * The tuning panel's rebuild will need this, once that panel is in the pane: it
+ * disposes its own folder and adds it again at the same index with the new
+ * handle, while the pickup tuner and the black box's readout keep their folders,
+ * their timers and their state.
  */
 
 /** At this width or less the pane starts collapsed, as the tuning panel did. */
@@ -20,7 +21,7 @@ export function startsExpanded(viewportWidth: number): boolean {
 }
 
 /**
- * The slice of Tweakpane's API the instruments use, declared (spec §3.8).
+ * The slice of Tweakpane's API the instruments use, declared (`docs/spec/picking-a-book-up.md` §3.8).
  *
  * `Pane` extends a class from `@tweakpane/core`, which is bundled into
  * `tweakpane` and not resolvable under pnpm's strict layout, so its methods
@@ -54,10 +55,19 @@ export interface FolderParams {
   readonly index?: number;
 }
 
+/**
+ * A folder as the pane hands it back. `dispose` is the shell's to call and not
+ * the instrument's: Tweakpane's `remove` only detaches a folder, and a read-only
+ * row polls on a timer that only a dispose clears.
+ */
+export interface PlacedFolder extends FolderSlice {
+  dispose(): void;
+}
+
 /** The pane as the shell calls it: add a folder at an index, remove one. */
 export interface PaneHost {
-  addFolder(params: FolderParams): FolderSlice;
-  remove(folder: FolderSlice): void;
+  addFolder(params: FolderParams): PlacedFolder;
+  remove(folder: PlacedFolder): void;
 }
 
 /** One instrument: a folder's worth of rows. `mount` returns its dispose. */
@@ -87,7 +97,7 @@ export interface Slots {
 }
 
 interface Mounted {
-  readonly folder: FolderSlice;
+  readonly folder: PlacedFolder;
   readonly dispose: () => void;
 }
 
@@ -117,6 +127,7 @@ export function createSlots(host: PaneHost): Slots {
           state.mounted = undefined;
           mounted.dispose();
           host.remove(mounted.folder);
+          mounted.folder.dispose();
         },
         remount(replacement) {
           if (replacement !== undefined) {

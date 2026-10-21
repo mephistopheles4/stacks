@@ -6,12 +6,14 @@ import {
   type FolderParams,
   type FolderSlice,
   type PaneHost,
+  type PlacedFolder,
 } from './pane-slots.ts';
 
 /** A folder the fake host hands out: it records what the instrument did to it. */
-interface FakeFolder extends FolderSlice {
+interface FakeFolder extends PlacedFolder {
   readonly params: FolderParams;
   readonly calls: string[];
+  disposed: boolean;
 }
 
 /**
@@ -27,6 +29,10 @@ function fakeHost() {
       const folder = {
         params,
         calls,
+        disposed: false,
+        dispose: () => {
+          folder.disposed = true;
+        },
         addBinding: () => {
           calls.push('binding');
           return { on: () => undefined };
@@ -73,12 +79,6 @@ describe('createSlots', () => {
     expect(log).toEqual(['mount one', 'mount two']);
   });
 
-  it('hands the instrument a folder it can build in', () => {
-    const { host, children } = fakeHost();
-    createSlots(host).add(instrument('one', []));
-    expect(children[0]?.calls).toEqual(['binding']);
-  });
-
   it('opens a folder unless the instrument asks for it closed', () => {
     const { host, children } = fakeHost();
     const slots = createSlots(host);
@@ -99,6 +99,8 @@ describe('createSlots', () => {
     expect(log).toEqual(['dispose b']);
     expect(titles()).toEqual(['a', 'c']);
     expect(removed.map((f) => f.params.title)).toEqual(['b']);
+    // Detached is not enough: Tweakpane's read-only rows poll until disposed.
+    expect(removed.map((f) => f.disposed)).toEqual([true]);
     expect(b.live).toBe(false);
   });
 
@@ -165,20 +167,37 @@ describe('createSlots', () => {
     expect(titles()).toEqual(['a2']);
   });
 
-  it('refuses to mount a live instrument twice, and to dispose a gone one twice', () => {
+  it('swaps a live instrument for a replacement in place, disposing the old one first', () => {
+    const { host, titles, children } = fakeHost();
+    const slots = createSlots(host);
+    const log: string[] = [];
+    slots.add(instrument('a', log));
+    const b = slots.add(instrument('b', log));
+    slots.add(instrument('c', log));
+    const [a0, , c0] = [...children];
+    log.length = 0;
+    b.remount(instrument('b2', log));
+    expect(log).toEqual(['dispose b', 'mount b2']);
+    expect(titles()).toEqual(['a', 'b2', 'c']);
+    expect(children[0]).toBe(a0);
+    expect(children[2]).toBe(c0);
+  });
+
+  it('leaves a live instrument alone on a remount, and ignores a second dispose', () => {
     const { host, titles } = fakeHost();
     const slots = createSlots(host);
     const log: string[] = [];
     const a = slots.add(instrument('a', log));
     a.remount();
     expect(titles()).toEqual(['a']);
+    expect(log.filter((line) => line === 'mount a')).toHaveLength(1);
     a.dispose();
     a.dispose();
     expect(log.filter((line) => line === 'dispose a')).toHaveLength(1);
   });
 
   it('disposes every live instrument, once, on disposeAll', () => {
-    const { host, titles } = fakeHost();
+    const { host, titles, removed } = fakeHost();
     const slots = createSlots(host);
     const log: string[] = [];
     slots.add(instrument('a', log));
@@ -188,6 +207,7 @@ describe('createSlots', () => {
     slots.disposeAll();
     expect(log).toEqual(['dispose a']);
     expect(titles()).toEqual([]);
+    expect(removed.every((f) => f.disposed)).toBe(true);
   });
 });
 

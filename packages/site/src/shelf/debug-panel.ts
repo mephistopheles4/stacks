@@ -29,8 +29,9 @@ import { WOOD_SPECIES, speciesPending, type WoodSpecies } from './woodwork.ts';
  * panel library would have brought, and "a UI library makes the lazy-load
  * boundary pointless" was disproved by measurement: the library's cost moves
  * into the lazy chunk with it (#375). The pickup tuner beside this panel is
- * Tweakpane for that reason (`pickup-tuner.ts`, ADR-0104), mounted by the shell in `debug-pane.ts` (ADR-0119); moving the rest
- * of this page to it is a later ticket, due once tuning the motion is done.
+ * Tweakpane for that reason (`pickup-tuner.ts`, ADR-0104), mounted by the
+ * shell in `debug-pane.ts`. The rest of this page moves into that pane, one
+ * instrument per ticket (ADR-0119).
  *
  * ## The one rule this file exists to keep
  *

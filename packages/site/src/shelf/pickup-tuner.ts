@@ -2,7 +2,8 @@
  * The pickup tuner — the first instrument in the debug pane, behind `?debug`.
  *
  * A view file: it takes the folder `debug-pane.ts` made for it and fills it,
- * and imports nothing from Tweakpane as a value. The pane, the essentials
+ * and imports nothing from Tweakpane, not even as a type: it types its folder with
+ * `FolderSlice` from `pane-slots.ts`. The pane, the essentials
  * plugin and the stylesheet belong to the shell, which is loaded by one dynamic
  * import from `boot.ts`, so a visitor without `?debug` downloads none of it; the
  * tuner-split gate holds that (ADR-0104, ADR-0119). The tuner's logic is in
@@ -63,21 +64,24 @@ export function pickupTuner(pickup: TunablePickup | undefined): Instrument {
 }
 
 /** Fill `folder`; the returned function stops the read-back timer. */
-export function mountPickupTuner(pane: FolderSlice, pickup: TunablePickup | undefined): () => void {
+export function mountPickupTuner(
+  folder: FolderSlice,
+  pickup: TunablePickup | undefined,
+): () => void {
   const live = { scrub: 0, held: 'nothing held' };
   // Set while the read-back writes `live`, so the write does not echo as a scrub.
   let reading = false;
 
   const motion = pickup?.motion;
   if (pickup !== undefined && motion !== undefined) {
-    pane.addBinding(live, 'scrub', { min: 0, max: 1, step: 0.001 }).on('change', (event) => {
+    folder.addBinding(live, 'scrub', { min: 0, max: 1, step: 0.001 }).on('change', (event) => {
       if (!reading) pickup.scrub(event.value);
     });
   }
-  pane.addBinding(live, 'held', { readonly: true });
+  folder.addBinding(live, 'held', { readonly: true });
 
   if (pickup !== undefined && motion !== undefined) {
-    const drive = pane.addFolder({ title: 'Drive' });
+    const drive = folder.addFolder({ title: 'Drive' });
     drive.addButton({ title: 'Play' }).on('click', () => {
       pickup.play();
     });
@@ -85,7 +89,7 @@ export function mountPickupTuner(pane: FolderSlice, pickup: TunablePickup | unde
       pickup.putBack();
     });
 
-    const timing = pane.addFolder({ title: 'Timing (seconds)' });
+    const timing = folder.addFolder({ title: 'Timing (seconds)' });
     for (const key of ['slide', 'turn', 'open', 'overlapSlideTurn', 'overlapTurnOpen'] as const) {
       timing.addBinding(motion, key, { min: 0, max: 2, step: 0.01 }).on('change', () => {
         pickup.retime();
@@ -95,7 +99,7 @@ export function mountPickupTuner(pane: FolderSlice, pickup: TunablePickup | unde
       pickup.retime();
     });
 
-    const shape = pane.addFolder({ title: 'Shape', expanded: false });
+    const shape = folder.addFolder({ title: 'Shape', expanded: false });
     shape.addBinding(motion, 'slideOut', { min: 0, max: 0.4, step: 0.005 });
     shape.addBinding(motion, 'lift', { min: 0, max: 0.1, step: 0.002 });
     shape.addBinding(motion, 'margin', { min: 1, max: 1.6, step: 0.01 });
@@ -105,7 +109,7 @@ export function mountPickupTuner(pane: FolderSlice, pickup: TunablePickup | unde
     // must not be able to export (ADR-0104's floor).
     shape.addBinding(motion, 'textFadeFrom', { min: 60, max: 140, step: 1 });
 
-    const eases = pane.addFolder({ title: 'Eases', expanded: false });
+    const eases = folder.addFolder({ title: 'Eases', expanded: false });
     for (const key of ['easeSlide', 'easeTurn', 'easeOpen'] as const) {
       const blade = eases.addBlade({
         view: 'cubicbezier',
@@ -124,12 +128,12 @@ export function mountPickupTuner(pane: FolderSlice, pickup: TunablePickup | unde
   // The export names what the shelf is running, which is the live copy when
   // there is one and the shipped constant when there is not.
   const out = { constant: '' };
-  pane.addButton({ title: 'Export PICKUP_MOTION' }).on('click', () => {
+  folder.addButton({ title: 'Export PICKUP_MOTION' }).on('click', () => {
     out.constant = exportMotion(motion ?? PICKUP_MOTION);
     void navigator.clipboard.writeText(out.constant).catch(() => undefined);
-    pane.refresh();
+    folder.refresh();
   });
-  pane.addBinding(out, 'constant', { readonly: true, multiline: true, rows: 6 });
+  folder.addBinding(out, 'constant', { readonly: true, multiline: true, rows: 6 });
 
   const timer = window.setInterval(() => {
     const state = pickup?.state();
@@ -139,7 +143,7 @@ export function mountPickupTuner(pane: FolderSlice, pickup: TunablePickup | unde
       state === undefined
         ? 'nothing held'
         : `${state.phase} · ${state.duration.toFixed(2)} s · ${state.title.slice(0, 24)}`;
-    pane.refresh();
+    folder.refresh();
     reading = false;
   }, READ_BACK_MS);
 

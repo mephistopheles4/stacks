@@ -97,7 +97,7 @@ dropped out.
 Read in `shelf-url.ts`; the keys are built in `woodwork.ts`'s `woodKeys`, which
 is where the backboard's is held to carrying the root.
 
-## The debug panel — `?debug`
+## The `?debug` page
 
 Loads a **black box**, a **tuning panel** and the **debug pane**, whose first
 instrument is the **pickup tuner**, onto the ordinary page. None of them exists for a visitor who does not ask.

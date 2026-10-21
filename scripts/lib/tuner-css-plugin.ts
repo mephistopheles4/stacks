@@ -5,7 +5,7 @@ import { extractTunerCss } from '../../packages/site/src/shelf/tuner-css.ts';
 import { REPO_ROOT } from './repo-root.ts';
 
 /**
- * Writes the pickup tuner's stylesheet where the site imports it, before Vite
+ * Writes the debug pane's stylesheet where the site imports it, before Vite
  * resolves a single module.
  *
  * The CSS lives inside the two packages' JavaScript (`tuner-css.ts` says why

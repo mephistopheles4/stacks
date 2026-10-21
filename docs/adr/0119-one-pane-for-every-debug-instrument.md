@@ -17,8 +17,10 @@ move the rest in, one instrument per ticket.
   tuner-split gate (G64) is unchanged: `.tp-rotv` stays in the shared Tweakpane
   code and stylesheet, and a page without `?debug` fetches none of it.
 - **An instrument is a view file and, where it has logic, a model file.** The
-  view takes a folder, imports Tweakpane not at all (a declared slice of its
-  API, `pane-slots.ts`), and has a `mount` that returns its dispose. The model
+  view takes a folder, imports nothing from Tweakpane, not even as a type (it
+  types the folder with `FolderSlice`, a declared slice of Tweakpane's API in
+  `pane-slots.ts`), and has a `mount` that returns its dispose. The ticket said
+  "as a type only"; this is the stricter reading and is the one built. The model
   is pure and is unit-tested in Node. The pickup tuner's model is
   `pickup-motion.ts`, as before.
 - **Ordering is a unit-tested module.** `pane-slots.ts` has no Tweakpane and no
@@ -26,7 +28,8 @@ move the rest in, one instrument per ticket.
   the same index while the others keep their folders and timers. The tuning
   panel's rebuild needs that.
 - **The pane is titled and starts collapsed at 700px wide or less**, the rule
-  the tuning panel already had.
+  the tuning panel already has. It now lives in `pane-slots.ts` too; the
+  tuning panel's own copy goes when that panel moves into the pane.
 
 ## Why
 
@@ -41,7 +44,15 @@ must read the rendered state for each field the view writes (#489).
 
 - An instrument leaves the pane by deleting its view file and its one
   `slots.add` line in the shell.
-- `debug-panel.ts`'s module-level `written` flag (#426) must stay in a module
-  that loads once per page, which the shell is.
+- `debug-panel.ts`'s module-level `written` flag (#426), which records whether
+  the address has been written yet, must stay in a module that loads once per
+  page. It is not in the shell today; it moves in, or stays where it is, with
+  the tuning panel's ticket, and a re-mount must not reset it.
+- **Nothing guards the import rule** (only the shell value-imports Tweakpane;
+  views import none). It is held by review. G64 would not notice a view that
+  imported Tweakpane, because the view is lazy behind the shell either way.
+- **Disposing a slot disposes the folder**, not only detaches it: Tweakpane's
+  `remove` leaves a read-only row's polling timer running, and only a dispose
+  clears it (found by running the real pane in a browser, #493).
 - A new dependency is not added; Tweakpane and essentials are as ADR-0104 left
   them.
