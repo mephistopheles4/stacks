@@ -1,7 +1,11 @@
 # ADR-0122 — athanor runs the suite in a sealed container, from an image that holds the installed workspace
 
 **Date:** 2026-10-21
-**Status:** accepted
+**Status:** proposed. The image and the four other commands stand; **the
+`--no-sandbox` wrapper waits on the owner's word**, because it accepts a risk,
+and the repository has no threat model to record that in. Until then `smoke`
+is named but not accepted. If the answer is no, the wrapper and the `smoke`
+command come out together.
 
 ## Decision
 
