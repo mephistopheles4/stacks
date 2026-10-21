@@ -145,3 +145,4 @@ Two other files hold what these deliberately do not:
 | [0115](./0115-the-repo-ships-no-posting-tool.md) | The repository ships no posting tool (supersedes 0078) |
 | [0116](./0116-wrangler-is-a-pinned-dev-dependency.md) | wrangler is a pinned devDependency, and the upload's environment is narrowed |
 | [0117](./0117-survivors-are-matched-by-content-and-recorded-on-their-own-orphan-branch.md) | Survivors are matched by content and recorded on their own orphan branch |
+| [0122](./0122-athanor-runs-the-suite-in-a-sealed-container.md) | athanor runs the suite in a sealed container, from an image that holds the installed workspace |
