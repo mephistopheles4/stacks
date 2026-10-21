@@ -142,7 +142,7 @@
       "stamp": "configHash",
       "value": "sha256:4d1873870fe0763896b6054005bbd7c3046ff5fccae41450260d9119858e4c41",
       "reason": "The shelf scope gained one browser-only exclusion, blackbox-readout.ts, the black box readout's view mounted by the debug pane behind ?debug (#494, #488): a handful of Tweakpane calls over a port, whose oracle is the readout check in smoke:render. A zero-mutant residual of the kind the 2026-10-09 entry declared, though blackbox-readout.test.ts drives it with a fake folder. Mutant counts were not run and no file set was compared; the change adds one excluded file and removes none.",
-      "pr": 494,
+      "pr": 505,
       "preserves": true
     }
   ]
