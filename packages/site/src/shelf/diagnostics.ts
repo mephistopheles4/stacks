@@ -35,6 +35,15 @@ declare global {
     /** Chrome only; absent elsewhere. Approximate device RAM in GiB. */
     readonly deviceMemory?: number;
   }
+  interface Window {
+    /**
+     * The black box's readout, published behind `?debug` and apart from
+     * `window.__shelf` (which boot republishes per shelf and which is absent when
+     * none mounted). `pnpm smoke:render` reads it wherever the readout is drawn,
+     * so the plain element and the pane's folder are one source (ADR-0119, #488).
+     */
+    __blackbox?: { text(): string };
+  }
   interface Performance {
     /** Chrome only — and the Pixel is Chrome, which is the point. */
     readonly memory?: {
@@ -153,12 +162,44 @@ export interface DiagnosticsOptions {
 }
 
 /**
+ * The readout, as a port the debug pane can claim.
+ *
+ * The recording is this file's and stays eager; only the *showing* is lent out.
+ * While nobody holds the claim the plain element is up, so a pane that has not
+ * loaded yet, one that never loads (`boot.ts` returns before the import when no
+ * shelf mounted) and one torn down by a rebuild are the same case, with nothing
+ * to unwire. This file imports nothing from the pane, which takes `import type`
+ * from here: Tweakpane never reaches the eager bundle.
+ */
+export interface DiagnosticsPort {
+  /** Exactly the string the readout shows — live part and record part. */
+  text(): string;
+  /** Whether the previous session left a record with no clean exit. */
+  readonly died: boolean;
+  /** Writes the previous and current snapshots to the clipboard as JSON; returns the label to show. */
+  copy(): string;
+  /** Whether `forget` is offered: only while a record exists, and after a press so its sentence stays. */
+  canForget(): boolean;
+  /** Forgets the lost-context record; returns the sentence to show. */
+  forget(): string;
+  /**
+   * Hides the plain readout: the holder shows it instead. A flag and not a
+   * count, for one holder at a time: `release` shows it again whoever else holds.
+   */
+  claim(): void;
+  /** Shows the plain readout again. */
+  release(): void;
+  /** Stops recording and removes the plain readout. */
+  dispose(): void;
+}
+
+/**
  * Starts recording, and shows the previous session's last known state.
  *
- * Returns a teardown for symmetry with the rest of the shelf; the page normally
- * lives until it is navigated away from, so nothing calls it today.
+ * Returns the port. The page normally lives until it is navigated away from, so
+ * nothing calls `dispose` today.
  */
-export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions): () => void {
+export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions): DiagnosticsPort {
   // Read before the first write, or this session overwrites the record it is
   // being mounted to show.
   const previous = readPrevious();
@@ -231,10 +272,14 @@ export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions)
     };
   };
 
+  /** What the readout shows now, kept so the hook and the pane read the string the element holds. */
+  let shown = '';
+
   const tick = (): void => {
     const current = sample();
     write(current);
-    body.textContent = render(current, previous);
+    shown = render(current, previous);
+    body.textContent = shown;
     showForget();
   };
 
@@ -258,17 +303,27 @@ export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions)
     write({ ...sample(), clean: true });
   };
 
-  const onCopy = (): void => {
+  const doCopy = (): string => {
     void navigator.clipboard.writeText(JSON.stringify({ previous, current: sample() }, null, 2));
     copy.textContent = 'copied';
+    return 'copied';
   };
 
-  const onForget = (): void => {
+  const doForget = (): string => {
     forgotten = true;
     forget.textContent =
       options.record?.forget() === true
         ? 'forgotten — reload to try real-time shadows again'
         : 'storage refused — nothing forgotten';
+    return forget.textContent;
+  };
+
+  const onCopy = (): void => {
+    doCopy();
+  };
+
+  const onForget = (): void => {
+    doForget();
   };
 
   window.addEventListener('error', onError);
@@ -280,15 +335,32 @@ export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions)
   tick();
   const timer = window.setInterval(tick, SAMPLE_MS);
 
-  return () => {
-    window.clearInterval(timer);
-    window.removeEventListener('error', onError);
-    window.removeEventListener('unhandledrejection', onRejection);
-    window.removeEventListener('pagehide', onPageHide);
-    copy.removeEventListener('click', onCopy);
-    forget.removeEventListener('click', onForget);
-    panel.remove();
+  const text = (): string => shown;
+  const port: DiagnosticsPort = {
+    text,
+    died: previous !== undefined && previous.clean !== true,
+    copy: doCopy,
+    canForget: () => forgotten || options.record?.exists() === true,
+    forget: doForget,
+    claim: () => {
+      panel.style.display = 'none';
+    },
+    release: () => {
+      panel.style.display = '';
+    },
+    dispose: () => {
+      if (window.__blackbox?.text === text) delete window.__blackbox;
+      window.clearInterval(timer);
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+      window.removeEventListener('pagehide', onPageHide);
+      copy.removeEventListener('click', onCopy);
+      forget.removeEventListener('click', onForget);
+      panel.remove();
+    },
   };
+  window.__blackbox = { text };
+  return port;
 }
 
 /* -------------------------------------------------------------------------- */
