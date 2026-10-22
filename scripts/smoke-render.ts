@@ -263,6 +263,7 @@ async function main(): Promise<void> {
             checkShadowReaders(browser, origin, large.origin),
           );
       const tuner = await timed('G64 tuner-split', () => checkTuner(browser, origin));
+      const tuning = await timed('tuning panel', () => checkTuningPanel(browser, origin));
       const readout = await timed('black box readout', () => checkReadout(browser, origin));
 
       report({
@@ -281,6 +282,7 @@ async function main(): Promise<void> {
         fallback,
         sampling,
         tuner,
+        tuning,
         readout,
       });
     } finally {
@@ -2715,7 +2717,7 @@ async function readPane(page: Page): Promise<PaneReading> {
   await until(page, HELD, 'the pane read-back: a book held');
   await until(
     page,
-    `(() => { const i = document.querySelector('.tp-rotv input.tp-txtv_i'); return i !== null && Number(i.value) > 0; })()`,
+    `(() => { const i = (${TUNER_FOLDER})?.querySelector('input.tp-txtv_i'); return i !== undefined && i !== null && Number(i.value) > 0; })()`,
     'the pane read-back: the scrub following the timeline',
   );
   const after = (await page.evaluate(READ_PANE)) as PaneNow | null;
@@ -2725,7 +2727,7 @@ async function readPane(page: Page): Promise<PaneReading> {
   })()`);
   await until(
     page,
-    `(document.querySelector('.tp-rotv textarea')?.value ?? '').includes('PICKUP_MOTION')`,
+    `((${TUNER_FOLDER})?.querySelector('textarea')?.value ?? '').includes('PICKUP_MOTION')`,
     'the pane export text',
   );
   const exported = (await page.evaluate(READ_PANE)) as PaneNow | null;
@@ -2765,19 +2767,28 @@ const NO_PANE: PaneReading = {
 };
 
 /**
+ * The Pickup tuner's folder, found by its title and not by its place: the pane
+ * holds other instruments, and the first text input or textarea on it is theirs
+ * as soon as one is added above or beside the tuner.
+ */
+const TUNER_FOLDER = `[...document.querySelectorAll('.tp-rotv .tp-fldv')].find((f) => f.querySelector('.tp-fldv_t')?.textContent === 'Pickup tuner') ?? null`;
+
+/**
  * The pane's rows as the page renders them: the root's `tp-rotv_t` title and
- * its `tp-rotv-expanded` class, the tuner's scrub (the first text input) and
- * `held` line (the first single-line monitor), and the read-only export text.
+ * its `tp-rotv-expanded` class, and, inside the Pickup tuner's folder, the scrub
+ * (its first text input), the `held` line (its first single-line monitor) and
+ * the read-only export text.
  */
 const READ_PANE = `(() => {
   const root = document.querySelector('.tp-rotv');
   if (root === null) return null;
+  const tuner = ${TUNER_FOLDER};
   return {
     title: root.querySelector('.tp-rotv_t')?.textContent ?? '',
     expanded: root.classList.contains('tp-rotv-expanded'),
-    scrub: root.querySelector('input.tp-txtv_i')?.value ?? '',
-    held: root.querySelector('input.tp-sglv_i')?.value ?? '',
-    exportText: root.querySelector('textarea')?.value ?? '',
+    scrub: tuner?.querySelector('input.tp-txtv_i')?.value ?? '',
+    held: tuner?.querySelector('input.tp-sglv_i')?.value ?? '',
+    exportText: tuner?.querySelector('textarea')?.value ?? '',
   };
 })()`;
 
@@ -3028,6 +3039,313 @@ async function visitReadout(
   }
 }
 
+/**
+ * The tuning panel, read off the real pane — one check for each field its view
+ * writes (#496, #489).
+ *
+ * `panel-model.test.ts` holds what the model *says*; `tuning-panel.test.ts` holds
+ * the order the view writes in, against a fake of Tweakpane. Neither can see
+ * whether the view copied a field at all, or whether Tweakpane drew it, so this
+ * does: every check below **changes something after the page is up and reads it
+ * again**, because a reading at rest passes whether or not the view copies the
+ * field a second time. A field is read as the page renders it: a label's text, a
+ * row's `tp-v-disabled` class or its input's `disabled` (never `binding.disabled`,
+ * which reads `false` under a disabled folder), a button's `tp-v-hidden`, a
+ * select's options, a monitor's text.
+ *
+ * Presence waits throughout (`until`): each is for a state the check requires,
+ * and a view that stops copying a field leaves it unreached, which is the failure.
+ *
+ * Outside G60 and G61, so it runs on pull requests (ADR-0108).
+ */
+const TUNING_TITLE = 'Tuning panel';
+const SHADOWS_OFF_TITLE = 'real-time shadows are off — nothing here has an effect';
+const SHADOWS_ON_TITLE = 'real-time shadow controls';
+
+/** Injected into the page: reads and drives the tuning folder as a visitor would. */
+const TUNING_HELPERS = `(() => {
+  const folder = (title) => [...document.querySelectorAll('.tp-rotv .tp-fldv')].find((f) => f.querySelector('.tp-fldv_t')?.textContent === title) ?? null;
+  const inside = () => folder(${JSON.stringify(TUNING_TITLE)});
+  const row = (name) => [...(inside()?.querySelectorAll('.tp-lblv') ?? [])].find((r) => {
+    const text = r.querySelector('.tp-lblv_l')?.textContent ?? '';
+    return text === name || text.includes(' ' + name + ' · ');
+  }) ?? null;
+  const read = (name) => {
+    const r = row(name);
+    if (r === null) return null;
+    const input = r.querySelector('select, textarea, input');
+    return {
+      label: r.querySelector('.tp-lblv_l')?.textContent ?? '',
+      disabled: r.classList.contains('tp-v-disabled') || input?.disabled === true,
+      value: input?.value ?? '',
+      knob: r.querySelector('.tp-sldv_k')?.style.width ?? '',
+      options: r.querySelector('select') === null ? [] : [...r.querySelector('select').options].map((o) => o.textContent),
+    };
+  };
+  const button = (title) => [...(inside()?.querySelectorAll('.tp-btnv') ?? [])].find((b) => b.textContent === title) ?? null;
+  const fire = (input) => input.dispatchEvent(new Event('change', { bubbles: true }));
+  window.__t = {
+    folder, row, read, button,
+    folderState: (title) => { const f = folder(title); return f === null ? null : { disabled: f.classList.contains('tp-v-disabled') }; },
+    hidden: (title) => button(title)?.classList.contains('tp-v-hidden') ?? null,
+    buttonText: (title) => button(title)?.textContent ?? null,
+    folderTitles: () => [...document.querySelectorAll('.tp-rotv > .tp-rotv_c > .tp-fldv')].map((f) => f.querySelector('.tp-fldv_t')?.textContent ?? ''),
+    setNumber: (name, value) => { const i = row(name).querySelector('input'); i.value = String(value); fire(i); },
+    choose: (name, value) => { const s = row(name).querySelector('select'); s.value = value; fire(s); },
+    toggle: (name) => { row(name).querySelector('input').click(); },
+    press: (title) => { button(title).querySelector('button').click(); },
+  };
+  return folder(${JSON.stringify(TUNING_TITLE)}) !== null;
+})()`;
+
+/** A page planted with a number beyond its slider and a name its list does not offer. */
+const TUNING_PLANT = { exposure: 5, materials: { woodSpecies: 'walnut' } };
+
+interface TuningRead {
+  readonly label: string;
+  readonly disabled: boolean;
+  readonly value: string;
+  /** A slider's knob, as a share of its track: the rendered range. */
+  readonly knob: string;
+  readonly options: readonly string[];
+}
+
+async function checkTuningPanel(browser: Browser, origin: string): Promise<TunerChecked> {
+  const lines: string[] = [];
+  const failures: string[] = [];
+  const fail = (what: string): void => {
+    failures.push(`tuning panel: ${what}`);
+  };
+
+  const read = async (page: Page, name: string): Promise<TuningRead | null> =>
+    (await page.evaluate(`window.__t.read(${JSON.stringify(name)})`)) as TuningRead | null;
+  const call = async (page: Page, expression: string): Promise<unknown> =>
+    await page.evaluate(`window.__t.${expression}`);
+  const wait = async (page: Page, condition: string, what: string): Promise<void> => {
+    if (!(await until(page, condition, `the tuning panel: ${what}`))) {
+      fail(`never reached: ${what}`);
+    }
+  };
+
+  const visitPane = async (query: string, run: (page: Page) => Promise<void>): Promise<void> => {
+    const context = await browser.createBrowserContext();
+    try {
+      const page = await context.newPage();
+      await page.setViewport(VIEWPORT);
+      page.on('pageerror', (error: unknown) => {
+        fail(`page error at ${query}: ${error instanceof Error ? error.message : String(error)}`);
+      });
+      await page.goto(`${origin}/${query}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+      // The pane is drawn by a lazy chunk, after the shelf is ready.
+      await wait(page, TUNING_HELPERS, 'the folder to be drawn');
+      await run(page);
+    } finally {
+      await context.close();
+    }
+  };
+
+  /* --- planted: out of range, off the list, and under no tone mapping --------- */
+
+  await visitPane(`?debug=${encodeURIComponent(JSON.stringify(TUNING_PLANT))}`, async (page) => {
+    // Label text, value and disabled, at rest.
+    const exposure = await read(page, 'exposure');
+    if (exposure === null) return fail('no exposure row');
+    if (!exposure.label.includes('5 is beyond the usual 0.1–3')) {
+      fail(`exposure 5 is not named in its label: "${exposure.label}"`);
+    }
+    if (!exposure.label.includes('· live') || !exposure.label.includes('🔴')) {
+      fail(`exposure under no tone mapping is not a red live row: "${exposure.label}"`);
+    }
+    if (!exposure.label.includes('pick a tone mapping first')) {
+      fail(`exposure's disabled reason is not in its label: "${exposure.label}"`);
+    }
+    if (Number(exposure.value) !== 5) {
+      fail(`exposure 5 shows ${exposure.value}: the slider clamped it`);
+    }
+    if (!exposure.disabled) fail('exposure is enabled under no tone mapping');
+
+    // List options: the stray value is offered, labelled, and selected.
+    const sheet = await read(page, 'woodwork sheet');
+    if (
+      sheet === null ||
+      !sheet.options.includes('walnut — not on the list') ||
+      sheet.value !== 'walnut — not on the list'
+    ) {
+      fail(`the woodwork sheet list does not hold walnut: ${JSON.stringify(sheet)}`);
+    }
+
+    // The rebuild button is hidden while nothing waits on a rebuild.
+    if ((await call(page, `hidden('rebuild shelf to apply')`)) !== true) {
+      fail('the rebuild button is not hidden at rest');
+    }
+
+    // A live change: label, disabled, status text.
+    await call(page, `choose('tone mapping', 'aces')`);
+    await wait(
+      page,
+      `(() => { const r = window.__t.read('exposure'); return r !== null && !r.disabled && !r.label.includes('pick a tone mapping first'); })()`,
+      'exposure enabled once a tone mapping is picked',
+    );
+    const enabled = await read(page, 'exposure');
+    if (enabled !== null && (!enabled.label.includes('🟢') || !enabled.label.includes('beyond'))) {
+      fail(`exposure under aces is not a green row still naming 5: "${enabled.label}"`);
+    }
+    await wait(
+      page,
+      `(() => { const t = window.__t.read('status')?.value ?? ''; return t.includes('✓') && t.includes('= '); })()`,
+      'the status text to report what was applied and what is running',
+    );
+
+    // A list drops the stray once a real value is picked.
+    await call(page, `choose('woodwork sheet', 'sapele')`);
+    await wait(
+      page,
+      `(() => { const r = window.__t.read('woodwork sheet'); return r !== null && r.value === 'sapele' && !r.options.some((o) => o.includes('not on the list')); })()`,
+      'the stray option to leave the list',
+    );
+
+    // Monitors: each figure is the shelf's own, read again.
+    await wait(
+      page,
+      `(() => {
+        const s = window.__shelf.stats();
+        const v = (n) => window.__t.read(n)?.value;
+        const fps = v('fps') ?? '';
+        return v('draws') === String(s.calls) && v('textures') === String(s.textures)
+          && v('tris') === String(s.triangles)
+          && v('buffer') === s.bufferWidth + 'x' + s.bufferHeight + ' @' + s.pixelRatio.toFixed(2)
+          && (fps === '—' || /^[0-9]+$/.test(fps));
+      })()`,
+      'the draws, textures, tris, buffer and fps monitors to read the shelf',
+    );
+
+    // A rebuild-class change lights the row, shows the button and the status.
+    await call(page, `setNumber('cover gloss', 0.5)`);
+    await wait(
+      page,
+      `window.__t.hidden('rebuild shelf to apply') === false && window.__t.read('cover gloss').label.includes('🟡')`,
+      'the rebuild button shown and cover gloss pending',
+    );
+    await wait(
+      page,
+      `(window.__t.read('status')?.value ?? '').includes('not applied yet')`,
+      'the status text to say a rebuild is waiting',
+    );
+
+    // A rebuild replaces only the tuning folder, at its index.
+    await page.evaluate(`(() => {
+      window.__t.folder('Pickup tuner').__kept = true;
+      window.__t.folder(${JSON.stringify(TUNING_TITLE)}).__old = true;
+      window.__shelf.__old = true;
+    })()`);
+    await call(page, `press('rebuild shelf to apply')`);
+    await wait(
+      page,
+      `window.__shelf?.ready === true && window.__shelf.__old !== true && window.__t.read('cover gloss')?.label.includes('🟢')`,
+      'the rebuilt shelf, and cover gloss caught up',
+    );
+    const after = (await page.evaluate(`(() => ({
+      titles: window.__t.folderTitles(),
+      tunerKept: window.__t.folder('Pickup tuner')?.__kept === true,
+      tuningNew: window.__t.folder(${JSON.stringify(TUNING_TITLE)})?.__old !== true,
+      hidden: window.__t.hidden('rebuild shelf to apply'),
+      gloss: window.__t.read('cover gloss')?.value,
+      exposure: window.__t.read('exposure')?.value,
+    }))()`)) as {
+      titles: string[];
+      tunerKept: boolean;
+      tuningNew: boolean;
+      hidden: boolean | null;
+      gloss: string | undefined;
+      exposure: string | undefined;
+    };
+    if (after.titles.join('|') !== `Pickup tuner|Black box|${TUNING_TITLE}`) {
+      fail(`after a rebuild the pane holds ${after.titles.join(' | ')}`);
+    }
+    if (!after.tunerKept) fail("a rebuild replaced the pickup tuner's folder");
+    if (!after.tuningNew) fail('a rebuild kept the old tuning folder');
+    if (after.hidden !== true) fail('the rebuild button is still shown after the rebuild');
+    if (Number(after.gloss) !== 0.5)
+      fail(`cover gloss reads ${String(after.gloss)} after a rebuild`);
+    if (Number(after.exposure) !== 5)
+      fail(`exposure reads ${String(after.exposure)} after a rebuild`);
+
+    // Copy settings: the button says so, then goes back.
+    await call(page, `press('copy settings JSON')`);
+    await wait(
+      page,
+      `window.__t.buttonText('copied — paste into shelf-settings.ts') !== null`,
+      'the copy button to say copied',
+    );
+    await wait(
+      page,
+      `window.__t.buttonText('copy settings JSON') !== null`,
+      'the copy button to go back',
+    );
+
+    // Reset: every control resynced, the shrunk range's float step ignored, and
+    // the address back to bare `?debug` — an echo applied as an edit would leave
+    // a diff in it.
+    await call(page, `press('reset to shipped defaults')`);
+    await wait(
+      page,
+      `(() => { const r = window.__t.read('exposure'); return r !== null && Number(r.value) === 1 && r.disabled && r.label.includes('pick a tone mapping first'); })()`,
+      'exposure back to 1 and disabled after a reset',
+    );
+    // The stretched range is gone: a 1 on a 0.1–3 track sits a third of the way
+    // along, where on the 0.1–5 track it was planted on it sits a fifth.
+    const reset = await read(page, 'exposure');
+    if (reset === null || Math.abs(parseFloat(reset.knob) - ((1 - 0.1) / (3 - 0.1)) * 100) > 1) {
+      fail(
+        `after a reset exposure's knob is at ${reset?.knob ?? '(no row)'}, so its range did not shrink back`,
+      );
+    }
+    const url = decodeURIComponent((await page.evaluate('location.search')) as string);
+    if (url !== '?debug') fail(`after a reset the address is "${url}", not "?debug"`);
+    lines.push(
+      'tuning panel   exposure 5 and walnut planted: label, value, disabled, options, status, monitors, rebuild, copy, reset',
+    );
+  });
+
+  /* --- the shadows folder: its title, its disabled state, and the way back ---- */
+
+  await visitPane('?debug&shadows=0', async (page) => {
+    const folderOff = (await call(page, `folderState(${JSON.stringify(SHADOWS_OFF_TITLE)})`)) as {
+      disabled: boolean;
+    } | null;
+    if (folderOff === null) return fail('no shadows folder titled with the reason it is off');
+    if (!folderOff.disabled) fail('the shadows folder is enabled while real-time shadows are off');
+    const filter = await read(page, 'filter');
+    if (
+      filter === null ||
+      !filter.disabled ||
+      !filter.label.includes('real-time shadows are off')
+    ) {
+      fail(`a row in the off folder is not disabled with its reason: ${JSON.stringify(filter)}`);
+    }
+    const realTime = await read(page, 'real-time');
+    if (realTime === null || realTime.disabled) {
+      fail('the real-time switch is disabled with the folder it re-enables');
+    }
+
+    await call(page, `toggle('real-time')`);
+    await wait(
+      page,
+      `window.__t.folderState(${JSON.stringify(SHADOWS_ON_TITLE)})?.disabled === false`,
+      'the shadows folder retitled and enabled',
+    );
+    await wait(
+      page,
+      `window.__t.read('filter') !== null && !window.__t.read('filter').disabled`,
+      'a row in the shadows folder enabled',
+    );
+    lines.push('tuning panel   shadows=0: folder title, folder and row disabled, the way back');
+  });
+
+  return { lines, failures };
+}
+
 async function checkReadout(browser: Browser, origin: string): Promise<TunerChecked> {
   const none = await visitReadout(browser, origin, {
     viewport: VIEWPORT,
@@ -3156,6 +3474,7 @@ function report(result: {
   fallback: FallbackChecked;
   sampling: SamplingChecked;
   tuner: TunerChecked;
+  tuning: TunerChecked;
   readout: TunerChecked;
 }): void {
   const {
@@ -3174,12 +3493,14 @@ function report(result: {
     fallback,
     sampling,
     tuner,
+    tuning,
     readout,
   } = result;
   const failures: string[] = [
     ...fallback.failures,
     ...sampling.failures,
     ...tuner.failures,
+    ...tuning.failures,
     ...readout.failures,
   ];
   // Fails closed: a run that skipped nothing must have run both, so a flagless
@@ -3292,6 +3613,8 @@ function report(result: {
   }
   console.log('pickup tuner, each page in a browser context of its own');
   for (const line of tuner.lines) console.log(`  ${line}`);
+  console.log('tuning panel, each page in a browser context of its own');
+  for (const line of tuning.lines) console.log(`  ${line}`);
   console.log('black box readout, each page in a browser context of its own');
   for (const line of readout.lines) console.log(`  ${line}`);
   console.log('step times');

@@ -44,6 +44,8 @@ function fakeFolder() {
   const buttons: FakeButton[] = [];
   let refreshes = 0;
   const folder: FolderSlice = {
+    title: 'Black box',
+    disabled: false,
     addBinding(object, key, params) {
       bindings.push({ object: object as Record<string, unknown>, key, params });
       return { on: () => undefined } as never;

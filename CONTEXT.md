@@ -294,7 +294,8 @@ The one Tweakpane `Pane` behind `?debug`, titled *Debug pane*: a shell
 (`debug-pane.ts`) that holds the `Pane` and gives each instrument a folder of its
 own, behind one dynamic import ([ADR-0119](docs/adr/0119-one-pane-for-every-debug-instrument.md)).
 It starts collapsed at 700px wide or less. The *pickup tuner* is its first
-instrument; the tuning panel and the black box's readout move in after it.
+instrument, the *tuning panel* its second; the black box's readout moves in after
+them.
 *Avoid*: panel on its own (the glossary gives that word to the backboard),
 debug panel for the pane.
 
@@ -302,10 +303,15 @@ debug panel for the pane.
 The instrument in the *debug pane* that scrubs the pickup motion and shapes its
 eases ([ADR-0104](docs/adr/0104-tweakpane-tunes-the-pickup-behind-debug.md)). It
 edits `PICKUP_MOTION` live and exports it; it is never where the values live.
-The rest of the `?debug` page is the *debug panel*, or *tuning panel*; either
-name is fine for that one, until it too joins the pane.
 *Avoid*: panel on its own (the glossary gives that word to the backboard),
 timeline editor.
+
+**Tuning panel**:
+The instrument in the *debug pane* that holds every setting the shelf has, live
+(`tuning-panel.ts`, over the pure `panel-model.ts`). It is no longer a page of
+its own, so *debug panel* is retired.
+*Avoid*: panel on its own (the glossary gives that word to the backboard),
+debug panel.
 
 ### Building and publishing
 

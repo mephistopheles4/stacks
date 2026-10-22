@@ -121,8 +121,21 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   and the readout takes only `import type` from it (G68), so Tweakpane never
   reaches the eager bundle
   ([#488](https://github.com/mephistopheles4/stacks/issues/488)).
-- **The panel** (`debug-panel.ts`) is every setting the shelf has, live, and is
-  **lazy**: its 8.8 KB is paid only by a page that asked for it.
+- **The tuning panel** (`tuning-panel.ts`, the pane's second instrument) is every
+  setting the shelf has, live. It is a **loop over `panel-model.ts`**, which gives
+  each row's lamp, label, disabled reason, list options, range and the rebuild
+  button's hidden flag as plain values Node tests on every pull request; the view
+  copies them onto Tweakpane bindings, folders and buttons, and imports no
+  Tweakpane. Lazy with the pane, not on its own. Its honesty comes from the order
+  it copies in: a slider's range is stretched, and a list offered the stray value,
+  *before* the value is written and before any `refresh()`, because Tweakpane
+  would otherwise clamp or rewrite it and write that back; everything it writes is
+  inside a re-entry guard, which also absorbs the float step a range leaves behind
+  when it narrows again. A rebuild disposes and re-adds only this instrument's
+  folder, at its index. `?debug=<json>` and the address writer are
+  `shelf-url.ts`'s, and the module-level `written` flag (#426) lives in the view,
+  which loads once per page. `smoke:render` reads the rendered state once for each
+  field the view writes.
 - **The debug pane** (`debug-pane.ts`) is one Tweakpane `Pane`, titled, collapsed
   at 700px wide or less, and **lazy** behind one dynamic import from `boot.ts`.
   It is **the only file that imports `tweakpane`, the essentials plugin and the
@@ -132,8 +145,12 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   Tweakpane, plus a pure model file where it has logic. A slot can dispose one
   instrument's folder and add it again at the same index while the others keep
   theirs, which the tuning panel's rebuild needs. To remove an instrument, delete
-  its view file and its one `slots.add` line in the shell
-  ([ADR-0119](adr/0119-one-pane-for-every-debug-instrument.md)).
+  its view file (and its model file, where it has one) and its one `slots.add`
+  line in the shell ([ADR-0119](adr/0119-one-pane-for-every-debug-instrument.md)).
+  The tuning panel is the exception on the shell's side: it is not added once but
+  by `adopt`, which `boot.ts` calls after every rebuild or fallback, so removing it
+  is two files, the shell's `adopt` and the `base` and `rebuild` sources `boot.ts`
+  hands over.
 - **The pickup tuner** (`pickup-tuner.ts`, the pane's first instrument) scrubs
   the held book's timeline, shapes the eases with the curve editor, and exports
   `PICKUP_MOTION` as the constant to paste back into `shelf-settings.ts`, which

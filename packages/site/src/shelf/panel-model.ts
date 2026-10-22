@@ -146,6 +146,22 @@ export function stretchRange(
 }
 
 /**
+ * A slider's value rounded to its step's decimals.
+ *
+ * Tweakpane lands a slider on its step grid in floating point, so a drag to 0.3
+ * arrives as 0.29999999999999993 and a narrowed range leaves 1.9999999999999998.
+ * Applied as it comes, that noise reaches the shelf, the address, the status line
+ * and the JSON copy hands you to paste into the settings file; the native range
+ * input it replaces gave 0.3. Not a number, or a step with no decimals to speak
+ * of, passes through.
+ */
+export function onStep(value: Value, step: number): Value {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return value;
+  const decimals = (String(step).split('.')[1] ?? '').length;
+  return Number(value.toFixed(decimals));
+}
+
+/**
  * What a row's label says: the lamp, the name, the class, and then whatever has
  * to be said — the real value of a number beyond the range, or why the row is
  * disabled. In label text because Tweakpane has no tooltip.
@@ -791,7 +807,7 @@ const idOf = (def: RowDef): string => `${def.group}/${def.label}`;
 export function setRow(id: string, settings: ShelfSettings, value: Value): ShelfSettings {
   const def = ROWS.find((candidate) => idOf(candidate) === id);
   if (def === undefined) throw new Error(`panel-model: no row ${id}`);
-  return def.set(settings, value);
+  return def.set(settings, def.range === undefined ? value : onStep(value, def.range.step));
 }
 
 function rowView(def: RowDef, inputs: PanelInputs, folderReason: string | undefined): RowView {

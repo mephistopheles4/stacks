@@ -7,13 +7,12 @@
  * `PaneHost` below; an instrument is a view file that takes a `FolderSlice` and
  * imports nothing from Tweakpane (ADR-0119).
  *
- * The tuning panel's rebuild will need this, once that panel is in the pane: it
- * disposes its own folder and adds it again at the same index with the new
- * handle, while the pickup tuner and the black box's readout keep their folders,
- * their timers and their state.
+ * The tuning panel's rebuild uses this: it disposes its own folder and adds it
+ * again at the same index with the new handle, while the pickup tuner and the
+ * black box's readout keep their folders, their timers and their state.
  */
 
-/** At this width or less the pane starts collapsed, as the tuning panel did. */
+/** At this width or less the pane starts collapsed, as the old tuning panel did. */
 export const PANE_NARROW_PX = 700;
 
 /**
@@ -44,14 +43,39 @@ export interface Clickable {
   hidden: boolean;
   on(event: 'click', handler: () => void): Clickable;
 }
+/** A list's option, as `binding.options` takes it. */
+export interface ListEntry {
+  readonly text: string;
+  readonly value: string;
+}
+/**
+ * A binding as the pane hands it back: the properties a view may set after the
+ * fact. Every one is public API (`BindingApi`, `SliderInputBindingApi`,
+ * `ListInputBindingApi`); `min`, `max` and `options` exist only on the kind of
+ * binding the params made, and a view sets them only on that kind.
+ */
+export interface BindingSlice<T> extends Changeable<T> {
+  label: string;
+  disabled: boolean;
+  hidden: boolean;
+  min: number;
+  max: number;
+  options: readonly ListEntry[];
+}
+export interface ButtonSlice extends Clickable {
+  title: string;
+  hidden: boolean;
+}
 export interface FolderSlice {
+  title: string;
+  disabled: boolean;
   addBinding<O extends object, K extends keyof O & string>(
     object: O,
     key: K,
     params?: Readonly<Record<string, unknown>>,
-  ): Changeable<O[K]>;
+  ): BindingSlice<O[K]>;
   addFolder(params: { readonly title: string; readonly expanded?: boolean }): FolderSlice;
-  addButton(params: { readonly title: string }): Clickable;
+  addButton(params: { readonly title: string }): ButtonSlice;
   addBlade(params: Readonly<Record<string, unknown>>): unknown;
   refresh(): void;
 }

@@ -144,6 +144,14 @@
       "reason": "The shelf scope gained one browser-only exclusion, blackbox-readout.ts, the black box readout's view mounted by the debug pane behind ?debug (#494, #488): a handful of Tweakpane calls over a port, whose oracle is the readout check in smoke:render. A zero-mutant residual of the kind the 2026-10-09 entry declared, though blackbox-readout.test.ts drives it with a fake folder. Mutant counts were not run and no file set was compared; the change adds one excluded file and removes none.",
       "pr": 505,
       "preserves": true
+    },
+    {
+      "date": "2026-10-21",
+      "stamp": "configHash",
+      "value": "sha256:d887451b1ba3a28642312a3c7efd49d11de3957a6054b89a670ce15dd18b5f9c",
+      "reason": "The shelf scope's browser-only exclusion for the ?debug tuning panel moved from debug-panel.ts, which was deleted, to tuning-panel.ts, the view that replaces it (#496, ADR-0119); both are zero-mutant residuals of the kind the 2026-10-09 entry declared. The panel's logic was already in panel-model.ts, a measured file since #495, and the new Node test file is a test file the mutate array leaves out. Reasoned from the configuration diff, which is one negation swapped for another, and not from a mutation run or a resolved file list: no measured file is added or removed, so the mutated set and its mutant inventory are unchanged.",
+      "pr": 504,
+      "preserves": true
     }
   ]
 }

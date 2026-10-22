@@ -13,7 +13,7 @@ import {
  * The query string, in both directions, in one place.
  *
  * It was three places: a reader in `boot.ts`, a translation in `scene.ts`, and a
- * writer in `debug-panel.ts`. The tell that this was wrong is that `shadowfetch`
+ * writer in the tuning panel. The tell that this was wrong is that `shadowfetch`
  * appeared in the writer's table and had no control — it had been copied from
  * the reader rather than derived from anything. Two tables describing one
  * vocabulary is the shape G10 and G23 both caught, and the failure is silent in
