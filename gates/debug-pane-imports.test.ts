@@ -11,7 +11,7 @@
  * goes is the shape the next instrument is copied from: views thin, models
  * measurable, one pane.
  *
- * Two clauses:
+ * Three clauses:
  *
  *   - `boot.ts` makes exactly one import of `./debug-pane.ts`, and names no
  *     instrument — a file `debug-pane.ts` itself imports, other than the pane's
@@ -20,6 +20,10 @@
  *   - no file under `packages/site/src` other than `debug-pane.ts` imports
  *     `tweakpane`, `@tweakpane/*` or a `.css?url` as a value, statically or by
  *     `import()`. A statement-level `import type` is erased and passes, as in G6.
+ *   - the black box's recording reaches nothing of the pane, and the readout's
+ *     view reaches the recording only as a type (#488): `diagnostics.ts` is an
+ *     eager static import, so one value edge from it into the pane, or from the
+ *     readout back into it, drags Tweakpane in front of the page it measures.
  *
  * See docs/gates.md, row G68 (debug-pane-imports).
  */
@@ -87,6 +91,39 @@ function bootFaults(boot: string, instruments: readonly string[]): string[] {
   return faults;
 }
 
+/**
+ * The pane's files, none of which the recording may reach — not even as a type:
+ * the shell, its bookkeeping and every instrument the shell imports as a value,
+ * read from the shell so a new instrument joins the list by being added.
+ */
+function paneFiles(shell: string): string[] {
+  return ['./debug-pane.ts', BOOKKEEPING, ...instrumentsOf(shell)];
+}
+
+/**
+ * What the black box and the pane do wrong to each other's direction: the
+ * recording reaching any pane file, and any pane file (the shell and each
+ * instrument, given by name) reaching the recording otherwise than as a type.
+ */
+function directionFaults(
+  diagnostics: string,
+  shell: string,
+  panes: Readonly<Record<string, string>>,
+): string[] {
+  const files = paneFiles(shell);
+  const faults = reaches(diagnostics)
+    .filter((r) => files.includes(r.specifier))
+    .map((r) => `diagnostics.ts reaches ${r.specifier}`);
+  for (const [name, source] of Object.entries({ 'debug-pane.ts': shell, ...panes })) {
+    for (const r of reaches(source)) {
+      if (r.specifier === './diagnostics.ts' && r.kind !== 'type') {
+        faults.push(`${name} imports ./diagnostics.ts as a ${r.kind}, not a type`);
+      }
+    }
+  }
+  return faults;
+}
+
 /** The library reaches in `source` that are values. */
 function libraryValueReaches(source: string): string[] {
   return reaches(source)
@@ -115,7 +152,72 @@ describe('G68 — the debug pane has one door and one library holder', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('keeps the black box free of the pane, and the pane to a type import of the black box', () => {
+    const DIR = 'packages/site/src/shelf/';
+    const shell = readRepoFile(SHELL);
+    const panes = Object.fromEntries(
+      [BOOKKEEPING, ...instrumentsOf(shell)].map((specifier) => [
+        specifier.slice(2),
+        readRepoFile(`${DIR}${specifier.slice(2)}`),
+      ]),
+    );
+    expect(Object.keys(panes)).toContain('blackbox-readout.ts');
+    expect(directionFaults(readRepoFile(`${DIR}diagnostics.ts`), shell, panes)).toEqual([]);
+  });
+
   describe('the judgement, on planted sources', () => {
+    const cleanDiagnostics = `import type { ShelfHandle } from './scene.ts';`;
+    const cleanShell = [
+      `import { createSlots } from './pane-slots.ts';`,
+      `import { blackboxReadout } from './blackbox-readout.ts';`,
+      `import { pickupTuner } from './pickup-tuner.ts';`,
+      `import type { DiagnosticsPort } from './diagnostics.ts';`,
+    ].join('\n');
+    const cleanPanes = {
+      'blackbox-readout.ts': `import type { DiagnosticsPort } from './diagnostics.ts';`,
+      'pickup-tuner.ts': `import { exportMotion } from './pickup-motion.ts';`,
+    };
+
+    it('passes a black box that imports no pane file and a pane that imports it as a type', () => {
+      expect(directionFaults(cleanDiagnostics, cleanShell, cleanPanes)).toEqual([]);
+    });
+
+    it('fails a black box that reaches the shell, its bookkeeping or any instrument, in any form', () => {
+      for (const specifier of [
+        './debug-pane.ts',
+        './pane-slots.ts',
+        './blackbox-readout.ts',
+        './pickup-tuner.ts',
+      ]) {
+        for (const source of [
+          `import { x } from '${specifier}';`,
+          `import type { X } from '${specifier}';`,
+          `const m = await import('${specifier}');`,
+        ]) {
+          expect(directionFaults(source, cleanShell, cleanPanes), source).not.toEqual([]);
+        }
+      }
+    });
+
+    it('fails the shell or an instrument that imports the black box as a value', () => {
+      for (const value of [
+        `import { mountDiagnostics } from './diagnostics.ts';`,
+        `import { type DiagnosticsPort } from './diagnostics.ts';`,
+      ]) {
+        expect(
+          directionFaults(cleanDiagnostics, cleanShell, {
+            ...cleanPanes,
+            'blackbox-readout.ts': value,
+          }),
+          value,
+        ).not.toEqual([]);
+        expect(
+          directionFaults(cleanDiagnostics, `${cleanShell}\n${value}`, cleanPanes),
+          value,
+        ).not.toEqual([]);
+      }
+    });
+
     const instruments = ['./pickup-tuner.ts'];
     const good = `const { mountDebugPane } = await import('./debug-pane.ts');`;
 

@@ -1,7 +1,7 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountBookViewer, type BookViewerElements } from './book-viewer.ts';
-import { mountDiagnostics } from './diagnostics.ts';
+import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
 import {
   createPickup,
   loopPickups,
@@ -410,8 +410,13 @@ export async function boot(
   // on exactly the device and connection where the first seconds of a crash
   // record are the ones worth having. The panel can afford that latency; this
   // cannot.
+  //
+  // Its readout is lent to the debug pane through the returned port: the plain
+  // element shows whenever nobody holds the claim, so the page where the pane
+  // never arrives still shows the previous session's record.
+  let blackbox: DiagnosticsPort | undefined;
   if (debug && surface.parentElement !== null) {
-    mountDiagnostics(surface.parentElement, {
+    blackbox = mountDiagnostics(surface.parentElement, {
       books: books.length,
       // A getter, so a rebuild does not leave the black box reading a shelf that
       // was disposed. See `DiagnosticsOptions.handle`.
@@ -455,32 +460,39 @@ export async function boot(
    * chain at +4.7 KB gzip and adding ambient occlusion at +12.5 KB.
    */
   if (debug) {
-    const { mountDebugPane } = await import('./debug-pane.ts');
-    const pane = mountDebugPane(host, {
-      tunable: live.tunable,
-      base: () => base,
-      rebuild: (current, settings) => {
-        // Dispose before mounting: two live renderers on one canvas is two
-        // contexts, and the browser hands out a limited number of those.
-        current.dispose();
-        const next = mount(settings);
-        if (next === undefined) {
-          handle = undefined;
-          showNotice(surface, failure);
-          return;
-        }
-        // Adopted so the black box's getter — and anything else holding one —
-        // follows the live shelf rather than the disposed one.
-        adopt(next);
-      },
-    });
-    showPanel = (current) => {
-      pane.adopt(current);
-    };
+    // A chunk that is slow, refused or never arrives must not take the shelf with
+    // it: the black box's plain readout stays up, and says what the pane could not.
+    try {
+      const { mountDebugPane } = await import('./debug-pane.ts');
+      const pane = mountDebugPane(host, {
+        tunable: live.tunable,
+        blackbox,
+        base: () => base,
+        rebuild: (current, settings) => {
+          // Dispose before mounting: two live renderers on one canvas is two
+          // contexts, and the browser hands out a limited number of those.
+          current.dispose();
+          const next = mount(settings);
+          if (next === undefined) {
+            handle = undefined;
+            showNotice(surface, failure);
+            return;
+          }
+          // Adopted so the black box's getter — and anything else holding one —
+          // follows the live shelf rather than the disposed one.
+          adopt(next);
+        },
+      });
+      showPanel = (current) => {
+        pane.adopt(current);
+      };
 
-    // Read again after the import: a fallback while the chunk was in flight has
-    // already replaced the shelf, or left none.
-    if (handle !== undefined) showPanel(handle);
+      // Read again after the import: a fallback while the chunk was in flight has
+      // already replaced the shelf, or left none.
+      if (handle !== undefined) showPanel(handle);
+    } catch (error) {
+      console.warn('the debug pane did not load; the black box stays plain', error);
+    }
   }
 
   watchForRebuilds();

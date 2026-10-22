@@ -24,6 +24,8 @@ import { Pane } from 'tweakpane';
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials';
 import tunerCss from '../generated/tuner.css?url';
 import { createSlots, startsExpanded, type PaneHost, type Slot, type Slots } from './pane-slots.ts';
+import { blackboxReadout } from './blackbox-readout.ts';
+import type { DiagnosticsPort } from './diagnostics.ts';
 import { pickupTuner, type TunablePickup } from './pickup-tuner.ts';
 import type { ShelfHandle } from './scene.ts';
 import type { ShelfSettings } from './shelf-settings.ts';
@@ -36,6 +38,8 @@ export interface PaneSources {
   readonly base: () => ShelfSettings;
   /** Remount the shelf `current` with `settings`: the page owns the canvas. */
   readonly rebuild: (current: ShelfHandle, settings: ShelfSettings) => void;
+  /** The black box's port, absent when it did not mount; the pane then has no readout folder. */
+  readonly blackbox?: DiagnosticsPort | undefined;
 }
 
 export interface DebugPane {
@@ -82,12 +86,13 @@ export function mountDebugPane(host: HTMLElement, sources: PaneSources): DebugPa
   const pane = new Pane({
     title: 'Debug pane',
     container,
-    expanded: startsExpanded(window.innerWidth),
+    expanded: startsExpanded(window.innerWidth, sources.blackbox?.died === true),
   }) as unknown as PaneSlice;
   pane.registerPlugin(EssentialsPlugin);
 
   const slots = createSlots(pane);
   slots.add(pickupTuner(sources.tunable));
+  if (sources.blackbox !== undefined) slots.add(blackboxReadout(sources.blackbox));
   let tuning: Slot | undefined;
 
   return {
