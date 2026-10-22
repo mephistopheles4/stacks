@@ -263,6 +263,7 @@ async function main(): Promise<void> {
             checkShadowReaders(browser, origin, large.origin),
           );
       const tuner = await timed('G64 tuner-split', () => checkTuner(browser, origin));
+      const readout = await timed('black box readout', () => checkReadout(browser, origin));
 
       report({
         skipped: pullRequest ? SKIPPED_ON_PULL_REQUESTS : undefined,
@@ -280,6 +281,7 @@ async function main(): Promise<void> {
         fallback,
         sampling,
         tuner,
+        readout,
       });
     } finally {
       await browser.close();
@@ -1985,7 +1987,7 @@ async function storageRefused(page: Page, origin: string): Promise<string> {
   );
   await waitForState(
     page,
-    `document.querySelector('.shelf-diagnostics')?.textContent.includes('not remembered') === true`,
+    `window.__blackbox?.text().includes('not remembered') === true`,
     3000,
     'black-box line saying the fallback is not remembered',
   );
@@ -2097,7 +2099,7 @@ async function probeLoss(page: Page, origin: string): Promise<string> {
   );
   await waitForState(
     page,
-    `document.querySelector('.shelf-diagnostics')?.textContent.includes('a shadow probe, not remembered') === true`,
+    `window.__blackbox?.text().includes('a shadow probe, not remembered') === true`,
     3000,
     "black-box line saying the probe's loss is not remembered",
   );
@@ -2632,6 +2634,9 @@ async function checkTuner(browser: Browser, origin: string): Promise<TunerChecke
   for (const error of [...plain.errors, ...debug.errors, ...narrow.errors]) {
     failures.push(`tuner: ${error}`);
   }
+  if (plain.hookPublished) {
+    failures.push('black box hook: window.__blackbox is published on a page without ?debug');
+  }
 
   const reading = debug.pane;
   lines.push(
@@ -2744,6 +2749,8 @@ interface TunerVisit {
     readonly emptyHash: boolean;
   };
   readonly pane: PaneReading;
+  /** Whether `window.__blackbox` was published: behind `?debug` only. */
+  readonly hookPublished: boolean;
   readonly errors: readonly string[];
 }
 
@@ -2839,10 +2846,297 @@ async function visitForTuner(
         : await readPaneAtRest(page);
 
     const fetched = (await Promise.all(reads)).filter((asset) => asset !== undefined);
-    return { fetched, styled, pane, errors };
+    const hookPublished = (await page.evaluate('window.__blackbox !== undefined')) as boolean;
+    return { fetched, styled, pane, hookPublished, errors };
   } finally {
     await context.close();
   }
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The black box's readout — the display check #488 left to #489, placed here.
+ *
+ * Outside G60 on purpose: G60 is skipped on pull requests (ADR-0108), and this
+ * is cheap, so it runs on every one. Three pages, each in a context of its own:
+ *
+ * - **no pane**: the pane's chunk is aborted at the network, as a slow or
+ *   refused chunk would be. The plain readout must be showing, and carry the
+ *   hook's text.
+ * - **pane**: once it loads, the readout monitor's textarea `.value` equals
+ *   `window.__blackbox.text()` and the plain element has stepped aside. A
+ *   textarea, not `textContent`, because that is what a Tweakpane read-only
+ *   multiline monitor draws.
+ * - **death**: a record with no clean exit is seeded before the page's first
+ *   script, at 700px where the pane starts collapsed; the pane and the readout
+ *   folder must both be open, and show the death line.
+ *
+ * It fails if any of the three is dropped: no hook, no claim, no monitor, or no
+ * opening rule each reds a different page.
+ */
+const BLACKBOX_KEY = 'stacks.blackbox.v2';
+
+/**
+ * The chunk `debug-pane.ts` becomes. Vite names it after the entry module and a
+ * hash; the dot keeps `debug-panel`, the tuning panel's chunk, from matching.
+ */
+const PANE_CHUNK = /debug-pane\.[\w-]+\.js/;
+
+/** A previous session's record that never reached `pagehide`: no `clean` flag. */
+const DEAD_RECORD = {
+  seconds: 42,
+  books: 7,
+  profile: 'staged death',
+  textures: 1,
+  geometries: 1,
+  programs: 1,
+  calls: 1,
+  triangles: 1,
+  buffer: '1x1',
+  pixelRatio: 1,
+  screen: '1x1 @1',
+  errors: [] as string[],
+};
+
+interface ReadoutReading {
+  /** `window.__blackbox.text()`, or null when the hook is absent. */
+  readonly hook: string | null;
+  /** The plain element: whether it is drawn, and its text. */
+  readonly plainShown: boolean;
+  readonly plainText: string;
+  readonly pane: boolean;
+  readonly paneExpanded: boolean;
+  /** The folder titled `Black box`, if the pane has one. */
+  readonly folder: boolean;
+  readonly folderExpanded: boolean;
+  readonly monitor: string | null;
+  /** The folder's `forget` button: found, and under a hidden blade. */
+  readonly forgetFound: boolean;
+  readonly forgetHidden: boolean;
+  /**
+   * Whether the monitor was seen equal to the hook. A moment, not a state: the
+   * monitor reads the port on its own tick, so it trails the hook by up to one
+   * tick and a later read can differ with nothing wrong.
+   */
+  readonly matched: boolean;
+  readonly aborted: number;
+  readonly errors: readonly string[];
+}
+
+/** The folder titled `Black box`, found by its title the way a reader would. */
+const FIND_FOLDER = `(() => {
+  const root = document.querySelector('${TUNER_MARKER}');
+  return root === null ? undefined : [...root.querySelectorAll('.tp-fldv')]
+    .find((f) => f.querySelector('.tp-fldv_t')?.textContent === 'Black box');
+})()`;
+
+const READ_READOUT = `(() => {
+  const plain = document.querySelector('.shelf-diagnostics');
+  const folder = ${FIND_FOLDER};
+  const forget = folder === undefined ? undefined : [...folder.querySelectorAll('.tp-btnv_b')]
+    .find((b) => b.textContent === 'forget');
+  return {
+    hook: window.__blackbox === undefined ? null : window.__blackbox.text(),
+    plainShown: plain !== null && plain.checkVisibility(),
+    plainText: plain?.textContent ?? '',
+    pane: document.querySelector('${TUNER_MARKER}') !== null,
+    paneExpanded: document.querySelector('${TUNER_MARKER}')?.classList.contains('tp-rotv-expanded') === true,
+    folder: folder !== undefined,
+    folderExpanded: folder?.classList.contains('tp-fldv-expanded') === true,
+    monitor: folder?.querySelector('textarea')?.value ?? null,
+    forgetFound: forget !== undefined,
+    forgetHidden: forget?.closest('.tp-v-hidden') != null,
+  };
+})()`;
+
+/** The monitor shows exactly what the hook returns. */
+const MONITOR_MATCHES_HOOK = `(() => {
+  const area = (${FIND_FOLDER})?.querySelector('textarea');
+  return area !== undefined && area !== null && window.__blackbox !== undefined &&
+    area.value === window.__blackbox.text();
+})()`;
+
+interface ReadoutVisit {
+  readonly viewport: { readonly width: number; readonly height: number };
+  /** Abort the pane's chunk, so the pane never arrives. */
+  readonly blockPane?: boolean;
+  /** Seed the record of a session that died, before any script runs. */
+  readonly seedDeath?: boolean;
+  /** Seed the record of a session that ended cleanly: it must not open anything. */
+  readonly seedClean?: boolean;
+  /** The pane is expected: wait for it and for the monitor to catch up. */
+  readonly awaitPane: boolean;
+}
+
+async function visitReadout(
+  browser: Browser,
+  origin: string,
+  how: ReadoutVisit,
+): Promise<ReadoutReading> {
+  const context = await browser.createBrowserContext();
+  const errors: string[] = [];
+  let aborted = 0;
+  let matched = false;
+  try {
+    const page = await context.newPage();
+    await page.setViewport(how.viewport);
+    page.on('pageerror', (error: unknown) => {
+      errors.push(error instanceof Error ? error.message : String(error));
+    });
+    if (how.blockPane === true) {
+      await page.setRequestInterception(true);
+      page.on('request', (request) => {
+        if (request.resourceType() === 'script' && PANE_CHUNK.test(request.url())) {
+          aborted += 1;
+          void request.abort();
+        } else {
+          void request.continue();
+        }
+      });
+    }
+    if (how.seedDeath === true || how.seedClean === true) {
+      const record = how.seedClean === true ? { ...DEAD_RECORD, clean: true } : DEAD_RECORD;
+      await page.evaluateOnNewDocument(
+        `localStorage.setItem(${JSON.stringify(BLACKBOX_KEY)}, ${JSON.stringify(
+          JSON.stringify(record),
+        )})`,
+      );
+    }
+    await page.goto(`${origin}/?debug`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    if (how.awaitPane) {
+      await until(page, `document.querySelector('${TUNER_MARKER}') !== null`, 'the pane to load');
+      matched = await until(
+        page,
+        MONITOR_MATCHES_HOOK,
+        "the readout monitor to equal the hook's text",
+      );
+    } else {
+      // The absence of a pane has no event to wait on: give the aborted import
+      // time to reject and the plain readout its first tick, then read.
+      await until(page, 'window.__blackbox !== undefined', 'the black box hook');
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    const now = (await page.evaluate(READ_READOUT)) as Omit<
+      ReadoutReading,
+      'matched' | 'aborted' | 'errors'
+    >;
+    return { ...now, matched, aborted, errors };
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkReadout(browser: Browser, origin: string): Promise<TunerChecked> {
+  const none = await visitReadout(browser, origin, {
+    viewport: VIEWPORT,
+    blockPane: true,
+    awaitPane: false,
+  });
+  // Narrow and after a clean exit: the previous session is in the text, and nothing
+  // may open on its account.
+  const loaded = await visitReadout(browser, origin, {
+    viewport: PANE_NARROW_VIEWPORT,
+    seedClean: true,
+    awaitPane: true,
+  });
+  const died = await visitReadout(browser, origin, {
+    viewport: PANE_NARROW_VIEWPORT,
+    seedDeath: true,
+    awaitPane: true,
+  });
+
+  const lines = [
+    `no pane      chunk aborted ${String(none.aborted)}x   plain readout ${none.plainShown ? 'shown' : 'NOT SHOWN'}   ` +
+      `hook ${none.hook === null ? 'ABSENT' : `${String(none.hook.length)} chars`}`,
+    `pane loaded after a clean exit at ${String(PANE_NARROW_VIEWPORT.width)}px   pane ${loaded.paneExpanded ? 'OPEN' : 'collapsed'}   forget ${
+      loaded.forgetFound ? (loaded.forgetHidden ? 'hidden' : 'SHOWN') : 'NOT FOUND'
+    }   monitor ${loaded.monitor === null ? 'NOT FOUND' : `${String(loaded.monitor.length)} chars`}   ` +
+      `${loaded.matched ? 'equals' : 'DIFFERS FROM'} the hook   ` +
+      `plain readout ${loaded.plainShown ? 'STILL SHOWN' : 'stepped aside'}`,
+    `staged death at ${String(PANE_NARROW_VIEWPORT.width)}px   pane ${died.paneExpanded ? 'open' : 'CLOSED'}   ` +
+      `folder ${died.folderExpanded ? 'open' : 'CLOSED'}   death line ${
+        died.monitor?.includes('PREVIOUS SESSION DIED') === true ? 'shown' : 'MISSING'
+      }`,
+  ];
+  return { lines, failures: judgeReadout(none, loaded, died) };
+}
+
+/** The three pages against the three claims; each failure names the dropped part. */
+function judgeReadout(
+  none: ReadoutReading,
+  loaded: ReadoutReading,
+  died: ReadoutReading,
+): string[] {
+  const failures: string[] = [];
+  for (const [name, page] of [
+    ['no pane', none],
+    ['pane loaded', loaded],
+    ['staged death', died],
+  ] as const) {
+    for (const error of page.errors) failures.push(`readout (${name}): page error, ${error}`);
+    if (page.hook === null) {
+      failures.push(`readout (${name}): window.__blackbox.text() is not published behind ?debug`);
+    }
+  }
+
+  // No pane: the plain readout carries it, so the control must really have blocked.
+  if (none.aborted === 0) {
+    failures.push(
+      'readout (no pane, control): the pane chunk was never requested and aborted, so "the plain ' +
+        `readout shows with no pane" proves nothing (chunk pattern ${String(PANE_CHUNK)})`,
+    );
+  }
+  if (none.pane) failures.push('readout (no pane): a pane drew although its chunk was aborted');
+  if (!none.plainShown) {
+    failures.push(
+      'readout (no pane): the plain readout is not showing, so a pane that never loads hides the record',
+    );
+  } else if (none.hook !== null && !none.plainText.includes(none.hook)) {
+    failures.push("readout (no pane): the plain readout does not hold the hook's text");
+  }
+
+  // Pane: the folder holds the same text, and the plain element has stepped aside.
+  if (!loaded.pane || !loaded.folder) {
+    failures.push('readout (pane loaded): the pane has no "Black box" folder');
+  } else if (!loaded.matched) {
+    failures.push(
+      'readout (pane loaded): the monitor textarea .value never equalled window.__blackbox.text(): ' +
+        `${JSON.stringify(loaded.monitor)} against ${JSON.stringify(loaded.hook)}`,
+    );
+  }
+  if (loaded.plainShown) {
+    failures.push(
+      'readout (pane loaded): the plain readout still shows beside the folder, so nothing claimed it',
+    );
+  }
+  if (loaded.paneExpanded) {
+    failures.push('readout (pane loaded): a clean exit opened the pane at 700px');
+  }
+  if (!loaded.folderExpanded) {
+    failures.push(
+      'readout (pane loaded): the Black box folder starts closed, where it starts open',
+    );
+  }
+  if (!loaded.forgetFound || !loaded.forgetHidden) {
+    failures.push(
+      'readout (pane loaded): the forget button is missing or shown with no lost-context record to forget',
+    );
+  }
+
+  // A death opens the pane and the folder at a width where the pane starts closed.
+  if (!died.paneExpanded) failures.push('readout (staged death): the pane is collapsed at 700px');
+  if (!died.folderExpanded) failures.push('readout (staged death): the Black box folder is closed');
+  if (died.monitor?.includes('PREVIOUS SESSION DIED') !== true) {
+    failures.push('readout (staged death): the folder does not show the death line');
+  }
+  if (!died.matched) {
+    failures.push(
+      'readout (staged death): the monitor never equalled window.__blackbox.text() with a record part in it',
+    );
+  }
+  return failures;
 }
 
 function report(result: {
@@ -2862,6 +3156,7 @@ function report(result: {
   fallback: FallbackChecked;
   sampling: SamplingChecked;
   tuner: TunerChecked;
+  readout: TunerChecked;
 }): void {
   const {
     skipped,
@@ -2879,8 +3174,14 @@ function report(result: {
     fallback,
     sampling,
     tuner,
+    readout,
   } = result;
-  const failures: string[] = [...fallback.failures, ...sampling.failures, ...tuner.failures];
+  const failures: string[] = [
+    ...fallback.failures,
+    ...sampling.failures,
+    ...tuner.failures,
+    ...readout.failures,
+  ];
   // Fails closed: a run that skipped nothing must have run both, so a flagless
   // run that left them out cannot print `OK` on the strength of empty results.
   if (skipped === undefined) {
@@ -2991,6 +3292,8 @@ function report(result: {
   }
   console.log('pickup tuner, each page in a browser context of its own');
   for (const line of tuner.lines) console.log(`  ${line}`);
+  console.log('black box readout, each page in a browser context of its own');
+  for (const line of readout.lines) console.log(`  ${line}`);
   console.log('step times');
   for (const { label, seconds } of TIMINGS) {
     console.log(`  ${label.padEnd(40)} ${seconds.toFixed(1).padStart(6)} s`);

@@ -105,6 +105,22 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
 - **The black box** (`diagnostics.ts`) records a crash that leaves no error
   behind, and is a **static** import: it has to be running before the thing it
   measures fails. See [The mobile crash](log/2026-08-01-the-mobile-crash-g15.md).
+  Only its **recording** is eager and unchanged; its **readout** is lent to the
+  pane through a claimable port that `mountDiagnostics` returns (`text`, `died`,
+  `copy`, `canForget`, `forget`, `claim`, `release`). The plain element shows
+  whenever nobody holds the claim, so a pane that has not loaded, one that never
+  loads (`boot.ts` returns before the import when no shelf mounted) and one a
+  rebuild unmounts are the same case. The pane's **Black box** folder
+  (`blackbox-readout.ts`) claims the port on mount and shows `text()` whole, live
+  part and record part, with `copy` and `forget` working from it. Behind `?debug`
+  the black box publishes `window.__blackbox.text()`, apart from `window.__shelf`,
+  returning exactly that string, and G60 reads it in place of the element's text
+  (a Tweakpane monitor draws into a `<textarea>`, which `textContent` cannot
+  read). The folder starts open. When the previous record has no clean exit, the
+  pane opens itself too, at any width. `diagnostics.ts` imports nothing from the pane
+  and the readout takes only `import type` from it (G68), so Tweakpane never
+  reaches the eager bundle
+  ([#488](https://github.com/mephistopheles4/stacks/issues/488)).
 - **The panel** (`debug-panel.ts`) is every setting the shelf has, live, and is
   **lazy**: its 8.8 KB is paid only by a page that asked for it.
 - **The debug pane** (`debug-pane.ts`) is one Tweakpane `Pane`, titled, collapsed

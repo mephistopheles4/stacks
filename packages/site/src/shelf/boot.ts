@@ -1,7 +1,7 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountBookViewer, type BookViewerElements } from './book-viewer.ts';
-import { mountDiagnostics } from './diagnostics.ts';
+import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
 import {
   createPickup,
   loopPickups,
@@ -412,8 +412,13 @@ export async function boot(
   // on exactly the device and connection where the first seconds of a crash
   // record are the ones worth having. The panel can afford that latency; this
   // cannot.
+  //
+  // Its readout is lent to the debug pane through the returned port: the plain
+  // element shows whenever nobody holds the claim, so the page where the pane
+  // never arrives still shows the previous session's record.
+  let blackbox: DiagnosticsPort | undefined;
   if (debug && surface.parentElement !== null) {
-    mountDiagnostics(surface.parentElement, {
+    blackbox = mountDiagnostics(surface.parentElement, {
       books: books.length,
       // A getter, so a rebuild does not leave the black box reading a shelf that
       // was disposed. See `DiagnosticsOptions.handle`.
@@ -489,8 +494,15 @@ export async function boot(
      * every page that did not ask for `?debug`. The tuner-split gate holds that,
      * since #376 measured a plain CSS import hoisted onto every page as silent.
      */
-    const { mountDebugPane } = await import('./debug-pane.ts');
-    mountDebugPane(host, { tunable: live.tunable });
+    //
+    // A chunk that is slow, refused or never arrives must not take the shelf with
+    // it: the black box's plain readout stays up, and says what the pane could not.
+    try {
+      const { mountDebugPane } = await import('./debug-pane.ts');
+      mountDebugPane(host, { tunable: live.tunable, blackbox });
+    } catch (error) {
+      console.warn('the debug pane did not load; the black box stays plain', error);
+    }
   }
 
   watchForRebuilds();

@@ -122,6 +122,10 @@
           "mechanism": "The pickup tuner's view, mounted by `debug-pane.ts` behind `?debug`: a loop of Tweakpane calls. Same browser-only chain; the oracle is the real pane in the styled-pane gate. Its logic is tested where it lives, in `pickup-motion.ts`."
         },
         {
+          "path": "packages/site/src/shelf/blackbox-readout.ts",
+          "mechanism": "The black box readout's view, mounted by `debug-pane.ts` behind `?debug`: a handful of Tweakpane calls over a port. Same browser-only chain; the oracle is the real pane in `checkReadout` in `smoke:render`, which compares the monitor's textarea with `window.__blackbox.text()`. `blackbox-readout.test.ts` drives it with a fake folder, but the text it shows, the claim and the opening rule only mean something against Tweakpane's rendered DOM."
+        },
+        {
           "path": "packages/site/src/shelf/diagnostics.ts",
           "mechanism": "The black box, statically imported by `boot.ts`. Same browser-only chain."
         },
