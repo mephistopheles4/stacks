@@ -147,3 +147,4 @@ Two other files hold what these deliberately do not:
 | [0117](./0117-survivors-are-matched-by-content-and-recorded-on-their-own-orphan-branch.md) | Survivors are matched by content and recorded on their own orphan branch |
 | [0118](./0118-the-settings-diff-rides-in-debug.md) | The settings diff rides in `?debug=<json>`, and `?tune=` is retired (supersedes 0035 in part) |
 | [0119](./0119-one-pane-for-every-debug-instrument.md) | One pane for every `?debug` instrument: a shell, and a view file and a model file per instrument (amends 0104) |
+| [0122](./0122-athanor-runs-the-suite-in-a-sealed-container.md) | athanor runs the suite in a sealed container, from an image that holds the installed workspace |

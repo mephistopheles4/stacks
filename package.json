@@ -33,6 +33,45 @@
     "trend:sync": "tsx scripts/trend-sync.ts",
     "deploy:site": "tsx scripts/deploy.ts"
   },
+  "athanor": {
+    "dockerfile": "docker/athanor/Dockerfile",
+    "context": "docker/athanor",
+    "inputs": [
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "packages/cli/package.json",
+      "packages/core/package.json",
+      "packages/site/package.json"
+    ],
+    "commands": {
+      "test": [
+        "pnpm",
+        "test"
+      ],
+      "typecheck": [
+        "pnpm",
+        "typecheck"
+      ],
+      "lint": [
+        "pnpm",
+        "lint"
+      ],
+      "build": [
+        "pnpm",
+        "build"
+      ],
+      "smoke": [
+        "env",
+        "CI=true",
+        "pnpm",
+        "smoke:render"
+      ]
+    },
+    "memory": "6g",
+    "cpus": 4,
+    "timeoutMinutes": 30
+  },
   "lint-staged": {
     "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,jsonc,yml,yaml}": "prettier --write"
   },
