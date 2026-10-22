@@ -280,17 +280,18 @@ than a state on one machine. **Read panel 1 before panel 2**, which is what the
 page says at the top; there is no confidence figure on it and there will not be
 one ([ADR-0062](docs/adr/0062-the-dashboard-is-provisioned-from-the-repo.md)).
 
-**When another session is testing on this machine, run the suite through
-`athanor run`** rather than `pnpm` on the host. Each run gets a fresh, offline
-Linux container holding a snapshot of the working tree, so sessions running in
-parallel never meet in the file system or on a port, and `athanor status` shows
-which slots are held. It is **optional, like every tool outside the gates**: not
-a dependency, not a `pnpm` script, and nothing in CI reads it, so a contributor
-without it loses nothing. ⚠️ **`athanor run smoke` is a pass or a fail, not a
-picture** — the screenshot stays in the container — so a visual change still
-runs `pnpm smoke:render` on the host, where `artifacts/shelf.png` is what the
-human reviews, and the phone check runs on the host because the phone is
-plugged into it. How to run it, and what differs from the host, is in
+**Run the suite through `athanor run` by default** — `test`, `typecheck`,
+`lint`, `build` and `smoke` — rather than `pnpm` on the host. Each run gets a
+fresh, offline Linux container holding a snapshot of the working tree, so
+sessions running in parallel never meet in the file system or on a port, and
+`athanor status` shows which slots are held. It is the default where it is
+installed, and **still not a gate**: not a dependency, not a `pnpm` script, and
+nothing in CI reads it, so a contributor without it runs the same commands with
+`pnpm` and loses nothing. Two runs stay on the host. ⚠️ **`athanor run smoke`
+is a pass or a fail, not a picture** — the screenshot stays in the container —
+so a visual change also runs `pnpm smoke:render` on the host, where
+`artifacts/shelf.png` is what the human reviews; and the phone check runs on the
+host because the phone is plugged into it. How to run it, and what differs from the host, is in
 [`docs/commands.md`](docs/commands.md)
 ([ADR-0122](docs/adr/0122-athanor-runs-the-suite-in-a-sealed-container.md)).
 
