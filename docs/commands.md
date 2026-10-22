@@ -1070,3 +1070,79 @@ build on Chrome 153, so a result is tied to a driver by `--gpuinfo`, which reads
 it off `chrome://gpu`. ⚠️ **A logcat can carry personal data**:
 notifications, account names, other apps. The JSON quotes a filtered slice; the
 whole file stays in `artifacts/` and is never attached anywhere raw.
+
+## `athanor run` — the suite in a sealed Linux container
+
+[athanor](https://github.com/mephistopheles4/athanor) runs a named command on
+the working tree in a fresh container with **no network**, at most N runs at a
+time on the machine. It is for the case where several sessions share one
+machine: only the test run goes into the container, so two suites cannot meet
+in the file system or on a port. The `athanor` key in the root `package.json`
+configures it, and [`docker/athanor/Dockerfile`](../docker/athanor/Dockerfile)
+is the image ([ADR-0122](adr/0122-athanor-runs-the-suite-in-a-sealed-container.md)).
+
+**It is not a dependency and not a `pnpm` script.** athanor 0.1.0 is not on npm
+yet, so it is installed on the machine and run as `athanor`, and nothing here
+needs it: CI and every gate run without it. It needs Node 24, git and a Docker
+engine (Docker Desktop on Windows).
+
+```sh
+athanor run              # pnpm test
+athanor run typecheck    # pnpm typecheck
+athanor run lint         # pnpm lint
+athanor run build        # pnpm build
+athanor run smoke        # pnpm smoke:render, under SwiftShader
+athanor run --json       # one JSON object on stdout: outcome, exit code, image, timings
+athanor status           # which slots are held
+```
+
+Measured on 2026-10-21, with the image already built: `test` 21 s (150 files,
+2877 passed, 2 skipped, as on the host), `typecheck` 6 s, `lint` 18 s, `build`
+16 s, `smoke` 242 s with G60 and G61 included. A test planted to fail made
+`athanor run` exit 1 with `outcome: fail`.
+
+**What it tests is the tracked tree as it stands**, staged or not. ⚠️ **A new
+test file you have not `git add`ed is left out** and the run says how many
+untracked files it skipped; pass `--untracked`, or add it first. A green run
+that never saw your new file looks exactly like a green run that did.
+
+**The image holds the installed workspace, and the run lays the tree over it.**
+athanor unpacks the snapshot into `$HOME/work` and runs the command there, with
+no network. `node_modules` is gitignored, so the snapshot never carries one, and
+the image installs the workspace into that same folder at build time, when the
+network is there. The image is keyed on the six manifests listed under `inputs`
+— the root `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` and each
+package's `package.json` — so a dependency change rebuilds it on the next run
+and a source edit never does. The build installs with `--frozen-lockfile`,
+under the same release-age window and trust policy as CI. pnpm is installed at
+exactly `packageManager`'s version, because any other makes pnpm fetch that
+one, which fails offline.
+
+**G21 holds in the container, and the container adds a second net.** G21
+replaces `fetch` before any request leaves, so a test that reaches for the
+network fails saying so, container or not. Anything that goes round `fetch` —
+`node:http`, a child process — is not recorded by G21, and in the container it
+fails outright with a network error instead of quietly reaching a server.
+
+**What differs from the host.**
+
+- **Git is one commit with no remote.** athanor's boot script makes the snapshot
+  a fresh repository. Every gate passes against that today; a gate that starts
+  reading history, a branch name or `origin/*` will see something the host
+  does not.
+- **`smoke` sets `CI=true` and runs Chromium with `--no-sandbox`.** `CI=true` is
+  what makes `smoke-render.ts` ask for SwiftShader; without it there is no GPU
+  and no WebGL context. `--no-sandbox` is because Docker's default seccomp
+  profile, which athanor leaves in place, stops Chromium making its own sandbox,
+  so it refuses to launch: measured under a plain `docker run` too, and it
+  starts only with `--security-opt seccomp=unconfined`. `/usr/bin/google-chrome` in the image is a wrapper that
+  adds it. The container is the sandbox: no network, nothing mounted, and the
+  only page loaded is the fixture site the run just built. ⚠️ **It is an
+  accepted risk, on the owner's word** (ADR-0122): if `smoke` is ever pointed at
+  a page from outside the run, that reasoning stops holding.
+- **The screenshot does not come back.** `artifacts/shelf.png` is written inside
+  the container and removed with it. `athanor run smoke` answers whether the
+  gate passes; a picture to review still needs `pnpm smoke:render` on the host.
+- **Limits are 6 GB and 4 CPUs**, under athanor's default ceilings of 8 GB and
+  4. Node reads the CPU quota, so vitest starts 3 workers in the container
+  rather than one per host core.
