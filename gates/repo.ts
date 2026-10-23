@@ -236,7 +236,9 @@ export function jobsOf(source: string, where: string): Map<string, string> {
   }
 
   return new Map(
-    sectionsOf(body, /^ {2}([\w-]+):$/gm).map((section) => [
+    // A trailing comment or a quoted key is still a job; missing one would fold
+    // it into the job above, where nothing asks about it.
+    sectionsOf(body, /^ {2}["']?([\w-]+)["']?:[ \t]*(?:#.*)?$/gm).map((section) => [
       section.captures[0] ?? '',
       section.body,
     ]),
@@ -249,9 +251,10 @@ export function jobsOf(source: string, where: string): Map<string, string> {
  * A `needs:` entry with no `result` test is a dependency that reports nothing
  * when it is skipped — and a required check that never reports blocks a pull
  * request forever, which is a shape this repository has already paid for once.
- * So three gates ask this same question about `gates.yml`'s aggregator: G40/G42
- * (`action-pins`) about `audit`, G48 (`markdown`) about `style`, and G55
- * (`pr-conventions`) about `conventions`.
+ * So several gates ask this same question about `gates.yml`'s aggregator: G42
+ * (`action-pins`) about `audit`, G48 (`markdown`) about `style`, G55
+ * (`pr-conventions`) about `conventions`, and G40 (`action-pins`) about every
+ * job at once, which is the only one that asks about `suite`.
  *
  * **Here rather than in one of them, because it was written out three times.**
  * `action-pins` had it as a named helper and the other two inlined a
@@ -261,9 +264,15 @@ export function jobsOf(source: string, where: string): Map<string, string> {
  * move `codeOf`, `trackedFiles`, `sectionsOf` and `jobsOf` each made before it.
  */
 export function aggregatorResultTests(aggregator: string): string[] {
-  return [...aggregator.matchAll(/needs\.([\w-]+)\.result\s*\}\}"\s*=\s*"success"/g)].map(
-    (match) => match[1] ?? '',
-  );
+  // A whole line, from `test` to `"success"`, because a comparison that cannot
+  // refuse must not count: commented out, turned into an `echo`, or followed by
+  // `|| true`, the step passes whatever the job's result, and an unanchored
+  // match read all three as tested.
+  return [
+    ...aggregator.matchAll(
+      /^[ \t]*test[ \t]+"\$\{\{[ \t]*needs\.([\w-]+)\.result[ \t]*\}\}"[ \t]*=[ \t]*"success"[ \t]*$/gm,
+    ),
+  ].map((match) => match[1] ?? '');
 }
 
 /**

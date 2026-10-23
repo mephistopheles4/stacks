@@ -143,7 +143,7 @@ describe('G48 — the Markdown check runs on every pull request', () => {
     // A `needs:` entry with no `result` test is a dependency that reports and
     // cannot refuse: skipped and cancelled both have to fail the gate rather
     // than pass it by omission, which is why this compares against 'success'.
-    // `aggregatorResultTests` is in `repo.ts` because three gates ask it.
+    // `aggregatorResultTests` is in `repo.ts` because several gates ask it.
     const tested = aggregatorResultTests(aggregator);
 
     expect(

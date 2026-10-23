@@ -371,7 +371,7 @@ describe('G55 — the check runs on every pull request, and on edits', () => {
         'is a job that blocks nothing',
     ).toBe(true);
 
-    // `aggregatorResultTests` is in `repo.ts` because three gates ask this same
+    // `aggregatorResultTests` is in `repo.ts` because several gates ask this same
     // question of the same aggregator — it was written out three times until a
     // review named it.
     const tested = aggregatorResultTests(aggregator);

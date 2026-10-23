@@ -335,3 +335,94 @@ describe('G42 — the `audit` job exists, runs, and is required', () => {
     ).toContain('audit');
   });
 });
+
+/**
+ * Every job in `source` other than the aggregator, with the ones the aggregator
+ * does not list in `needs:` and the ones it does not compare against `'success'`.
+ *
+ * The job list is derived rather than written down, because a written list is
+ * how `suite` went unasked: G42, G48 and G55 each ask about their own job, and
+ * the job that runs the tests belonged to no row. A job added later is asked
+ * about without anyone remembering to.
+ */
+function aggregatorGaps(source: string): {
+  readonly jobs: readonly string[];
+  readonly unneeded: readonly string[];
+  readonly untested: readonly string[];
+} {
+  const all = jobsOf(source, GATES_WORKFLOW);
+  const aggregator = all.get('gates') ?? '';
+  const list = /needs:\s*\[([^\]]*)\]/.exec(aggregator)?.[1];
+  if (list === undefined) {
+    // Read as empty, a block list or a scalar would name every job as missing,
+    // the listed ones too, and a red that names the wrong jobs sends its reader
+    // the wrong way.
+    throw new Error(
+      `the \`gates\` aggregator in ${GATES_WORKFLOW} has no \`needs: [...]\` flow list. ` +
+        'This clause reads only that form, so a rewrite to another must change it too.',
+    );
+  }
+  const needs = list.split(',').map((name) => name.trim());
+  const tested = aggregatorResultTests(aggregator);
+  const jobs = [...all.keys()].filter((name) => name !== 'gates');
+
+  return {
+    jobs,
+    unneeded: jobs.filter((name) => !needs.includes(name)),
+    untested: jobs.filter((name) => !tested.includes(name)),
+  };
+}
+
+describe('G40 — the required check needs every other job in the workflow', () => {
+  it('lists every job in `needs:` and compares each against `success`', () => {
+    const gaps = aggregatorGaps(readRepoFile(GATES_WORKFLOW));
+    expectFound(gaps.jobs, `jobs besides \`gates\` in ${GATES_WORKFLOW}`, 4);
+
+    expect(
+      gaps.unneeded,
+      `jobs the \`gates\` aggregator in ${GATES_WORKFLOW} does not list in its \`needs:\`. ` +
+        '`gates` is the single required status check, so a job it does not need is a job ' +
+        'whose failure merges',
+    ).toEqual([]);
+    expect(
+      gaps.untested,
+      `jobs the \`gates\` aggregator in ${GATES_WORKFLOW} does not compare against ` +
+        "'success'. A skipped or cancelled one would pass the required check by omission",
+    ).toEqual([]);
+  });
+
+  it('goes red on copies of the workflow with each break planted', () => {
+    // The plants, made on copies: `suite` is the job no other clause asks
+    // about, so it is the one whose loss must be seen here. Each break is
+    // planted alone, so a helper that read both lists from one source fails.
+    const source = readRepoFile(GATES_WORKFLOW);
+    const comparison = /^([ \t]*)(test "\$\{\{ needs\.suite\.result \}\}" = "success")$/m;
+    const plant = (pattern: RegExp, replacement: string): string => {
+      const planted = source.replace(pattern, replacement);
+      expect(planted, `the plant ${String(pattern)} matched nothing`).not.toBe(source);
+      return planted;
+    };
+
+    const unlisted = aggregatorGaps(plant(/(needs:\s*\[)suite,\s*/, '$1'));
+    expect(unlisted.unneeded).toEqual(['suite']);
+    expect(unlisted.untested).toEqual([]);
+
+    const uncompared = aggregatorGaps(plant(comparison, '$1echo skipped'));
+    expect(uncompared.unneeded).toEqual([]);
+    expect(uncompared.untested).toEqual(['suite']);
+
+    // A comparison that cannot refuse is no comparison.
+    for (const disarmed of ['$1# $2', '$1$2 || true', '$1echo $2']) {
+      expect(aggregatorGaps(plant(comparison, disarmed)).untested, disarmed).toEqual(['suite']);
+    }
+
+    // A job added with a trailing comment on its key is still a job.
+    const added = aggregatorGaps(
+      plant(/^ {2}gates:$/m, '  lint2: # a later job\n    runs-on: x\n\n  gates:'),
+    );
+    expect(added.unneeded).toEqual(['lint2']);
+    expect(added.untested).toEqual(['lint2']);
+
+    expect(() => aggregatorGaps(plant(/needs: \[[^\]]*\]/, 'needs: suite'))).toThrow(/flow list/);
+  });
+});
