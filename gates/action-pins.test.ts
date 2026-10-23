@@ -352,9 +352,17 @@ function aggregatorGaps(source: string): {
 } {
   const all = jobsOf(source, GATES_WORKFLOW);
   const aggregator = all.get('gates') ?? '';
-  const needs = (/needs:\s*\[([^\]]*)\]/.exec(aggregator)?.[1] ?? '')
-    .split(',')
-    .map((name) => name.trim());
+  const list = /needs:\s*\[([^\]]*)\]/.exec(aggregator)?.[1];
+  if (list === undefined) {
+    // Read as empty, a block list or a scalar would name every job as missing,
+    // the listed ones too, and a red that names the wrong jobs sends its reader
+    // the wrong way.
+    throw new Error(
+      `the \`gates\` aggregator in ${GATES_WORKFLOW} has no \`needs: [...]\` flow list. ` +
+        'This clause reads only that form, so a rewrite to another must change it too.',
+    );
+  }
+  const needs = list.split(',').map((name) => name.trim());
   const tested = aggregatorResultTests(aggregator);
   const jobs = [...all.keys()].filter((name) => name !== 'gates');
 
@@ -383,16 +391,38 @@ describe('G40 — the required check needs every other job in the workflow', () 
     ).toEqual([]);
   });
 
-  it('goes red on the workflow with `suite` taken out of the aggregator', () => {
-    // The plant, made on a copy: `suite` is the job no other clause asks about,
-    // so it is the one whose removal must be seen here.
+  it('goes red on copies of the workflow with each break planted', () => {
+    // The plants, made on copies: `suite` is the job no other clause asks
+    // about, so it is the one whose loss must be seen here. Each break is
+    // planted alone, so a helper that read both lists from one source fails.
     const source = readRepoFile(GATES_WORKFLOW);
-    const planted = source
-      .replace(/(needs:\s*\[)suite,\s*/, '$1')
-      .replace(/^.*needs\.suite\.result.*"success".*\n/m, '');
+    const comparison = /^([ \t]*)(test "\$\{\{ needs\.suite\.result \}\}" = "success")$/m;
+    const plant = (pattern: RegExp, replacement: string): string => {
+      const planted = source.replace(pattern, replacement);
+      expect(planted, `the plant ${String(pattern)} matched nothing`).not.toBe(source);
+      return planted;
+    };
 
-    expect(planted, 'the plant matched nothing, so it proves nothing').not.toBe(source);
-    expect(aggregatorGaps(planted).unneeded).toEqual(['suite']);
-    expect(aggregatorGaps(planted).untested).toEqual(['suite']);
+    const unlisted = aggregatorGaps(plant(/(needs:\s*\[)suite,\s*/, '$1'));
+    expect(unlisted.unneeded).toEqual(['suite']);
+    expect(unlisted.untested).toEqual([]);
+
+    const uncompared = aggregatorGaps(plant(comparison, '$1echo skipped'));
+    expect(uncompared.unneeded).toEqual([]);
+    expect(uncompared.untested).toEqual(['suite']);
+
+    // A comparison that cannot refuse is no comparison.
+    for (const disarmed of ['$1# $2', '$1$2 || true', '$1echo $2']) {
+      expect(aggregatorGaps(plant(comparison, disarmed)).untested, disarmed).toEqual(['suite']);
+    }
+
+    // A job added with a trailing comment on its key is still a job.
+    const added = aggregatorGaps(
+      plant(/^ {2}gates:$/m, '  lint2: # a later job\n    runs-on: x\n\n  gates:'),
+    );
+    expect(added.unneeded).toEqual(['lint2']);
+    expect(added.untested).toEqual(['lint2']);
+
+    expect(() => aggregatorGaps(plant(/needs: \[[^\]]*\]/, 'needs: suite'))).toThrow(/flow list/);
   });
 });

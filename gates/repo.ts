@@ -236,7 +236,9 @@ export function jobsOf(source: string, where: string): Map<string, string> {
   }
 
   return new Map(
-    sectionsOf(body, /^ {2}([\w-]+):$/gm).map((section) => [
+    // A trailing comment or a quoted key is still a job; missing one would fold
+    // it into the job above, where nothing asks about it.
+    sectionsOf(body, /^ {2}["']?([\w-]+)["']?:[ \t]*(?:#.*)?$/gm).map((section) => [
       section.captures[0] ?? '',
       section.body,
     ]),
@@ -262,9 +264,15 @@ export function jobsOf(source: string, where: string): Map<string, string> {
  * move `codeOf`, `trackedFiles`, `sectionsOf` and `jobsOf` each made before it.
  */
 export function aggregatorResultTests(aggregator: string): string[] {
-  return [...aggregator.matchAll(/needs\.([\w-]+)\.result\s*\}\}"\s*=\s*"success"/g)].map(
-    (match) => match[1] ?? '',
-  );
+  // A whole line, from `test` to `"success"`, because a comparison that cannot
+  // refuse must not count: commented out, turned into an `echo`, or followed by
+  // `|| true`, the step passes whatever the job's result, and an unanchored
+  // match read all three as tested.
+  return [
+    ...aggregator.matchAll(
+      /^[ \t]*test[ \t]+"\$\{\{[ \t]*needs\.([\w-]+)\.result[ \t]*\}\}"[ \t]*=[ \t]*"success"[ \t]*$/gm,
+    ),
+  ].map((match) => match[1] ?? '');
 }
 
 /**
