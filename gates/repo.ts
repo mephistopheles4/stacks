@@ -249,9 +249,10 @@ export function jobsOf(source: string, where: string): Map<string, string> {
  * A `needs:` entry with no `result` test is a dependency that reports nothing
  * when it is skipped — and a required check that never reports blocks a pull
  * request forever, which is a shape this repository has already paid for once.
- * So three gates ask this same question about `gates.yml`'s aggregator: G40/G42
- * (`action-pins`) about `audit`, G48 (`markdown`) about `style`, and G55
- * (`pr-conventions`) about `conventions`.
+ * So several gates ask this same question about `gates.yml`'s aggregator: G42
+ * (`action-pins`) about `audit`, G48 (`markdown`) about `style`, G55
+ * (`pr-conventions`) about `conventions`, and G40 (`action-pins`) about every
+ * job at once, which is the only one that asks about `suite`.
  *
  * **Here rather than in one of them, because it was written out three times.**
  * `action-pins` had it as a named helper and the other two inlined a

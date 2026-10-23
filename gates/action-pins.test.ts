@@ -335,3 +335,64 @@ describe('G42 — the `audit` job exists, runs, and is required', () => {
     ).toContain('audit');
   });
 });
+
+/**
+ * Every job in `source` other than the aggregator, with the ones the aggregator
+ * does not list in `needs:` and the ones it does not compare against `'success'`.
+ *
+ * The job list is derived rather than written down, because a written list is
+ * how `suite` went unasked: G42, G48 and G55 each ask about their own job, and
+ * the job that runs the tests belonged to no row. A job added later is asked
+ * about without anyone remembering to.
+ */
+function aggregatorGaps(source: string): {
+  readonly jobs: readonly string[];
+  readonly unneeded: readonly string[];
+  readonly untested: readonly string[];
+} {
+  const all = jobsOf(source, GATES_WORKFLOW);
+  const aggregator = all.get('gates') ?? '';
+  const needs = (/needs:\s*\[([^\]]*)\]/.exec(aggregator)?.[1] ?? '')
+    .split(',')
+    .map((name) => name.trim());
+  const tested = aggregatorResultTests(aggregator);
+  const jobs = [...all.keys()].filter((name) => name !== 'gates');
+
+  return {
+    jobs,
+    unneeded: jobs.filter((name) => !needs.includes(name)),
+    untested: jobs.filter((name) => !tested.includes(name)),
+  };
+}
+
+describe('G40 — the required check needs every other job in the workflow', () => {
+  it('lists every job in `needs:` and compares each against `success`', () => {
+    const gaps = aggregatorGaps(readRepoFile(GATES_WORKFLOW));
+    expectFound(gaps.jobs, `jobs besides \`gates\` in ${GATES_WORKFLOW}`, 4);
+
+    expect(
+      gaps.unneeded,
+      `jobs the \`gates\` aggregator in ${GATES_WORKFLOW} does not list in its \`needs:\`. ` +
+        '`gates` is the single required status check, so a job it does not need is a job ' +
+        'whose failure merges',
+    ).toEqual([]);
+    expect(
+      gaps.untested,
+      `jobs the \`gates\` aggregator in ${GATES_WORKFLOW} does not compare against ` +
+        "'success'. A skipped or cancelled one would pass the required check by omission",
+    ).toEqual([]);
+  });
+
+  it('goes red on the workflow with `suite` taken out of the aggregator', () => {
+    // The plant, made on a copy: `suite` is the job no other clause asks about,
+    // so it is the one whose removal must be seen here.
+    const source = readRepoFile(GATES_WORKFLOW);
+    const planted = source
+      .replace(/(needs:\s*\[)suite,\s*/, '$1')
+      .replace(/^.*needs\.suite\.result.*"success".*\n/m, '');
+
+    expect(planted, 'the plant matched nothing, so it proves nothing').not.toBe(source);
+    expect(aggregatorGaps(planted).unneeded).toEqual(['suite']);
+    expect(aggregatorGaps(planted).untested).toEqual(['suite']);
+  });
+});
