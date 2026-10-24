@@ -306,10 +306,10 @@ text, and say in your report that you used it. The two host runs above, and the
 forms that write to the tree or keep running (`--fix`, `-u`, watch mode), are
 never refused. **Agents run only scoped mutation runs**, through athanor by the
 recipe in `docs/commands.md`, with the report in `artifacts/stryker/scoped/` and
-never in `current/`; a full `pnpm mutation:run` is refused to an agent on the
-host whether or not athanor works, and a full report comes from the
-`mutation-report-<run id>` artifact of the latest `metrics.yml` run, or from the
-owner
+never in `current/`. A full `pnpm mutation:run` is refused to an agent on the
+host whether or not athanor works, and inside `athanor run --` too; a full
+report comes from the `mutation-report-<run id>` artifact of the latest
+`metrics.yml` run, or from the owner
 ([ADR-0123](docs/adr/0123-a-hook-holds-agents-to-athanor.md)).
 
 **The rest is in [`docs/commands.md`](docs/commands.md)** — read it before you

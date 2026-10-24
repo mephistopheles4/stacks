@@ -13,7 +13,8 @@ hook on Bash and PowerShell. While `athanor --version` works it refuses the host
 runs that have an `athanor run` equivalent — `pnpm test`, `typecheck`, `lint`,
 `build`, and `vitest`, `tsc --noEmit` and a scoped Stryker run invoked directly
 — and names the athanor form. A full mutation run from an agent is refused
-whatever athanor's state, with no fallback. Everything else is silence, a fault
+whatever athanor's state, and inside `athanor run --` too, with no fallback.
+Everything else is silence, a fault
 in the hook included. The fallback is the shell comment
 `# --host-fallback=<reason>` on the command's own line. The hook is TypeScript
 run by Node's type stripping, with `node:` built-ins only.

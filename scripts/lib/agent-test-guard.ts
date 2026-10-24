@@ -11,8 +11,8 @@
  * the command's own line. A comment, not grimoire's flag, because `tsc`,
  * `eslint` and `vitest` all reject an option they do not know, so a flag would
  * fail the very run it permits. **A full mutation run is refused whatever
- * athanor's state, with no fallback** (`FULL_MUTATION_REFUSAL`): agents run
- * only scoped ones.
+ * athanor's state, and inside `athanor run --` too, with no fallback**
+ * (`FULL_MUTATION_REFUSAL`): agents run only scoped ones.
  *
  * It reads the command as data, never runs it, and never changes it. It starts
  * only the athanor probe — through `cmd.exe` on Windows, and `taskkill` when
@@ -57,7 +57,7 @@ export const REFUSAL = [
  * broken athanor does not make it cheaper. Fixed text, as the other.
  */
 export const FULL_MUTATION_REFUSAL = [
-  'A full mutation run is not for an agent on the host, whether or not athanor works, and no fallback covers it.',
+  'A full mutation run is not for an agent — on the host, whether or not athanor works, or inside `athanor run` — and no fallback covers it.',
   'Run a scoped one through athanor instead — Stryker with `--mutate <files>`, its report written to `artifacts/stryker/scoped/` and never to `current/` — by the recipe in docs/commands.md, "A scoped run through athanor".',
   'A full report comes from the nightly: find the latest run of `metrics.yml` with `gh run list --workflow metrics.yml` and download its `mutation-report-<run id>` artifact, or ask the owner to run one.',
 ].join(' ');
@@ -336,7 +336,27 @@ function kindOf(tokens: readonly string[]): Kind {
   const rest = tokens.slice(i + 1);
   if (program === 'pnpm') return pnpm(rest);
   if (program === 'npx' || program === 'node') return direct(fromFirstWord(rest));
+  if (program === 'athanor') return inAthanor(rest);
   return direct(tokens.slice(i));
+}
+
+/**
+ * What `athanor run -- <command>` runs. Never a guarded host run — it is the
+ * container run the guard sends agents to — but a full mutation run inside it
+ * is still one an agent must not start, so the command after `--` is read, and
+ * a `sh -c '<script>'` is parsed as the Bash it is.
+ */
+function inAthanor(args: readonly string[]): Kind {
+  const dashes = args.indexOf('--');
+  if (dashes === -1) return 'other';
+  const inner = args.slice(dashes + 1);
+  const shell = programOf(inner[0] ?? '');
+  const script = inner[2];
+  const kinds =
+    (shell === 'sh' || shell === 'bash') && inner[1] === '-c' && script !== undefined
+      ? parse(script, true).segments.map((s) => kindOf(s.tokens))
+      : [kindOf(inner)];
+  return kinds.includes('full-mutation') ? 'full-mutation' : 'other';
 }
 
 const FALLBACK = /(?:^|\s)--host-fallback=(?:"([^"]*)"|'([^']*)'|(\S*))/;

@@ -1207,7 +1207,8 @@ changes the command, and nothing in CI reads it.
 
 **Refused always, with no fallback**: a full mutation run from an agent —
 `pnpm mutation:run`, or `stryker run` with neither `--mutate` nor
-`--incremental`, by its bin, its package name or through `node`. A full report
+`--incremental`, by its bin, its package name or through `node`, on the host
+or after `athanor run --`. A full report
 comes from the nightly: `gh run list --workflow metrics.yml` finds the latest
 run, and `gh run download <run id>` fetches its `mutation-report-<run id>`
 artifact. Or the owner runs one.
@@ -1217,7 +1218,8 @@ artifact. Or the owner runs one.
 `pnpm stacks <cmd>`; the forms that write to the tree or keep running, which a
 container run cannot keep (`lint --fix`, `test -u`, `vitest -u`, watch mode);
 vitest's `list`, `bench` and `init`; package-scoped forms (`--filter`, `-F`,
-`-C`, `--dir`, `-r`, `--recursive`); `athanor run` itself; and anything inside
+`-C`, `--dir`, `-r`, `--recursive`); `athanor run` itself, unless it names a
+full mutation run after `--`, directly or in `sh -c '…'`; and anything inside
 quotes, a heredoc or a comment.
 
 **The fallback is a comment**, because `tsc`, `eslint` and `vitest` all reject

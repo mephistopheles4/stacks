@@ -81,6 +81,8 @@ const PASSES = [
   'athanor run',
   'athanor run typecheck',
   'athanor run -- pnpm vitest run gates/commands.test.ts',
+  'athanor run -- pnpm test',
+  "athanor run -- sh -c 'pnpm test'",
   'pnpm smoke:render',
   'pnpm run smoke:render',
   'node scripts/phone-check.ts',
@@ -155,6 +157,9 @@ const FULL_MUTATION = [
   'npx @stryker-mutator/core run',
   'pnpm dlx @stryker-mutator/core run',
   'node node_modules/@stryker-mutator/core/bin/stryker.js run',
+  'athanor run -- pnpm mutation:run',
+  'athanor run --untracked -- npx stryker run',
+  "athanor run -- sh -c 'pnpm exec stryker run >&2 && cat artifacts/stryker/current/mutation.json'",
 ];
 
 // C12: a scoped mutation run, guarded like any other host run.
@@ -284,7 +289,7 @@ describe('C6: the refusal is fixed text', () => {
   });
 });
 
-describe('C11: a full mutation run is refused on the host, always', () => {
+describe('C11: a full mutation run is refused, always', () => {
   for (const tool of ['Bash', 'PowerShell'] as const) {
     for (const command of FULL_MUTATION) {
       it(`${tool}: ${JSON.stringify(command)}`, async () => {
