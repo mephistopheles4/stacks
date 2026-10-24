@@ -47,22 +47,24 @@ import {
   stampOf,
 } from './lib/edge-probe.ts';
 import {
-  type WindowStamps,
+  askTightenings,
   calibration,
   capCalibration,
-  CAPPED_SERIES,
-  countedIn,
   floorRefusals,
   readFloors,
-  readWindow,
-  scoredIn,
   renderCapLines,
   renderFloorLines,
   localDay,
   runRowsFrom,
-  tightenings,
 } from './lib/floors.ts';
-import { acceptedValues, readRenovations } from './lib/renovations.ts';
+import {
+  lastMutationRun,
+  mutantsPerScope,
+  windowRecords,
+  windowStamps,
+  type MutationRun,
+} from './lib/ratchet-inputs.ts';
+import { readRenovations } from './lib/renovations.ts';
 import { gitOutput } from './lib/git.ts';
 import {
   GATED_SERIES,
@@ -81,15 +83,7 @@ import {
   storedRecords,
   type FetchedRecord,
 } from './lib/metrics-record.ts';
-import {
-  readDeclarations,
-  readReport,
-  scoreRun,
-  total,
-  type MutationReport,
-  type Scope,
-  type Tally,
-} from './lib/mutation-score.ts';
+import { readDeclarations, scoreRun, type Tally } from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
 import { numbersFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
@@ -118,15 +112,6 @@ const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 
 /** How `dist/` is named in messages, so they read the same on every platform. */
 const DIST_LABEL = 'packages/site/dist';
-
-/**
- * How many records one deploy will read looking for a window, at the most.
- *
- * Merge records are not window members, so a busy week of pushes sits between
- * two nightlies; this is the bound that keeps that from being an unbounded
- * walk. Generous rather than tight — reading a record is one `git cat-file`.
- */
-const WINDOW_RECORD_CAP = 200;
 
 // How long to give the edge, how a page names its build, and how a refusal is
 // told apart from a stale answer all live in `./lib/edge-probe.ts` now. Surface
@@ -339,17 +324,6 @@ try {
  */
 const RECORD_LOOKBACK = 30;
 
-/**
- * Where `pnpm mutation:run` leaves its report on this machine.
- *
- * ⚠️ **Above the call below, and that is not style.** `reportTrendRecord()`
- * runs at module scope, and a `const` it reads declared after it is in the
- * temporal dead zone — the script dies on `Cannot access 'REPORT_PATH' before
- * initialization` before any check runs. The functions hoist; their constants
- * do not, which cost this file two stack traces on two separate passes.
- */
-const REPORT_PATH = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
-
 reportTrendRecord();
 
 /**
@@ -419,42 +393,6 @@ function prWindow(records: readonly ParsedRecord[]): PrWindow {
   // The shared one is also stricter: it anchors the suffix, so `(#99)` mentioned
   // mid-subject is a reference rather than a merge.
   return numbersFrom(subjects.split('\n'));
-}
-
-/**
- * The last mutation run on this machine — and **three states, not two.**
- *
- * ⚠️ **Unreadable is its own answer, beside present and absent.** Both readers
- * are a bare `JSON.parse`, and a `pnpm mutation:run` interrupted partway
- * through its ~41 minutes leaves a truncated `mutation.json` behind. Read
- * unguarded, that throws out of a **print** and takes the whole deploy with it
- * — before the freshness verdict, before the gates, as a raw stack trace. The
- * two steps below say the panel prints and the refusals are separate; a parse
- * error broke both, and it broke them from the least important half.
- *
- * ⚠️ **One reader because there were two call sites and the crash was in both.**
- * Guarding step 0b alone would have moved the stack trace two steps later
- * rather than removed it — the instance fixed and the population left, which is
- * the failure this rollout's own spec is a catalogue of.
- *
- * The distinction is kept rather than collapsed to `undefined`: *nobody ran it*
- * is the ordinary case on a fresh checkout, and *it is there and I cannot read
- * it* is a fault worth naming. Silently treating the second as the first is
- * this repo's oldest rule about instruments, broken.
- */
-type MutationRun =
-  | { kind: 'none' }
-  | { kind: 'unreadable'; why: string }
-  | { kind: 'read'; report: MutationReport; scopes: Scope[] };
-
-function lastMutationRun(): MutationRun {
-  if (!existsSync(REPORT_PATH)) return { kind: 'none' };
-
-  try {
-    return { kind: 'read', report: readReport(REPORT_PATH), scopes: readDeclarations().scopes };
-  } catch (error) {
-    return { kind: 'unreadable', why: error instanceof Error ? error.message : String(error) };
-  }
 }
 
 /** Each scope's per-mutant resolution, from the last run **on this machine**. */
@@ -725,68 +663,27 @@ function reportFloors(): void {
   // Before the records, because how far to read depends on them: each window
   // runs back to the last stamp change its renovations did not preserve.
   const renovations = readRenovations();
-  const stamps = {
-    configHash: floors.configHash,
-    configAccepted: acceptedValues(renovations, 'configHash', floors.configHash),
-    fixtureHash: floors.fixtureHash,
-    fixtureAccepted: acceptedValues(renovations, 'fixtureHash', floors.fixtureHash),
-  };
+  const stamps = windowStamps(floors, renovations);
 
   // Whatever the last sync left in the object store. This fetches nothing: a
   // deploy asks a question the store can answer offline, and how fresh that
   // answer is has its own refusal rather than a second opinion here.
   const rows = runRowsFrom(windowRecords(storedRecords(), stamps));
 
-  // ⚠️ **The newest run that *scored*, never the newest record.** `metrics.yml`
-  // writes on every push to `main` and a merge record carries no per-scope
-  // score, so on a busy week the newest record is a merge — read that as the
-  // newest run and every armed scope reports *no score in the record*, which is
-  // a floor refusing nothing at exactly the moment somebody is deploying. A
-  // crashed nightly is dropped for the same reason: it measured nothing.
+  // ⚠️ **The newest run that *scored*, never the newest record**, and the newest
+  // that *counted*, which is a different row. Both judgements, and the
+  // tightening asks, are `askTightenings`'s in `lib/floors.ts`: `pnpm
+  // trend:sync` puts the same asks on the trend page from the same call (#463),
+  // so this script is one of two thin callers. It asks and writes nothing
+  // (ADR-0111).
   //
-  // It is also the trend panel's own subject, which is what stops the two
-  // blocks below printing different numbers for one scope.
-  const scored = scoredIn(rows);
-  const newest = scored.at(-1);
-  const previous = scored.at(-2);
-
-  // The same read the trend panel above already did, handed on rather than
-  // repeated: one answer to *what did the last local run measure*.
-  const mutants = mutantsPerScope(lastMutationRun());
-  const readings = names.map((scope) => ({
-    scope,
-    score: newest?.scores.get(scope) ?? null,
-    previous: previous?.scores.get(scope),
-    mutants: mutants.get(scope),
-  }));
-
-  // The newest run that *counted*, which is a different row from the newest
-  // that scored. The judgement is `countedIn`'s, in `lib/floors.ts`, where a
-  // spec can reach it — this script is a thin caller, and a filter written here
-  // would be the one rule in the pair that nothing plants.
-  const counted = countedIn(rows);
-  const newestCount = counted.at(-1);
-  const previousCount = counted.at(-2);
-
-  const capReadings = names.flatMap((scope) =>
-    CAPPED_SERIES.map((series) => {
-      const before = previousCount?.counts.get(series)?.get(scope);
-      return {
-        scope,
-        series,
-        value: newestCount?.counts.get(series)?.get(scope) ?? null,
-        ...(before === undefined ? {} : { previous: before }),
-      };
-    }),
-  );
-
-  // The arming rule run again in the tightening direction, from the same rows
-  // and the same two stamps. It asks and writes nothing (ADR-0111).
-  const asked = tightenings({
+  // The mutants are the same read the trend panel above already did, handed on
+  // rather than repeated: one answer to *what did the last local run measure*.
+  const { readings, capReadings, newest, newestCount, asked } = askTightenings({
     rows,
     floors,
-    readings,
-    capReadings,
+    names,
+    mutants: mutantsPerScope(lastMutationRun()),
     stamps,
     today: localToday(),
   });
@@ -855,80 +752,6 @@ function reportFloors(): void {
   // than as a decision to make.
   const first = refusals[0];
   if (first !== undefined) fail(first);
-}
-
-/**
- * The records one deploy reads for the calibration window.
- *
- * ⚠️ **A separate read from `trendRecords`, and not a duplicate of it.** That
- * one answers *is the record fresh* and stops as soon as it has seen every
- * series plus one more scoring run — one or two records on a healthy machine.
- * This one answers *how far has each window filled*, which needs every
- * nightly back to where both streaks broke. Same store, same parser, different
- * question.
- *
- * It reads newest-first and stops once both streaks have ended inside the read,
- * keeping the row that broke each, and never on fewer than `WINDOW_RUNS + 1`
- * nightlies.
- * ⚠️ **Eleven nightlies was the rule until #464**, written when one nightly was
- * one sample; since ADR-0084 a sample is a distinct tree, and eleven nightlies
- * covered about five. The rule is `readWindow`'s, in `lib/floors.ts`, where a
- * test can plant it. The hard cap is what stops a store full of merge records,
- * which score nothing and are not window members, turning one deploy into an
- * unbounded walk.
- */
-function windowRecords(store: FetchedRecord | undefined, stamps: WindowStamps): ParsedRecord[] {
-  if (store === undefined) return [];
-
-  const ordered = store.names
-    .map((name) => parseRecordName(name))
-    .filter((record) => record !== undefined)
-    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name))
-    .map((record) => record.name);
-
-  return readWindow(
-    ordered,
-    (name) => {
-      const bytes = readRecord(store.tip, name);
-      return bytes === undefined ? undefined : parseRecord(bytes);
-    },
-    stamps,
-    WINDOW_RECORD_CAP,
-  );
-}
-
-/**
- * Mutants per declared scope, from the newest local run, for the per-mutant
- * resolution the print and the breach both carry.
- *
- * ⚠️ **The scores come from the record and this comes from the local report,
- * and mixing them is deliberate.** A floor is derived from CI runs and compared
- * against CI runs — comparing one to a local report would be the two-machine
- * comparison the calibration rule exists to forbid. But *how many mutants a
- * scope holds* is a property of the tree rather than of the machine, and it is
- * the number that says whether a floor is one test away or ten. Absent when no
- * report exists, which prints as a line without it rather than as a silence.
- */
-function mutantsPerScope(run: MutationRun): Map<string, number> {
-  const counts = new Map<string, number>();
-  // ⚠️ **Three states, not two, and this reads none of them off the disk
-  // itself.** `readReport` is a bare `JSON.parse`, and an interrupted
-  // `pnpm mutation:run` leaves a truncated `mutation.json` — a third reader here
-  // would throw out of the print and kill the deploy *before* the gates, which
-  // is the fault `lastMutationRun` was extracted to fix. *Nobody ran it* is
-  // ordinary on a fresh checkout; *it is there and unreadable* is a fault worth
-  // naming; collapsing them makes a corrupt report read as checked-and-clean.
-  // Both non-`read` states degrade the line rather than refusing, on section
-  // 0b's rule that no report is a print and never a silence.
-  if (run.kind !== 'read') return counts;
-
-  const declarations = { scopes: run.scopes };
-  const scored = scoreRun(run.report, declarations.scopes);
-  for (const scope of declarations.scopes) {
-    const tally = scored.perScope.get(scope.name);
-    if (tally !== undefined && total(tally) > 0) counts.set(scope.name, total(tally));
-  }
-  return counts;
 }
 
 /**

@@ -32,7 +32,10 @@ rest is read. Both are documented in [`docs/commands.md`](docs/commands.md).
 
 ## Git hooks arrive with `pnpm install`
 
-⚠️ **This is the one thing in this repository you do not opt into.** `husky` is
+⚠️ **This is the one thing in this repository a person does not opt into.** (A
+Claude Code session gets one more: the `PreToolUse` hook in
+`.claude/settings.json`, which sends its test runs through athanor. It gates
+nothing either, and it never runs for a person.) `husky` is
 a dependency and `prepare` is a lifecycle script, so `pnpm install` installs two
 git hooks for you without asking:
 

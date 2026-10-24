@@ -26,6 +26,7 @@ import {
   joinRecords,
   renderEdgeCheck,
   renderMetrics,
+  renderAsks,
   renderRenovations,
   trendNamesIn,
   type EdgeFacts,
@@ -197,7 +198,7 @@ describe('renderEdgeCheck — surface D, with nothing invented', () => {
   });
 });
 
-describe('the four metric prefixes name four things', () => {
+describe('each metric prefix names one thing', () => {
   it('makes no prefix a prefix of another', () => {
     // `trendNamesIn` strips a prefix to recover a name. If one prefix were a
     // prefix of another, every sample under the longer one would parse as a
@@ -610,5 +611,61 @@ describe('renderRenovations — the marker as a series', () => {
 
   it('stays out of the trend namespace, so it owes no `## Trends` row', () => {
     expect(trendNamesIn(renderRenovations([entry()]))).toEqual([]);
+  });
+});
+
+describe('renderAsks — the tightening clause as a series', () => {
+  const floor = {
+    scope: 'scripts',
+    bound: 'floor',
+    kind: 'tightenable',
+    value: 70.1,
+    since: '2026-10-19',
+    atLeast: false,
+  } as const;
+  const cap = {
+    scope: 'scripts',
+    bound: 'complexity-max',
+    kind: 'tightenable',
+    value: 11,
+    since: '2026-10-12',
+    atLeast: true,
+  } as const;
+
+  it('writes one sample per ask, each on its own line, valued at the sync that wrote it', () => {
+    const lines = renderAsks([floor, cap], AT).split('\n');
+    const at = `${String(AT)} ${String(AT)}`;
+
+    // A floor reads to the hundredth, as the print names it; a cap is a count.
+    expect(lines).toContain(
+      `stacks_ratchet_ask{scope="scripts",bound="floor",kind="tightenable",tighten_to="70.10",since="2026-10-19",at_least="false"} ${at}`,
+    );
+    expect(lines).toContain(
+      `stacks_ratchet_ask{scope="scripts",bound="complexity-max",kind="tightenable",tighten_to="11",since="2026-10-12",at_least="true"} ${at}`,
+    );
+    expect(lines).toContain(`stacks_ratchet_asks_written ${at}`);
+    expect(lines.slice(-2)).toEqual(['# EOF', '']);
+  });
+
+  // An ask that stopped must say so: with no newer marker the page would keep
+  // drawing the old one, because a backfilled sample is never taken back.
+  it('writes the marker when nothing is asked, so a stopped ask is superseded', () => {
+    const document = renderAsks([], AT);
+
+    expect(document).toContain(`stacks_ratchet_asks_written ${String(AT)} ${String(AT)}`);
+    expect(document).not.toContain('stacks_ratchet_ask{');
+  });
+
+  it('leaves the date empty on an unjudged floor', () => {
+    const document = renderAsks(
+      [{ scope: 'scripts', bound: 'floor', kind: 'unjudged', value: 70.12 }],
+      AT,
+    );
+
+    expect(document).toContain('kind="unjudged",tighten_to="70.12",since="",at_least=""}');
+  });
+
+  it('stays out of the trend namespace, so it owes no `## Trends` row', () => {
+    expect(trendNamesIn(renderAsks([floor], AT))).toEqual([]);
   });
 });

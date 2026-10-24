@@ -13,8 +13,12 @@ Never claim a phase is complete without pasting the command output that proves i
 Every phase:
 
 ```bash
-pnpm test && pnpm build
+athanor run && athanor run build
 ```
+
+That is `pnpm test && pnpm build` in a sealed container, the default in
+`AGENTS.md`, and the hook in `.claude/settings.json` refuses the host form while
+athanor works. Without athanor, run the `pnpm` form.
 
 Then the phase-specific check from `AGENTS.md` → "Phase gates":
 
