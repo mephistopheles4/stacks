@@ -525,6 +525,21 @@ an agent, which never runs a full one, take the nightly's report or ask the
 owner (see [The agent guard](#the-agent-guard--scriptsagent-test-guardts)). Pass
 `--force` to re-run everything while keeping the file.
 
+### Survivors on every recent night — `scripts/persistent-survivors.ts`
+
+```sh
+git fetch origin survivors
+pnpm exec tsx scripts/persistent-survivors.ts 7          # --ref <ref> to read another
+```
+
+Lists, per scope, the survivors whose content key is on every one of the last N
+records on the `survivors` branch, matched as a multiset
+([`docs/spec/survivor-record.md`](spec/survivor-record.md)): the candidates for
+an equivalent mutant, read before a floor is armed. **It lists nothing when
+fewer than N records agree** on `keySchema`, the Stryker version and
+`configHash` with the newest, and names the record where the run ended instead.
+A read, never a gate, and not a `pnpm` script ([#472](https://github.com/mephistopheles4/stacks/issues/472)).
+
 ## `pnpm mutation:stamp`
 
 **The remedy G56 (`config-hash`) prints, and the only thing in the repository
