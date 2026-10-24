@@ -14,6 +14,7 @@ import {
   buildRecord,
   diffRecords,
   persistentSurvivors,
+  recordsNewestFirst,
   shouldRecord,
   parseRecord,
   summaryLine,
@@ -680,6 +681,20 @@ describe('#472: survivors present on every one of the last N records', () => {
     expect(result.survivors).toEqual([]);
   });
 
+  it('orders record paths newest first by timestamp, and drops anything else', () => {
+    const listing = [
+      'survivors/200-abc.jsonl',
+      'survivors/1000-abc.jsonl',
+      'survivors/README.md',
+      'survivors/300-def.jsonl',
+    ].join('\n');
+    expect(recordsNewestFirst(listing)).toEqual([
+      'survivors/1000-abc.jsonl',
+      'survivors/300-def.jsonl',
+      'survivors/200-abc.jsonl',
+    ]);
+  });
+
   it('takes N of 1 as the newest record alone', () => {
     expect(
       persistentSurvivors([night({ survivors: [X] })], 1).survivors.map((s) => s.file),
@@ -688,5 +703,6 @@ describe('#472: survivors present on every one of the last N records', () => {
 
   it('refuses an N below 1', () => {
     expect(() => persistentSurvivors([night({ survivors: [X] })], 0)).toThrow(/at least 1/);
+    expect(() => persistentSurvivors([night({ survivors: [X] })], 1.5)).toThrow(/whole number/);
   });
 });

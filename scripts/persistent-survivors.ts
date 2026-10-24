@@ -12,10 +12,9 @@
 
 import { spawnSync } from 'node:child_process';
 import { gitOutput } from './lib/git.ts';
-import { persistentSurvivors } from './lib/survivor-record.ts';
+import { persistentSurvivors, recordsNewestFirst } from './lib/survivor-record.ts';
 
 const ROOT = process.cwd();
-const RECORD = /^survivors\/(\d+)-[0-9a-z]+\.jsonl$/;
 
 function fail(message: string): never {
   console.error(message);
@@ -35,24 +34,18 @@ function show(ref: string, path: string): string {
 const args = process.argv.slice(2);
 const refAt = args.indexOf('--ref');
 const ref = refAt === -1 ? 'origin/survivors' : args[refAt + 1];
-const n = Number(
-  args.find((arg, index) => (refAt === -1 || index !== refAt + 1) && !arg.startsWith('--')),
-);
-if (ref === undefined || !Number.isInteger(n) || n < 1) {
+// Anything but N and `--ref <ref>` is refused: `--ref=x` read as the default
+// branch would print a plausible list for the wrong records.
+const rest =
+  refAt === -1 ? args : args.filter((_, index) => index !== refAt && index !== refAt + 1);
+const n = rest.length === 1 && /^\d+$/.test(rest[0] ?? '') ? Number(rest[0]) : NaN;
+if (ref === undefined || ref.startsWith('-') || !Number.isInteger(n) || n < 1) {
   fail('usage: persistent-survivors.ts <N> [--ref origin/survivors]');
 }
 
 const listing = gitOutput(['ls-tree', '--name-only', ref, 'survivors/'], ROOT);
 if (listing === undefined) fail(`git cannot read ${ref}; run \`git fetch origin survivors\` first`);
-const paths = listing
-  .split('\n')
-  .flatMap((path) => {
-    const match = RECORD.exec(path);
-    return match === null ? [] : [{ path, timestamp: Number(match[1]) }];
-  })
-  .sort((a, b) => b.timestamp - a.timestamp)
-  .slice(0, n)
-  .map(({ path }) => path);
+const paths = recordsNewestFirst(listing).slice(0, n);
 
 const result = persistentSurvivors(
   paths.map((path) => show(ref, path)),

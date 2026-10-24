@@ -356,6 +356,20 @@ function changedBetween(a: RecordHeader, b: RecordHeader): string[] {
   return changed;
 }
 
+const RECORD_PATH = /^survivors\/(\d+)-[0-9a-z]+\.jsonl$/;
+
+/** Record paths from an `ls-tree` listing, newest first by the timestamp in the name. */
+export function recordsNewestFirst(listing: string): string[] {
+  return listing
+    .split('\n')
+    .flatMap((path) => {
+      const match = RECORD_PATH.exec(path);
+      return match === null ? [] : [{ path, timestamp: Number(match[1]) }];
+    })
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .map(({ path }) => path);
+}
+
 export interface PersistentSurvivor {
   scope: string;
   file: string;
