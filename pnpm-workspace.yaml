@@ -401,6 +401,30 @@ trustPolicyExclude:
 # and after, and a planted violation is still reported. Scoped to the 15 major,
 # for the brace-expansion block's reason; caret, for the nanoid block's. Remove
 # it when `markdownlint-cli2` pins `markdown-it` at 15.0.3 or later.
+
+# GHSA-mrhx-c7xc-m3w5, high: `zod` below 4.6.6 can exhaust memory validating an
+# oversized constrained collection. It arrives three ways: `astro`, and
+# `@stryker-mutator/core` (directly and under the vitest runner) through
+# `mutation-server-protocol`. Every schema it runs validates this repository's
+# own config and build data, so nothing untrusted reaches it; that bounds the
+# blast radius and does not answer the gate.
+#
+# GHSA-xjj6-f33q-929c, high: `undici` 7.18.0 to below 7.30.1 and 8.0.0 to below
+# 8.12.2 crash on an unhandled error from too many content-encodings. The 7.x
+# line arrives through `wrangler` > `miniflare`, the 8.x line through `astro` >
+# `unifont`, the font fetcher. Both are build or deploy tooling, and neither
+# ships to a visitor.
+#
+# ⚠️ **Both advisories landed after `main`'s last green `gates` run on
+# 2026-10-23**, so pull requests 508 to 510 went red on `audit` with no diff of
+# their own: the smol-toml shape again. All three fixes are outside the
+# seven-day window: zod 4.6.6 shipped 2026-10-11, undici 7.30.1 and 8.12.2 on
+# 2026-10-15. No exclude entry is needed.
+#
+# Scoped to each major line, for the brace-expansion block's reason: an older
+# line arriving later is caught by `audit`, rather than forced across a major
+# here. Caret, for the nanoid block's. Remove each when its consumers' own
+# floors reach the fixed version and the lockfile carries it unaided.
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.16.0'
@@ -410,6 +434,9 @@ overrides:
   http-cache-semantics: '^4.3.0'
   smol-toml: '^1.9.0'
   'markdown-it@15': '^15.0.3'
+  'zod@4': '^4.6.6'
+  'undici@7': '^7.30.1'
+  'undici@8': '^8.12.2'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #
