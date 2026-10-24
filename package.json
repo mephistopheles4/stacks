@@ -80,7 +80,7 @@
     "@stryker-mutator/core": "9.6.1",
     "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "^26.6.5",
-    "@typescript-eslint/parser": "8.71.1",
+    "@typescript-eslint/parser": "8.71.2",
     "@vitest/coverage-v8": "4.1.11",
     "eslint": "10.12.0",
     "eslint-plugin-sonarjs": "4.2.2",
@@ -90,11 +90,11 @@
     "lint-staged": "17.6.0",
     "markdownlint-cli2": "0.23.3",
     "prettier": "3.9.10",
-    "puppeteer-core": "^25.13.0",
+    "puppeteer-core": "^25.14.0",
     "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.1",
+    "typescript-eslint": "8.71.2",
     "vitest": "4.1.11",
     "wrangler": "4.149.0"
   }
