@@ -471,20 +471,65 @@ function diffRenderer(diff: Diff): Partial<ShelfSettings['renderer']> {
   };
 }
 
-/** The five sections, each kept only when it is an object. */
+/**
+ * The five sections, each kept only when it is an object, with every value of
+ * the wrong type dropped on the way (#491).
+ */
 function diffSections(diff: Diff): Omit<SettingsPatch, 'renderer'> {
+  const section = (name: 'lighting' | 'scene' | 'materials' | 'books' | 'effects') =>
+    isRecord(diff[name])
+      ? { [name]: conform(diff[name], DEFAULT_SETTINGS[name], name) }
+      : (diff[name] !== undefined && refuse(name), {});
   return {
-    ...(isRecord(diff.lighting) ? { lighting: diff.lighting as SettingsPatch['lighting'] } : {}),
-    ...(isRecord(diff.scene) ? { scene: diff.scene as SettingsPatch['scene'] } : {}),
-    ...(isRecord(diff.materials)
-      ? { materials: diff.materials as SettingsPatch['materials'] }
-      : {}),
-    ...(isRecord(diff.books) ? { books: diff.books as SettingsPatch['books'] } : {}),
-    ...(isRecord(diff.effects) ? { effects: diff.effects as SettingsPatch['effects'] } : {}),
+    ...section('lighting'),
+    ...section('scene'),
+    ...section('materials'),
+    ...section('books'),
+    ...section('effects'),
   };
 }
 
-function isRecord(value: unknown): boolean {
+/**
+ * A diff's values, kept only where each has its default's type: a `null`, a
+ * string or an object where a number, boolean or colour is bound would reach
+ * Tweakpane unchecked, and Tweakpane refuses to mount the whole pane over one.
+ * A refused value falls back to the default, as a malformed `?debug` does, and
+ * warns naming its key so the inspector says why it ignored part of the link.
+ * Keys the defaults do not have are passed through untouched; nothing binds them.
+ *
+ * The defaults are read by *own* key, so `constructor` is an unknown key rather
+ * than a function to compare against; and `__proto__` is refused outright, since
+ * `JSON.parse` makes it an own key and assigning it would swap `kept`'s
+ * prototype, carrying a wrong-typed group past this check into the merge.
+ */
+function conform(value: object, template: unknown, path: string): object {
+  const kept: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    const expected: unknown =
+      isRecord(template) && Object.hasOwn(template, key)
+        ? (template as Record<string, unknown>)[key]
+        : undefined;
+    const at = `${path}.${key}`;
+    if (key === '__proto__') refuse(at);
+    else if (expected === undefined) kept[key] = child;
+    else if (isRecord(expected)) {
+      if (isRecord(child)) kept[key] = conform(child, expected, at);
+      else refuse(at);
+    } else if (
+      typeof child === typeof expected &&
+      (typeof child !== 'number' || Number.isFinite(child))
+    )
+      kept[key] = child;
+    else refuse(at);
+  }
+  return kept;
+}
+
+function refuse(path: string): void {
+  console.warn(`?debug: ${path} has the wrong type, so the shelf keeps its default`);
+}
+
+function isRecord(value: unknown): value is object {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 

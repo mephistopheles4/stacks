@@ -151,6 +151,82 @@ describe('?debug=<json>', () => {
     expect(read(query).renderer.exposure).toBe(DEFAULT_SETTINGS.renderer.exposure);
   });
 
+  describe('a value of the wrong type (#491)', () => {
+    afterEach(() => vi.restoreAllMocks());
+    const debug = (diff: unknown) => `debug=${encodeURIComponent(JSON.stringify(diff))}`;
+
+    it.each([
+      ['a null number', { lighting: { key: { intensity: null } } }],
+      ['a string number', { scene: { fog: { near: '3' } } }],
+      ['an object for a colour', { lighting: { lamp: { colour: { r: 1 } } } }],
+      ['a string boolean', { effects: { bloom: { enabled: 'yes' } } }],
+      ['a number for an object', { materials: { spineProfile: 4 } }],
+      ['an array for an object', { lighting: { key: { position: [1, 2] } } }],
+      ['a null for an object', { lighting: { key: null } }],
+    ])('falls back to the default for %s, and warns naming the key', (_, diff) => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      expect(read(debug(diff))).toEqual(DEFAULT_SETTINGS);
+      expect(warn).toHaveBeenCalledOnce();
+      expect(String(warn.mock.calls[0]?.[0])).toMatch(/\?debug/);
+    });
+
+    it('keeps the well-typed siblings of a refused value', () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const settings = read(debug({ lighting: { key: { intensity: null, colour: 0x123456 } } }));
+      expect(settings.lighting.key.intensity).toBe(DEFAULT_SETTINGS.lighting.key.intensity);
+      expect(settings.lighting.key.colour).toBe(0x123456);
+    });
+
+    it('names the refused key in the warning, and stays quiet for a well-typed diff', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      read(debug({ lighting: { key: { intensity: 2 } } }));
+      expect(warn).not.toHaveBeenCalled();
+      read(debug({ lighting: { key: { intensity: null } } }));
+      expect(String(warn.mock.calls[0]?.[0])).toContain('lighting.key.intensity');
+    });
+
+    it('refuses a wrong-typed value hidden under a key named __proto__', () => {
+      // JSON.parse makes `__proto__` an own key; assigning it to a plain object
+      // would swap that object's prototype and carry the null past the check.
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const query = `debug=${encodeURIComponent('{"lighting":{"__proto__":{"key":{"intensity":null}}}}')}`;
+      expect(read(query).lighting.key.intensity).toBe(DEFAULT_SETTINGS.lighting.key.intensity);
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('lighting.key'));
+    });
+
+    it('refuses a number that parses to Infinity', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const query = `debug=${encodeURIComponent('{"scene":{"fog":{"near":1e999}}}')}`;
+      expect(read(query).scene.fog.near).toBe(DEFAULT_SETTINGS.scene.fog.near);
+      expect(warn).toHaveBeenCalledOnce();
+    });
+
+    it('passes a key named like an Object member through, without a warning', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const patch = readSettings(
+        new URLSearchParams(debug({ lighting: { constructor: { a: 1 } } })),
+      );
+      expect(Object.getOwnPropertyDescriptor(patch.lighting, 'constructor')?.value).toEqual({
+        a: 1,
+      });
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('warns when a whole section has the wrong type', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      expect(read(debug({ effects: null, lighting: 4 }))).toEqual(DEFAULT_SETTINGS);
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(String(warn.mock.calls[0]?.[0])).toContain('lighting');
+    });
+
+    it('passes a key the defaults do not have through untouched, without a warning', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const patch = readSettings(new URLSearchParams(debug({ lighting: { key: { later: 1 } } })));
+      expect(patch.lighting?.key).toEqual({ later: 1 });
+      expect(warn).not.toHaveBeenCalled();
+    });
+  });
+
   it('carries the books category, which is the first new top-level key since this was written', () => {
     // `books` is not one of the ten historic probe spellings, so a URL is the
     // only way to hand a phone a dialled mixture — and `readDiff` has to have

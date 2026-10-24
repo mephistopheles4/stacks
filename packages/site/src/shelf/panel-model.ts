@@ -327,6 +327,11 @@ const SHADOWS = 'shadows';
 const ROOM = 'bookcase & room';
 const RENDERER = 'renderer';
 
+// Shared by bloom's three sliders; the `enabled` toggle stays outside it, as it
+// is the switch that turns them back on.
+const bloomOffReason = (s: ShelfSettings): string | undefined =>
+  s.effects.bloom.enabled ? undefined : 'bloom is off, so this has no effect';
+
 /** Every row of the panel, in the order it is drawn. One source for the view and the tests. */
 const ROWS: readonly RowDef[] = [
   colour(
@@ -589,7 +594,7 @@ const ROWS: readonly RowDef[] = [
     0.01,
     (s) => s.effects.bloom.strength,
     (s, v) => resolveSettings({ effects: { bloom: { strength: v } } }, s),
-    { active: (s) => s.effects.bloom.enabled },
+    { active: (s) => s.effects.bloom.enabled, disabledReason: bloomOffReason },
   ),
   slider(
     BLOOM,
@@ -600,7 +605,7 @@ const ROWS: readonly RowDef[] = [
     0.01,
     (s) => s.effects.bloom.radius,
     (s, v) => resolveSettings({ effects: { bloom: { radius: v } } }, s),
-    { active: (s) => s.effects.bloom.enabled },
+    { active: (s) => s.effects.bloom.enabled, disabledReason: bloomOffReason },
   ),
   slider(
     BLOOM,
@@ -611,7 +616,7 @@ const ROWS: readonly RowDef[] = [
     0.01,
     (s) => s.effects.bloom.threshold,
     (s, v) => resolveSettings({ effects: { bloom: { threshold: v } } }, s),
-    { active: (s) => s.effects.bloom.enabled },
+    { active: (s) => s.effects.bloom.enabled, disabledReason: bloomOffReason },
   ),
 
   // `painted` and `real-time` sit outside the folder: painted is the fallback

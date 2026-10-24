@@ -207,6 +207,23 @@ describe('claim 3 — a row that would do nothing is disabled, with the reason i
     expect(rowOf(view(), 'renderer/antialias').disabled).toBe(false);
   });
 
+  it.each(['strength', 'radius', 'threshold'])(
+    'disables bloom/%s while bloom is off, and enables it while bloom is on',
+    (key) => {
+      expect(DEFAULT_SETTINGS.effects.bloom.enabled).toBe(false);
+      const off = rowOf(view(), `bloom/${key}`);
+      expect(off.disabled).toBe(true);
+      expect(off.reason).toContain('bloom is off');
+      expect(off.labelText).toContain(off.reason);
+      const bloom = resolveSettings({ effects: { bloom: { enabled: true } } });
+      const on = rowOf(view(bloom), `bloom/${key}`);
+      expect(on.disabled).toBe(false);
+      expect(on.reason).toBeUndefined();
+      // and the toggle that turns them back on is never the one disabled
+      expect(rowOf(view(), 'bloom/enabled').disabled).toBe(false);
+    },
+  );
+
   it('disables the shadows group when real-time is off, and keeps real-time outside it', () => {
     const painted = resolveSettings({ shadows: { enabled: false } });
     const group = view(painted).groups.find((g) => g.title === 'shadows');
