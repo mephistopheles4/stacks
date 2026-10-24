@@ -444,9 +444,21 @@ function readDiff(params: URLSearchParams): SettingsPatch {
 
   const diff = diffObject(raw);
   if (diff === undefined) return {};
+  for (const key of Object.keys(diff)) if (!DIFF_KEYS.includes(key)) refuse(key);
 
   return { renderer: diffRenderer(diff), ...diffSections(diff) };
 }
+
+/** Every top-level key `?debug` reads; any other is refused, as `conform` refuses below. */
+const DIFF_KEYS: readonly string[] = [
+  'effects',
+  'lighting',
+  'scene',
+  'materials',
+  'books',
+  'toneMapping',
+  'exposure',
+] satisfies readonly (keyof Diff)[];
 
 /** `?debug`'s value as an object, or `undefined` when it is not JSON or not an object. */
 function diffObject(raw: string): Diff | undefined {
@@ -523,9 +535,14 @@ function conform(value: object, template: object, path: string): object {
 }
 
 function refuse(path: string): void {
-  // Quoted, because a refused key is the link's own text: escaped, it cannot
-  // break the line and pass for another message.
-  console.warn(`?debug: ${JSON.stringify(path)} is not a setting of that type, so it is ignored`);
+  // Quoted, because a refused key is the link's own text: escaped, line
+  // separators and invisible format characters included, it cannot break the
+  // line or reorder it to pass for another message.
+  const quoted = JSON.stringify(path).replace(
+    /[\p{Zl}\p{Zp}\p{Cf}]/gu,
+    (c) => '\\u' + (c.codePointAt(0) ?? 0).toString(16).padStart(4, '0'),
+  );
+  console.warn(`?debug: ${quoted} is not a setting of that type, so it is ignored`);
 }
 
 function isRecord(value: unknown): value is object {
