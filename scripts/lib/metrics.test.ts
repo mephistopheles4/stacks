@@ -26,6 +26,7 @@ import {
   joinRecords,
   renderEdgeCheck,
   renderMetrics,
+  renderAsks,
   renderRenovations,
   trendNamesIn,
   type EdgeFacts,
@@ -197,7 +198,7 @@ describe('renderEdgeCheck — surface D, with nothing invented', () => {
   });
 });
 
-describe('the four metric prefixes name four things', () => {
+describe('each metric prefix names one thing', () => {
   it('makes no prefix a prefix of another', () => {
     // `trendNamesIn` strips a prefix to recover a name. If one prefix were a
     // prefix of another, every sample under the longer one would parse as a
@@ -610,5 +611,47 @@ describe('renderRenovations — the marker as a series', () => {
 
   it('stays out of the trend namespace, so it owes no `## Trends` row', () => {
     expect(trendNamesIn(renderRenovations([entry()]))).toEqual([]);
+  });
+});
+
+describe('renderAsks — the tightening clause as a series', () => {
+  const floor = {
+    scope: 'scripts',
+    bound: 'floor',
+    kind: 'tightenable',
+    value: 70.12,
+    since: '2026-10-19',
+    atLeast: false,
+  } as const;
+
+  it('writes one sample per ask, valued at the sync that wrote it', () => {
+    const document = renderAsks([floor], AT);
+
+    expect(document).toContain(
+      `stacks_ratchet_ask{scope="scripts",bound="floor",kind="tightenable",value="70.12",since="2026-10-19",at_least="false"} ${String(AT)} ${String(AT)}`,
+    );
+    expect(document.endsWith('\n# EOF\n')).toBe(true);
+  });
+
+  // An ask that stopped must say so: with no newer marker the page would keep
+  // drawing the old one, because a backfilled sample is never taken back.
+  it('writes the marker when nothing is asked, so a stopped ask is superseded', () => {
+    const document = renderAsks([], AT);
+
+    expect(document).toContain(`stacks_ratchet_asks_written ${String(AT)} ${String(AT)}`);
+    expect(document).not.toContain('stacks_ratchet_ask{');
+  });
+
+  it('leaves the date empty on an unjudged floor', () => {
+    const document = renderAsks(
+      [{ scope: 'scripts', bound: 'floor', kind: 'unjudged', value: 70.12 }],
+      AT,
+    );
+
+    expect(document).toContain('kind="unjudged",value="70.12",since="",at_least=""}');
+  });
+
+  it('stays out of the trend namespace, so it owes no `## Trends` row', () => {
+    expect(trendNamesIn(renderAsks([floor], AT))).toEqual([]);
   });
 });

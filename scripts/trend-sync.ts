@@ -69,7 +69,15 @@ import {
   type CoverAnswer,
   type EdgeAnswer,
 } from './lib/edge-probe.ts';
-import { joinRecords, renderEdgeCheck, renderRenovations } from './lib/metrics.ts';
+import { askTightenings, asksOf, localDay, readFloors, runRowsFrom } from './lib/floors.ts';
+import { joinRecords, renderAsks, renderEdgeCheck, renderRenovations } from './lib/metrics.ts';
+import { readDeclarations } from './lib/mutation-score.ts';
+import {
+  lastMutationRun,
+  mutantsPerScope,
+  windowRecords,
+  windowStamps,
+} from './lib/ratchet-inputs.ts';
 import { readRenovations } from './lib/renovations.ts';
 import {
   METRICS_BRANCH,
@@ -77,6 +85,7 @@ import {
   isFastForward,
   readRecord,
   selectNewRecords,
+  storedRecords,
 } from './lib/metrics-record.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runExe } from './lib/run.ts';
@@ -209,6 +218,12 @@ interface StoreState {
    * Absent on a store written before markers existed, which imports them once.
    */
   renovations?: string[];
+  /**
+   * A digest of the tightening asks the store last took in (#463). A sync
+   * writes a new `-ratchet.prom` row only when the asks differ from this, so a
+   * sync with nothing new stays a no-op rather than restarting the store.
+   */
+  asks?: string;
 }
 
 /**
@@ -694,6 +709,44 @@ async function probeOrigin(): Promise<void> {
   );
 }
 
+/**
+ * The tightening clause for the trend page (#463): the same asks the deploy
+ * print makes, from `askTightenings` over the same reads, written as a local
+ * row only when they changed. It refuses, files and edits nothing (ADR-0111).
+ *
+ * Read from `METRICS_REF` after the fetch, so it judges the records this sync
+ * is importing rather than the store as it stood before.
+ */
+function writeAsks(held: string | undefined): string {
+  const floors = readFloors();
+  const stamps = windowStamps(floors, readRenovations());
+  const today = localDay(new Date());
+  const { asked } = askTightenings({
+    rows: runRowsFrom(windowRecords(storedRecords(), stamps)),
+    floors,
+    names: readDeclarations().scopes.map((scope) => scope.name),
+    mutants: mutantsPerScope(lastMutationRun()),
+    stamps,
+    today,
+  });
+  const asks = asksOf(asked, today);
+  const digest = createHash('sha256').update(JSON.stringify(asks)).digest('hex');
+  if (digest === held) return digest;
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  writeFileSync(
+    join(LOCAL, `${String(timestamp)}-ratchet.prom`),
+    renderAsks(asks, timestamp),
+    'utf8',
+  );
+  console.log(
+    asks.length === 0
+      ? '\nratchet: no bound is tightenable'
+      : `\nratchet: ${String(asks.length)} bound(s) tightenable — see the trend page`,
+  );
+  return digest;
+}
+
 // ── The sync ────────────────────────────────────────────────────────────────
 
 async function main(): Promise<number> {
@@ -736,6 +789,7 @@ async function main(): Promise<number> {
   }
 
   await probeOrigin();
+  const asks = writeAsks(state.asks);
 
   const onBranch = fetched?.names ?? [];
   const inStore = readdirSync(LOCAL).filter((name) => name.endsWith('.prom'));
@@ -857,6 +911,7 @@ async function main(): Promise<number> {
     // markers that were never ingested would leave the store missing lines
     // nothing would ever import again.
     renovations: renovationsChanged ? renovationDigests : state.renovations,
+    asks,
   });
   rmSync(INCOMING, { force: true });
   startStore();

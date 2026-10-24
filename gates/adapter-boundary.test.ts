@@ -197,11 +197,15 @@ const ALLOWED = [
   // write moved into rather than a second one growing beside it.
   'scripts/stamp-floors.ts',
   // Imports the `.prom` records CI wrote into the local trend store, and writes
-  // surface D's own row beside them. The only vault-derived thing it opens is
+  // surface D's own row and the ratchet's asks beside them. The only
+  // vault-derived thing it opens is
   // the *published* `dist/` — `index.html` for its build stamp and
   // `library.json` for what each cover weighs — which is the artifact, never the
   // vault. It does not know what a book is.
   'scripts/trend-sync.ts',
+  // Asks whether the local Stryker report exists before reading it, for the
+  // ratchet's two readers — deploy and trend-sync. A test artifact, not a note.
+  'scripts/lib/ratchet-inputs.ts',
   // Was here once and left: its filesystem access moved into
   // `lib/mutation-score.ts` with the arithmetic, and the rot-catcher below went
   // red on the spent permission — that was the gate working. It is back for one

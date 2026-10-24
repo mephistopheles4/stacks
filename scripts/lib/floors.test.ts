@@ -27,6 +27,8 @@ import { parseRecord } from './metrics-read.ts';
 import type { Scope } from './mutation-score.ts';
 import {
   breaches,
+  askTightenings,
+  asksOf,
   calibration,
   CAPPED_SERIES,
   capBreaches,
@@ -2989,6 +2991,92 @@ describe('the tightening clause', () => {
       const withMutant = printed({ rows: nightlies(25) });
       expect(withMutant.floor).toMatch(/1 mutant = 0\.08 {3}window lowest 70\.12 - tightenable/);
       expect(withMutant.cap).toMatch(/current 11 {3}window highest 11 - tightenable/);
+    });
+  });
+
+  // #463. The same clause on the trend page, from the one call the print makes.
+  describe('C12: the page asks what the print asks', () => {
+    // `countedIn` wants every capped series counted, not `complexity-max` alone.
+    const counted = (count: number) =>
+      nightlies(count, (row, day) => {
+        for (const series of CAPPED_SERIES) {
+          row.counts.set(series, new Map([[SCOPE, countAt(day)]]));
+        }
+      });
+    const ask = (rows: RunRow[], floor: number | 'unarmed' = 65, mutants = 1250) => {
+      const today = localDay(new Date((rows.at(-1)?.timestamp ?? BASE) * 1000));
+      const found = askTightenings({
+        rows,
+        floors: floorsWith(floor, 14),
+        names: [SCOPE],
+        mutants: new Map([[SCOPE, mutants]]),
+        stamps: STAMPS,
+        today,
+      });
+      return { ...found, today };
+    };
+
+    it('reads the newest scored run and the newest counted run, skipping a merge', () => {
+      const rows = counted(25);
+      const merge: RunRow = {
+        timestamp: BASE + 25 * DAY,
+        ok: true,
+        event: 'push',
+        configHash: HASH,
+        fixtureHash: FIX,
+        scores: new Map(),
+        counts: new Map(),
+      };
+      const { readings, capReadings } = ask([...rows, merge]);
+
+      expect(readings).toEqual([{ scope: SCOPE, score: 70.5, previous: 70.5, mutants: 1250 }]);
+      expect(capReadings.find((one) => one.series === 'complexity-max')).toEqual({
+        scope: SCOPE,
+        series: 'complexity-max',
+        value: 11,
+        previous: 11,
+      });
+    });
+
+    it('lists each ask with the day it became tightenable, not a day count', () => {
+      const { asked, today } = ask(counted(25));
+
+      expect(asksOf(asked, today)).toEqual([
+        {
+          scope: SCOPE,
+          bound: 'floor',
+          kind: 'tightenable',
+          value: 70.12,
+          since: localDay(new Date((BASE + 19 * DAY) * 1000)),
+          atLeast: false,
+        },
+        {
+          scope: SCOPE,
+          bound: 'complexity-max',
+          kind: 'tightenable',
+          value: 11,
+          since: localDay(new Date((BASE + 19 * DAY) * 1000)),
+          atLeast: false,
+        },
+      ]);
+    });
+
+    it('lists an unjudged floor with no date', () => {
+      const { asked, today } = ask(counted(25), 65, 0);
+
+      expect(asksOf(asked, today).find((one) => one.bound === 'floor')).toEqual({
+        scope: SCOPE,
+        bound: 'floor',
+        kind: 'unjudged',
+        value: 70.12,
+      });
+    });
+
+    it('asks nothing where the print asks nothing', () => {
+      expect(asksOf(ask(counted(25), 70.05).asked, '2026-01-01')).toEqual([
+        expect.objectContaining({ bound: 'complexity-max' }),
+      ]);
+      expect(asksOf(ask(counted(9)).asked, '2026-01-01')).toEqual([]);
     });
   });
 });

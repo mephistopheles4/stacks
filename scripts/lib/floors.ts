@@ -1632,6 +1632,131 @@ export function tightenings(input: TightenInput): Tightenings {
   return found;
 }
 
+export interface AskInput {
+  rows: readonly RunRow[];
+  floors: Floors;
+  /** The declared scopes, in declaration order. */
+  names: readonly string[];
+  /** Mutants per scope from the newest local run; empty where there is none. */
+  mutants: ReadonlyMap<string, number>;
+  stamps: WindowStamps;
+  /** Today, as `YYYY-MM-DD`. */
+  today: string;
+}
+
+export interface Asked {
+  readings: PrintReading[];
+  capReadings: CapReading[];
+  /** The newest run that scored, and the newest that counted — different rows. */
+  newest: RunRow | undefined;
+  newestCount: RunRow | undefined;
+  asked: Tightenings;
+}
+
+/**
+ * The readings and the tightening asks, assembled once for both of their
+ * readers: the deploy print and the trend page (#463).
+ *
+ * ⚠️ **One function, two callers, on purpose.** The page must not carry a
+ * second copy of the window walk, and a second copy of the assembly in front of
+ * it drifts the same way — a page reading a different row than the print would
+ * ask about a bound the print does not.
+ */
+export function askTightenings(input: AskInput): Asked {
+  // The newest run that *scored*, never the newest record: `metrics.yml` writes
+  // on every push and a merge record carries no per-scope score, so on a busy
+  // week the newest record is a merge — read as the newest run, every armed
+  // scope would report *no score in the record*. A crashed nightly is dropped
+  // for the same reason: it measured nothing.
+  const scored = scoredIn(input.rows);
+  const newest = scored.at(-1);
+  const previous = scored.at(-2);
+  const readings = input.names.map((scope) => ({
+    scope,
+    score: newest?.scores.get(scope) ?? null,
+    previous: previous?.scores.get(scope),
+    mutants: input.mutants.get(scope),
+  }));
+
+  const counted = countedIn(input.rows);
+  const newestCount = counted.at(-1);
+  const previousCount = counted.at(-2);
+  const capReadings = input.names.flatMap((scope) =>
+    CAPPED_SERIES.map((series) => {
+      const before = previousCount?.counts.get(series)?.get(scope);
+      return {
+        scope,
+        series,
+        value: newestCount?.counts.get(series)?.get(scope) ?? null,
+        ...(before === undefined ? {} : { previous: before }),
+      };
+    }),
+  );
+
+  // The arming rule run again in the tightening direction. It asks and writes
+  // nothing (ADR-0111).
+  const asked = tightenings({
+    rows: input.rows,
+    floors: input.floors,
+    readings,
+    capReadings,
+    stamps: input.stamps,
+    today: input.today,
+  });
+  return { readings, capReadings, newest, newestCount, asked };
+}
+
+/** One bound the evidence says could be tighter, flat, as the trend page shows it. */
+export type Ask =
+  | {
+      scope: string;
+      bound: 'floor' | CappedSeries;
+      kind: 'tightenable';
+      value: number;
+      /** The day it became tightenable, so the record does not change daily. */
+      since: string;
+      atLeast: boolean;
+    }
+  | { scope: string; bound: 'floor'; kind: 'unjudged'; value: number };
+
+/** `tightenings`' answer as a list: floors first, then caps in `CAPPED_SERIES` order. */
+export function asksOf(asked: Tightenings, today: string): Ask[] {
+  const sinceOf = (age: number): string => {
+    const date = new Date(`${today}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - age);
+    return date.toISOString().slice(0, 10);
+  };
+  const asks: Ask[] = [];
+  for (const [scope, found] of asked.floors) {
+    asks.push(
+      found.kind === 'unjudged'
+        ? { scope, bound: 'floor', kind: 'unjudged', value: found.value }
+        : {
+            scope,
+            bound: 'floor',
+            kind: 'tightenable',
+            value: found.value,
+            since: sinceOf(found.days),
+            atLeast: found.atLeast,
+          },
+    );
+  }
+  for (const series of CAPPED_SERIES) {
+    for (const [scope, found] of asked.caps.get(series) ?? []) {
+      if (found.kind !== 'tightenable') continue;
+      asks.push({
+        scope,
+        bound: series,
+        kind: 'tightenable',
+        value: found.value,
+        since: sinceOf(found.days),
+        atLeast: found.atLeast,
+      });
+    }
+  }
+  return asks;
+}
+
 /** A scope where the sweep and the recorded counter disagree, and by how much. */
 export interface IgnoredMismatch {
   scope: string;

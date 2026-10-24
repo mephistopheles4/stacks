@@ -34,6 +34,7 @@ import type { CognitiveCounts } from './cognitive.ts';
 import type { Counts } from './complexity.ts';
 import type { AllCounts, DuplicationCounts } from './duplication.ts';
 import type { EdgeAnswer } from './edge-probe.ts';
+import type { Ask } from './floors.ts';
 import type { Renovation } from './renovations.ts';
 
 /**
@@ -65,6 +66,7 @@ export const METRIC_PREFIXES = {
   trend: 'stacks_trend_',
   edge: 'stacks_edge_',
   renovation: 'stacks_renovation_',
+  ratchet: 'stacks_ratchet_',
 } as const;
 
 /** The eight series, and the whole of what this record carries as a trend. */
@@ -951,6 +953,44 @@ export function renderRenovations(renovations: readonly Renovation[]): string {
     },
     0,
   );
+  return `${lines.join('\n')}\n# EOF\n`;
+}
+
+/**
+ * The tightening clause as a series, for the trend page (#463). Written by
+ * `pnpm trend:sync` on this machine only, like surface D, and never by CI.
+ *
+ * **Every sample's value is the moment of the sync that wrote it**, and the
+ * marker carries the same value whether anything is asked or not. The page
+ * keeps the asks whose value equals the newest marker's, so an ask that stopped
+ * — the owner tightened it — drops off at the next sync rather than lingering,
+ * since a backfilled sample is never taken back. It asks, and refuses nothing,
+ * as ADR-0111 sets for the print.
+ */
+export function renderAsks(asks: readonly Ask[], at: number): string {
+  const families: Family[] = [
+    {
+      metric: `${METRIC_PREFIXES.ratchet}asks_written`,
+      help: 'The sync that judged the tightening asks, in unix seconds; present when it asked nothing.',
+      samples: [{ labels: {}, value: at }],
+    },
+    {
+      metric: `${METRIC_PREFIXES.ratchet}ask`,
+      help: 'A bound the window says could be tighter, valued at the sync that asked. Asks only.',
+      samples: asks.map((ask) => ({
+        labels: {
+          scope: ask.scope,
+          bound: ask.bound,
+          kind: ask.kind,
+          value: ask.bound === 'floor' ? ask.value.toFixed(2) : String(ask.value),
+          since: ask.kind === 'tightenable' ? ask.since : '',
+          at_least: ask.kind === 'tightenable' ? String(ask.atLeast) : '',
+        },
+        value: at,
+      })),
+    },
+  ];
+  const lines = families.flatMap((family) => render(family, at));
   return `${lines.join('\n')}\n# EOF\n`;
 }
 
