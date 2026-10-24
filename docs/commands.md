@@ -448,6 +448,34 @@ run by `tsx` would need an exclusion in `stryker.scopes.json`, which moves
 `configHash`; the rendering lives in `scripts/lib/mutation-report.ts`, inside the
 `scripts` scope, where its spec reaches it.
 
+### A scoped run through athanor — the only mutation run for an agent
+
+**An agent never runs a full mutation run**: 13–18 minutes of every core on the
+owner's machine, and the hook refuses it on the host with no fallback (see
+[The agent guard](#the-agent-guard--scriptsagent-test-guardts)). A scoped run
+names its files with `--mutate` and goes through athanor, whose 0.1.0 can bring
+nothing back but the command's standard output — so the recipe sends Stryker's
+own output to standard error and prints the report:
+
+```sh
+mkdir -p artifacts/stryker/scoped
+athanor run -- sh -c 'pnpm exec stryker run --concurrency 4 --mutate scripts/lib/settle.ts >&2 && cat artifacts/stryker/current/mutation.json' > artifacts/stryker/scoped/mutation.json
+pnpm mutation:score artifacts/stryker/scoped/mutation.json
+```
+
+Measured on 2026-10-24: one file, 21 mutants, 7 s, the report intact on the
+host. `--mutate` takes a comma-separated list. `--concurrency 4` matches the
+`cpus: 4` the `athanor` key sets for every command, rather than oversubscribe
+it; no cap is set for mutation alone, because athanor 0.1.0 has none per
+command. In PowerShell, run it under PowerShell 7, whose `>` writes UTF-8.
+
+⚠️ **The report lands in `scoped/`, never in `current/`.** `deploy:site`'s
+zero-mutant check reads `artifacts/stryker/current/mutation.json`, and a scoped
+report there makes every scope it did not name read as empty, which refuses the
+deploy. The `current/` in the recipe is the container's own folder, which is
+thrown away with it. A scoped run **on the host**, under the fallback, writes
+`current/` as it always has.
+
 ### Incremental runs are fast, and they are not a score
 
 **While you work, reuse the last run's verdicts**, and pass every flag on the
@@ -456,6 +484,10 @@ command line — never in `stryker.config.mjs`:
 ```sh
 pnpm exec stryker run --incremental --incrementalFile artifacts/stryker/incremental.json
 ```
+
+⚠️ **For an agent this is a host run the guard refuses while athanor works**,
+and inside athanor it finds no results file — `artifacts/` is ignored, so the
+snapshot never carries one — and runs everything. An agent uses `--mutate`.
 
 The first run is a full one and writes the results file. After that, a run
 takes about a minute where a full one takes 13–18, and it answers *which
@@ -1146,3 +1178,52 @@ fails outright with a network error instead of quietly reaching a server.
 - **Limits are 6 GB and 4 CPUs**, under athanor's default ceilings of 8 GB and
   4. Node reads the CPU quota, so vitest starts 3 workers in the container
   rather than one per host core.
+
+### The agent guard — `scripts/agent-test-guard.ts`
+
+**Claude Code sessions are held to `athanor run` by a hook**, declared in
+[`.claude/settings.json`](../.claude/settings.json), which runs before every
+Bash and PowerShell call and reads the command as text
+([ADR-0123](adr/0123-a-hook-holds-agents-to-athanor.md)). It never runs or
+changes the command, and nothing in CI reads it.
+
+**Refused while `athanor --version` works**, alone or chained, with or without
+`run` and extra arguments, wherever the session's working folder is:
+
+- `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` — `athanor run`,
+  `athanor run typecheck`, `athanor run lint`, `athanor run build`.
+- `vitest` run directly (`pnpm vitest`, `pnpm exec vitest`, `npx vitest`, a bare
+  `vitest`) — one file is `athanor run -- pnpm vitest run <file>`.
+- `tsc --noEmit` run directly.
+- A scoped Stryker run: `--mutate` or `--incremental` — by the recipe below.
+
+**Refused always, with no fallback**: a full mutation run from an agent —
+`pnpm mutation:run`, or `stryker run` with neither `--mutate` nor
+`--incremental`. A full report comes from the nightly's
+`mutation-report-<run id>` artifact (`gh run download <run id>`) or from the
+owner.
+
+**Never refused**: `pnpm smoke:render`, the phone check, `gate:public`,
+`deploy:site`, `lint:md`, `format`, `install`, `dev`, `worktree`,
+`pnpm stacks <cmd>`; the forms that write to the tree, which a container run
+throws away (`lint --fix`, `test -u`, `vitest -u`, watch mode); package-scoped
+forms (`--filter`, `-F`, `-C`, `--dir`); `athanor run` itself; and anything
+inside quotes, a heredoc or a comment.
+
+**The fallback is a comment**, because `tsc`, `eslint` and `vitest` all reject
+an option they do not know: when an athanor run produced no result — exit 124
+(time limit), 125 (athanor could not run it) or 137 (memory limit) — rerun the
+host command with `# --host-fallback=<reason>` at the end of its line, the
+reason in your own words with no path, token or pasted error text, and say in
+your report that you used it. A fallback covers the guarded runs on its own
+line only. **When athanor is missing the hook is silent**, and needs no
+fallback.
+
+**Everything that is not a refusal is silence** — exit 0, nothing on either
+stream, never an explicit allow, so the owner's permission prompts stay in
+force — and a fault in the hook is silence too, because a guard that failed
+closed would stop all work in the repo. It runs with `node:` built-ins under
+Node's own type stripping, so it works in a worktree before `pnpm install`.
+Measured on the owner's Windows machine: **219 ms** median for an unguarded
+command against 151 ms for a bare `node`, and 330 ms for a guarded one, which
+probes athanor. To switch it off, delete the `PreToolUse` entry.

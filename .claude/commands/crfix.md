@@ -112,8 +112,12 @@ table, so declining is as visible as fixing.
 The gate contract, per [`AGENTS.md`](../../AGENTS.md):
 
 ```bash
-pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render
+athanor run && athanor run build && pnpm gate:public && pnpm smoke:render
 ```
+
+The first two are `pnpm test` and `pnpm build` in a sealed container, which the
+hook in `.claude/settings.json` holds you to while athanor works; the last two
+stay on the host. Without athanor, run the `pnpm` forms.
 
 ⚠️ **Stage new files before trusting a green suite.** G29 (`doc-links`) reads
 *tracked* `.md` files, so a full pass before `git add` says nothing about a new

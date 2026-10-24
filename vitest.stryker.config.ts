@@ -32,6 +32,12 @@ import { cliResolveConditions } from './vitest.cli-conditions.ts';
  * not move. **`scripts/mutation-scopes.test.ts` is the sixth, for the same
  * reason**: it runs `scripts/mutation-scopes.ts` as a child process and writes a
  * scratch directory, and that script is excluded from mutation too.
+ * **`scripts/agent-test-guard-hook.test.ts` is the seventh**: it writes fake
+ * `athanor` programs to a scratch directory, spawns them and the hook, and
+ * calls `process.chdir()`. Unlike the two before it, its script *is* in the
+ * `scripts` scope, so what leaves is the probe's oracle: `probeAthanor`'s
+ * mutants read as uncovered. The decision, which is most of the file, keeps
+ * its in-process oracle in `scripts/lib/agent-test-guard.test.ts`.
  *
  * ⚠️ **`scripts/lib/complexity-tree.test.ts` is the second, and it is the
  * filesystem warning further down made concrete.** It asserts the complexity of
@@ -136,6 +142,7 @@ export default defineConfig({
       'scripts/lib/sampling-hook-source.test.ts',
       'scripts/commit-metrics.test.ts',
       'scripts/mutation-scopes.test.ts',
+      'scripts/agent-test-guard-hook.test.ts',
     ],
     environment: 'node',
     setupFiles: ['./gates/no-live-network.setup.ts'],

@@ -26,7 +26,7 @@ owed to `docs/adr/`.
 
 Checked into `.claude/`, so they arrive with the checkout rather than with a
 machine. **Optional, like everything else in this file** — the gates are the
-contract, and neither of these is one.
+contract, and none of these is one.
 
 - [`.claude/skills/phase-gate/SKILL.md`](.claude/skills/phase-gate/SKILL.md) —
   closing out a phase: run the gate, show the output, record before committing.
@@ -38,3 +38,8 @@ contract, and neither of these is one.
   the command names it as optional and carries the whole procedure itself.
   Invoking a skill that is absent fails outright, which is the trap this note
   exists to keep anyone from walking into.
+- [`.claude/settings.json`](.claude/settings.json) — the `PreToolUse` hook that
+  runs [`scripts/agent-test-guard.ts`](scripts/agent-test-guard.ts) before every
+  Bash and PowerShell call. The rule it enforces is in `AGENTS.md`, beside
+  athanor; what it refuses and why is in
+  [`docs/commands.md`](docs/commands.md#the-agent-guard--scriptsagent-test-guardts).
