@@ -13,6 +13,8 @@ import { survivorsOf } from './mutation-score.ts';
 import {
   buildRecord,
   diffRecords,
+  persistentSurvivors,
+  recordsNewestFirst,
   shouldRecord,
   parseRecord,
   summaryLine,
@@ -560,4 +562,147 @@ describe('C8: when a record is written at all', () => {
       expect(shouldRecord({ ...ok, ref })).toEqual({ ok: false, reason: 'the run is not on main' });
     },
   );
+});
+
+describe('#472: survivors present on every one of the last N records', () => {
+  /** `[scope, file, mutator, original, replacement]`. */
+  type Key = [string, string, string, string, string];
+
+  interface Night {
+    stryker?: string;
+    configHash?: string;
+    keySchema?: number;
+    survivors: Key[];
+  }
+
+  function night(spec: Night): string {
+    const header = {
+      record: 'survivors',
+      keySchema: spec.keySchema ?? 1,
+      stryker: spec.stryker ?? '9.0.0',
+      configHash: spec.configHash ?? 'h1',
+      commit: SHA_A,
+      event: 'schedule',
+      runUrl: '',
+      recordedAt: '2026-10-01T00:00:00Z',
+      counts: {},
+    };
+    const lines = spec.survivors.map(([scope, file, mutator, original, replacement]) => ({
+      file,
+      scope,
+      mutator,
+      status: 'Survived',
+      original,
+      replacement,
+      start: null,
+      end: null,
+    }));
+    return [header, ...lines].map((line) => JSON.stringify(line)).join('\n') + '\n';
+  }
+
+  const X: Key = ['alpha', 'src/a.ts', 'StringLiteral', "'one'", '""'];
+  const Y: Key = ['beta', 'lib/b.ts', 'BooleanLiteral', 'true', 'false'];
+
+  it('lists a key on every record and drops one missing from any', () => {
+    const records = [
+      night({ survivors: [X, Y] }),
+      night({ survivors: [X] }),
+      night({ survivors: [Y, X] }),
+    ];
+    const result = persistentSurvivors(records, 3);
+    expect(result.compared).toBe(3);
+    expect(result.stop).toBeUndefined();
+    expect(result.survivors).toEqual([
+      {
+        scope: 'alpha',
+        file: 'src/a.ts',
+        mutator: 'StringLiteral',
+        original: "'one'",
+        replacement: '""',
+        count: 1,
+      },
+    ]);
+  });
+
+  it('reads only the newest N, so an older night without the key does not drop it', () => {
+    const records = [
+      night({ survivors: [X, Y] }),
+      night({ survivors: [X, Y] }),
+      night({ survivors: [X] }),
+    ];
+    expect(persistentSurvivors(records, 2).survivors.map((s) => s.file)).toEqual([
+      'src/a.ts',
+      'lib/b.ts',
+    ]);
+  });
+
+  it('matches as a multiset: the count is the fewest copies on any record', () => {
+    const records = [
+      night({ survivors: [X, X, X] }),
+      night({ survivors: [X, X] }),
+      night({ survivors: [X, X, X] }),
+    ];
+    expect(persistentSurvivors(records, 3).survivors.map((s) => s.count)).toEqual([2]);
+  });
+
+  it('stops at a record whose Stryker version differs, and says where', () => {
+    const records = [
+      night({ survivors: [X] }),
+      night({ survivors: [X] }),
+      night({ stryker: '8.0.0', survivors: [X] }),
+    ];
+    const result = persistentSurvivors(records, 3);
+    expect(result.compared).toBe(2);
+    expect(result.stop).toEqual({ index: 2, reason: 'the Stryker version changed' });
+    expect(result.survivors).toEqual([]);
+  });
+
+  it('stops at a different config hash or key schema, naming each', () => {
+    const records = [
+      night({ survivors: [X] }),
+      night({ configHash: 'h2', keySchema: 2, survivors: [X] }),
+    ];
+    expect(persistentSurvivors(records, 2).stop).toEqual({
+      index: 1,
+      reason: 'the key schema and config hash changed',
+    });
+  });
+
+  it('stops at a record that does not parse', () => {
+    const result = persistentSurvivors([night({ survivors: [X] }), '{not json'], 2);
+    expect(result.compared).toBe(1);
+    expect(result.stop).toEqual({ index: 1, reason: 'the record could not be read' });
+  });
+
+  it('lists nothing and stops at the end when there are fewer than N records', () => {
+    const result = persistentSurvivors([night({ survivors: [X] })], 2);
+    expect(result.compared).toBe(1);
+    expect(result.stop).toEqual({ index: 1, reason: 'there are no older records' });
+    expect(result.survivors).toEqual([]);
+  });
+
+  it('orders record paths newest first by timestamp, and drops anything else', () => {
+    const listing = [
+      'survivors/200-abc.jsonl',
+      'survivors/1000-abc.jsonl',
+      'survivors/README.md',
+      'survivors/300-def.jsonl',
+    ].join('\n');
+    expect(recordsNewestFirst(listing)).toEqual([
+      'survivors/1000-abc.jsonl',
+      'survivors/300-def.jsonl',
+      'survivors/200-abc.jsonl',
+    ]);
+  });
+
+  it('takes N of 1 as the newest record alone', () => {
+    expect(
+      persistentSurvivors([night({ survivors: [X] })], 1).survivors.map((s) => s.file),
+    ).toEqual(['src/a.ts']);
+  });
+
+  it('refuses an N below 1', () => {
+    expect(() => persistentSurvivors([night({ survivors: [X] })], 0)).toThrow(/at least 1/);
+    expect(() => persistentSurvivors([night({ survivors: [X] })], 1.5)).toThrow(/whole number/);
+  });
 });

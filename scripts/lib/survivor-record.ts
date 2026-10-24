@@ -332,10 +332,7 @@ export type Comparison =
  * Records made under a different key, Stryker or configuration are not compared.
  */
 export function diffRecords(previous: ParsedRecord, current: ParsedRecord): Comparison {
-  const changed: string[] = [];
-  if (previous.header.keySchema !== current.header.keySchema) changed.push('key schema');
-  if (previous.header.stryker !== current.header.stryker) changed.push('Stryker version');
-  if (previous.header.configHash !== current.header.configHash) changed.push('config hash');
+  const changed = changedBetween(previous.header, current.header);
   if (changed.length > 0) return { kind: 'not-compared', changed };
 
   const before = multiset(previous.survivors);
@@ -348,6 +345,101 @@ export function diffRecords(previous: ParsedRecord, current: ParsedRecord): Comp
     else gone -= difference;
   }
   return { kind: 'diff', added, gone };
+}
+
+/** What makes two records comparable, named as `diffRecords` and the summary name it. */
+function changedBetween(a: RecordHeader, b: RecordHeader): string[] {
+  const changed: string[] = [];
+  if (a.keySchema !== b.keySchema) changed.push('key schema');
+  if (a.stryker !== b.stryker) changed.push('Stryker version');
+  if (a.configHash !== b.configHash) changed.push('config hash');
+  return changed;
+}
+
+const RECORD_PATH = /^survivors\/(\d+)-[0-9a-z]+\.jsonl$/;
+
+/** Record paths from an `ls-tree` listing, newest first by the timestamp in the name. */
+export function recordsNewestFirst(listing: string): string[] {
+  return listing
+    .split('\n')
+    .flatMap((path) => {
+      const match = RECORD_PATH.exec(path);
+      return match === null ? [] : [{ path, timestamp: Number(match[1]) }];
+    })
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .map(({ path }) => path);
+}
+
+export interface PersistentSurvivor {
+  scope: string;
+  file: string;
+  mutator: string | null;
+  original: string | null;
+  replacement: string | null;
+  /** The fewest copies of this key on any of the records read. */
+  count: number;
+}
+
+export interface Persistence {
+  /** How many records, newest first, were comparable with the newest. */
+  compared: number;
+  /** Where the run of comparable records ended before reaching N, and why. */
+  stop?: { index: number; reason: string };
+  /** Empty unless all N records were comparable. */
+  survivors: PersistentSurvivor[];
+}
+
+/**
+ * The survivors on every one of the newest `n` records (#472): the candidates
+ * for an equivalent mutant, which survives on the same code night after night.
+ *
+ * `records` is newest first. Matching is the multiset of `diffRecords`, so a key
+ * twice on every night counts 2. Every record is compared with the newest under
+ * the key schema, Stryker version and config hash, and the run stops at the
+ * first that disagrees or does not parse; short of `n`, nothing is listed.
+ */
+export function persistentSurvivors(records: readonly string[], n: number): Persistence {
+  if (!Number.isInteger(n) || n < 1) throw new Error('N must be a whole number, at least 1');
+  const parsed: ParsedRecord[] = [];
+  let stop: Persistence['stop'];
+  for (let index = 0; index < n; index += 1) {
+    const source = records[index];
+    if (source === undefined) {
+      stop = { index, reason: 'there are no older records' };
+      break;
+    }
+    let record: ParsedRecord;
+    try {
+      record = parseRecord(source);
+    } catch {
+      stop = { index, reason: 'the record could not be read' };
+      break;
+    }
+    const changed = parsed[0] === undefined ? [] : changedBetween(parsed[0].header, record.header);
+    if (changed.length > 0) {
+      stop = { index, reason: `the ${nameList(changed)} changed` };
+      break;
+    }
+    parsed.push(record);
+  }
+  const newest = parsed[0];
+  if (stop !== undefined || newest === undefined) {
+    return { compared: parsed.length, ...(stop && { stop }), survivors: [] };
+  }
+
+  const counts = parsed.map((record) => multiset(record.survivors));
+  const survivors: PersistentSurvivor[] = [];
+  const seen = new Set<string>();
+  for (const line of newest.survivors) {
+    const key = keyOf(line);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const count = Math.min(...counts.map((tally) => tally.get(key) ?? 0));
+    if (count === 0) continue;
+    const { scope, file, mutator, original, replacement } = line;
+    survivors.push({ scope, file, mutator, original, replacement, count });
+  }
+  return { compared: parsed.length, survivors };
 }
 
 export type RecordDecision = { ok: true; report: MutationReport } | { ok: false; reason: string };
