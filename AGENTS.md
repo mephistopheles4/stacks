@@ -300,15 +300,16 @@ follows it unheld. While `athanor --version` works, `.claude/settings.json`
 refuses `pnpm test`, `typecheck`, `lint` and `build` on the host, and `vitest`
 or `tsc --noEmit` run directly; when athanor is missing it says nothing. When an
 athanor run produced no result — exit 124, 125 or 137 — rerun the host command
-with the comment `# --host-fallback=<reason>` at the end of its line, the reason
-in your own words with no path, token or pasted error text, and say in your
-report that you used it. The two host runs above, and the forms that write to
-the tree (`--fix`, `-u`, watch mode), are never refused. **Agents run only
-scoped mutation runs**, through athanor by the recipe in `docs/commands.md`,
-with the report in `artifacts/stryker/scoped/` and never in `current/`; a full
-`pnpm mutation:run` is refused to an agent on the host whether or not athanor
-works, and a full report comes from the nightly's `mutation-report-<run id>`
-artifact or from the owner
+with the comment `# --host-fallback=<reason>` at the end of its line, naming the
+reason and the exit code in your own words with no path, token or pasted error
+text, and say in your report that you used it. The two host runs above, and the
+forms that write to the tree or keep running (`--fix`, `-u`, watch mode), are
+never refused. **Agents run only scoped mutation runs**, through athanor by the
+recipe in `docs/commands.md`, with the report in `artifacts/stryker/scoped/` and
+never in `current/`; a full `pnpm mutation:run` is refused to an agent on the
+host whether or not athanor works, and a full report comes from the
+`mutation-report-<run id>` artifact of the latest `metrics.yml` run, or from the
+owner
 ([ADR-0123](docs/adr/0123-a-hook-holds-agents-to-athanor.md)).
 
 **The rest is in [`docs/commands.md`](docs/commands.md)** — read it before you

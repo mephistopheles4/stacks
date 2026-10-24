@@ -10,11 +10,14 @@
  * says how to name the fallback: the comment `# --host-fallback=<reason>` on
  * the command's own line. A comment, not grimoire's flag, because `tsc`,
  * `eslint` and `vitest` all reject an option they do not know, so a flag would
- * fail the very run it permits.
+ * fail the very run it permits. **A full mutation run is refused whatever
+ * athanor's state, with no fallback** (`FULL_MUTATION_REFUSAL`): agents run
+ * only scoped ones.
  *
- * It reads the command as data, never runs it, and never changes it. It runs
- * one program, `athanor --version`, and only for a guarded command. It writes
- * nothing and sends nothing.
+ * It reads the command as data, never runs it, and never changes it. It starts
+ * only the athanor probe — through `cmd.exe` on Windows, and `taskkill` when
+ * the probe hangs — and only for a guarded command. It writes nothing and sends
+ * nothing.
  *
  * Everything that is not a refusal is silence: exit 0, nothing on either
  * stream. A hook that answers with an explicit allow skips the owner's
@@ -42,10 +45,10 @@ import { delimiter, join, posix } from 'node:path';
  */
 export const REFUSAL = [
   'Run this through athanor, not on the host: `athanor run` for `pnpm test`, and `athanor run typecheck`, `athanor run lint` or `athanor run build` for the others; one test file is `athanor run -- pnpm vitest run <file>`.',
-  'A run tests tracked files only, so `git add` a new file first or pass `--untracked`.',
+  'A run tests tracked files only, so `git add` a new file first, or pass `--untracked` to `athanor run`, before any `--`.',
   'The host run is the fallback only when athanor produced no result (exit 124, 125 or 137): then rerun the same command with the comment `# --host-fallback=<reason>` at the end of its line, name the reason and the exit code in your own words (no path, token or pasted error text), and say in your report that you used the fallback.',
-  'A scoped mutation run goes through athanor too, by the recipe in docs/commands.md.',
-  '`pnpm smoke:render`, the phone check and the forms that write to the tree (`--fix`, `-u`, watch mode) stay on the host. docs/commands.md has the rest.',
+  'A scoped mutation run (Stryker with `--mutate`) goes through athanor too: docs/commands.md, "A scoped run through athanor".',
+  '`pnpm smoke:render`, the phone check and the forms that write to the tree or keep running (`--fix`, `-u`, watch mode) stay on the host. docs/commands.md, "The agent guard", has the rest.',
 ].join(' ');
 
 /**
@@ -55,8 +58,8 @@ export const REFUSAL = [
  */
 export const FULL_MUTATION_REFUSAL = [
   'A full mutation run is not for an agent on the host, whether or not athanor works, and no fallback covers it.',
-  'Run a scoped one through athanor instead — Stryker with `--mutate <files>`, its report written to `artifacts/stryker/scoped/` and never to `current/` — by the recipe in docs/commands.md.',
-  'A full report comes from the nightly: download its `mutation-report-<run id>` artifact, or ask the owner to run one.',
+  'Run a scoped one through athanor instead — Stryker with `--mutate <files>`, its report written to `artifacts/stryker/scoped/` and never to `current/` — by the recipe in docs/commands.md, "A scoped run through athanor".',
+  'A full report comes from the nightly: find the latest run of `metrics.yml` with `gh run list --workflow metrics.yml` and download its `mutation-report-<run id>` artifact, or ask the owner to run one.',
 ].join(' ');
 
 interface Segment {
@@ -214,21 +217,47 @@ const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 /** The root scripts that have an `athanor run` equivalent. */
 const SCRIPTS = new Set(['test', 'typecheck', 'lint', 'build']);
 
-/** pnpm options that scope a run to a package, which athanor does not mirror. */
-const SCOPED = new Set(['--filter', '-F', '-C', '--dir', '-r', '--recursive']);
+/**
+ * pnpm options that scope a run to one package or fan it out across all of
+ * them, which athanor does not mirror. "Package-scoped", never "scoped": that
+ * word belongs to a mutation run that names its files.
+ */
+const PACKAGE_SCOPED = new Set(['--filter', '-F', '-C', '--dir', '-r', '--recursive']);
+
+/** pnpm options that take their value as the next word, which is not the script. */
+const PNPM_VALUED = new Set(['--reporter', '--loglevel', '--workspace-concurrency']);
+
+/** pnpm's own short names for `pnpm test`. After `run`, they would name a script. */
+const TEST_ALIASES = new Set(['t', 'tst']);
 
 /** vitest's subcommands that watch, list or do something other than one run. */
 const VITEST_OTHER = new Set(['watch', 'dev', 'list', 'bench', 'init']);
 
-/** A program's name, from a path in either slash, without a Windows suffix. */
+/** The flags of a run that writes to the tree or keeps running, which a container cannot do. */
+const STAYS_ON_HOST = ['-u', '--update', '-w', '--watch'];
+
+/**
+ * A program's name, from a path in either slash, without a Windows or script
+ * suffix — so `node_modules/@stryker-mutator/core/bin/stryker.js` is
+ * `stryker` — and with Stryker's package name read as Stryker.
+ */
 function programOf(token: string): string {
-  return (token.replace(/\\/g, '/').split('/').pop() ?? '')
-    .toLowerCase()
-    .replace(/\.(cmd|exe|ps1)$/, '');
+  const path = token.replace(/\\/g, '/').toLowerCase();
+  if (/(?:^|\/)@stryker-mutator\/core(?:@[^/]*)?$/.test(path)) return 'stryker';
+  return (path.split('/').pop() ?? '').replace(/\.(cmd|exe|ps1|js|mjs|cjs)$/, '');
 }
 
-const writes = (args: readonly string[], flags: readonly string[]): boolean =>
+const hasAny = (args: readonly string[], flags: readonly string[]): boolean =>
   args.some((arg) => flags.includes(arg));
+
+/** The words from the first one that is not an option. */
+const fromFirstWord = (args: readonly string[]): readonly string[] =>
+  args.slice(
+    Math.max(
+      0,
+      args.findIndex((arg) => !arg.startsWith('-')),
+    ),
+  );
 
 /**
  * What a run is: not guarded, a guarded host run, or a full mutation run.
@@ -256,13 +285,10 @@ function direct(tokens: readonly string[]): Kind {
   if (program === 'stryker') return rest[0] === 'run' ? stryker(rest.slice(1)) : 'other';
   if (program === 'vitest') {
     const sub = rest.find((arg) => !arg.startsWith('-'));
-    return asKind(
-      !(sub !== undefined && VITEST_OTHER.has(sub)) &&
-        !writes(rest, ['-u', '--update', '-w', '--watch']),
-    );
+    return asKind(!(sub !== undefined && VITEST_OTHER.has(sub)) && !hasAny(rest, STAYS_ON_HOST));
   }
   if (program === 'tsc')
-    return asKind(rest.includes('--noEmit') && !writes(rest, ['-w', '--watch']));
+    return asKind(rest.includes('--noEmit') && !hasAny(rest, ['-w', '--watch']));
   return 'other';
 }
 
@@ -271,21 +297,25 @@ function pnpm(args: readonly string[]): Kind {
   let j = 0;
   for (; args[j]?.startsWith('-'); j++) {
     const arg = args[j] ?? '';
-    if (SCOPED.has(arg) || arg.startsWith('--filter=') || arg.startsWith('--dir=')) return 'other';
+    if (PACKAGE_SCOPED.has(arg) || arg.startsWith('--filter=') || arg.startsWith('--dir=')) {
+      return 'other';
+    }
+    if (PNPM_VALUED.has(arg)) j++;
   }
   let name = args[j];
   let rest = args.slice(j + 1);
-  if (name === 'run') {
+  if (name !== undefined && TEST_ALIASES.has(name)) name = 'test';
+  else if (name === 'run') {
     name = args[j + 1];
     rest = args.slice(j + 2);
   }
   if (name === undefined) return 'other';
-  if (name === 'exec') return direct(rest);
+  if (name === 'exec' || name === 'dlx') return direct(fromFirstWord(rest));
   if (name === 'vitest' || name === 'tsc' || name === 'stryker') return direct([name, ...rest]);
   if (name === 'mutation:run') return stryker(rest);
   if (!SCRIPTS.has(name)) return 'other';
   if (name === 'lint') return asKind(!rest.includes('--fix'));
-  if (name === 'test') return asKind(!writes(rest, ['-u', '--update', '-w', '--watch']));
+  if (name === 'test') return asKind(!hasAny(rest, STAYS_ON_HOST));
   return 'guarded';
 }
 
@@ -305,15 +335,7 @@ function kindOf(tokens: readonly string[]): Kind {
   const program = programOf(tokens[i] ?? '');
   const rest = tokens.slice(i + 1);
   if (program === 'pnpm') return pnpm(rest);
-  if (program === 'npx')
-    return direct(
-      rest.slice(
-        Math.max(
-          0,
-          rest.findIndex((arg) => !arg.startsWith('-')),
-        ),
-      ),
-    );
+  if (program === 'npx' || program === 'node') return direct(fromFirstWord(rest));
   return direct(tokens.slice(i));
 }
 

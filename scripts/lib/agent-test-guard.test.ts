@@ -3,7 +3,7 @@
  *
  * The seam is `decide()`: the hook's input in, a refusal or `null` out, with
  * the athanor probe passed in. Every case here names a claim of the spec on
- * #513, C1 to C6; the probe itself and the script as Claude Code spawns it are
+ * #513, C1 to C6, C11 and C12; the probe itself and the script as Claude Code spawns it are
  * in `scripts/agent-test-guard-hook.test.ts`, which Stryker's dry run leaves out
  * because it writes files and spawns processes.
  */
@@ -63,6 +63,17 @@ const GUARDED = [
   '(pnpm test)',
   'if ($true) { pnpm test }',
   'pnpm test # a comment that names no fallback',
+  'git status | pnpm test',
+  'git status & pnpm test',
+  'false || pnpm test',
+  'time pnpm test',
+  'pnpm t',
+  'pnpm tst',
+  'pnpm --reporter append-only test',
+  'pnpm --reporter=append-only test',
+  'node node_modules/vitest/vitest.mjs run',
+  'node_modules\\.bin\\vitest.cmd run',
+  'cat <<EOF\nx\nEOF\npnpm test',
 ];
 
 // C4: never refused, and the probe never runs for them.
@@ -112,6 +123,21 @@ const PASSES = [
   '# pnpm test',
   'ls -la',
   '',
+  'git commit -m "wip; pnpm test"',
+  "git commit -m 'a && pnpm build'",
+  'echo "x | pnpm test"',
+  'cat <<EOF\nx\npnpm test\nEOF',
+  'cat <<-EOF\n\tpnpm test\n\tEOF',
+  '@"\nx; pnpm test\n"@',
+  '<# pnpm test #> git status',
+  'pnpm --filter=@stacks/site build',
+  'pnpm -r test',
+  'pnpm --recursive test',
+  'pnpm vitest --update',
+  'tsc --noEmit -w',
+  'pnpm test --watch',
+  'vitest list',
+  'pnpm run t',
 ];
 
 // C11: a full mutation run, refused to an agent on the host whatever athanor's
@@ -126,6 +152,9 @@ const FULL_MUTATION = [
   'stryker run',
   'node_modules/.bin/stryker run',
   'pnpm mutation:run # --host-fallback=athanor exited 125',
+  'npx @stryker-mutator/core run',
+  'pnpm dlx @stryker-mutator/core run',
+  'node node_modules/@stryker-mutator/core/bin/stryker.js run',
 ];
 
 // C12: a scoped mutation run, guarded like any other host run.
@@ -135,51 +164,6 @@ const SCOPED_MUTATION = [
   'npx stryker run --mutate=scripts/lib/settle.ts',
   'pnpm exec stryker run --incremental --incrementalFile artifacts/stryker/incremental.json',
 ];
-
-describe('C11: a full mutation run is refused on the host, always', () => {
-  for (const tool of ['Bash', 'PowerShell'] as const) {
-    for (const command of FULL_MUTATION) {
-      it(`${tool}: ${JSON.stringify(command)}`, async () => {
-        let probes = 0;
-        const athanorPresent = (): Promise<boolean> => {
-          probes++;
-          return Promise.resolve(false);
-        };
-        expect(await ask(command, { tool, athanorPresent })).toEqual({
-          reason: FULL_MUTATION_REFUSAL,
-        });
-        expect(probes).toBe(0);
-      });
-    }
-  }
-
-  it('names the scoped recipe, the nightly artifact and the owner', () => {
-    for (const part of ['--mutate', 'artifacts/stryker/scoped/', 'mutation-report-', 'owner']) {
-      expect(FULL_MUTATION_REFUSAL).toContain(part);
-    }
-  });
-});
-
-describe('C12: a scoped mutation run is guarded like any other', () => {
-  it('is refused while athanor works, silent while it is missing, and takes the fallback', async () => {
-    for (const command of SCOPED_MUTATION) {
-      expect(await ask(command), command).toEqual({ reason: REFUSAL });
-      expect(await ask(command, { athanorPresent: missing }), command).toBeNull();
-      expect(await ask(`${command} # --host-fallback=athanor exited 125`), command).toBeNull();
-    }
-  });
-
-  it('passes the recipe and the readers of a report', async () => {
-    for (const command of [
-      "athanor run -- sh -c 'pnpm exec stryker run --concurrency 4 --mutate scripts/lib/settle.ts >&2 && cat artifacts/stryker/current/mutation.json' > artifacts/stryker/scoped/mutation.json",
-      'pnpm mutation:score artifacts/stryker/scoped/mutation.json',
-      'pnpm mutation:stamp --check',
-      'pnpm exec stryker --version',
-    ]) {
-      expect(await ask(command), command).toBeNull();
-    }
-  });
-});
 
 describe('C1: a guarded host run is refused while athanor works', () => {
   for (const tool of ['Bash', 'PowerShell'] as const) {
@@ -223,6 +207,7 @@ describe('C3: the fallback comment', () => {
   it('refuses an empty or all-space reason', async () => {
     for (const command of [
       'pnpm test # --host-fallback=',
+      'pnpm test # --host-fallback="  "',
       'pnpm test # --host-fallback=   ',
       'pnpm test # --host-fallback=""',
       "pnpm test # --host-fallback=' '",
@@ -280,11 +265,6 @@ describe('C5: anything that is not a shell command is silence', () => {
 });
 
 describe('C6: the refusal is fixed text', () => {
-  it('echoes nothing from the command', async () => {
-    expect(await ask('pnpm test SECRET_TOKEN_abc123')).toEqual({ reason: REFUSAL });
-    expect(REFUSAL).not.toContain('SECRET_TOKEN_abc123');
-  });
-
   it('names the athanor runs, untracked files and the fallback', () => {
     for (const part of [
       'athanor run typecheck',
@@ -297,8 +277,61 @@ describe('C6: the refusal is fixed text', () => {
       '125',
       '137',
       'own words',
+      'smoke:render',
     ]) {
       expect(REFUSAL).toContain(part);
+    }
+  });
+});
+
+describe('C11: a full mutation run is refused on the host, always', () => {
+  for (const tool of ['Bash', 'PowerShell'] as const) {
+    for (const command of FULL_MUTATION) {
+      it(`${tool}: ${JSON.stringify(command)}`, async () => {
+        let probes = 0;
+        const athanorPresent = (): Promise<boolean> => {
+          probes++;
+          return Promise.resolve(false);
+        };
+        expect(await ask(command, { tool, athanorPresent })).toEqual({
+          reason: FULL_MUTATION_REFUSAL,
+        });
+        expect(probes).toBe(0);
+      });
+    }
+  }
+
+  it('names the scoped recipe, the nightly artifact and the owner', () => {
+    for (const part of [
+      'no fallback',
+      '--mutate',
+      'artifacts/stryker/scoped/',
+      'metrics.yml',
+      'mutation-report-',
+      'owner',
+    ]) {
+      expect(FULL_MUTATION_REFUSAL).toContain(part);
+    }
+  });
+});
+
+describe('C12: a scoped mutation run is guarded like any other', () => {
+  it('is refused while athanor works, silent while it is missing, and takes the fallback', async () => {
+    for (const command of SCOPED_MUTATION) {
+      expect(await ask(command), command).toEqual({ reason: REFUSAL });
+      expect(await ask(command, { athanorPresent: missing }), command).toBeNull();
+      expect(await ask(`${command} # --host-fallback=athanor exited 125`), command).toBeNull();
+    }
+  });
+
+  it('passes the recipe and the readers of a report', async () => {
+    for (const command of [
+      "athanor run -- sh -c 'pnpm exec stryker run --concurrency 4 --mutate scripts/lib/settle.ts >&2 && cat artifacts/stryker/current/mutation.json' > artifacts/stryker/scoped/mutation.json",
+      'pnpm mutation:score artifacts/stryker/scoped/mutation.json',
+      'pnpm mutation:stamp --check',
+      'pnpm exec stryker --version',
+    ]) {
+      expect(await ask(command), command).toBeNull();
     }
   });
 });

@@ -109,7 +109,8 @@ table, so declining is as visible as fixing.
 
 ## 4. Before pushing
 
-The gate contract, per [`AGENTS.md`](../../AGENTS.md):
+The gate contract, per [`AGENTS.md`](../../AGENTS.md), with its first two runs
+in athanor:
 
 ```bash
 athanor run && athanor run build && pnpm gate:public && pnpm smoke:render

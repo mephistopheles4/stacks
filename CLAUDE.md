@@ -40,6 +40,9 @@ contract, and none of these is one.
   exists to keep anyone from walking into.
 - [`.claude/settings.json`](.claude/settings.json) — the `PreToolUse` hook that
   runs [`scripts/agent-test-guard.ts`](scripts/agent-test-guard.ts) before every
-  Bash and PowerShell call. The rule it enforces is in `AGENTS.md`, beside
+  Bash and PowerShell call. ⚠️ **The one entry here that is not optional**: it
+  arrives with the checkout and runs in every session, as husky's hooks arrive
+  with `pnpm install` ([ADR-0083](docs/adr/0083-hooks-arrive-with-pnpm-install.md)),
+  and like them it gates nothing. The rule it enforces is in `AGENTS.md`, beside
   athanor; what it refuses and why is in
   [`docs/commands.md`](docs/commands.md#the-agent-guard--scriptsagent-test-guardts).

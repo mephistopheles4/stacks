@@ -23,7 +23,7 @@ import {
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { probeAthanor } from './lib/agent-test-guard.ts';
+import { probeAthanor, REFUSAL } from './lib/agent-test-guard.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const guard = join(REPO_ROOT, 'scripts', 'agent-test-guard.ts');
@@ -92,10 +92,6 @@ function envWith(path: string): NodeJS.ProcessEnv {
 }
 
 describe('C2: the probe', () => {
-  it('finds a working athanor', async () => {
-    expect(await probeAthanor({ env: envWith(fake('ok')) })).toBe(true);
-  });
-
   it('counts a dangling shim, a non-version and an empty PATH as missing', async () => {
     expect(await probeAthanor({ env: envWith(fake('dangling')) })).toBe(false);
     expect(await probeAthanor({ env: envWith(fake('noversion')) })).toBe(false);
@@ -171,17 +167,33 @@ const call = (command: string, tool = 'Bash') => ({
 });
 
 describe('C7: the script as Claude Code runs it', () => {
-  it('prints the deny decision, exits 0 and writes nothing to stderr', () => {
+  it('prints the deny decision with the fixed reason, exits 0 and writes nothing to stderr (C6)', () => {
     for (const tool of ['Bash', 'PowerShell']) {
-      const r = hook(call('pnpm test', tool), fake('ok'));
+      const r = hook(call('pnpm test SECRET_TOKEN_abc123', tool), fake('ok'));
       expect(r.status).toBe(0);
       expect(r.stderr).toBe('');
-      const out = JSON.parse(r.stdout) as Record<string, Record<string, unknown>>;
-      expect(Object.keys(out)).toEqual(['hookSpecificOutput']);
-      expect(out.hookSpecificOutput).toMatchObject({
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'deny',
+      expect(JSON.parse(r.stdout)).toEqual({
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'deny',
+          permissionDecisionReason: REFUSAL,
+        },
       });
+    }
+  });
+
+  // What makes the hook run before `pnpm install`: a package import would
+  // resolve here, where node_modules exists, and print an error in a fresh
+  // worktree.
+  it('imports nothing but node: built-ins and local files', () => {
+    for (const file of [guard, join(REPO_ROOT, 'scripts', 'lib', 'agent-test-guard.ts')]) {
+      const specifiers = [
+        ...readFileSync(file, 'utf8').matchAll(/^import\s[^;]*?from\s+'([^']+)'/gm),
+      ];
+      expect(specifiers.length, file).toBeGreaterThan(0);
+      for (const [, specifier] of specifiers) {
+        expect(specifier, file).toMatch(/^(?:node:|\.\/)/);
+      }
     }
   });
 

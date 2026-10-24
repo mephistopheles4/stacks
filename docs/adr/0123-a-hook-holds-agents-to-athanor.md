@@ -59,6 +59,9 @@ partial report there would refuse the deploy.
 
 ## Consequences
 
+- It is a second thing that arrives unasked, after husky's hooks
+  ([ADR-0083](0083-hooks-arrive-with-pnpm-install.md)), and on the same terms:
+  it gates nothing, and a contributor without it passes every gate.
 - Only Claude Code runs the hook. Every other agent follows the rule in
   `AGENTS.md` unheld, and nothing in CI reads `.claude/`.
 - A checked-out branch's own version of the script runs on every shell call in

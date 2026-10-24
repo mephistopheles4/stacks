@@ -32,12 +32,17 @@ import { cliResolveConditions } from './vitest.cli-conditions.ts';
  * not move. **`scripts/mutation-scopes.test.ts` is the sixth, for the same
  * reason**: it runs `scripts/mutation-scopes.ts` as a child process and writes a
  * scratch directory, and that script is excluded from mutation too.
- * **`scripts/agent-test-guard-hook.test.ts` is the seventh**: it writes fake
+ * **`scripts/agent-test-guard-hook.test.ts` is excluded too**: it writes fake
  * `athanor` programs to a scratch directory, spawns them and the hook, and
- * calls `process.chdir()`. Unlike the two before it, its script *is* in the
- * `scripts` scope, so what leaves is the probe's oracle: `probeAthanor`'s
- * mutants read as uncovered. The decision, which is most of the file, keeps
- * its in-process oracle in `scripts/lib/agent-test-guard.test.ts`.
+ * calls `process.chdir()`. Unlike the two before it, the code it tests *is* in
+ * the `scripts` scope, so what leaves is the probe's oracle:
+ * `probeAthanor`'s mutants in `scripts/lib/agent-test-guard.ts` read as
+ * uncovered. The decision, which is most of that file, keeps its in-process
+ * oracle in `scripts/lib/agent-test-guard.test.ts`. The entry,
+ * `scripts/agent-test-guard.ts`, is only ever spawned, as `scripts/deploy.ts`
+ * is, and it is left **in** the scope rather than excluded: it is a dozen lines
+ * of stdin and JSON, and an exclusion would move `configHash` for mutants that
+ * read as uncovered either way.
  *
  * ⚠️ **`scripts/lib/complexity-tree.test.ts` is the second, and it is the
  * filesystem warning further down made concrete.** It asserts the complexity of

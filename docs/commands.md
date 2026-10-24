@@ -465,16 +465,20 @@ pnpm mutation:score artifacts/stryker/scoped/mutation.json
 
 Measured on 2026-10-24: one file, 21 mutants, 7 s, the report intact on the
 host. `--mutate` takes a comma-separated list. `--concurrency 4` matches the
-`cpus: 4` the `athanor` key sets for every command, rather than oversubscribe
-it; no cap is set for mutation alone, because athanor 0.1.0 has none per
-command. In PowerShell, run it under PowerShell 7, whose `>` writes UTF-8.
+`cpus: 4` that the `athanor` key in the root `package.json` sets for every
+command, rather than oversubscribe it; no cap is set for mutation alone,
+because athanor 0.1.0 has none per command. In PowerShell, run it under
+PowerShell 7, whose `>` writes UTF-8. ⚠️ **The `>` empties the scoped report
+before the run starts**, so a run that fails leaves an empty or partial file
+behind: read the score only after athanor exits 0.
 
 ⚠️ **The report lands in `scoped/`, never in `current/`.** `deploy:site`'s
 zero-mutant check reads `artifacts/stryker/current/mutation.json`, and a scoped
 report there makes every scope it did not name read as empty, which refuses the
 deploy. The `current/` in the recipe is the container's own folder, which is
-thrown away with it. A scoped run **on the host**, under the fallback, writes
-`current/` as it always has.
+thrown away with it. ⚠️ **A scoped run on the host, under the fallback, writes
+`current/` as it always has**, so delete `artifacts/stryker/current/` after
+one, or `deploy:site` reads the partial report as the last run.
 
 ### Incremental runs are fast, and they are not a score
 
@@ -487,7 +491,8 @@ pnpm exec stryker run --incremental --incrementalFile artifacts/stryker/incremen
 
 ⚠️ **For an agent this is a host run the guard refuses while athanor works**,
 and inside athanor it finds no results file — `artifacts/` is ignored, so the
-snapshot never carries one — and runs everything. An agent uses `--mutate`.
+snapshot never carries one — and runs everything: scoped in name only. An
+agent uses `--mutate`.
 
 The first run is a full one and writes the results file. After that, a run
 takes about a minute where a full one takes 13–18, and it answers *which
@@ -515,7 +520,9 @@ much, never too little. The measurements are in
 ⚠️ **It overwrites `artifacts/stryker/current/mutation.json`**, the report
 `deploy:site`'s resolution line reads and `pnpm mutation:score` scores by
 default — so either then reports reused verdicts as if they were fresh. **Before
-quoting a scope's score, or deploying, run plain `pnpm mutation:run`.** Pass
+quoting a scope's score, or deploying, run plain `pnpm mutation:run`** — or, as
+an agent, which never runs a full one, take the nightly's report or ask the
+owner (see [The agent guard](#the-agent-guard--scriptsagent-test-guardts)). Pass
 `--force` to re-run everything while keeping the file.
 
 ## `pnpm mutation:stamp`
@@ -1195,27 +1202,30 @@ changes the command, and nothing in CI reads it.
 - `vitest` run directly (`pnpm vitest`, `pnpm exec vitest`, `npx vitest`, a bare
   `vitest`) — one file is `athanor run -- pnpm vitest run <file>`.
 - `tsc --noEmit` run directly.
-- A scoped Stryker run: `--mutate` or `--incremental` — by the recipe below.
+- A scoped Stryker run: `--mutate` or `--incremental` — by the recipe in
+  [A scoped run through athanor](#a-scoped-run-through-athanor--the-only-mutation-run-for-an-agent).
 
 **Refused always, with no fallback**: a full mutation run from an agent —
 `pnpm mutation:run`, or `stryker run` with neither `--mutate` nor
-`--incremental`. A full report comes from the nightly's
-`mutation-report-<run id>` artifact (`gh run download <run id>`) or from the
-owner.
+`--incremental`, by its bin, its package name or through `node`. A full report
+comes from the nightly: `gh run list --workflow metrics.yml` finds the latest
+run, and `gh run download <run id>` fetches its `mutation-report-<run id>`
+artifact. Or the owner runs one.
 
 **Never refused**: `pnpm smoke:render`, the phone check, `gate:public`,
 `deploy:site`, `lint:md`, `format`, `install`, `dev`, `worktree`,
-`pnpm stacks <cmd>`; the forms that write to the tree, which a container run
-throws away (`lint --fix`, `test -u`, `vitest -u`, watch mode); package-scoped
-forms (`--filter`, `-F`, `-C`, `--dir`); `athanor run` itself; and anything
-inside quotes, a heredoc or a comment.
+`pnpm stacks <cmd>`; the forms that write to the tree or keep running, which a
+container run cannot keep (`lint --fix`, `test -u`, `vitest -u`, watch mode);
+vitest's `list`, `bench` and `init`; package-scoped forms (`--filter`, `-F`,
+`-C`, `--dir`, `-r`, `--recursive`); `athanor run` itself; and anything inside
+quotes, a heredoc or a comment.
 
 **The fallback is a comment**, because `tsc`, `eslint` and `vitest` all reject
 an option they do not know: when an athanor run produced no result — exit 124
 (time limit), 125 (athanor could not run it) or 137 (memory limit) — rerun the
-host command with `# --host-fallback=<reason>` at the end of its line, the
-reason in your own words with no path, token or pasted error text, and say in
-your report that you used it. A fallback covers the guarded runs on its own
+host command with `# --host-fallback=<reason>` at the end of its line, naming
+the reason and the exit code in your own words with no path, token or pasted
+error text, and say in your report that you used it. A fallback covers the guarded runs on its own
 line only. **When athanor is missing the hook is silent**, and needs no
 fallback.
 
