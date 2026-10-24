@@ -151,6 +151,139 @@ describe('?debug=<json>', () => {
     expect(read(query).renderer.exposure).toBe(DEFAULT_SETTINGS.renderer.exposure);
   });
 
+  describe('a value of the wrong type (#491)', () => {
+    afterEach(() => vi.restoreAllMocks());
+    const debug = (diff: unknown) => `debug=${encodeURIComponent(JSON.stringify(diff))}`;
+
+    it.each([
+      ['a null number', 'lighting.key.intensity', { lighting: { key: { intensity: null } } }],
+      ['a string number', 'scene.fog.near', { scene: { fog: { near: '3' } } }],
+      [
+        'an object for a colour',
+        'lighting.lamp.colour',
+        { lighting: { lamp: { colour: { r: 1 } } } },
+      ],
+      ['a string boolean', 'effects.bloom.enabled', { effects: { bloom: { enabled: 'yes' } } }],
+      ['a number for an object', 'materials.spineProfile', { materials: { spineProfile: 4 } }],
+      [
+        'an array for an object',
+        'lighting.key.position',
+        { lighting: { key: { position: [1, 2] } } },
+      ],
+      ['a null for an object', 'lighting.key', { lighting: { key: null } }],
+    ])('falls back to the default for %s, and warns naming the key', (_, path, diff) => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      expect(read(debug(diff))).toEqual(DEFAULT_SETTINGS);
+      expect(warn).toHaveBeenCalledOnce();
+      expect(String(warn.mock.calls[0]?.[0])).toContain(`?debug: "${path}"`);
+    });
+
+    it('keeps the well-typed siblings of a refused value', () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const settings = read(debug({ lighting: { key: { intensity: null, colour: 0x123456 } } }));
+      expect(settings.lighting.key.intensity).toBe(DEFAULT_SETTINGS.lighting.key.intensity);
+      expect(settings.lighting.key.colour).toBe(0x123456);
+    });
+
+    it('names the refused key in the warning, and stays quiet for a well-typed diff', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      read(debug({ lighting: { key: { intensity: 2 } } }));
+      // and for every key a whole diff carries, as the panel's own links do
+      const { renderer, effects, lighting, scene, materials, books } = DEFAULT_SETTINGS;
+      read(
+        debug({
+          toneMapping: renderer.toneMapping,
+          exposure: renderer.exposure,
+          effects,
+          lighting,
+          scene,
+          materials,
+          books,
+        }),
+      );
+      expect(warn).not.toHaveBeenCalled();
+      read(debug({ lighting: { key: { intensity: null } } }));
+      expect(String(warn.mock.calls[0]?.[0])).toContain('lighting.key.intensity');
+    });
+
+    it('refuses a wrong-typed value hidden under a key named __proto__', () => {
+      // JSON.parse makes `__proto__` an own key; assigning it to a plain object
+      // would swap that object's prototype and carry the null past the check.
+      // Doubled, because one level down the template is `Object.prototype`, whose
+      // own prototype is `null`: only the own-key read keeps that off the chain.
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const raw = '{"lighting":{"__proto__":{"__proto__":{"key":{"intensity":null}}}}}';
+      const patch = readSettings(new URLSearchParams(`debug=${encodeURIComponent(raw)}`));
+      expect(Object.getPrototypeOf(patch.lighting)).toBe(Object.prototype);
+      expect(resolveSettings(patch).lighting.key.intensity).toBe(
+        DEFAULT_SETTINGS.lighting.key.intensity,
+      );
+      expect(warn).toHaveBeenCalledOnce();
+      expect(String(warn.mock.calls[0]?.[0])).toContain('"lighting.__proto__"');
+    });
+
+    it('refuses a number that parses to Infinity', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const query = `debug=${encodeURIComponent('{"scene":{"fog":{"near":1e999}}}')}`;
+      expect(read(query).scene.fog.near).toBe(DEFAULT_SETTINGS.scene.fog.near);
+      expect(warn).toHaveBeenCalledOnce();
+    });
+
+    it('refuses a key named like an Object member, as a key the defaults lack', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const patch = readSettings(
+        new URLSearchParams(debug({ lighting: { constructor: { a: 1 } } })),
+      );
+      expect(Object.hasOwn(patch.lighting ?? {}, 'constructor')).toBe(false);
+      expect(warn).toHaveBeenCalledOnce();
+      expect(String(warn.mock.calls[0]?.[0])).toContain('lighting.constructor');
+    });
+
+    it('warns when a whole section has the wrong type', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      expect(read(debug({ effects: null, lighting: 4 }))).toEqual(DEFAULT_SETTINGS);
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(String(warn.mock.calls[0]?.[0])).toContain('lighting');
+    });
+
+    it('refuses a key the defaults do not have, with a warning, and keeps its siblings', () => {
+      // An allowlist, as the Thoughts extractor is: a key nothing binds is not
+      // carried into the live settings, at any size or depth.
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const patch = readSettings(
+        new URLSearchParams(debug({ lighting: { key: { later: [[1]], intensity: 2 } } })),
+      );
+      expect(patch.lighting?.key).toEqual({ intensity: 2 });
+      expect(warn).toHaveBeenCalledOnce();
+      expect(String(warn.mock.calls[0]?.[0])).toContain('lighting.key.later');
+    });
+
+    it('escapes a refused key in the warning, so a link cannot forge a console line', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      readSettings(new URLSearchParams(debug({ scene: { 'x\nforged line': 1 } })));
+      const line = String(warn.mock.calls[0]?.[0]);
+      expect(line).not.toContain('\n');
+      expect(line).toContain('\\n');
+    });
+
+    it('escapes line separators and format characters too', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const hidden = [0x2028, 0x2029, 0x202e, 0xad].map((c) => String.fromCodePoint(c)).join('');
+      readSettings(new URLSearchParams(debug({ scene: { [`x${hidden}`]: 1 } })));
+      const line = String(warn.mock.calls[0]?.[0]);
+      expect(line).not.toMatch(/[\u2028\u2029\p{Cf}]/u);
+      expect(line).toContain('\\u2028');
+      expect(line).toContain('\\u00ad');
+    });
+
+    it('refuses a top-level key ?debug does not read, with a warning', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      readSettings(new URLSearchParams(debug({ lightning: { a: 1 }, shadows: {} })));
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(String(warn.mock.calls[0]?.[0])).toContain('"lightning"');
+    });
+  });
+
   it('carries the books category, which is the first new top-level key since this was written', () => {
     // `books` is not one of the ten historic probe spellings, so a URL is the
     // only way to hand a phone a dialled mixture — and `readDiff` has to have
