@@ -686,6 +686,17 @@ counting rule changed. `--rebuild` re-imports them with everything else.
 See [#227](https://github.com/mephistopheles4/stacks/issues/227) and
 [ADR-0085](adr/0085-a-renovation-is-declared-and-the-window-may-survive.md).
 
+**It also asks the ratchet's tightening question**, so a tightenable bound
+reaches you on a day with no deploy. The answer is the same `askTightenings`
+call the `deploy:site` print makes, over the same reads, written as a local
+`-ratchet.prom` row and drawn as the last panel on the page. A row is written
+only when the asks change — the store remembers a digest of them — so a sync
+with nothing new still imports nothing. Each row says *every* ask at that sync,
+an empty one included, so a bound you have tightened drops off the page at the
+next sync. It asks only: it refuses, files and edits nothing
+([ADR-0111](adr/0111-the-ratchet-asks-to-tighten-in-a-print.md),
+[#463](https://github.com/mephistopheles4/stacks/issues/463)).
+
 **No laptop cron and no daemon.** A second scheduled thing that can silently stop
 is the failure class this design spends its budget containing, and this one would
 leave no Actions history to inspect afterwards. The cost is stated rather than

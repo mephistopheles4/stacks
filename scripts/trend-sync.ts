@@ -6,7 +6,8 @@
  *
  * CI writes a durable record; this pulls it. It fetches the orphan `metrics`
  * branch, imports the records this machine has not seen into a local
- * Prometheus, asks the live origin what it is serving, and restarts the store.
+ * Prometheus, asks the live origin what it is serving, writes the ratchet's
+ * tightening asks when they change (#463), and restarts the store.
  * See `docs/spec/trend-layer.md` §§1 and 5, and
  * [ADR-0055](../docs/adr/0055-ci-writes-a-durable-record.md).
  *
@@ -69,7 +70,22 @@ import {
   type CoverAnswer,
   type EdgeAnswer,
 } from './lib/edge-probe.ts';
-import { joinRecords, renderEdgeCheck, renderRenovations } from './lib/metrics.ts';
+import {
+  askTightenings,
+  asksOf,
+  localDay,
+  readFloors,
+  runRowsFrom,
+  type Ask,
+} from './lib/floors.ts';
+import { joinRecords, renderAsks, renderEdgeCheck, renderRenovations } from './lib/metrics.ts';
+import { readDeclarations } from './lib/mutation-score.ts';
+import {
+  lastMutationRun,
+  mutantsPerScope,
+  windowRecords,
+  windowStamps,
+} from './lib/ratchet-inputs.ts';
 import { readRenovations } from './lib/renovations.ts';
 import {
   METRICS_BRANCH,
@@ -77,6 +93,7 @@ import {
   isFastForward,
   readRecord,
   selectNewRecords,
+  storedRecords,
 } from './lib/metrics-record.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runExe } from './lib/run.ts';
@@ -209,6 +226,12 @@ interface StoreState {
    * Absent on a store written before markers existed, which imports them once.
    */
   renovations?: string[];
+  /**
+   * A digest of the tightening asks the store last took in (#463). A sync
+   * writes a new `-ratchet.prom` row only when the asks differ from this, so a
+   * sync with nothing new stays a no-op rather than restarting the store.
+   */
+  asksDigest?: string;
 }
 
 /**
@@ -694,6 +717,57 @@ async function probeOrigin(): Promise<void> {
   );
 }
 
+/**
+ * The tightening clause for the trend page (#463): the same asks the deploy
+ * print makes, from `askTightenings` over the same reads, written as a local
+ * row only when they changed. It refuses, files and edits nothing (ADR-0111).
+ *
+ * Read from `METRICS_REF` after the fetch, so it judges the records this sync
+ * is importing rather than the store as it stood before.
+ *
+ * ⚠️ **A read that fails costs the row, never the sync.** The floors file and
+ * the declarations are bare `JSON.parse`s, and a question that asks must not
+ * stop the import it rides on; the held digest is returned unchanged, so the
+ * next sync asks again.
+ */
+function writeAsks(held: string | undefined): string | undefined {
+  let asks: Ask[];
+  try {
+    const floors = readFloors();
+    const stamps = windowStamps(floors, readRenovations());
+    const today = localDay(new Date());
+    const { asked } = askTightenings({
+      rows: runRowsFrom(windowRecords(storedRecords(), stamps)),
+      floors,
+      names: readDeclarations().scopes.map((scope) => scope.name),
+      mutants: mutantsPerScope(lastMutationRun()),
+      stamps,
+      today,
+    });
+    asks = asksOf(asked, today);
+  } catch (error) {
+    console.warn(
+      `! the ratchet's asks could not be judged, so the trend page keeps its last answer — ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return held;
+  }
+  const digest = createHash('sha256').update(JSON.stringify(asks)).digest('hex');
+  if (digest === held) return digest;
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  writeFileSync(
+    join(LOCAL, `${String(timestamp)}-ratchet.prom`),
+    renderAsks(asks, timestamp),
+    'utf8',
+  );
+  console.log(
+    asks.length === 0
+      ? '\nratchet: the asks changed — nothing to tighten now'
+      : `\nratchet: the asks changed — ${String(asks.length)} ask(s), see the trend page`,
+  );
+  return digest;
+}
+
 // ── The sync ────────────────────────────────────────────────────────────────
 
 async function main(): Promise<number> {
@@ -736,6 +810,7 @@ async function main(): Promise<number> {
   }
 
   await probeOrigin();
+  const asksDigest = writeAsks(state.asksDigest);
 
   const onBranch = fetched?.names ?? [];
   const inStore = readdirSync(LOCAL).filter((name) => name.endsWith('.prom'));
@@ -857,6 +932,7 @@ async function main(): Promise<number> {
     // markers that were never ingested would leave the store missing lines
     // nothing would ever import again.
     renovations: renovationsChanged ? renovationDigests : state.renovations,
+    asksDigest,
   });
   rmSync(INCOMING, { force: true });
   startStore();
