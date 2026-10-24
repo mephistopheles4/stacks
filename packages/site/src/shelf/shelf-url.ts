@@ -495,23 +495,20 @@ function diffSections(diff: Diff): Omit<SettingsPatch, 'renderer'> {
  * Tweakpane unchecked, and Tweakpane refuses to mount the whole pane over one.
  * A refused value falls back to the default, as a malformed `?debug` does, and
  * warns naming its key so the inspector says why it ignored part of the link.
- * Keys the defaults do not have are passed through untouched; nothing binds them.
  *
- * The defaults are read by *own* key, so `constructor` is an unknown key rather
- * than a function to compare against; and `__proto__` is refused outright, since
- * `JSON.parse` makes it an own key and assigning it would swap `kept`'s
- * prototype, carrying a wrong-typed group past this check into the merge.
+ * An allowlist, never a denylist: a key the defaults do not *own* is refused
+ * too, whatever it holds. Reading by own key is what keeps `constructor` from
+ * comparing against a function, and `__proto__` from being assigned, which
+ * would swap `kept`'s prototype and carry a wrong-typed group into the merge.
  */
-function conform(value: object, template: unknown, path: string): object {
+function conform(value: object, template: object, path: string): object {
   const kept: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) {
-    const expected: unknown =
-      isRecord(template) && Object.hasOwn(template, key)
-        ? (template as Record<string, unknown>)[key]
-        : undefined;
+    const expected: unknown = Object.hasOwn(template, key)
+      ? (template as Record<string, unknown>)[key]
+      : undefined;
     const at = `${path}.${key}`;
-    if (key === '__proto__') refuse(at);
-    else if (expected === undefined) kept[key] = child;
+    if (expected === undefined) refuse(at);
     else if (isRecord(expected)) {
       if (isRecord(child)) kept[key] = conform(child, expected, at);
       else refuse(at);
@@ -526,7 +523,9 @@ function conform(value: object, template: unknown, path: string): object {
 }
 
 function refuse(path: string): void {
-  console.warn(`?debug: ${path} has the wrong type, so the shelf keeps its default`);
+  // Quoted, because a refused key is the link's own text: escaped, it cannot
+  // break the line and pass for another message.
+  console.warn(`?debug: ${JSON.stringify(path)} is not a setting of that type, so it is ignored`);
 }
 
 function isRecord(value: unknown): value is object {

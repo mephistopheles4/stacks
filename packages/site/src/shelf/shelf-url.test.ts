@@ -201,15 +201,14 @@ describe('?debug=<json>', () => {
       expect(warn).toHaveBeenCalledOnce();
     });
 
-    it('passes a key named like an Object member through, without a warning', () => {
+    it('refuses a key named like an Object member, as a key the defaults lack', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const patch = readSettings(
         new URLSearchParams(debug({ lighting: { constructor: { a: 1 } } })),
       );
-      expect(Object.getOwnPropertyDescriptor(patch.lighting, 'constructor')?.value).toEqual({
-        a: 1,
-      });
-      expect(warn).not.toHaveBeenCalled();
+      expect(Object.hasOwn(patch.lighting ?? {}, 'constructor')).toBe(false);
+      expect(warn).toHaveBeenCalledOnce();
+      expect(String(warn.mock.calls[0]?.[0])).toContain('lighting.constructor');
     });
 
     it('warns when a whole section has the wrong type', () => {
@@ -219,11 +218,24 @@ describe('?debug=<json>', () => {
       expect(String(warn.mock.calls[0]?.[0])).toContain('lighting');
     });
 
-    it('passes a key the defaults do not have through untouched, without a warning', () => {
+    it('refuses a key the defaults do not have, with a warning, and keeps its siblings', () => {
+      // An allowlist, as the Thoughts extractor is: a key nothing binds is not
+      // carried into the live settings, at any size or depth.
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-      const patch = readSettings(new URLSearchParams(debug({ lighting: { key: { later: 1 } } })));
-      expect(patch.lighting?.key).toEqual({ later: 1 });
-      expect(warn).not.toHaveBeenCalled();
+      const patch = readSettings(
+        new URLSearchParams(debug({ lighting: { key: { later: [[1]], intensity: 2 } } })),
+      );
+      expect(patch.lighting?.key).toEqual({ intensity: 2 });
+      expect(warn).toHaveBeenCalledOnce();
+      expect(String(warn.mock.calls[0]?.[0])).toContain('lighting.key.later');
+    });
+
+    it('escapes a refused key in the warning, so a link cannot forge a console line', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      readSettings(new URLSearchParams(debug({ scene: { 'x\nforged line': 1 } })));
+      const line = String(warn.mock.calls[0]?.[0]);
+      expect(line).not.toContain('\n');
+      expect(line).toContain('\\n');
     });
   });
 
