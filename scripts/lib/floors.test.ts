@@ -3017,7 +3017,11 @@ describe('the tightening clause', () => {
     };
 
     it('reads the newest scored run and the newest counted run, skipping a merge', () => {
+      // The run before the newest differs from it, so `previous` must come from it.
       const rows = counted(25);
+      const before = rows[23];
+      before?.scores.set(SCOPE, 70.3);
+      before?.counts.get('complexity-max')?.set(SCOPE, 10);
       const merge: RunRow = {
         timestamp: BASE + 25 * DAY,
         ok: true,
@@ -3029,13 +3033,49 @@ describe('the tightening clause', () => {
       };
       const { readings, capReadings } = ask([...rows, merge]);
 
-      expect(readings).toEqual([{ scope: SCOPE, score: 70.5, previous: 70.5, mutants: 1250 }]);
+      expect(readings).toEqual([{ scope: SCOPE, score: 70.5, previous: 70.3, mutants: 1250 }]);
       expect(capReadings.find((one) => one.series === 'complexity-max')).toEqual({
         scope: SCOPE,
         series: 'complexity-max',
         value: 11,
-        previous: 11,
+        previous: 10,
       });
+    });
+
+    // A fresh machine's store: the sync must answer, not throw, since it refuses nothing.
+    it('answers with no readings and no asks on an empty store, and on one run', () => {
+      for (const rows of [[], counted(1)]) {
+        const { readings, capReadings, asked, today } = ask(rows);
+
+        expect(readings[0]?.previous).toBeUndefined();
+        expect(capReadings.every((one) => one.previous === undefined)).toBe(true);
+        expect(asksOf(asked, today)).toEqual([]);
+      }
+      expect(ask([]).readings).toEqual([{ scope: SCOPE, score: null, mutants: 1250 }]);
+      expect(ask([]).capReadings.every((one) => one.value === null)).toBe(true);
+    });
+
+    it('carries a bound the window cannot see the start of as `at least`', () => {
+      const asked = {
+        floors: new Map(),
+        caps: new Map([
+          [
+            'complexity-max' as const,
+            new Map([[SCOPE, { kind: 'tightenable' as const, value: 11, days: 3, atLeast: true }]]),
+          ],
+        ]),
+      };
+
+      expect(asksOf(asked, '2026-10-24')).toEqual([
+        {
+          scope: SCOPE,
+          bound: 'complexity-max',
+          kind: 'tightenable',
+          value: 11,
+          since: '2026-10-21',
+          atLeast: true,
+        },
+      ]);
     });
 
     it('lists each ask with the day it became tightenable, not a day count', () => {

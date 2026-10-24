@@ -6,7 +6,8 @@
  *
  * CI writes a durable record; this pulls it. It fetches the orphan `metrics`
  * branch, imports the records this machine has not seen into a local
- * Prometheus, asks the live origin what it is serving, and restarts the store.
+ * Prometheus, asks the live origin what it is serving, writes the ratchet's
+ * tightening asks when they change (#463), and restarts the store.
  * See `docs/spec/trend-layer.md` §§1 and 5, and
  * [ADR-0055](../docs/adr/0055-ci-writes-a-durable-record.md).
  *
@@ -69,7 +70,14 @@ import {
   type CoverAnswer,
   type EdgeAnswer,
 } from './lib/edge-probe.ts';
-import { askTightenings, asksOf, localDay, readFloors, runRowsFrom } from './lib/floors.ts';
+import {
+  askTightenings,
+  asksOf,
+  localDay,
+  readFloors,
+  runRowsFrom,
+  type Ask,
+} from './lib/floors.ts';
 import { joinRecords, renderAsks, renderEdgeCheck, renderRenovations } from './lib/metrics.ts';
 import { readDeclarations } from './lib/mutation-score.ts';
 import {
@@ -223,7 +231,7 @@ interface StoreState {
    * writes a new `-ratchet.prom` row only when the asks differ from this, so a
    * sync with nothing new stays a no-op rather than restarting the store.
    */
-  asks?: string;
+  asksDigest?: string;
 }
 
 /**
@@ -716,20 +724,33 @@ async function probeOrigin(): Promise<void> {
  *
  * Read from `METRICS_REF` after the fetch, so it judges the records this sync
  * is importing rather than the store as it stood before.
+ *
+ * ⚠️ **A read that fails costs the row, never the sync.** The floors file and
+ * the declarations are bare `JSON.parse`s, and a question that asks must not
+ * stop the import it rides on; the held digest is returned unchanged, so the
+ * next sync asks again.
  */
-function writeAsks(held: string | undefined): string {
-  const floors = readFloors();
-  const stamps = windowStamps(floors, readRenovations());
-  const today = localDay(new Date());
-  const { asked } = askTightenings({
-    rows: runRowsFrom(windowRecords(storedRecords(), stamps)),
-    floors,
-    names: readDeclarations().scopes.map((scope) => scope.name),
-    mutants: mutantsPerScope(lastMutationRun()),
-    stamps,
-    today,
-  });
-  const asks = asksOf(asked, today);
+function writeAsks(held: string | undefined): string | undefined {
+  let asks: Ask[];
+  try {
+    const floors = readFloors();
+    const stamps = windowStamps(floors, readRenovations());
+    const today = localDay(new Date());
+    const { asked } = askTightenings({
+      rows: runRowsFrom(windowRecords(storedRecords(), stamps)),
+      floors,
+      names: readDeclarations().scopes.map((scope) => scope.name),
+      mutants: mutantsPerScope(lastMutationRun()),
+      stamps,
+      today,
+    });
+    asks = asksOf(asked, today);
+  } catch (error) {
+    console.warn(
+      `! the ratchet's asks could not be judged, so the trend page keeps its last answer — ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return held;
+  }
   const digest = createHash('sha256').update(JSON.stringify(asks)).digest('hex');
   if (digest === held) return digest;
 
@@ -741,8 +762,8 @@ function writeAsks(held: string | undefined): string {
   );
   console.log(
     asks.length === 0
-      ? '\nratchet: no bound is tightenable'
-      : `\nratchet: ${String(asks.length)} bound(s) tightenable — see the trend page`,
+      ? '\nratchet: the asks changed — nothing to tighten now'
+      : `\nratchet: the asks changed — ${String(asks.length)} ask(s), see the trend page`,
   );
   return digest;
 }
@@ -789,7 +810,7 @@ async function main(): Promise<number> {
   }
 
   await probeOrigin();
-  const asks = writeAsks(state.asks);
+  const asksDigest = writeAsks(state.asksDigest);
 
   const onBranch = fetched?.names ?? [];
   const inStore = readdirSync(LOCAL).filter((name) => name.endsWith('.prom'));
@@ -911,7 +932,7 @@ async function main(): Promise<number> {
     // markers that were never ingested would leave the store missing lines
     // nothing would ever import again.
     renovations: renovationsChanged ? renovationDigests : state.renovations,
-    asks,
+    asksDigest,
   });
   rmSync(INCOMING, { force: true });
   startStore();

@@ -39,7 +39,7 @@ export function windowStamps(floors: Floors, renovations: readonly Renovation[])
 const REPORT_PATH = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
 
 /**
- * How many records one deploy will read looking for a window, at the most.
+ * How many records one window read takes, at the most — deploy and trend-sync alike.
  *
  * Merge records are not window members, so a busy week of pushes sits between
  * two nightlies; this is the bound that keeps that from being an unbounded
@@ -55,11 +55,11 @@ const WINDOW_RECORD_CAP = 200;
  * through its ~41 minutes leaves a truncated `mutation.json` behind. Read
  * unguarded, that throws out of a **print** and takes the whole deploy with it
  * — before the freshness verdict, before the gates, as a raw stack trace. The
- * two steps below say the panel prints and the refusals are separate; a parse
+ * two steps in `scripts/deploy.ts` say the panel prints and the refusals are separate; a parse
  * error broke both, and it broke them from the least important half.
  *
  * ⚠️ **One reader because there were two call sites and the crash was in both.**
- * Guarding step 0b alone would have moved the stack trace two steps later
+ * Guarding deploy step 0b alone would have moved the stack trace two steps later
  * rather than removed it — the instance fixed and the population left, which is
  * the failure this rollout's own spec is a catalogue of.
  *
@@ -84,9 +84,9 @@ export function lastMutationRun(): MutationRun {
 }
 
 /**
- * The records one deploy reads for the calibration window.
+ * The records one window read takes, for the deploy print and for trend-sync.
  *
- * ⚠️ **A separate read from `trendRecords`, and not a duplicate of it.** That
+ * ⚠️ **A separate read from `trendRecords` in `scripts/deploy.ts`, and not a duplicate of it.** That
  * one answers *is the record fresh* and stops as soon as it has seen every
  * series plus one more scoring run — one or two records on a healthy machine.
  * This one answers *how far has each window filled*, which needs every
@@ -100,7 +100,7 @@ export function lastMutationRun(): MutationRun {
  * one sample; since ADR-0084 a sample is a distinct tree, and eleven nightlies
  * covered about five. The rule is `readWindow`'s, in `lib/floors.ts`, where a
  * test can plant it. The hard cap is what stops a store full of merge records,
- * which score nothing and are not window members, turning one deploy into an
+ * which score nothing and are not window members, turning one read into an
  * unbounded walk.
  */
 export function windowRecords(
@@ -143,11 +143,11 @@ export function mutantsPerScope(run: MutationRun): Map<string, number> {
   // ⚠️ **Three states, not two, and this reads none of them off the disk
   // itself.** `readReport` is a bare `JSON.parse`, and an interrupted
   // `pnpm mutation:run` leaves a truncated `mutation.json` — a third reader here
-  // would throw out of the print and kill the deploy *before* the gates, which
+  // would throw out of the print and kill the deploy *before* the gates (or the sync), which
   // is the fault `lastMutationRun` was extracted to fix. *Nobody ran it* is
   // ordinary on a fresh checkout; *it is there and unreadable* is a fault worth
   // naming; collapsing them makes a corrupt report read as checked-and-clean.
-  // Both non-`read` states degrade the line rather than refusing, on section
+  // Both non-`read` states degrade the line rather than refusing, on deploy section
   // 0b's rule that no report is a print and never a silence.
   if (run.kind !== 'read') return counts;
 

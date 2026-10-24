@@ -1646,7 +1646,7 @@ export interface AskInput {
 
 export interface Asked {
   readings: PrintReading[];
-  capReadings: CapReading[];
+  capReadings: CapPrintReading[];
   /** The newest run that scored, and the newest that counted — different rows. */
   newest: RunRow | undefined;
   newestCount: RunRow | undefined;

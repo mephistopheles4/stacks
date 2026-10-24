@@ -594,7 +594,7 @@
       "id": 12,
       "type": "table",
       "title": "The ratchet asks — bounds the window says could be tighter",
-      "description": "The tightening clause the deploy print carries, from the same call, judged at the last `pnpm trend:sync` on this machine (#463). It asks only: nothing here refuses, files or edits anything (ADR-0111). Tightening a bound is a hand edit to stryker.floors.json and a human judgement. `since` is the day the bound became tightenable; `at least` means the window cannot see further back. An `unjudged` floor had no mutant count — `pnpm mutation:run` judges it.",
+      "description": "The tightening clause the deploy print carries, from the same call, as `pnpm trend:sync` on this machine last wrote it (#463). A sync writes a row only when the asks change, so the panel reads the newest row however old it is, whatever the time range above. It asks only: nothing here refuses, files or edits anything (ADR-0111). Tightening a bound is a hand edit to stryker.floors.json and a human judgement. `since` is the day the bound became tightenable; `at least` means the window cannot see further back. An `unjudged` floor had no mutant count — `pnpm mutation:run` judges it.",
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 55 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -602,7 +602,7 @@
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "stacks-trend" },
           "editorMode": "code",
-          "expr": "max_over_time(stacks_ratchet_ask[$__range:5m]) == scalar(max_over_time(stacks_ratchet_asks_written[$__range:5m]))",
+          "expr": "max_over_time(stacks_ratchet_ask[3650d]) == scalar(max_over_time(stacks_ratchet_asks_written[3650d]))",
           "format": "table",
           "instant": true,
           "range": false,
@@ -628,12 +628,12 @@
             "indexByName": {
               "scope": 0,
               "bound": 1,
-              "value": 2,
+              "tighten_to": 2,
               "since": 3,
               "at_least": 4,
               "kind": 5
             },
-            "renameByName": { "value": "tighten to", "at_least": "at least" }
+            "renameByName": { "tighten_to": "tighten to", "at_least": "at least" }
           }
         }
       ],
@@ -641,7 +641,7 @@
         "defaults": {
           "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false },
           "mappings": [],
-          "noValue": "nothing to tighten as of the last sync — or no sync has asked yet",
+          "noValue": "nothing to tighten as of the newest row — or no `pnpm trend:sync` has written one yet",
           "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
         },
         "overrides": []

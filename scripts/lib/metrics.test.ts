@@ -619,18 +619,32 @@ describe('renderAsks — the tightening clause as a series', () => {
     scope: 'scripts',
     bound: 'floor',
     kind: 'tightenable',
-    value: 70.12,
+    value: 70.1,
     since: '2026-10-19',
     atLeast: false,
   } as const;
+  const cap = {
+    scope: 'scripts',
+    bound: 'complexity-max',
+    kind: 'tightenable',
+    value: 11,
+    since: '2026-10-12',
+    atLeast: true,
+  } as const;
 
-  it('writes one sample per ask, valued at the sync that wrote it', () => {
-    const document = renderAsks([floor], AT);
+  it('writes one sample per ask, each on its own line, valued at the sync that wrote it', () => {
+    const lines = renderAsks([floor, cap], AT).split('\n');
+    const at = `${String(AT)} ${String(AT)}`;
 
-    expect(document).toContain(
-      `stacks_ratchet_ask{scope="scripts",bound="floor",kind="tightenable",value="70.12",since="2026-10-19",at_least="false"} ${String(AT)} ${String(AT)}`,
+    // A floor reads to the hundredth, as the print names it; a cap is a count.
+    expect(lines).toContain(
+      `stacks_ratchet_ask{scope="scripts",bound="floor",kind="tightenable",tighten_to="70.10",since="2026-10-19",at_least="false"} ${at}`,
     );
-    expect(document.endsWith('\n# EOF\n')).toBe(true);
+    expect(lines).toContain(
+      `stacks_ratchet_ask{scope="scripts",bound="complexity-max",kind="tightenable",tighten_to="11",since="2026-10-12",at_least="true"} ${at}`,
+    );
+    expect(lines).toContain(`stacks_ratchet_asks_written ${at}`);
+    expect(lines.slice(-2)).toEqual(['# EOF', '']);
   });
 
   // An ask that stopped must say so: with no newer marker the page would keep
@@ -648,7 +662,7 @@ describe('renderAsks — the tightening clause as a series', () => {
       AT,
     );
 
-    expect(document).toContain('kind="unjudged",value="70.12",since="",at_least=""}');
+    expect(document).toContain('kind="unjudged",tighten_to="70.12",since="",at_least=""}');
   });
 
   it('stays out of the trend namespace, so it owes no `## Trends` row', () => {

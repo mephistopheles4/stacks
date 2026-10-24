@@ -38,13 +38,13 @@ import type { Ask } from './floors.ts';
 import type { Renovation } from './renovations.ts';
 
 /**
- * The four metric-name prefixes, and the whole of the separation between them.
+ * The metric-name prefixes, and the whole of the separation between them.
  *
  * No one of them may be a prefix of another: `trendNamesIn` strips `trend` to
  * recover a name, and if `run` were a prefix of it every run-health sample
  * would parse as a trend with a mangled name rather than being skipped.
  * Asserted by G36 and by `metrics.test.ts` rather than left as a property of
- * four strings that look obviously different.
+ * strings that look obviously different.
  *
  * ⚠️ **`edge` is written by the machine, never by CI**, and that is what the
  * prefix buys. Surface D's row is produced by `pnpm trend:sync` into the local
@@ -60,6 +60,10 @@ import type { Renovation } from './renovations.ts';
  * number somebody's tooling produced, and this one is a dated sentence a person
  * wrote about why a counting rule changed. A name under `trend` would put it on
  * the same footing as a score. See [#227](https://github.com/mephistopheles4/stacks/issues/227).
+ *
+ * `ratchet` is `edge`'s argument once more: the sync writes the tightening
+ * asks into the local store and CI never does, so it owes no `## Trends` row
+ * ([#463](https://github.com/mephistopheles4/stacks/issues/463)).
  */
 export const METRIC_PREFIXES = {
   run: 'stacks_run_',
@@ -971,7 +975,7 @@ export function renderAsks(asks: readonly Ask[], at: number): string {
   const families: Family[] = [
     {
       metric: `${METRIC_PREFIXES.ratchet}asks_written`,
-      help: 'The sync that judged the tightening asks, in unix seconds; present when it asked nothing.',
+      help: 'The sync that judged the tightening asks, in unix seconds; present even when it asked nothing.',
       samples: [{ labels: {}, value: at }],
     },
     {
@@ -982,7 +986,7 @@ export function renderAsks(asks: readonly Ask[], at: number): string {
           scope: ask.scope,
           bound: ask.bound,
           kind: ask.kind,
-          value: ask.bound === 'floor' ? ask.value.toFixed(2) : String(ask.value),
+          tighten_to: ask.bound === 'floor' ? ask.value.toFixed(2) : String(ask.value),
           since: ask.kind === 'tightenable' ? ask.since : '',
           at_least: ask.kind === 'tightenable' ? String(ask.atLeast) : '',
         },
