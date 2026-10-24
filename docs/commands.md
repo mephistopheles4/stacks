@@ -1219,7 +1219,9 @@ changes the command, and nothing in CI reads it.
 **Refused always, with no fallback**: a full mutation run from an agent —
 `pnpm mutation:run`, or `stryker run` with neither `--mutate` nor
 `--incremental`, by its bin, its package name or through `node`, on the host
-or after `athanor run --`. A full report
+or after `athanor run --` — where only `--mutate` makes it scoped, because the
+container never holds a results file, so an `--incremental` run there runs
+everything. A full report
 comes from the nightly: `gh run list --workflow metrics.yml` finds the latest
 run, and `gh run download <run id>` fetches its `mutation-report-<run id>`
 artifact. Or the owner runs one.

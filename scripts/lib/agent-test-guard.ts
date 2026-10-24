@@ -263,26 +263,32 @@ const fromFirstWord = (args: readonly string[]): readonly string[] =>
  * What a run is: not guarded, a guarded host run, or a full mutation run.
  * Stryker is scoped when it names files with `--mutate` or reuses the last
  * run's verdicts with `--incremental`; anything else is the whole of
- * `stryker.scopes.json`.
+ * `stryker.scopes.json`. **Inside `athanor run --` only `--mutate` scopes
+ * it**: the container never holds a results file, because `artifacts/` is
+ * ignored, so an incremental run there runs everything.
  */
 type Kind = 'other' | 'guarded' | 'full-mutation';
 
 const asKind = (isGuarded: boolean): Kind => (isGuarded ? 'guarded' : 'other');
 
-function stryker(args: readonly string[]): Kind {
+function stryker(args: readonly string[], inContainer: boolean): Kind {
   const scoped = args.some(
     (arg) =>
-      arg === '--mutate' || arg === '-m' || arg.startsWith('--mutate=') || arg === '--incremental',
+      arg === '--mutate' ||
+      arg === '-m' ||
+      arg.startsWith('--mutate=') ||
+      (!inContainer && arg === '--incremental'),
   );
   return scoped ? 'guarded' : 'full-mutation';
 }
 
 /** `vitest`, `tsc` or `stryker` run directly, by any path or launcher. */
-function direct(tokens: readonly string[]): Kind {
+function direct(tokens: readonly string[], inContainer = false): Kind {
   const [first, ...rest] = tokens;
   if (first === undefined) return 'other';
   const program = programOf(first);
-  if (program === 'stryker') return rest[0] === 'run' ? stryker(rest.slice(1)) : 'other';
+  if (program === 'stryker')
+    return rest[0] === 'run' ? stryker(rest.slice(1), inContainer) : 'other';
   if (program === 'vitest') {
     const sub = rest.find((arg) => !arg.startsWith('-'));
     return asKind(!(sub !== undefined && VITEST_OTHER.has(sub)) && !hasAny(rest, STAYS_ON_HOST));
@@ -293,7 +299,7 @@ function direct(tokens: readonly string[]): Kind {
 }
 
 /** What follows `pnpm`. */
-function pnpm(args: readonly string[]): Kind {
+function pnpm(args: readonly string[], inContainer: boolean): Kind {
   let j = 0;
   for (; args[j]?.startsWith('-'); j++) {
     const arg = args[j] ?? '';
@@ -310,9 +316,10 @@ function pnpm(args: readonly string[]): Kind {
     rest = args.slice(j + 2);
   }
   if (name === undefined) return 'other';
-  if (name === 'exec' || name === 'dlx') return direct(fromFirstWord(rest));
-  if (name === 'vitest' || name === 'tsc' || name === 'stryker') return direct([name, ...rest]);
-  if (name === 'mutation:run') return stryker(rest);
+  if (name === 'exec' || name === 'dlx') return direct(fromFirstWord(rest), inContainer);
+  if (name === 'vitest' || name === 'tsc' || name === 'stryker')
+    return direct([name, ...rest], inContainer);
+  if (name === 'mutation:run') return stryker(rest, inContainer);
   if (!SCRIPTS.has(name)) return 'other';
   if (name === 'lint') return asKind(!rest.includes('--fix'));
   if (name === 'test') return asKind(!hasAny(rest, STAYS_ON_HOST));
@@ -320,7 +327,7 @@ function pnpm(args: readonly string[]): Kind {
 }
 
 /** What one segment is. */
-function kindOf(tokens: readonly string[]): Kind {
+function kindOf(tokens: readonly string[], inContainer = false): Kind {
   let i = 0;
   for (;;) {
     const t = tokens[i];
@@ -334,10 +341,10 @@ function kindOf(tokens: readonly string[]): Kind {
   }
   const program = programOf(tokens[i] ?? '');
   const rest = tokens.slice(i + 1);
-  if (program === 'pnpm') return pnpm(rest);
-  if (program === 'npx' || program === 'node') return direct(fromFirstWord(rest));
+  if (program === 'pnpm') return pnpm(rest, inContainer);
+  if (program === 'npx' || program === 'node') return direct(fromFirstWord(rest), inContainer);
   if (program === 'athanor') return inAthanor(rest);
-  return direct(tokens.slice(i));
+  return direct(tokens.slice(i), inContainer);
 }
 
 /**
@@ -354,8 +361,8 @@ function inAthanor(args: readonly string[]): Kind {
   const script = inner[2];
   const kinds =
     (shell === 'sh' || shell === 'bash') && inner[1] === '-c' && script !== undefined
-      ? parse(script, true).segments.map((s) => kindOf(s.tokens))
-      : [kindOf(inner)];
+      ? parse(script, true).segments.map((s) => kindOf(s.tokens, true))
+      : [kindOf(inner, true)];
   return kinds.includes('full-mutation') ? 'full-mutation' : 'other';
 }
 

@@ -83,6 +83,7 @@ const PASSES = [
   'athanor run -- pnpm vitest run gates/commands.test.ts',
   'athanor run -- pnpm test',
   "athanor run -- sh -c 'pnpm test'",
+  'athanor run -- pnpm exec stryker run --incremental --mutate scripts/lib/settle.ts',
   'pnpm smoke:render',
   'pnpm run smoke:render',
   'node scripts/phone-check.ts',
@@ -160,6 +161,9 @@ const FULL_MUTATION = [
   'athanor run -- pnpm mutation:run',
   'athanor run --untracked -- npx stryker run',
   "athanor run -- sh -c 'pnpm exec stryker run >&2 && cat artifacts/stryker/current/mutation.json'",
+  'athanor run -- pnpm exec stryker run --incremental',
+  'athanor run -- pnpm mutation:run --incremental --incrementalFile artifacts/stryker/incremental.json',
+  "athanor run -- sh -c 'npx stryker run --incremental >&2'",
 ];
 
 // C12: a scoped mutation run, guarded like any other host run.
