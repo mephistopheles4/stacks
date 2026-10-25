@@ -2,9 +2,9 @@
 
 **Fourteen efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
-share one. **The third, fifth, sixth, eleventh and twelfth are waiting for an
-implementation session**; the first two, the eighth, the ninth and the tenth have been built and are kept as written, and the fourth
-is built except its last step. The fourteenth is built in the pull request for
+share one. **The third and the fifth are waiting for an implementation
+session**, and every other one is built, as the State column below says. The
+fourteenth is built in the pull request for
 [#454](https://github.com/mephistopheles4/stacks/issues/454).
 
 ⚠️ **The fifth is the first whose finish line is not a document.** Its map carried
