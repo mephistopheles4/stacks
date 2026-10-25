@@ -150,6 +150,7 @@ describe('parseHistory — fails closed', () => {
     ['a short commit', { commit: 'aecb7cf' }, /commit/],
     ['a commit with a prefix', { commit: `x${sha('a')}` }, /commit/],
     ['a commit with a suffix', { commit: `${sha('a')}x` }, /commit/],
+    ['a commit wrapped in a list', { commit: [sha('a')] }, /commit/],
   ])('refuses a point with %s', (_, broken, message) => {
     const points = [{ ...point(), ...broken }];
     expect(() => parseHistory(doc({ points }))).toThrow(message);
@@ -182,6 +183,14 @@ describe('parseHistory — fails closed', () => {
     ['a short hash', { duplicationHash: 'sha256:abc' }, /duplicationHash/],
     ['a hash with a prefix', { duplicationHash: `xsha256:${'f'.repeat(64)}` }, /duplicationHash/],
     ['a hash with a suffix', { duplicationHash: `sha256:${'f'.repeat(64)}0` }, /duplicationHash/],
+    // A one-item list turns into its element when a regex tests it, so these
+    // are the rows that hold the string checks: without them `['5.4.1']` parses.
+    ['a version wrapped in a list', { jscpdVersion: ['5.4.1'] }, /jscpdVersion/],
+    [
+      'a hash wrapped in a list',
+      { duplicationHash: [`sha256:${'f'.repeat(64)}`] },
+      /duplicationHash/,
+    ],
   ])('refuses %s', (_, broken, message) => {
     expect(() => parseHistory(doc(broken))).toThrow(message);
   });
@@ -208,7 +217,6 @@ describe('the committed file', () => {
   it('is the backfill up to the parent of #262, as the generator wrote it', () => {
     const committed = parseHistory(JSON.parse(committedText()) as unknown);
     expect(BACKFILL_TIP).toBe('aecb7cf8ca3af6cefd99e16205fa00d99fd89ded');
-    expect(committed.tip).toBe(BACKFILL_TIP);
     expect(committed.points).toHaveLength(136);
     expect(committed.points[0]?.commit).toBe('d700bc57adb4d65a7bc27cfeee1136d610056130');
     expect(committed.points.at(-1)?.commit).toBe(BACKFILL_TIP);
@@ -305,12 +313,17 @@ describe('historyAction — the rendered copy in the local store', () => {
   });
 
   it('refuses when a history record sits there under any other name, imported or not', () => {
-    const existing = new Map([['1-history.prom', 'STALE']]);
+    const existing = new Map([
+      ['1-history.prom', 'STALE'],
+      ['2-history.prom', 'STALE'],
+    ]);
     for (const imported of [['1-history.prom'], []]) {
       const action = historyAction({ committed: ok, existing, imported });
 
       expect(action.kind).toBe('refuse');
-      expect(action.kind === 'refuse' && action.message).toMatch(/1-history\.prom[\s\S]*--rebuild/);
+      expect(action.kind === 'refuse' && action.message).toMatch(
+        /1-history\.prom, 2-history\.prom[\s\S]*Delete the other[\s\S]*--rebuild/,
+      );
     }
   });
 

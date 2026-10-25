@@ -8,8 +8,10 @@ lead's picks under the owner's standing instruction for the day. The panel,
 the lines and the titles are the owner's own words, relayed by the lead.
 **Signed off on 2026-10-25, the title table included, relayed by the lead.
 Built in the pull request for #454**, and the owner's visual check passed on
-C6 to C8 ("visual check is good for 454", relayed). §S3 lists every decision
-and its source, the two accepted risks among them.
+C6 to C8 ("visual check is good for 454", relayed). That check saw the page
+before the as-built changes in §S5.5: the bridged backfill, the named join and
+the fixed colours. §S3 lists every decision and its source, the accepted risks
+among them.
 
 Every line number is on `main` at `e6cce7c`. Each place is also named by its
 function, so a rebase can find it again.
@@ -57,6 +59,9 @@ backfill would land in the store with nothing that draws it.
 | q8 | Add claim C9, ASVS 5.0.0 V13.4 and V14.2 | Lead's pick |
 | q9 | Sign off §S5.5's title table, and "my graphs" as every time-series chart | The owner saw the table in the lead's chat and changed nothing, relayed |
 | T2 | Accept that `parseHistory` caps neither the point count nor the earliest time | **The owner's own word**, given in the lead's chat and relayed by the lead. Nothing built |
+| q11 | Accept that `parseHistory` drops extra keys and allows a repeated commit, rather than refusing them | **The owner's own word**, given in the lead's chat on 2026-10-25 and relayed by the lead. Nothing built |
+| q12 | Keep `duplication-report.ts` under G1: move its one write into `scripts/lib/history-file.ts`, and exempt only that file | Lead's pick. It narrows an exemption this change made, and accepts no risk |
+| q13 | Accept two generator risks: an interrupted run may leave jscpd's temporary report behind, and a malformed jscpd report could quote a fragment in its parse error. Both are patterns `runJscpd` already has | **The owner's own word**, given in the lead's chat on 2026-10-25 and relayed by the lead. Nothing built |
 | — | Lines instead of dots | The owner's words, relayed |
 | — | Plain titles saying what is measured and which way is better, with axis labels | The owner's words, relayed. The table in §S5.5 goes to the owner before the build |
 | — | The security pair on the spec and the diff | Lead's pick. Writing historical data into the shared trend store is close to the data-migrations item |
@@ -244,10 +249,11 @@ before "The instrument". Two queries, both whole-tree:
 
 The unit is `percent`, the reducer is the highest in a bin (the complexity
 panels' rule: high is the unflattering direction), and the description says
-where the line steps. The backfill ends at 35 clones under jscpd 5.4.1, and
-the nightly line starts at 33 under 5.0.16. The step is the counter changing,
-not the code. The renovation markers already on the page annotate each jscpd
-bump.
+what happens where the two lines meet. The backfill ends at 35 clones under
+jscpd 5.4.1, and the nightly line starts at 33 under 5.0.16. *As approved,
+this paragraph said the step is the counter and that the page's renovation
+markers annotate it. Both were wrong, and the as-built note below replaces
+them.*
 
 ⚠️ **The share is derived on the page and never recorded**, the rule
 `duplication-report.ts` states: a ratio falls when the tree grows and nothing
@@ -269,12 +275,17 @@ draws no segment across an empty bucket. All six time-series charts
   means no commit landed, as for 78 hours in mid-August, not that a run went
   missing. The nightly series keeps the three-day break. Added after the Test
   round's behaviour-lens, and after the owner's visual pass.
-- **As built, the join is named.** No renovation marker stands at the
-  2026-08-25 step, because the first nightlies predate any declared jscpd bump,
-  so the page's own rule would read it as a movement in the code. The page's
-  text and the chart's tooltip both say what it is. Measured, the step from
-  0.86% to 0.73% is about 0.10 points of counter and 0.03 of code: jscpd 5.4.1
-  reads 0.83% at #262 itself.
+- **As built, the join is named.** No renovation marker stands at
+  2026-08-25, because the first nightlies predate any declared jscpd bump.
+  The two lines meet at about the same height, 0.86%. Zoomed to that day, the
+  first two nightly runs dip to 0.73%, and the line is back within the hour.
+  At wider ranges the dip is hidden, because a plotted point is the highest
+  run in its bin. The page's text and the chart's tooltip say so. Measured,
+  the dip is about 0.10 points of counter and 0.03 of code: jscpd 5.4.1 reads
+  0.83% at #262 itself.
+- **As built, each series keeps one colour**: nightly green and backfill
+  yellow, by fixed-colour overrides. Without them the backfill drew green
+  wherever it was the only series in view.
 
 **The titles.** The old titles and their caveats move into each panel's
 `description`, the tooltip, so nothing is lost. Panel 1 and Panel 2 keep those
@@ -371,7 +382,9 @@ The tables and the two stats have no lines to draw.
     touched.
   - Unit tests cover `writeHistory`'s six cases (§S5.4): missing, identical,
     changed and not yet imported, changed after import, another name
-    present, and a malformed or missing committed file.
+    present, and a malformed or missing committed file. As built, the cases
+    live in two pure functions that `writeHistory` calls, `historyAction` and
+    `committedFrom`, and their test blocks are what hold them.
 - **C6. The duplication chart shows both stretches.** After a sync, the new
   chart draws the backfill from 2026-07-31 to 2026-08-25 and the nightly from
   2026-08-25 on, with the two legends in §S5.5. This is **the owner's visual
@@ -427,8 +440,8 @@ a gate.
 - **Comparability against continuity.** Re-measuring the nightly stretch
   under 5.4.1 would remove the step at 2026-08-25, but it would draw a second
   line over data the store already holds and invite reading one for the
-  other. The backfill covers only what nothing measured, and the step is
-  annotated. Driver: §S8.
+  other. The backfill covers only what nothing measured, and the page's text
+  names the join, since no marker stands there. Driver: §S8.
 - **Reviewability against branch purity.** A committed file adds 27 KB to
   the tree. In exchange, the data is reviewed in a diff, reverted by a
   revert, and never pushed to an append-only branch that every ratchet reader

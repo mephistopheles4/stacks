@@ -27,8 +27,6 @@
  * than a link to nothing.
  */
 
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { populationOf } from './lib/complexity.ts';
 import {
   TREE_POPULATION,
@@ -42,6 +40,7 @@ import { readScopes } from './lib/mutation-score.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { sourceFiles } from './lib/scope-check.ts';
 import { HISTORY_FILE, measureHistory, serialiseHistory } from './lib/duplication-history.ts';
+import { writeHistoryFile } from './lib/history-file.ts';
 
 /**
  * `--history`: measure the backfill and write `jscpd.history.json` (#454).
@@ -53,7 +52,7 @@ import { HISTORY_FILE, measureHistory, serialiseHistory } from './lib/duplicatio
  */
 if (process.argv.includes('--history')) {
   const history = measureHistory();
-  writeFileSync(join(REPO_ROOT, HISTORY_FILE), serialiseHistory(history), 'utf8');
+  writeHistoryFile(serialiseHistory(history));
   for (const point of history.points) {
     const share = point.totalLines === 0 ? 0 : (point.duplicatedLines / point.totalLines) * 100;
     console.log(

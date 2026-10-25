@@ -366,6 +366,10 @@ export function historyAction(input: {
  * ⚠️ **`gitOutput` cannot be used for `grep`**: it answers `undefined` for every
  * non-zero exit, and `git grep` exits 1 when nothing matched. A failed sweep
  * read as an empty one is a zero nobody measured.
+ *
+ * So these two helpers are an exception to ADR-0030's rule that git's capture
+ * contracts live in `git.ts`, named here the way `commit-metrics.ts` names its
+ * own. Both keep the no-shell half: an argument array, never a command line.
  */
 function gitLines(args: readonly string[], root: string): string[] {
   const result = spawnSync('git', [...args], {

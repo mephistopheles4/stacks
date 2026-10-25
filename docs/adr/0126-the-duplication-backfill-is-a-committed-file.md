@@ -52,11 +52,14 @@ two newest counting stamps.
 
 ## What it costs
 
-- **A step where the two lines meet.** The backfill is counted by jscpd 5.4.1,
-  and the first nightlies by 5.0.16, which reads about 2 clones lower. The step
-  is the counter, not the code, and the renovation markers on the page annotate
-  each jscpd bump. Re-measuring the nightly stretch would remove it, at the
-  price of a second line over data the store already holds.
+- **A dip where the two lines meet.** The backfill is counted by jscpd 5.4.1,
+  and the first two nightlies by 5.0.16, which read 0.73% against the
+  backfill's 0.86%. The line is back at 0.86% within the hour, so the dip shows
+  only zoomed to that day. It is mostly the counter: 5.4.1 reads 0.83% at #262
+  itself. No renovation marker stands there, because those runs predate any
+  declared bump, so the page's text and the chart's tooltip name it instead.
+  Re-measuring the nightly stretch would remove it, at the price of a second
+  line over data the store already holds.
 - **A revert does not reach a store that imported the file.** The rendered copy
   stays in `.trend/local/`, and `--rebuild` replays it. The rollback is a
   revert, then deleting `.trend/local/1787677348-history.prom`, then
@@ -65,10 +68,16 @@ two newest counting stamps.
   generator rather than a hand edit, beyond the diff review and the rerun in the
   pull request. A byte-compare check would be a new guard, and the owner
   accepted the risk instead, on 2026-10-25, in the lead's chat, relayed. They
-  also accepted that the reader caps neither the number of points nor how early
-  one may be dated. The repository has no threat model, so both acceptances are
-  recorded in the spec's §S3 and in the pull request, and not as entries
-  anywhere else.
+  also accepted three more, each by class:
+  - the reader caps neither the number of points nor how early one may be
+    dated;
+  - it drops extra keys and allows a repeated commit, where it could refuse
+    them;
+  - an interrupted generator run may leave jscpd's temporary report behind, and
+    a malformed jscpd report could quote a fragment in its parse error.
+
+  The repository has no threat model, so this record, the spec's §S3 and the
+  pull request say so, and no threat-model entry exists.
 
 ## How this was decided
 

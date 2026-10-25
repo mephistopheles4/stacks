@@ -587,7 +587,11 @@ export interface HistoryReportPoint {
  * - ⚠️ **`--history-limit` is set past any range this repo can have.** Its
  *   default is 30, sampled evenly, and the report does not say it sampled.
  *
- * It reads git objects and checks nothing out.
+ * ⚠️ **jscpd checks each commit out into a temporary detached worktree of its
+ * own** (its release notes and PR #1050 say so). This tree's working files
+ * stayed clean across every run measured, and no `.git/worktrees` entry was
+ * left behind. A checkout runs local hooks, though, so a `post-checkout` hook
+ * added under `.husky/` would run once per scanned commit.
  */
 export function runJscpdHistory(tip: string, root: string = REPO_ROOT): HistoryReportPoint[] {
   const out = mkdtempSync(join(tmpdir(), 'stacks-jscpd-'));
