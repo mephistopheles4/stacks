@@ -76,11 +76,22 @@ backfill would land in the store with nothing that draws it.
 new file under `scripts/lib/` adds no entry to Stryker's `mutate` array, so
 G56's `configHash` does not move.
 
+- **It runs on the host, in the build worktree**, a linked worktree on
+  Windows where `.git` is a file. History mode was rerun there on 2026-10-25
+  and matched the throwaway clone point for point (§S10.3). The unit tests
+  never need git history, so athanor's sealed snapshot can run them.
 - **One jscpd run**, spawned like `runJscpd` (`duplication.ts:539`):
   `. --format typescript --ignore "**/*.d.ts" --history <tip>
   --history-limit 5000`, at `THRESHOLDS`, with the `json` and `silent`
-  reporters, writing to a temporary directory. It reads git objects and checks
-  nothing out (§S10.1).
+  reporters. It reads git objects and checks nothing out (§S10.1).
+  - **The report goes to a temporary directory that a `finally` removes**,
+    `runJscpd`'s rule. The report holds code fragments and paths from every
+    commit it scanned.
+  - **Each point is rebuilt from six fields and nothing else**: `commit`, the
+    committer time, `clones`, `duplicatedLines`, `lines` (stored as
+    `totalLines`) and the swept `ignoredLines`. jscpd's point also carries
+    `subject`, `date`, `short`, `sources`, `tokens` and `percentage`. None of
+    them reach the file, so no commit message is copied into it.
   - ⚠️ **`--history-limit` defaults to 30 and samples evenly**, so the limit
     is set above any range this repo can have, and the module refuses a
     report whose points do not cover every first-parent commit it expected.
@@ -131,7 +142,21 @@ never by hand:
   `duplication_hash` says whether the two are comparable.
 - **A parser that throws on any malformed field**, `parseDeclarations`' rule
   (`duplication.ts:754`): a partly read history file would draw a chart with
-  holes nobody can see.
+  holes nobody can see. ⚠️ **It checks bounds as well as types**, because the
+  sync joins every record into one document, and one timestamp the block
+  builder rejects writes no block for any of them (`renovations.ts`,
+  `isRealDay`). So `parseHistory` checks all of these:
+  - `points` is not empty;
+  - each `at` is a positive safe integer, strictly increasing, and the last
+    is below #262's committer time, 1787678208;
+  - `tip` equals `BACKFILL_TIP`;
+  - `jscpdVersion` is a dotted version, `duplicationHash` is `sha256:` plus 64
+    hex characters, and each `commit` is 40 hex characters;
+  - every count is a non-negative integer, and `duplicatedLines` is no more
+    than `totalLines`.
+- **Prettier-stable as written.** `.prettierignore` does not exclude a root
+  JSON file, so the writer emits `JSON.stringify(document, null, 2)` plus a
+  final newline, and C2 checks that `pnpm format:check` passes on the result.
 - The file is JSON and not TypeScript, so neither duplication population
   scans it.
 
@@ -149,7 +174,8 @@ prints the table, as today.
 - It is run by hand, once, and committed. Rerunning it against the same tip
   and the same jscpd gives byte-identical output (claim C2).
 - `AGENTS.md`'s Commands block and `docs/commands.md` §`pnpm duplication:report`
-  say what the flag does.
+  say what the flag does. `docs/commands.md` §`pnpm trend:sync` gains the
+  history file, its two refusals (§S5.4), and the rollback in §S8.
 
 ### S5.4 Into the store
 
@@ -164,16 +190,25 @@ so CI never emits it and no `.prom` on the branch carries it.
   `stacks_backfill_info{tip,jscpd_version,duplication_hash}`, is set to 1 at
   the last point's time. It is the provenance a chart's tooltip can show.
   `METRIC_PREFIXES` gains `backfill: 'stacks_backfill_'`.
-- `writeHistory` writes `LOCAL/<first point's at>-history.prom`. The name
-  passes `parseRecordName` (`metrics-record.ts:65`), so the existing
-  `selectNewRecords` path imports it once, and `--rebuild` replays it with
-  surface D's rows.
+- `writeHistory` writes `LOCAL/1787677348-history.prom`. **The name is a
+  constant**, `BACKFILL_TIP`'s committer time, so no edit to the data can
+  rename the file. The name passes `parseRecordName`
+  (`metrics-record.ts:65`), so the existing `selectNewRecords` path imports
+  it once, and `--rebuild` replays it with surface D's rows.
   - When the file is missing, it is written.
   - When it exists with identical bytes, nothing happens.
   - When it differs and has not been imported yet, it is rewritten.
   - When it differs and has been imported, the sync refuses and names
     `--rebuild`, `renovations.json`'s rule for an edited entry: a changed
     value at the same timestamp cannot be undone by adding blocks.
+  - When `LOCAL` holds a `*-history.prom` under any other name, the sync
+    refuses and names it, so that a stale copy can never sit beside the
+    current one.
+- **A missing or malformed `jscpd.history.json` costs only the backfill.**
+  `writeHistory` warns, naming the file, and the sync carries on with the
+  branch's records and the asks, as `writeAsks` does when it cannot judge. A
+  file that breaks must not stop the nightly data reaching the page. The
+  warning never quotes the file's contents.
 - **Nothing that reads the `metrics` branch changes**, and none of them can
   list a file that lives only in `.trend/local/`. The window code, the deploy
   refusal and G39 read the branch through `recordsAt`
@@ -225,23 +260,26 @@ draws no segment across an empty bucket. All six time-series charts
 words at the start, because `AGENTS.md` and the page's first text panel say
 "read panel 1 before panel 2". Each chart gains `"axisLabel"`.
 
-| # | Old title | New title | Axis label |
-| --- | --- | --- | --- |
-| 1 | Panel 1 — is this real: the run, and what merged into it | Panel 1 · Each CI run: when, which commit, and what merged into it | — (table) |
-| 2 | Panel 1 — is this real: delta since the previous run, per scope | Panel 1 · Change in mutation score since the previous run, per scope (up is better) | — (table) |
-| 3 | Panel 2 — is this bad: each scope against its own history | Panel 2 · Mutation score: % of mutants the tests kill, per scope (higher is better) | % killed |
-| 4 | complexity-functions — the denominator the other three are read against | Functions counted, per scope (grows with the code, no better direction) | functions |
-| 5 | complexity-mass — Σ cyclomatic complexity over those functions | Total complexity, per scope (lower is better, read against functions counted) | complexity |
-| 6 | complexity-mass-over-10 — Σ complexity in functions above McCabe's cut | Complexity in functions scoring over 10, per scope (lower is better) | complexity |
-| 7 | complexity-max — the largest single function | Most complex single function, per scope (lower is better) | complexity |
-| new | — | Duplicated lines, % of all TypeScript in the repo (lower is better) | % duplicated |
-| 8 | The instrument: what the suite and a mutation run cost | Time to run the test suite and a mutation run (lower is better) | seconds |
-| 9 | live-exclusions — displayed, never thresholded | Mutation exclusions still in force | — (stat) |
-| 10 | of this many declared | Mutation exclusions declared | — (stat) |
-| 11 | The ratchet asks — bounds the window says could be tighter | Bounds the ratchet says could be tightened (a prompt, never applied) | — (table) |
+| Position | Panel id | Old title | New title | Axis label |
+| --- | --- | --- | --- | --- |
+| 1 | 2 | Panel 1 — is this real: the run, and what merged into it | Panel 1 · Each CI run: when, which commit, and what merged into it | — (table) |
+| 2 | 3 | Panel 1 — is this real: delta since the previous run, per scope | Panel 1 · Change in mutation score since the previous run, per scope (up is better) | — (table) |
+| 3 | 4 | Panel 2 — is this bad: each scope against its own history | Panel 2 · Mutation score: % of mutants the tests kill, per scope (higher is better) | % killed |
+| 4 | 8 | complexity-functions — the denominator the other three are read against | Functions counted, per scope (grows with the code, no better direction) | functions |
+| 5 | 9 | complexity-mass — Σ cyclomatic complexity over those functions | Total complexity, per scope (lower is better, read against functions counted) | complexity |
+| 6 | 10 | complexity-mass-over-10 — Σ complexity in functions above McCabe's cut | Complexity in functions scoring over 10, per scope (lower is better) | complexity |
+| 7 | 11 | complexity-max — the largest single function | Most complex single function, per scope (lower is better) | complexity |
+| 8 | 13 (new) | — | Duplicated lines, % of all TypeScript in the repo (lower is better) | % duplicated |
+| 9 | 5 | The instrument: what the suite and a mutation run cost | Time to run the test suite and a mutation run (lower is better) | seconds |
+| 10 | 6 | live-exclusions — displayed, never thresholded | Mutation exclusions still in force | — (stat) |
+| 11 | 7 | of this many declared | Mutation exclusions declared | — (stat) |
+| 12 | 12 | The ratchet asks — bounds the window says could be tighter | Bounds the ratchet says could be tightened (a prompt, never applied) | — (table) |
 
-Rows 4, 9 and 10 name no better direction, because ADR-0062 keeps verdicts off
-this page, and "fewer is better" there would read as one. "How to read this
+Positions 4, 10 and 11 name no better direction, because ADR-0062 keeps
+verdicts off this page, and "fewer is better" there would read as one. A
+direction on a title is not a verdict: it says which way a number moves when
+the code improves, and it names no threshold and no target. ADR-0126 records
+that rule beside the storage decision. "How to read this
 page" keeps its title. Its text gains one sentence naming the duplication
 chart and the backfill.
 
@@ -252,8 +290,9 @@ The tables and the two stats have no lines to draw.
 ### S5.6 The record
 
 - ADR-0126, *The duplication backfill is a committed file under its own
-  series names*: q1's names, q5's file, and the reasons `event="backfill"`
-  and a record on `metrics` were declined.
+  series names*: q1's names, q5's file, the reasons `event="backfill"` and a
+  record on `metrics` were declined, and the rule that a title may name a
+  direction but never a verdict (§S5.5).
 - A log entry, `docs/log/2026-10-25-duplication-backfill.md`, holds §S10's
   measurements, with one index line in `docs/progress.md`.
 - This file is added to `docs/spec/README.md`'s table.
@@ -267,31 +306,51 @@ The tables and the two stats have no lines to draw.
   where both exist and the record's `duplication_hash` equals today's, the
   module's tree counts equal the record's four values. A test drives the
   module's report parser and first-parent filter against a planted jscpd
-  report. The live comparison (§S10.2: 97 of 97) is rerun by the build
-  session and quoted in the pull request.
+  report.
+  - **The live comparison is rerun with a throwaway script outside the
+    repo**, never with a repo tool. The script runs §S10.2's raw jscpd
+    command over `4596155~1..origin/main`, then compares each point with
+    every record on `origin/metrics` that carries tree series. The build
+    session quotes the command and the "N of N" result per era in the pull
+    request.
+  - ⚠️ **Any mismatch under today's `duplication_hash` stops the build**, and
+    it goes to the owner through the lead.
 - **C2. The file is complete and regenerable.** `jscpd.history.json` holds
   136 points, one per first-parent commit from `d700bc5` to `aecb7cf` after
   the shared-second rule, with times strictly increasing. Running
-  `pnpm duplication:report --history` twice gives byte-identical files.
+  `pnpm duplication:report --history` twice gives byte-identical files,
+  `pnpm format:check` passes on the file, and every point has exactly the
+  keys `commit`, `at`, `clones`, `duplicatedLines`, `ignoredLines` and
+  `totalLines`. The temporary report folder is gone after each run.
   - Unit tests cover the history-limit refusal (a report missing a
     first-parent commit throws), the `working` point dropped, side-branch
     commits dropped, the shared-second rule, and a non-increasing time
     refused.
   - The rerun is shown in the pull request.
-- **C3. The parser fails closed.** `parseHistory` throws on a missing field,
-  a non-integer count, a non-increasing `at` or an empty `points`. A unit
-  test for each.
+- **C3. The parser fails closed.** `parseHistory` throws on each shape
+  §S5.2 lists: a missing field, a non-integer or negative count,
+  `duplicatedLines` above `totalLines`, a non-increasing or unsafe `at`, a
+  last `at` at or past #262, a `tip` other than `BACKFILL_TIP`, a malformed
+  version, hash or commit, and an empty `points`. A unit test for each.
 - **C4. No ratchet reader sees a backfilled point.** `renderHistory`'s
   output, put through `runRowsFrom` and `trendNamesIn`, yields no run row and
   no trend name. A unit test plants it beside a real record. The pull
   request lists the readers of `metrics/` and `storedRecords()` (§S5.4) and
   shows that none of them can list `.trend/local/`.
-- **C5. The store takes it, and a second sync is a no-op.** On a scratch
-  store, `pnpm trend:sync` imports `…-history.prom`. A second sync reports
-  nothing new. Editing one point after the import makes the next sync refuse
-  and name `--rebuild`. The build session runs this with Docker and pastes
-  the three outputs. Unit tests cover `writeHistory`'s four cases
-  (§S5.4).
+- **C5. The store takes it, and a second sync is a no-op.** The scratch
+  store is the build worktree's own `.trend/`, never the main checkout's.
+  There, `pnpm trend:sync` imports `1787677348-history.prom`. A second sync
+  reports nothing new. Editing one point after the import makes the next
+  sync refuse and name `--rebuild`. The build session runs this with Docker
+  and pastes the three outputs.
+  - ⚠️ **The containers are shared across checkouts.** `stacks-prometheus`
+    and `stacks-grafana` have fixed names, so a sync from the worktree
+    recreates them against the worktree's store. The owner's next sync from
+    the main checkout points them back, and the main store's data is never
+    touched.
+  - Unit tests cover `writeHistory`'s six cases (§S5.4): missing, identical,
+    changed and not yet imported, changed after import, another name
+    present, and a malformed or missing committed file.
 - **C6. The duplication chart shows both stretches.** After a sync, the new
   chart draws the backfill from 2026-07-31 to 2026-08-25 and the nightly from
   2026-08-25 on, with the two legends in §S5.5. This is **the owner's visual
@@ -314,8 +373,10 @@ puts no test on the dashboard file and a `gates/` file would need a G19 row.
 When the build is pushed, the build session sends the lead "awaiting visual
 check" with these steps:
 
-1. Check out the branch and run `pnpm install`.
-2. Run `pnpm trend:sync`. Docker must be running.
+1. Use the build worktree, never the main checkout. A pre-merge history file
+   in the main store would need a `--rebuild` if review changes it.
+2. Run `pnpm trend:sync` there. Docker must be running. This recreates the
+   shared containers against the worktree, as C5 says.
 3. Open <http://localhost:3000/d/stacks-trend-layer>, and set the range to
    cover 2026-07-31 to today.
 4. Check C6, C7 and C8 against §S5.5.
@@ -351,6 +412,11 @@ None is written in this project's agent instructions. Flagged once, as the
 pact asks: each point above leans to the side that is cheaper to reverse. A
 committed file and a dashboard diff are undone by a revert. A record on
 `metrics`, once a scope is armed, is history the ratchet reads.
+
+⚠️ **A revert does not reach a store that already imported the file.** The
+rendered copy stays in `.trend/local/`, and `--rebuild` would replay it. The
+full rollback is: revert, delete `.trend/local/1787677348-history.prom`, then
+run `pnpm trend:sync --rebuild`. `docs/commands.md` carries it.
 
 ## S9. Out of scope
 
@@ -388,7 +454,16 @@ Run on 2026-10-25 in a throwaway clone of this checkout, at jscpd 5.4.1,
    changing, as each bump's renovation entry records.
 3. **The backfill.** `--history aecb7cf` returned 170 points in about 26 s,
    in a 160 KB report: 169 commits plus `working`, covering all 137
-   first-parent commits.
+   first-parent commits. Rerun in the linked build worktree, it took 67 s
+   and gave identical points.
+   - **The report's shape**, for the planted fixtures: the file is
+     `jscpd-report.json`, and the history sits at `history.points`, beside
+     `history.range` and `history.threshold`. Each point carries `clones`,
+     `commit` (the full SHA), `date` (a day, no time), `duplicatedLines`,
+     `lines`, `percentage`, `short`, `sources`, `subject` and `tokens`. The
+     working-tree point has `commit: "working tree"` and `short: "working"`.
+     The single-run `duplicates` and `statistics` keys describe the working
+     tree, and the module reads neither.
    - `git log -S"ignore-start"` over `*.ts` on `main` finds nothing. The
      canary `-S"jscpd:ignore"` finds one commit, so the search works. Its one
      `ignore-end` hit is prose in #262 itself.
@@ -401,7 +476,10 @@ Run on 2026-10-25 in a throwaway clone of this checkout, at jscpd 5.4.1,
 ## S11. Needs a human
 
 - **Before the build:** the owner signs off §S5.5's title table, through the
-  lead.
+  lead, and with it the default that "my graphs" means every time-series
+  chart.
+- **At Test:** the security pair runs again on the diff, beside the QA and
+  standards pairs. The merge is the owner's, through the lead.
 - **After the build:** the owner's visual check, §S6.2.
 - **After merge:** the owner runs `pnpm trend:sync` on their machine. No
   `--rebuild` is needed if C5 holds.
