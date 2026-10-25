@@ -131,15 +131,34 @@ describe('parseHistory — fails closed', () => {
   });
 
   it.each([
-    ['a missing field', { totalLines: undefined }],
-    ['a non-integer count', { clones: 1.5 }],
-    ['a negative count', { ignoredLines: -1 }],
-    ['more duplicated lines than lines', { duplicatedLines: 500, totalLines: 400 }],
-    ['an unsafe time', { at: 2 ** 60 }],
-    ['a malformed commit', { commit: 'aecb7cf' }],
-  ])('refuses a point with %s', (_, broken) => {
+    ['a missing field', { totalLines: undefined }, /totalLines/],
+    ['a count written as a string', { clones: '2' }, /clones/],
+    ['a non-integer count', { clones: 1.5 }, /clones/],
+    ['a negative count', { ignoredLines: -1 }, /ignoredLines/],
+    [
+      'more duplicated lines than lines',
+      { duplicatedLines: 500, totalLines: 400 },
+      /more duplicated/,
+    ],
+    ['an unsafe time', { at: 2 ** 60 }, /\bat\b/],
+    ['a time of zero', { at: 0 }, /positive at/],
+    ['a short commit', { commit: 'aecb7cf' }, /commit/],
+    ['a commit with a prefix', { commit: `x${sha('a')}` }, /commit/],
+    ['a commit with a suffix', { commit: `${sha('a')}x` }, /commit/],
+    ['a commit that is not a string', { commit: 7 }, /commit/],
+  ])('refuses a point with %s', (_, broken, message) => {
     const points = [{ ...point(), ...broken }];
-    expect(() => parseHistory(doc({ points }))).toThrow();
+    expect(() => parseHistory(doc({ points }))).toThrow(message);
+  });
+
+  it('refuses a point that is not an object, and a document that is not one', () => {
+    expect(() => parseHistory(doc({ points: [null] }))).toThrow(/point 0 is not an object/);
+    expect(() => parseHistory(null)).toThrow(/not an object/);
+  });
+
+  it('accepts a point whose every line is duplicated', () => {
+    const points = [point({ duplicatedLines: 467, totalLines: 467 })];
+    expect(parseHistory(doc({ points })).points[0]?.duplicatedLines).toBe(467);
   });
 
   it('refuses times that do not strictly increase', () => {
@@ -153,11 +172,21 @@ describe('parseHistory — fails closed', () => {
   });
 
   it.each([
-    ['a tip other than BACKFILL_TIP', { tip: sha('c') }],
-    ['a malformed version', { jscpdVersion: 'latest' }],
-    ['a malformed hash', { duplicationHash: 'sha256:abc' }],
-  ])('refuses %s', (_, broken) => {
-    expect(() => parseHistory(doc(broken))).toThrow();
+    ['a tip other than BACKFILL_TIP', { tip: sha('c') }, /tip/],
+    ['a version that is not dotted', { jscpdVersion: 'latest' }, /jscpdVersion/],
+    ['a version with a prefix', { jscpdVersion: 'v5.4.1' }, /jscpdVersion/],
+    ['a version with a suffix', { jscpdVersion: '5.4.1-rc' }, /jscpdVersion/],
+    ['a version that is not a string', { jscpdVersion: 541 }, /jscpdVersion/],
+    ['a short hash', { duplicationHash: 'sha256:abc' }, /duplicationHash/],
+    ['a hash with a prefix', { duplicationHash: `xsha256:${'f'.repeat(64)}` }, /duplicationHash/],
+    ['a hash with a suffix', { duplicationHash: `sha256:${'f'.repeat(64)}0` }, /duplicationHash/],
+    ['a hash that is not a string', { duplicationHash: null }, /duplicationHash/],
+  ])('refuses %s', (_, broken, message) => {
+    expect(() => parseHistory(doc(broken))).toThrow(message);
+  });
+
+  it('reads multi-digit version parts', () => {
+    expect(parseHistory(doc({ jscpdVersion: '15.40.112' })).jscpdVersion).toBe('15.40.112');
   });
 });
 
@@ -192,6 +221,12 @@ describe('historyAction — the rendered copy in the local store', () => {
     });
   });
 
+  it('writes the record again when the store imported it but the local copy is gone', () => {
+    expect(
+      historyAction({ committed: ok, existing: new Map(), imported: [HISTORY_RECORD] }).kind,
+    ).toBe('write');
+  });
+
   it('rewrites a copy that changed before it was ever imported', () => {
     const existing = new Map([[HISTORY_RECORD, 'OLD']]);
     expect(historyAction({ committed: ok, existing, imported: [] }).kind).toBe('write');
@@ -214,15 +249,19 @@ describe('historyAction — the rendered copy in the local store', () => {
   });
 
   it.each([
-    ['missing', { state: 'missing' }],
-    ['malformed', { state: 'malformed', reason: 'point 3 has no clones' }],
+    ['missing', { state: 'missing' }, /jscpd\.history\.json is missing/],
+    [
+      'malformed',
+      { state: 'malformed', reason: 'point 3 has no clones' },
+      /jscpd\.history\.json cannot be read \(point 3 has no clones\)/,
+    ],
   ] as const)(
     'only warns when the committed file is %s, so the nightly records still import',
-    (_, committed) => {
+    (_, committed, message) => {
       const action = historyAction({ committed, existing: new Map(), imported: [] });
 
       expect(action.kind).toBe('warn');
-      expect(action.kind === 'warn' && action.message).toMatch(/jscpd\.history\.json/);
+      expect(action.kind === 'warn' && action.message).toMatch(message);
     },
   );
 });
