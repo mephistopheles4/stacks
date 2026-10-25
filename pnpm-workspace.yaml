@@ -377,9 +377,9 @@ trustPolicyExclude:
 # were removed in #521, once each was past seven days old. No 15.x release
 # carries provenance and all three came from one account, so the trust policy
 # checks nothing here and the window was the only control this lifted. What
-# stood in for the wait: the published 15.0.1 to 15.0.3 diff, read before this was written, is the three parser fixes
-# upstream's commits between those tags describe, plus brace reformatting, with
-# no new import, I/O or install script.
+# stood in for the wait: the published 15.0.1 to 15.0.3 diff, read before this
+# was written, is the three parser fixes upstream's commits between those tags
+# describe, plus brace reformatting, with no new import, I/O or install script.
 #
 # Crossing the exact pin is a combination the package does not declare, checked
 # as the smol-toml block was: `pnpm lint:md` reports the same findings before
