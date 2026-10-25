@@ -49,4 +49,5 @@ In the build worktree's own store:
 ⚠️ **Every sync re-imports all ten renovation markers and writes a new ratchet
 row.** That is not this change. `readState` in `scripts/trend-sync.ts` returns
 only `tip` and `imported`, so the digests the sync keeps for both are dropped on
-every read. It is listed as a follow-up in the spec.
+every read. Filed as
+[#522](https://github.com/mephistopheles4/stacks/issues/522).

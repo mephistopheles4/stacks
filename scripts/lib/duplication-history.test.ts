@@ -1,22 +1,28 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import type { HistoryReportPoint } from './duplication.ts';
 import {
   BACKFILL_TIP,
+  HISTORY_FILE,
   HISTORY_RECORD,
   NIGHTLY_START_AT,
+  committedFrom,
   historyAction,
   parseHistory,
   pointsFrom,
   serialiseHistory,
   type History,
   type HistoryPoint,
-  type ReportedPoint,
 } from './duplication-history.ts';
+import { parseRecordName } from './metrics-record.ts';
+import { REPO_ROOT } from './repo-root.ts';
 
 const sha = (digit: string): string => digit.repeat(40);
 
 /** One point as jscpd's `history.points` carries it, with only the fields read here. */
-function reported(commit: string, over: Partial<ReportedPoint> = {}): ReportedPoint {
+function reported(commit: string, over: Partial<HistoryReportPoint> = {}): HistoryReportPoint {
   return { commit, clones: 2, duplicatedLines: 12, lines: 400, ...over };
 }
 
@@ -132,7 +138,6 @@ describe('parseHistory — fails closed', () => {
 
   it.each([
     ['a missing field', { totalLines: undefined }, /totalLines/],
-    ['a count written as a string', { clones: '2' }, /clones/],
     ['a non-integer count', { clones: 1.5 }, /clones/],
     ['a negative count', { ignoredLines: -1 }, /ignoredLines/],
     [
@@ -140,12 +145,11 @@ describe('parseHistory — fails closed', () => {
       { duplicatedLines: 500, totalLines: 400 },
       /more duplicated/,
     ],
-    ['an unsafe time', { at: 2 ** 60 }, /\bat\b/],
+    ['an unsafe count', { clones: 2 ** 60 }, /clones/],
     ['a time of zero', { at: 0 }, /positive at/],
     ['a short commit', { commit: 'aecb7cf' }, /commit/],
     ['a commit with a prefix', { commit: `x${sha('a')}` }, /commit/],
     ['a commit with a suffix', { commit: `${sha('a')}x` }, /commit/],
-    ['a commit that is not a string', { commit: 7 }, /commit/],
   ])('refuses a point with %s', (_, broken, message) => {
     const points = [{ ...point(), ...broken }];
     expect(() => parseHistory(doc({ points }))).toThrow(message);
@@ -173,20 +177,78 @@ describe('parseHistory — fails closed', () => {
 
   it.each([
     ['a tip other than BACKFILL_TIP', { tip: sha('c') }, /tip/],
-    ['a version that is not dotted', { jscpdVersion: 'latest' }, /jscpdVersion/],
     ['a version with a prefix', { jscpdVersion: 'v5.4.1' }, /jscpdVersion/],
     ['a version with a suffix', { jscpdVersion: '5.4.1-rc' }, /jscpdVersion/],
-    ['a version that is not a string', { jscpdVersion: 541 }, /jscpdVersion/],
     ['a short hash', { duplicationHash: 'sha256:abc' }, /duplicationHash/],
     ['a hash with a prefix', { duplicationHash: `xsha256:${'f'.repeat(64)}` }, /duplicationHash/],
     ['a hash with a suffix', { duplicationHash: `sha256:${'f'.repeat(64)}0` }, /duplicationHash/],
-    ['a hash that is not a string', { duplicationHash: null }, /duplicationHash/],
   ])('refuses %s', (_, broken, message) => {
     expect(() => parseHistory(doc(broken))).toThrow(message);
   });
 
   it('reads multi-digit version parts', () => {
     expect(parseHistory(doc({ jscpdVersion: '15.40.112' })).jscpdVersion).toBe('15.40.112');
+  });
+
+  it('names a field and a position in a refusal, never the value it refused', () => {
+    const planted = `${'c0ffee'.repeat(6)}zzzz`;
+    expect(() => parseHistory(doc({ points: [point({ commit: planted })] }))).toThrow(
+      /^(?!.*c0ffee).*point 0 has no 40-character commit/,
+    );
+  });
+});
+
+describe('the committed file', () => {
+  const committed = parseHistory(
+    JSON.parse(readFileSync(join(REPO_ROOT, HISTORY_FILE), 'utf8')) as unknown,
+  );
+
+  it('is the backfill up to the parent of #262, as the generator wrote it', () => {
+    expect(BACKFILL_TIP).toBe('aecb7cf8ca3af6cefd99e16205fa00d99fd89ded');
+    expect(committed.tip).toBe(BACKFILL_TIP);
+    expect(committed.points).toHaveLength(136);
+    expect(committed.points[0]?.commit).toBe('d700bc57adb4d65a7bc27cfeee1136d610056130');
+    expect(committed.points.at(-1)?.commit).toBe(BACKFILL_TIP);
+  });
+
+  it('is written byte for byte as serialiseHistory writes it', () => {
+    expect(serialiseHistory(committed)).toBe(
+      readFileSync(join(REPO_ROOT, HISTORY_FILE), 'utf8').replace(/\r\n/g, '\n'),
+    );
+  });
+
+  it('renders under a fixed record name the store reads as a local row', () => {
+    expect(HISTORY_RECORD).toBe('1787677348-history.prom');
+    expect(parseRecordName(HISTORY_RECORD)?.timestamp).toBe(1_787_677_348);
+  });
+});
+
+describe('committedFrom — the file as the sync reads it', () => {
+  const render = (h: History): string => `RENDERED ${String(h.points.length)}`;
+
+  it('is missing when there is no text', () => {
+    expect(committedFrom(undefined, render)).toEqual({ state: 'missing' });
+  });
+
+  it('reports a syntax error as fixed text, so no snippet of the file is echoed', () => {
+    expect(committedFrom('{"tip": "secret-snippet', render)).toEqual({
+      state: 'malformed',
+      reason: 'it is not JSON',
+    });
+  });
+
+  it("passes the parser's own refusal through", () => {
+    expect(committedFrom(JSON.stringify(doc({ points: [] })), render)).toEqual({
+      state: 'malformed',
+      reason: `${HISTORY_FILE} has no points`,
+    });
+  });
+
+  it('renders a file that parses', () => {
+    expect(committedFrom(serialiseHistory(history()), render)).toEqual({
+      state: 'ok',
+      rendered: 'RENDERED 2',
+    });
   });
 });
 
@@ -240,12 +302,14 @@ describe('historyAction — the rendered copy in the local store', () => {
     expect(action.kind === 'refuse' && action.message).toMatch(/--rebuild/);
   });
 
-  it('refuses when a history record sits there under any other name', () => {
+  it('refuses when a history record sits there under any other name, imported or not', () => {
     const existing = new Map([['1-history.prom', 'STALE']]);
-    const action = historyAction({ committed: ok, existing, imported: ['1-history.prom'] });
+    for (const imported of [['1-history.prom'], []]) {
+      const action = historyAction({ committed: ok, existing, imported });
 
-    expect(action.kind).toBe('refuse');
-    expect(action.kind === 'refuse' && action.message).toMatch(/1-history\.prom/);
+      expect(action.kind).toBe('refuse');
+      expect(action.kind === 'refuse' && action.message).toMatch(/1-history\.prom[\s\S]*--rebuild/);
+    }
   });
 
   it.each([

@@ -78,12 +78,7 @@ import {
   runRowsFrom,
   type Ask,
 } from './lib/floors.ts';
-import {
-  HISTORY_FILE,
-  historyAction,
-  parseHistory,
-  type Committed,
-} from './lib/duplication-history.ts';
+import { HISTORY_FILE, committedFrom, historyAction } from './lib/duplication-history.ts';
 import {
   joinRecords,
   renderAsks,
@@ -792,27 +787,10 @@ function writeAsks(held: string | undefined): string | undefined {
  */
 function writeHistory(imported: readonly string[]): void {
   const path = join(REPO_ROOT, HISTORY_FILE);
-  let committed: Committed;
-  if (!existsSync(path)) {
-    committed = { state: 'missing' };
-  } else {
-    try {
-      committed = {
-        state: 'ok',
-        rendered: renderHistory(parseHistory(JSON.parse(readFileSync(path, 'utf8')))),
-      };
-    } catch (error) {
-      committed = {
-        state: 'malformed',
-        reason:
-          error instanceof SyntaxError
-            ? 'it is not JSON'
-            : error instanceof Error
-              ? error.message
-              : 'unknown',
-      };
-    }
-  }
+  const committed = committedFrom(
+    existsSync(path) ? readFileSync(path, 'utf8') : undefined,
+    renderHistory,
+  );
 
   const existing = new Map(
     readdirSync(LOCAL)

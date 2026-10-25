@@ -12,6 +12,14 @@
  * failure is a movement a person reads. It exits non-zero only when the counter
  * could not run at all, which is a question about the pipe.
  *
+ * ⚠️ **`--history` is the exception to both paragraphs above.** It writes
+ * `jscpd.history.json` rather than printing, and it refuses a report short of a
+ * first-parent commit or out of order. It also counts with jscpd's own
+ * `--format typescript` rule rather than the file list, because a list names
+ * files at one commit and history spans many — measured equal to the list at
+ * `e6cce7c`, and against the nightly at every overlapping commit under one
+ * stamp. See `lib/duplication-history.ts`.
+ *
  * ⚠️ **The permalinks are generated here and stored nowhere.** A pinned link
  * stays valid while it stops describing a block that moved, and a stale link
  * that still resolves reads as current. The commit is read from git at print

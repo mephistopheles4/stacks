@@ -82,16 +82,6 @@ export interface History {
   points: HistoryPoint[];
 }
 
-/**
- * The half of one `history.points` entry this module reads.
- *
- * ⚠️ **jscpd's point carries more, and none of it is copied.** It also has
- * `subject` — the commit message — with `date`, `short`, `sources`, `tokens`
- * and `percentage`. A point is rebuilt from these four fields plus the
- * committer time and the sweep, so no commit message reaches the file.
- */
-export type ReportedPoint = HistoryReportPoint;
-
 /** A first-parent commit and when it landed, oldest first. */
 export interface Landed {
   commit: string;
@@ -114,9 +104,14 @@ export interface Landed {
  * per timestamp, and the tree that stood at the end of that second is the
  * later one. `dafa958` and `69a479e` (#181 and #183) are the pair this exists
  * for.
+ *
+ * ⚠️ **jscpd's point carries more, and none of it is copied.** It also has
+ * `subject` — the commit message — with `date`, `short`, `sources`, `tokens`
+ * and `percentage`. A point is rebuilt from three of its counts plus the
+ * committer time and the sweep, so no commit message reaches the file.
  */
 export function pointsFrom(
-  reported: readonly ReportedPoint[],
+  reported: readonly HistoryReportPoint[],
   firstParent: readonly Landed[],
   ignored: ReadonlyMap<string, number>,
 ): HistoryPoint[] {
@@ -133,6 +128,8 @@ export function pointsFrom(
   const points: HistoryPoint[] = [];
   for (const landed of firstParent) {
     const entry = byCommit.get(landed.commit);
+    // Never taken: the refusal above already threw for any absent commit. It
+    // is here so the type narrows without an assertion.
     if (entry === undefined) continue;
     const next: HistoryPoint = {
       commit: landed.commit,
@@ -275,6 +272,32 @@ export function serialiseHistory(history: History): string {
 export type Committed =
   { state: 'ok'; rendered: string } | { state: 'missing' } | { state: 'malformed'; reason: string };
 
+/**
+ * The committed file's text, read and rendered, or why it could not be.
+ *
+ * ⚠️ **A JSON syntax error is reported as fixed text and never by its message**,
+ * because V8's message can quote a snippet of the file. `parseHistory`'s own
+ * messages name a field and a position only, so those pass through. `render`
+ * is a parameter so this module needs nothing from the metrics renderer.
+ */
+export function committedFrom(
+  text: string | undefined,
+  render: (history: History) => string,
+): Committed {
+  if (text === undefined) return { state: 'missing' };
+  let document: unknown;
+  try {
+    document = JSON.parse(text);
+  } catch {
+    return { state: 'malformed', reason: 'it is not JSON' };
+  }
+  try {
+    return { state: 'ok', rendered: render(parseHistory(document)) };
+  } catch (error) {
+    return { state: 'malformed', reason: error instanceof Error ? error.message : 'unknown' };
+  }
+}
+
 /** What the sync does with the rendered copy. */
 export type HistoryAction =
   | { kind: 'write'; name: string; bytes: string }
@@ -316,8 +339,8 @@ export function historyAction(input: {
       kind: 'warn',
       message:
         input.committed.state === 'missing'
-          ? `! ${HISTORY_FILE} is missing, so the trend page draws no backfill this time`
-          : `! ${HISTORY_FILE} cannot be read (${input.committed.reason}), so the trend page draws no backfill this time`,
+          ? `! ${HISTORY_FILE} is missing, so the backfill was not refreshed; a copy the store already holds is still drawn`
+          : `! ${HISTORY_FILE} cannot be read (${input.committed.reason}), so the backfill was not refreshed; a copy the store already holds is still drawn`,
     };
   }
 

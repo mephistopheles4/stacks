@@ -63,8 +63,12 @@ two newest counting stamps.
   `pnpm trend:sync --rebuild`.
 - **The file's stamps are self-declared.** Nothing proves the file came from the
   generator rather than a hand edit, beyond the diff review and the rerun in the
-  pull request. A byte-compare check would be a new guard, and the owner holds
-  that as a risk.
+  pull request. A byte-compare check would be a new guard, and the owner
+  accepted the risk instead, on 2026-10-25, in the lead's chat, relayed. They
+  also accepted that the reader caps neither the number of points nor how early
+  one may be dated. The repository has no threat model, so both acceptances are
+  recorded in the spec's §S3 and in the pull request, and not as entries
+  anywhere else.
 
 ## How this was decided
 

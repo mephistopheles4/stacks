@@ -4,7 +4,8 @@
 end, and **each carries its own build order and its own gate roster** — they do not
 share one. **The third, fifth, sixth, eleventh and twelfth are waiting for an
 implementation session**; the first two, the eighth, the ninth and the tenth have been built and are kept as written, and the fourth
-is built except its last step.
+is built except its last step. The fourteenth is built in the pull request for
+[#454](https://github.com/mephistopheles4/stacks/issues/454).
 
 ⚠️ **The fifth is the first whose finish line is not a document.** Its map carried
 execution as a deliberate override of wayfinder's plan-don't-do default, so it is

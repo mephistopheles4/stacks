@@ -590,7 +590,8 @@ The duplication counts, printed rather than recorded. **The same counter CI
 emits** — one counter, one set of thresholds, two callers — so the numbers on
 your screen are the numbers that reach the `metrics` branch. Nothing here is a
 gate and nothing here refuses on a number; it exits non-zero only when jscpd
-could not run at all.
+could not run at all — except under `--history`, below, which also refuses a
+report short of a commit or out of order.
 
 **Two populations, and they do not add up.** The eight declared scopes, and
 whole-tree TypeScript. A clone is a relation between two places, so a clone

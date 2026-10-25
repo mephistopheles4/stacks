@@ -7,9 +7,9 @@ against the code and three measured runs (§S10). Decisions q1 to q5 are the
 lead's picks under the owner's standing instruction for the day. The panel,
 the lines and the titles are the owner's own words, relayed by the lead.
 **Signed off on 2026-10-25, the title table included, relayed by the lead.
-Built in the pull request for #454.** q6 and q8 were taken on the lead's
-picks. q7, the provenance risk in ADR-0126, is the owner's own call and was
-still open at the build.
+Built in the pull request for #454**, and the owner's visual check passed on
+C6 to C8 ("visual check is good for 454", relayed). §S3 lists every decision
+and its source, the two accepted risks among them.
 
 Every line number is on `main` at `e6cce7c`. Each place is also named by its
 function, so a rebase can find it again.
@@ -51,7 +51,12 @@ backfill would land in the store with nothing that draws it.
 | q1 | Distinct series names, no `stacks_run_ok` and no `stacks_run_info` | Lead's pick. `event="backfill"` was ruled out by `floors.ts:869`, which counts every event but `push` as a nightly |
 | q2 | The tree's four series only, no scopes | Lead's pick. Scopes were first declared on 2026-08-19 and changed 15 times since |
 | q3 | A duplication chart on the trend page | The owner's words, relayed |
-| q4, q5 | A committed file that `trend:sync` renders, not a record on `metrics` | Lead's pick on q5, which revises q4 |
+| q4, q5 | A committed file that `trend:sync` renders, not a record on `metrics` | Lead's pick on q5. It revises q4, which had put one record on `metrics` after merge, on its own go |
+| q6 | Take the security pair's two spec fixes: bounds checks in `parseHistory`, and a fixed record name with a refusal for any other | Lead's pick |
+| q7 | Accept that nothing proves the committed file came from the generator | **The owner's own word**, "454 a", given in the lead's chat and relayed by the lead. Recorded here and in the pull request; there is no threat model to record it in |
+| q8 | Add claim C9, ASVS 5.0.0 V13.4 and V14.2 | Lead's pick |
+| q9 | Sign off §S5.5's title table, and "my graphs" as every time-series chart | The owner saw the table in the lead's chat and changed nothing, relayed |
+| T2 | Accept that `parseHistory` caps neither the point count nor the earliest time | **The owner's own word**, given in the lead's chat and relayed by the lead. Nothing built |
 | — | Lines instead of dots | The owner's words, relayed |
 | — | Plain titles saying what is measured and which way is better, with axis labels | The owner's words, relayed. The table in §S5.5 goes to the owner before the build |
 | — | The security pair on the spec and the diff | Lead's pick. Writing historical data into the shared trend store is close to the data-migrations item |
@@ -85,8 +90,9 @@ G56's `configHash` does not move.
   never need git history, so athanor's sealed snapshot can run them.
 - **One jscpd run**, spawned like `runJscpd` (`duplication.ts:539`):
   `. --format typescript --ignore "**/*.d.ts" --history <tip>
-  --history-limit 5000`, at `THRESHOLDS`, with the `json` and `silent`
-  reporters. It reads git objects and checks nothing out (§S10.1).
+  --history-limit 100000`, at `THRESHOLDS`, with the `json` and `silent`
+  reporters. It reads git objects, and the working tree stayed clean across
+  every run (§S10).
   - **The report goes to a temporary directory that a `finally` removes**,
     `runJscpd`'s rule. The report holds code fragments and paths from every
     commit it scanned.
@@ -100,8 +106,9 @@ G56's `configHash` does not move.
     report whose points do not cover every first-parent commit it expected.
   - ⚠️ **jscpd walks every commit in the range, merged side branches
     included**: 170 for this range, against 137 on the first parent. The
-    module keeps first-parent commits only, read from
-    `git rev-list --first-parent <tip>`, and drops jscpd's `working` point.
+    module keeps first-parent commits only, read with their committer times
+    from `git log --first-parent --reverse --format='%H %ct' <tip>`, and
+    drops jscpd's `working` point.
   - `.d.ts` is ignored to match `treePopulationOf` (`duplication.ts:376`).
     Without that, total lines come out 40 high at `e6cce7c`.
 - **`ignoredLines` comes from the repo's own sweep.** For each commit,
@@ -257,6 +264,17 @@ draws no segment across an empty bucket. All six time-series charts
   breaks at three days, and a missing run should still show.
 - `"showPoints": "auto"` instead of `"always"`, so Grafana draws a point only
   where there is room. `pointSize` stays 7.
+- **As built, the backfill series bridges every gap.** A field override on the
+  duplication chart's query B sets `spanNulls` to `true`. A gap in the backfill
+  means no commit landed, as for 78 hours in mid-August, not that a run went
+  missing. The nightly series keeps the three-day break. Added after the Test
+  round's behaviour-lens, and after the owner's visual pass.
+- **As built, the join is named.** No renovation marker stands at the
+  2026-08-25 step, because the first nightlies predate any declared jscpd bump,
+  so the page's own rule would read it as a movement in the code. The page's
+  text and the chart's tooltip both say what it is. Measured, the step from
+  0.86% to 0.73% is about 0.10 points of counter and 0.03 of code: jscpd 5.4.1
+  reads 0.83% at #262 itself.
 
 **The titles.** The old titles and their caveats move into each panel's
 `description`, the tooltip, so nothing is lost. Panel 1 and Panel 2 keep those
@@ -438,7 +456,8 @@ run `pnpm trend:sync --rebuild`. `docs/commands.md` carries it.
   only `tip` and `imported`, so `renovations` and `asksDigest` are dropped on
   every read. Every sync then re-imports every renovation marker, and
   `writeAsks` compares with `undefined`. This spec's import goes through
-  `imported` and does not depend on it. It is filed as its own issue.
+  `imported` and does not depend on it. Filed as
+  [#522](https://github.com/mephistopheles4/stacks/issues/522).
 
 ## S10. The measurement
 
