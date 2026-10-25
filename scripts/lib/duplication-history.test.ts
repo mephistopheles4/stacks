@@ -199,11 +199,14 @@ describe('parseHistory — fails closed', () => {
 });
 
 describe('the committed file', () => {
-  const committed = parseHistory(
-    JSON.parse(readFileSync(join(REPO_ROOT, HISTORY_FILE), 'utf8')) as unknown,
-  );
+  // Read inside each test rather than at collection time: code a describe body
+  // runs is attributed to no test, and Stryker's per-test coverage then lets
+  // mutants in the parser survive tests that would kill them.
+  const committedText = (): string =>
+    readFileSync(join(REPO_ROOT, HISTORY_FILE), 'utf8').replace(/\r\n/g, '\n');
 
   it('is the backfill up to the parent of #262, as the generator wrote it', () => {
+    const committed = parseHistory(JSON.parse(committedText()) as unknown);
     expect(BACKFILL_TIP).toBe('aecb7cf8ca3af6cefd99e16205fa00d99fd89ded');
     expect(committed.tip).toBe(BACKFILL_TIP);
     expect(committed.points).toHaveLength(136);
@@ -212,9 +215,8 @@ describe('the committed file', () => {
   });
 
   it('is written byte for byte as serialiseHistory writes it', () => {
-    expect(serialiseHistory(committed)).toBe(
-      readFileSync(join(REPO_ROOT, HISTORY_FILE), 'utf8').replace(/\r\n/g, '\n'),
-    );
+    const text = committedText();
+    expect(serialiseHistory(parseHistory(JSON.parse(text) as unknown))).toBe(text);
   });
 
   it('renders under a fixed record name the store reads as a local row', () => {

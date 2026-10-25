@@ -51,3 +51,15 @@ row.** That is not this change. `readState` in `scripts/trend-sync.ts` returns
 only `tip` and `imported`, so the digests the sync keeps for both are dropped on
 every read. Filed as
 [#522](https://github.com/mephistopheles4/stacks/issues/522).
+
+## A describe body hides mutants from Stryker
+
+The test that reads the committed file first parsed it once, at the top of its
+`describe` block. A scoped Stryker run on `duplication-history.ts` then scored
+**50.58**, against 62.35 the round before, with 74 survivors. Most of the new
+survivors were parser guards the refusal tests plainly kill: the tip check and
+the empty-points check among them. Code that a `describe` body runs at
+collection time belongs to no test, and Stryker's per-test coverage then left
+those mutants unpaired with the tests that would kill them. With the read moved
+inside each test, the same run scored **66.37**, with 20 survivors, all of them
+equivalent guards or wording.
