@@ -81,7 +81,7 @@
     "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "^26.6.5",
     "@typescript-eslint/parser": "8.71.2",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
     "eslint": "10.13.0",
     "eslint-plugin-sonarjs": "4.2.2",
     "github-slugger": "2.0.0",
@@ -95,7 +95,7 @@
     "tsx": "^4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.2",
-    "vitest": "4.1.11",
+    "vitest": "4.1.12",
     "wrangler": "4.149.0"
   }
 }

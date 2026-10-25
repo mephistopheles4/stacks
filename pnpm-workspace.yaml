@@ -59,22 +59,6 @@ verifyDepsBeforeRun: warn
 # window is the only control this hatch removes.
 minimumReleaseAge: 10080
 
-# The hatch above, used for the first time, on the owner's word on 2026-10-21.
-# markdown-it 15.0.3 is the only release fixing GHSA-gfr2-rv44-r23c and was
-# published 2026-10-16T01:25Z; see the markdown-it block above `overrides:`.
-# **Remove this entry after 2026-10-23T01:25Z**, when 15.0.3 is seven days old.
-#
-# argparse 3.0.3 rides along, on the owner's word the same day: markdown-it
-# 15.0.3 asks for `^3.0.3`, and it was published 2026-10-15T21:58Z. Same
-# publisher, no provenance on any release, and its diff from 3.0.2 is one
-# character of one regex (a ReDoS fix). markdown-it reaches it only from its
-# own command-line entry point, which markdownlint never loads. **Remove it
-# after 2026-10-22T21:58Z.** Nothing checks either date, so the next
-# dependency change after them should.
-minimumReleaseAgeExclude:
-  - markdown-it@15.0.3
-  - argparse@3.0.3
-
 # ⚠️ **This does not do what the issue for it (#459) assumed.** Measured on pnpm
 # 11.18.0 with the key at `false` and read back by `pnpm config get`: a `github:`
 # dependency and a codeload.github.com tarball dependency both still installed.
@@ -387,14 +371,15 @@ trustPolicyExclude:
 # `@stacks/core`, the Thoughts extractor's parser (ADR-0107), so it is its own
 # change on the security route.
 #
-# ⚠️ **The fix is inside the seven-day window**, so this override comes with an
-# exact `minimumReleaseAgeExclude` entry for `markdown-it@15.0.3`; see that
-# block. No 15.x release carries provenance and all three came from one
-# account, so the trust policy checks nothing here and the window was the only
-# control this lifts. What stood in for the wait: the published 15.0.1 to
-# 15.0.3 diff, read before this was written, is the three parser fixes
-# upstream's commits between those tags describe, plus brace reformatting, with
-# no new import, I/O or install script.
+# ⚠️ **The fix was inside the seven-day window** when this landed, so it came
+# with an exact `minimumReleaseAgeExclude` entry for `markdown-it@15.0.3` (and
+# `argparse@3.0.3`, which it asks for), on the owner's word on 2026-10-21. Both
+# were removed in #521, once each was past seven days old. No 15.x release
+# carries provenance and all three came from one account, so the trust policy
+# checks nothing here and the window was the only control this lifted. What
+# stood in for the wait: the published 15.0.1 to 15.0.3 diff, read before this
+# was written, is the three parser fixes upstream's commits between those tags
+# describe, plus brace reformatting, with no new import, I/O or install script.
 #
 # Crossing the exact pin is a combination the package does not declare, checked
 # as the smol-toml block was: `pnpm lint:md` reports the same findings before
@@ -425,6 +410,20 @@ trustPolicyExclude:
 # line arriving later is caught by `audit`, rather than forced across a major
 # here. Caret, for the nanoid block's. Remove each when its consumers' own
 # floors reach the fixed version and the lockfile carries it unaided.
+
+# GHSA-238p-pmpm-9mq7, low: `katex` below 0.18.2 lets an existing prototype
+# pollution bypass its trust restrictions. It arrives only through
+# `markdownlint-cli2` > `markdownlint` > `micromark-extension-math`, whose
+# `^0.16.0` has no fixed release, and markdownlint uses only the math syntax
+# extension: nothing here calls `renderToString`. Dependabot opens nothing for
+# it, since its security updates move direct dependencies only (#519).
+#
+# The target is 0.19, not 0.18: 0.18.11, the newest 0.18, is deprecated as a
+# breaking release. Crossing from 0.16 is a combination the package does not declare;
+# G48 loads the extension, and so katex, inside `pnpm test`, and `pnpm lint:md`
+# still lints the tree with 0 findings. Scoped to the 0.16 line, for the
+# brace-expansion block's reason; caret, for the nanoid block's. Remove it when
+# `micromark-extension-math` allows 0.19.0 or later.
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.16.0'
@@ -434,6 +433,7 @@ overrides:
   http-cache-semantics: '^4.3.0'
   smol-toml: '^1.9.0'
   'markdown-it@15': '^15.0.3'
+  'katex@0.16': '^0.19.0'
   'zod@4': '^4.6.6'
   'undici@7': '^7.30.1'
   'undici@8': '^8.12.2'
