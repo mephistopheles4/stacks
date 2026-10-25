@@ -33,6 +33,7 @@
 import type { CognitiveCounts } from './cognitive.ts';
 import type { Counts } from './complexity.ts';
 import type { AllCounts, DuplicationCounts } from './duplication.ts';
+import type { History, HistoryPoint } from './duplication-history.ts';
 import type { EdgeAnswer } from './edge-probe.ts';
 import type { Ask } from './floors.ts';
 import type { Renovation } from './renovations.ts';
@@ -71,6 +72,7 @@ export const METRIC_PREFIXES = {
   edge: 'stacks_edge_',
   renovation: 'stacks_renovation_',
   ratchet: 'stacks_ratchet_',
+  backfill: 'stacks_backfill_',
 } as const;
 
 /** The eight series, and the whole of what this record carries as a trend. */
@@ -957,6 +959,75 @@ export function renderRenovations(renovations: readonly Renovation[]): string {
     },
     0,
   );
+  return `${lines.join('\n')}\n# EOF\n`;
+}
+
+/** The four backfilled counts, in the order the page reads them. */
+const BACKFILL_FAMILIES: readonly {
+  name: string;
+  field: keyof Omit<HistoryPoint, 'commit' | 'at'>;
+  help: string;
+}[] = [
+  {
+    name: 'clones',
+    field: 'clones',
+    help: 'Clones found, whole-tree TypeScript, backfilled from git history.',
+  },
+  {
+    name: 'lines',
+    field: 'duplicatedLines',
+    help: 'Duplicated lines, whole-tree TypeScript, backfilled.',
+  },
+  {
+    name: 'ignored_lines',
+    field: 'ignoredLines',
+    help: 'Lines inside a jscpd suppression block, backfilled.',
+  },
+  {
+    name: 'total_lines',
+    field: 'totalLines',
+    help: 'Lines scanned, backfilled — the denominator the other three are read against.',
+  },
+];
+
+/**
+ * `jscpd.history.json` as series, for the trend page (#454). Written by
+ * `pnpm trend:sync` on this machine only, like the renovation markers, and
+ * never by CI.
+ *
+ * ⚠️ **Names of its own, and no run markers.** `stacks_backfill_` is a prefix
+ * no ratchet reader matches, and there is no `stacks_run_ok` or
+ * `stacks_run_info` here, so `runRowsFrom` makes no row of it — and `floors.ts`
+ * would have counted any event but `push` as a nightly. Every sample carries
+ * its own commit's time, `renderRenovations`' one-family-many-moments rule.
+ */
+export function renderHistory(history: History): string {
+  const families: Family[] = BACKFILL_FAMILIES.map((family) => ({
+    metric: `${METRIC_PREFIXES.backfill}duplication_tree_${family.name}`,
+    help: family.help,
+    samples: history.points.map((point) => ({
+      labels: {},
+      value: point[family.field],
+      at: point.at,
+    })),
+  }));
+  const last = history.points.at(-1)?.at ?? 0;
+  families.push({
+    metric: `${METRIC_PREFIXES.backfill}info`,
+    help: 'The counting rule the backfill was measured under, at its last point.',
+    samples: [
+      {
+        labels: {
+          tip: history.tip,
+          jscpd_version: history.jscpdVersion,
+          duplication_hash: history.duplicationHash,
+        },
+        value: 1,
+        at: last,
+      },
+    ],
+  });
+  const lines = families.flatMap((family) => render(family, last));
   return `${lines.join('\n')}\n# EOF\n`;
 }
 

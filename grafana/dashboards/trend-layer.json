@@ -36,14 +36,14 @@
       "options": {
         "mode": "markdown",
         "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
-        "content": "**Panel 1 answers *is this real*. Panel 2 answers *is this bad*. Read them in that order** — the order is a design rule, not a preference, and it is provisioned from `grafana/dashboards/trend-layer.json` so that it is a diff somebody can review rather than a state on one machine.\n\nA movement with an **empty PR window** (`[]`) is the tool disagreeing with itself at a fixed commit — [stryker-js#6073](https://github.com/stryker-mutator/stryker-js/issues/6073) — because a nightly runs whether or not `main` moved. A **one-PR window** reads *that PR*. A **five-PR window** reads *you need to look*, which is honest rather than attributive. `unknown` is **not** an empty window: it means nothing could be read, and it must never be taken for the tool-noise reading.\n\n**The four complexity panels sit under panel 2 because they are read against it, and against each other.** A scope whose mass is rising while its mutation score holds or falls is where the next tests go; a scope whose max fell while mass held was split, not simplified. They are counts and never a share: no ratio survived both games the prototype played on this repo's own worst function, so the record carries the four and the reading is made across them. `functions` is the denominator the other three are read against, and the cut at 10 inside `mass over 10` is McCabe's 1976 definition rather than a line anything goes red for.\n\n**There is no confidence figure on this page and there will not be one.** It would be the global-coverage failure mode transposed one level up — one number, gameable, hiding which part moved; it would delete exactly what panel 1 supplies; any composite over a score and two wall-clocks is a weight vector over incommensurable units, arithmetic dressed as a fact; and it is the most invisible weakening available, because a floor lowered is a diff while a weight re-tuned raises the figure with nothing looking edited.\n\n**An orange vertical line is a renovation, and it is the answer to *did we do that*.** A stamp records the counting rule a number was produced under, so when one moves the numbers either side of it are not comparable and the calibration window restarts. The line marks the day that happened; hover it for the reason, the pull request, and whether the window was carried across. **A step change with a line beside it is a tool change somebody made. A step change with no line is a movement in the code**, and panel 1 is where you find out which pull requests are in it. The lines are drawn from `renovations.json` in the repository — [#227](https://github.com/mephistopheles4/stacks/issues/227).\n\n⚠️ **A change that moves no stamp is only there if somebody wrote it down.** Adding lint rules, adopting a formatter and upgrading Node move no count and no stamp, so nothing forces an entry for them and none can. An unexplained step change is worth asking about rather than assuming.\n\n**No axis here carries a target line**, for the same reason. A scope is read against its own history. `live-exclusions` is displayed and never thresholded; its healthy value is 0."
+        "content": "**Panel 1 answers *is this real*. Panel 2 answers *is this bad*. Read them in that order** — the order is a design rule, not a preference, and it is provisioned from `grafana/dashboards/trend-layer.json` so that it is a diff somebody can review rather than a state on one machine.\n\nA movement with an **empty PR window** (`[]`) is the tool disagreeing with itself at a fixed commit — [stryker-js#6073](https://github.com/stryker-mutator/stryker-js/issues/6073) — because a nightly runs whether or not `main` moved. A **one-PR window** reads *that PR*. A **five-PR window** reads *you need to look*, which is honest rather than attributive. `unknown` is **not** an empty window: it means nothing could be read, and it must never be taken for the tool-noise reading.\n\n**The four complexity panels sit under panel 2 because they are read against it, and against each other.** A scope whose *total complexity* is rising while its mutation score holds or falls is where the next tests go; a scope whose *most complex single function* fell while total complexity held was split, not simplified. They are counts and never a share: no ratio survived both games the prototype played on this repo's own worst function, so the record carries the four and the reading is made across them. *Functions counted* is the denominator the other three are read against, and the cut at 10 in *complexity in functions scoring over 10* is McCabe's 1976 definition rather than a line anything goes red for.\n\n**The duplication chart is the whole tree's duplicated lines as a share of its lines**, derived on this page and never recorded. Two lines: the nightly, and a backfill measured once from git history for the 137 commits before anybody measured it ([#454](https://github.com/mephistopheles4/stacks/issues/454)). Where they meet, on 2026-08-25, the two lines sit at about the same height, 0.86%, and no orange line stands there, because the first nightlies predate any declared jscpd bump. **The first two nightly runs read 0.73% and 0.72%, and the line is back at 0.86% within the hour. That dip is mostly the counter, not the code.** It shows at a month's range or less, and the default 90 days hides it, because there each plotted point is the highest run in its bin: the backfill was counted by jscpd 5.4.1 and those two runs by 5.0.16. The later bumps carry their orange lines. The backfill line bridges every gap, because a gap there means no commit landed, not that a run went missing.\n\n**There is no confidence figure on this page and there will not be one.** It would be the global-coverage failure mode transposed one level up — one number, gameable, hiding which part moved; it would delete exactly what panel 1 supplies; any composite over a score and two wall-clocks is a weight vector over incommensurable units, arithmetic dressed as a fact; and it is the most invisible weakening available, because a floor lowered is a diff while a weight re-tuned raises the figure with nothing looking edited.\n\n**An orange vertical line is a renovation, and it is the answer to *did we do that*.** A stamp records the counting rule a number was produced under, so when one moves the numbers either side of it are not comparable and the calibration window restarts. The line marks the day that happened; hover it for the reason, the pull request, and whether the window was carried across. **A step change with a line beside it is a tool change somebody made. A step change with no line is a movement in the code**, and panel 1 is where you find out which pull requests are in it. The lines are drawn from `renovations.json` in the repository — [#227](https://github.com/mephistopheles4/stacks/issues/227).\n\n⚠️ **A change that moves no stamp is only there if somebody wrote it down.** Adding lint rules, adopting a formatter and upgrading Node move no count and no stamp, so nothing forces an entry for them and none can. An unexplained step change is worth asking about rather than assuming.\n\n**No axis here carries a target line**, for the same reason. A scope is read against its own history. *Mutation exclusions still in force* is displayed and never thresholded; its healthy value is 0."
       }
     },
     {
       "id": 2,
       "type": "table",
-      "title": "Panel 1 — is this real: the run, and what merged into it",
-      "description": "A score never appears without its run. The window is every pull request that merged between the previous record and this one; `[]` is an empty window and `unknown` is no answer at all.",
+      "title": "Panel 1 · Each CI run: when, which commit, and what merged into it",
+      "description": "Formerly titled “Panel 1 — is this real: the run, and what merged into it”. A score never appears without its run. The window is every pull request that merged between the previous record and this one; `[]` is an empty window and `unknown` is no answer at all.",
       "gridPos": { "h": 11, "w": 15, "x": 0, "y": 9 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -123,8 +123,8 @@
     {
       "id": 3,
       "type": "table",
-      "title": "Panel 1 — is this real: delta since the previous run, per scope",
-      "description": "Last score minus the one before it, per declared scope, however far apart the two runs were. Read this against the window on the left before reading panel 2 at all.",
+      "title": "Panel 1 · Change in mutation score since the previous run, per scope (up is better)",
+      "description": "Formerly titled “Panel 1 — is this real: delta since the previous run, per scope”. Last score minus the one before it, per declared scope, however far apart the two runs were. Read this against the window on the left before reading panel 2 at all.",
       "gridPos": { "h": 11, "w": 9, "x": 15, "y": 9 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -176,8 +176,8 @@
     {
       "id": 4,
       "type": "timeseries",
-      "title": "Panel 2 — is this bad: each scope against its own history",
-      "description": "Read only after panel 1 says the movement is real. Never against a target line: there is no floor drawn here, and the axis is whatever the data spans. ⚠️ Where the range is wide enough that one plotted point covers several runs, that point is the LOWEST score among them. The store keeps every sample and a chart has one pixel column, so the only question is which run gets shown — and a reducer that could hide a drop behind a good neighbour in the same bin is the flattering-number failure this page exists to refuse. Panel 1 is the per-run truth.",
+      "title": "Panel 2 · Mutation score: % of mutants the tests kill, per scope (higher is better)",
+      "description": "Formerly titled “Panel 2 — is this bad: each scope against its own history”. Read only after panel 1 says the movement is real. Never against a target line: there is no floor drawn here, and the axis is whatever the data spans. ⚠️ Where the range is wide enough that one plotted point covers several runs, that point is the LOWEST score among them. The store keeps every sample and a chart has one pixel column, so the only question is which run gets shown — and a reducer that could hide a drop behind a good neighbour in the same bin is the flattering-number failure this page exists to refuse. Panel 1 is the per-run truth.",
       "gridPos": { "h": 11, "w": 24, "x": 0, "y": 20 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -212,12 +212,13 @@
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "fillOpacity": 0,
-            "showPoints": "always",
+            "showPoints": "auto",
             "pointSize": 7,
-            "spanNulls": false,
+            "spanNulls": 259200000,
             "insertNulls": false,
             "gradientMode": "none",
             "axisPlacement": "auto",
+            "axisLabel": "% killed",
             "axisSoftMin": null,
             "axisSoftMax": null,
             "scaleDistribution": { "type": "linear" },
@@ -231,8 +232,8 @@
     {
       "id": 8,
       "type": "timeseries",
-      "title": "complexity-functions — the denominator the other three are read against",
-      "description": "Functions counted in the scope: ESLint's `complexity` rule over the scope glob minus tests. Read against the mutation score directly above. ⚠️ Where the range is wide enough that one plotted point covers several runs, that point is the HIGHEST value among them — the opposite of panel 2's reducer, and for the same reason. There, low was the unflattering direction; here it is high, and a reducer that could hide a rise behind a quiet neighbour in the same bin is the same flattering-number failure this page exists to refuse. No target line and no threshold: this count grows with the codebase legitimately. A rise here beside a matching rise in mass is dilution, not new complexity.",
+      "title": "Functions counted, per scope (grows with the code, no better direction)",
+      "description": "Formerly titled “complexity-functions — the denominator the other three are read against”. Functions counted in the scope: ESLint's `complexity` rule over the scope glob minus tests. Read against the mutation score directly above. ⚠️ Where the range is wide enough that one plotted point covers several runs, that point is the HIGHEST value among them — the opposite of panel 2's reducer, and for the same reason. There, low was the unflattering direction; here it is high, and a reducer that could hide a rise behind a quiet neighbour in the same bin is the same flattering-number failure this page exists to refuse. No target line and no threshold: this count grows with the codebase legitimately. A rise here beside a matching rise in total complexity is dilution, not new complexity.",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -267,12 +268,13 @@
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "fillOpacity": 0,
-            "showPoints": "always",
+            "showPoints": "auto",
             "pointSize": 7,
-            "spanNulls": false,
+            "spanNulls": 259200000,
             "insertNulls": false,
             "gradientMode": "none",
             "axisPlacement": "auto",
+            "axisLabel": "functions",
             "axisSoftMin": null,
             "axisSoftMax": null,
             "scaleDistribution": { "type": "linear" },
@@ -286,8 +288,8 @@
     {
       "id": 9,
       "type": "timeseries",
-      "title": "complexity-mass — Σ cyclomatic complexity over those functions",
-      "description": "Read beside functions, which is the whole reason both are carried. Mass and functions rising by the same amount is dilution — thirty trivial functions appended beside a bad one — while mass flat with functions up is a split. Neither game moves a ratio, which is why this page shows counts and derives no share. ⚠️ Where one plotted point covers several runs it shows the HIGHEST among them, because for this count the unflattering direction is up. No target line and no threshold: mass grows with the codebase legitimately.",
+      "title": "Total complexity, per scope (lower is better, read against functions counted)",
+      "description": "Formerly titled “complexity-mass — Σ cyclomatic complexity over those functions”. Read beside functions, which is the whole reason both are carried. Mass and functions rising by the same amount is dilution — thirty trivial functions appended beside a bad one — while mass flat with functions up is a split. Neither game moves a ratio, which is why this page shows counts and derives no share. ⚠️ Where one plotted point covers several runs it shows the HIGHEST among them, because for this count the unflattering direction is up. No target line and no threshold: mass grows with the codebase legitimately.",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -322,12 +324,13 @@
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "fillOpacity": 0,
-            "showPoints": "always",
+            "showPoints": "auto",
             "pointSize": 7,
-            "spanNulls": false,
+            "spanNulls": 259200000,
             "insertNulls": false,
             "gradientMode": "none",
             "axisPlacement": "auto",
+            "axisLabel": "complexity",
             "axisSoftMin": null,
             "axisSoftMax": null,
             "scaleDistribution": { "type": "linear" },
@@ -341,8 +344,8 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "complexity-mass-over-10 — Σ complexity in functions above McCabe's cut",
-      "description": "Σ complexity over the functions whose own complexity exceeds 10. ⚠️ The cut is McCabe's 1976 upper bound for a module. It is a sourced constant inside this measure's definition and NOT a threshold — nothing goes red when a function crosses it, and no line is drawn for it here. ⚠️ Where one plotted point covers several runs it shows the HIGHEST among them, because for this count the unflattering direction is up. Read against mass: this rising while mass holds means the same branches concentrated into fewer, larger functions.",
+      "title": "Complexity in functions scoring over 10, per scope (lower is better)",
+      "description": "Formerly titled “complexity-mass-over-10 — Σ complexity in functions above McCabe's cut”. Σ complexity over the functions whose own complexity exceeds 10. ⚠️ The cut is McCabe's 1976 upper bound for a module. It is a sourced constant inside this measure's definition and NOT a threshold — nothing goes red when a function crosses it, and no line is drawn for it here. ⚠️ Where one plotted point covers several runs it shows the HIGHEST among them, because for this count the unflattering direction is up. Read against total complexity: this rising while total complexity holds means the same branches concentrated into fewer, larger functions.",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 39 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -377,12 +380,13 @@
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "fillOpacity": 0,
-            "showPoints": "always",
+            "showPoints": "auto",
             "pointSize": 7,
-            "spanNulls": false,
+            "spanNulls": 259200000,
             "insertNulls": false,
             "gradientMode": "none",
             "axisPlacement": "auto",
+            "axisLabel": "complexity",
             "axisSoftMin": null,
             "axisSoftMax": null,
             "scaleDistribution": { "type": "linear" },
@@ -396,8 +400,8 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "complexity-max — the largest single function",
-      "description": "The highest complexity of any one function in the scope. ⚠️ A fall here while mass held is a split, not a simplification: the branches moved into new functions rather than going away. The prototype measured exactly that — a mechanical three-way split of this repo's worst function dropped max by 10 while mass ROSE by 5. That is the reading this panel exists for, and it is why max is never read alone. ⚠️ Where one plotted point covers several runs it shows the HIGHEST among them. No target line: read against the scope's own history.",
+      "title": "Most complex single function, per scope (lower is better)",
+      "description": "Formerly titled “complexity-max — the largest single function”. The highest complexity of any one function in the scope. ⚠️ A fall here while total complexity held is a split, not a simplification: the branches moved into new functions rather than going away. The prototype measured exactly that — a mechanical three-way split of this repo's worst function dropped the most complex function by 10 while total complexity ROSE by 5. That is the reading this panel exists for, and it is why this panel is never read alone. ⚠️ Where one plotted point covers several runs it shows the HIGHEST among them. No target line: read against the scope's own history.",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 39 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -432,12 +436,13 @@
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "fillOpacity": 0,
-            "showPoints": "always",
+            "showPoints": "auto",
             "pointSize": 7,
-            "spanNulls": false,
+            "spanNulls": 259200000,
             "insertNulls": false,
             "gradientMode": "none",
             "axisPlacement": "auto",
+            "axisLabel": "complexity",
             "axisSoftMin": null,
             "axisSoftMax": null,
             "scaleDistribution": { "type": "linear" },
@@ -449,11 +454,89 @@
       }
     },
     {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Duplicated lines, % of all TypeScript in the repo (lower is better)",
+      "description": "Duplicated lines over lines scanned, whole-tree TypeScript, at jscpd's 50 tokens / 5 lines / mild. The share is derived here and never recorded: a ratio falls when the tree grows and nothing else happens, so the record carries counts. Two series. `nightly` is what CI measures on every run since #262 (2026-08-25). `backfill` was measured once, from git history, for every first-parent commit before that (#454): it is under series names of its own and no ratchet reader ever sees it. ⚠️ The two lines meet on 2026-08-25 at about the same height, 0.86%, with no orange line beside them, because the first nightlies predate any declared jscpd bump. The first two nightly runs read 0.73% and 0.72%, and the line is back at 0.86% within the hour. The dip shows whenever a plotted point covers less than about half an hour, which is a month's range or less. The default 90 days hides it, because there each point is the highest run in its bin. About 0.10 points of the dip is the counter (5.4.1 for the backfill, 5.0.16 for those runs; 5.4.1 reads 0.83% at that same commit) and about 0.03 is the code #262 added. ⚠️ The backfill bridges every gap, because a gap there means no commit landed; the nightly keeps the three-day break, because a gap there is a run that went missing. ⚠️ Where one plotted point covers several runs it shows the HIGHEST among them, the complexity panels' rule. No target line.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 47 },
+      "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "100 * max_over_time(stacks_trend_duplication_tree_lines[$__interval]) / max_over_time(stacks_trend_duplication_tree_total_lines[$__interval])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "nightly"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "100 * max_over_time(stacks_backfill_duplication_tree_lines[$__interval]) / max_over_time(stacks_backfill_duplication_tree_total_lines[$__interval])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "backfill (jscpd 5.4.1, measured 2026-10-25)"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull"]
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "mappings": [],
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 7,
+            "spanNulls": 259200000,
+            "insertNulls": false,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "axisLabel": "% duplicated",
+            "axisSoftMin": null,
+            "axisSoftMax": null,
+            "scaleDistribution": { "type": "linear" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byFrameRefID", "options": "A" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byFrameRefID", "options": "B" },
+            "properties": [
+              { "id": "custom.spanNulls", "value": true },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": 5,
       "type": "timeseries",
-      "title": "The instrument: what the suite and a mutation run cost",
-      "description": "Mutation cost scales with suite runtime, and `mutation-run-runtime` is the series that says when running this on every merge becomes affordable. Neither is a verdict on the code. ⚠️ Where one plotted point covers several runs it is the SLOWEST of them — the non-flattering direction for a cost, which is why this panel reduces the opposite way to panel 2. `gate-suite-runtime` is written on every push to main, so this one bins more often than the nightly does.",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 47 },
+      "title": "Time to run the test suite and a mutation run (lower is better)",
+      "description": "Formerly titled “The instrument: what the suite and a mutation run cost”. Mutation cost scales with suite runtime, and `mutation-run-runtime` is the series that says when running this on every merge becomes affordable. Neither is a verdict on the code. ⚠️ Where one plotted point covers several runs it is the SLOWEST of them — the non-flattering direction for a cost, which is why this panel reduces the opposite way to panel 2. `gate-suite-runtime` is written on every push to main, so this one bins more often than the nightly does.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 55 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
         {
@@ -496,12 +579,13 @@
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "fillOpacity": 0,
-            "showPoints": "always",
+            "showPoints": "auto",
             "pointSize": 7,
-            "spanNulls": false,
+            "spanNulls": 259200000,
             "insertNulls": false,
             "gradientMode": "none",
             "axisPlacement": "auto",
+            "axisLabel": "seconds",
             "scaleDistribution": { "type": "linear" },
             "thresholdsStyle": { "mode": "off" }
           },
@@ -513,9 +597,9 @@
     {
       "id": 6,
       "type": "stat",
-      "title": "live-exclusions — displayed, never thresholded",
-      "description": "Declared exclusions that produced at least one executed mutant. Healthy value 0. No threshold sits on this number, deliberately: \"exclusion entry N is now false\" would be a verdict, and trends carry no verdicts.",
-      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 47 },
+      "title": "Mutation exclusions still in force",
+      "description": "Formerly titled “live-exclusions — displayed, never thresholded”. Declared exclusions that produced at least one executed mutant. Healthy value 0. No threshold sits on this number, deliberately: \"exclusion entry N is now false\" would be a verdict, and trends carry no verdicts.",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 55 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
         {
@@ -553,9 +637,9 @@
     {
       "id": 7,
       "type": "stat",
-      "title": "of this many declared",
-      "description": "The denominator the count on the left is read against: exclusion entries declared in stryker.scopes.json. Run context, not a series — a count of declarations is a property of a file and not a measurement.",
-      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 47 },
+      "title": "Mutation exclusions declared",
+      "description": "Formerly titled “of this many declared”. The denominator the count on the left is read against: exclusion entries declared in stryker.scopes.json. Run context, not a series — a count of declarations is a property of a file and not a measurement.",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 55 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
         {
@@ -593,9 +677,9 @@
     {
       "id": 12,
       "type": "table",
-      "title": "The ratchet asks — bounds the window says could be tighter",
-      "description": "The tightening clause the deploy print carries, from the same call, as `pnpm trend:sync` on this machine last wrote it (#463). A sync writes a row only when the asks change, so the panel reads the newest row however old it is, whatever the time range above. It asks only: nothing here refuses, files or edits anything (ADR-0111). Tightening a bound is a hand edit to stryker.floors.json and a human judgement. `since` is the day the bound became tightenable; `at least` means the window cannot see further back. An `unjudged` floor had no mutant count — `pnpm mutation:run` judges it.",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 55 },
+      "title": "Bounds the ratchet says could be tightened (a prompt, never applied)",
+      "description": "Formerly titled “The ratchet asks — bounds the window says could be tighter”. The tightening clause the deploy print carries, from the same call, as `pnpm trend:sync` on this machine last wrote it (#463). A sync writes a row only when the asks change, so the panel reads the newest row however old it is, whatever the time range above. It asks only: nothing here refuses, files or edits anything (ADR-0111). Tightening a bound is a hand edit to stryker.floors.json and a human judgement. `since` is the day the bound became tightenable; `at least` means the window cannot see further back. An `unjudged` floor had no mutant count — `pnpm mutation:run` judges it.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 63 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
         {

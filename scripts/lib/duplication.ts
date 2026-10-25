@@ -566,6 +566,73 @@ export function runJscpd(files: readonly string[], root: string = REPO_ROOT): Re
   }
 }
 
+/** One commit's totals, as `--history` reports them under `history.points`. */
+export interface HistoryReportPoint {
+  /** The full SHA, or `"working tree"` for the point jscpd adds for the checkout. */
+  commit: string;
+  clones: number;
+  duplicatedLines: number;
+  lines: number;
+}
+
+/**
+ * jscpd's `--history` over the whole-tree population, every commit up to `tip`.
+ *
+ * `runJscpd`'s spawn and its temporary directory, with two differences.
+ *
+ * - **The population is jscpd's `--format typescript` rule rather than a list**,
+ *   because a list names files at one commit and history spans many. `.d.ts`
+ *   is ignored to match `treePopulationOf`, and the two were measured equal at
+ *   `e6cce7c`: 315 files, 96,116 lines, 74 clones, 783 duplicated lines.
+ * - ⚠️ **`--history-limit` is set past any range this repo can have.** Its
+ *   default is 30, sampled evenly, and the report does not say it sampled.
+ *
+ * ⚠️ **jscpd checks each commit out into a temporary detached worktree of its
+ * own** (its release notes and PR #1050 say so). This tree's working files
+ * stayed clean across every run measured, and no `.git/worktrees` entry was
+ * left behind. A checkout runs local hooks, though, so a `post-checkout` hook
+ * added under `.husky/` would run once per scanned commit.
+ */
+export function runJscpdHistory(tip: string, root: string = REPO_ROOT): HistoryReportPoint[] {
+  const out = mkdtempSync(join(tmpdir(), 'stacks-jscpd-'));
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        jscpdEntry(),
+        '.',
+        '--format',
+        'typescript',
+        '--ignore',
+        '**/*.d.ts',
+        '--history',
+        tip,
+        '--history-limit',
+        '100000',
+        '--min-tokens',
+        String(THRESHOLDS.minTokens),
+        '--min-lines',
+        String(THRESHOLDS.minLines),
+        '--mode',
+        THRESHOLDS.mode,
+        '--reporters',
+        'json,silent',
+        '--output',
+        out,
+      ],
+      { cwd: root, stdio: 'ignore', maxBuffer: 64 * 1024 * 1024 },
+    );
+    const report = JSON.parse(readFileSync(join(out, 'jscpd-report.json'), 'utf8')) as {
+      history?: { points?: HistoryReportPoint[] };
+    };
+    const points = report.history?.points;
+    if (!Array.isArray(points)) throw new Error('jscpd --history wrote no history.points');
+    return points;
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+}
+
 /**
  * One population's four counts, or `null` where the population is empty.
  *

@@ -78,7 +78,14 @@ import {
   runRowsFrom,
   type Ask,
 } from './lib/floors.ts';
-import { joinRecords, renderAsks, renderEdgeCheck, renderRenovations } from './lib/metrics.ts';
+import { HISTORY_FILE, committedFrom, historyAction } from './lib/duplication-history.ts';
+import {
+  joinRecords,
+  renderAsks,
+  renderEdgeCheck,
+  renderHistory,
+  renderRenovations,
+} from './lib/metrics.ts';
 import { readDeclarations } from './lib/mutation-score.ts';
 import {
   lastMutationRun,
@@ -768,6 +775,38 @@ function writeAsks(held: string | undefined): string | undefined {
   return digest;
 }
 
+/**
+ * The duplication backfill, rendered from the committed `jscpd.history.json`
+ * into `LOCAL` so the import below takes it like any local row (#454).
+ *
+ * It is a repository fact, like `renovations.json`, so CI never emits it and no
+ * `.prom` on the branch carries it — which is also why no reader of the branch
+ * can see it. What to do with the copy is `historyAction`'s; this only reads
+ * the disk and acts. A file that cannot be read costs the backfill and nothing
+ * else, and the warning never quotes it.
+ */
+function writeHistory(imported: readonly string[]): void {
+  const path = join(REPO_ROOT, HISTORY_FILE);
+  const committed = committedFrom(
+    existsSync(path) ? readFileSync(path, 'utf8') : undefined,
+    renderHistory,
+  );
+
+  const existing = new Map(
+    readdirSync(LOCAL)
+      .filter((name) => name.endsWith('-history.prom'))
+      .map((name) => [name, readFileSync(join(LOCAL, name), 'utf8')]),
+  );
+  const action = historyAction({ committed, existing, imported });
+
+  if (action.kind === 'refuse') fail(action.message);
+  if (action.kind === 'warn') console.warn(action.message);
+  if (action.kind === 'write') {
+    writeFileSync(join(LOCAL, action.name), action.bytes, 'utf8');
+    console.log(`\nbackfill: ${action.name} written from ${HISTORY_FILE}`);
+  }
+}
+
 // ── The sync ────────────────────────────────────────────────────────────────
 
 async function main(): Promise<number> {
@@ -811,6 +850,7 @@ async function main(): Promise<number> {
 
   await probeOrigin();
   const asksDigest = writeAsks(state.asksDigest);
+  writeHistory(state.imported);
 
   const onBranch = fetched?.names ?? [];
   const inStore = readdirSync(LOCAL).filter((name) => name.endsWith('.prom'));

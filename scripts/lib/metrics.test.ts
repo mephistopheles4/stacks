@@ -27,11 +27,15 @@ import {
   renderEdgeCheck,
   renderMetrics,
   renderAsks,
+  renderHistory,
   renderRenovations,
   trendNamesIn,
   type EdgeFacts,
   type RunFacts,
 } from './metrics.ts';
+import { BACKFILL_TIP, type History } from './duplication-history.ts';
+import { runRowsFrom } from './floors.ts';
+import { parseRecord } from './metrics-read.ts';
 import type { Renovation } from './renovations.ts';
 
 const AT = 1_787_183_835;
@@ -667,5 +671,51 @@ describe('renderAsks — the tightening clause as a series', () => {
 
   it('stays out of the trend namespace, so it owes no `## Trends` row', () => {
     expect(trendNamesIn(renderAsks([floor], AT))).toEqual([]);
+  });
+});
+
+describe('renderHistory — the backfill as series of its own', () => {
+  const history: History = {
+    tip: BACKFILL_TIP,
+    jscpdVersion: '5.4.1',
+    duplicationHash: `sha256:${'f'.repeat(64)}`,
+    points: [
+      {
+        commit: 'a'.repeat(40),
+        at: 1_785_506_529,
+        clones: 0,
+        duplicatedLines: 0,
+        ignoredLines: 0,
+        totalLines: 467,
+      },
+      {
+        commit: 'b'.repeat(40),
+        at: 1_785_507_000,
+        clones: 2,
+        duplicatedLines: 12,
+        ignoredLines: 0,
+        totalLines: 2390,
+      },
+    ],
+  };
+
+  it('renders the four counts at each point, in order, under the backfill prefix', () => {
+    const document = renderHistory(history);
+
+    expect(document).toContain('stacks_backfill_duplication_tree_lines 12 1785507000');
+    expect(document).toContain('stacks_backfill_duplication_tree_total_lines 467 1785506529');
+    expect(document.match(/^# TYPE /gm)).toHaveLength(5);
+    expect(document.endsWith('\n# EOF\n')).toBe(true);
+  });
+
+  it('is read by no ratchet reader: no run row and no trend name, even beside a real record', () => {
+    const real =
+      '# TYPE stacks_run_ok gauge\nstacks_run_ok 1 1792937897\n' +
+      '# TYPE stacks_run_info gauge\nstacks_run_info{commit="c",event="schedule"} 1 1792937897\n# EOF\n';
+    const rows = runRowsFrom([parseRecord(renderHistory(history)), parseRecord(real)]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.commit).toBe('c');
+    expect(trendNamesIn(renderHistory(history))).toEqual([]);
   });
 });

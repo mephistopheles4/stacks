@@ -590,7 +590,8 @@ The duplication counts, printed rather than recorded. **The same counter CI
 emits** — one counter, one set of thresholds, two callers — so the numbers on
 your screen are the numbers that reach the `metrics` branch. Nothing here is a
 gate and nothing here refuses on a number; it exits non-zero only when jscpd
-could not run at all.
+could not run at all — except under `--history`, below, which also refuses a
+report short of a commit or out of order.
 
 **Two populations, and they do not add up.** The eight declared scopes, and
 whole-tree TypeScript. A clone is a relation between two places, so a clone
@@ -617,6 +618,17 @@ actually installed.
 **The share column is derived here and recorded nowhere.** A ratio falls when the
 tree grows and nothing else happens, so the record carries counts and the reader
 derives the fraction — the rule the complexity counts already follow.
+
+**`--history` measures the backfill and writes `jscpd.history.json`** (#454). It
+is the one mode here that writes. One `jscpd --history` run covers every
+first-parent commit up to the parent of #262, the commit that published the
+first duplication series. The tip is a constant, so the range cannot drift. A
+point holds the four whole-tree counts at each commit's landing time, and
+nothing else from jscpd's report, so no commit message reaches the file. Run it
+by hand, on the host. It takes about a minute, and a rerun at the same jscpd
+writes the same bytes. The file is committed and reviewed as a diff, and
+`pnpm trend:sync` puts it on the trend page. See
+[ADR-0126](adr/0126-the-duplication-backfill-is-a-committed-file.md).
 
 ### Suppression blocks
 
@@ -698,6 +710,24 @@ whole set once. ⚠️ **An entry appended on a day no nightly ran still syncs**
 is the one thing that can make an otherwise empty import worth doing, and taking
 the *nothing new* path would leave the page with no line at the moment the
 counting rule changed. `--rebuild` re-imports them with everything else.
+
+**It also renders the duplication backfill** from the committed
+`jscpd.history.json` into `.trend/local/1787677348-history.prom`, under series
+names of its own (`stacks_backfill_duplication_tree_*`) that no ratchet reader
+matches ([ADR-0126](adr/0126-the-duplication-backfill-is-a-committed-file.md)).
+The record is imported once by name, like any local row.
+
+- **A missing or unreadable file only warns.** The sync carries on with the
+  branch's records, because a broken data file must not keep the nightly off
+  the page.
+- ⚠️ **It refuses when the file changed after the store imported it**, because
+  a changed value at the same timestamp cannot be undone by adding blocks.
+  `--rebuild` is the way back.
+- ⚠️ **It refuses when `.trend/local/` holds a history record under any other
+  name.** Delete the stray one, then `--rebuild`.
+- ⚠️ **A revert does not reach a store that already holds it.** The full
+  rollback is a revert, then deleting `.trend/local/1787677348-history.prom`,
+  then `pnpm trend:sync --rebuild`.
 See [#227](https://github.com/mephistopheles4/stacks/issues/227) and
 [ADR-0085](adr/0085-a-renovation-is-declared-and-the-window-may-survive.md).
 

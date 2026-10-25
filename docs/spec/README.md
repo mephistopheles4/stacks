@@ -1,10 +1,11 @@
 # `docs/spec/` — the locked specs
 
-**Thirteen efforts have produced a locked spec in this folder.** Each is decided end to
+**Fourteen efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
-share one. **The third, fifth, sixth, eleventh and twelfth are waiting for an
-implementation session**; the first two, the eighth, the ninth and the tenth have been built and are kept as written, and the fourth
-is built except its last step.
+share one. **The third and the fifth are waiting for an implementation
+session**, and every other one is built, as the State column below says. The
+fourteenth is built in the pull request for
+[#454](https://github.com/mephistopheles4/stacks/issues/454).
 
 ⚠️ **The fifth is the first whose finish line is not a document.** Its map carried
 execution as a deliberate override of wayfinder's plan-don't-do default, so it is
@@ -25,6 +26,7 @@ done when a rendered bookcase is on `main` — not when this folder is complete.
 | The survivor record — every night's survivors, kept past 30 days | [`survivor-record.md`](survivor-record.md) | **built in the pull request for #344 (a draft until the owner merges it), unproven until its first nightly**; signed off by the owner on 2026-10-17; standard tier. A clean nightly on `main` writes its survivors to a new orphan branch, `survivors`, matched by content key as a multiset, and adds one line to the job summary saying what moved. Warn-only, no new token scope, and no gate row. [#344](https://github.com/mephistopheles4/stacks/issues/344) carries the measurements and the decisions |
 | Close the release-age window's remaining side doors | [`release-age-side-doors.md`](release-age-side-doors.md) | **built in [#477](https://github.com/mephistopheles4/stacks/pull/477)** (a draft pull request until the owner merges it), signed off on 2026-10-17, standard tier, one build session. Four doors from #449's adversarial review. Two of the issue's premises were measured false and are corrected: the missing-time key does not stop git or tarball dependencies, and dlx already applies the window. The trust policy fails today's lockfile on three entries, which the owner let through by exact exclude, with chromium-bidi's tied to puppeteer-core. pnpm dlx doesn't apply the trust policy, so wrangler becomes an exact-pinned devDependency, with an ADR. G67 (`release-age`) is extended; no new row. Four lenses ran on the spec, the security pair among them. [#459](https://github.com/mephistopheles4/stacks/issues/459) carries the trail |
 | The deploy reads a full window, the 2026-10-09 renovation preserves, and the armable line rounds down | [`a-full-window-read.md`](a-full-window-read.md) | **built** in [#471](https://github.com/mephistopheles4/stacks/pull/471), standard tier, one session, spec and build in one pull request. ⚠️ **After merge the owner runs `pnpm trend:sync --rebuild` once**, because the corrected renovation is already in the store. Lands before any bound is armed and before [#462](https://github.com/mephistopheles4/stacks/pull/462)'s build, which reads its rows. [#464](https://github.com/mephistopheles4/stacks/issues/464) carries the trail |
+| The duplication series, backfilled from history, and a trend page you can read | [`duplication-backfill.md`](duplication-backfill.md) | **built in the pull request for [#454](https://github.com/mephistopheles4/stacks/issues/454)**, standard tier on the security route, one session. The whole-tree duplication series reach back to the first commit through one `jscpd --history` run, kept in a committed `jscpd.history.json` that `pnpm trend:sync` renders under series names of its own, so no ratchet reader sees a backfilled point ([ADR-0126](../adr/0126-the-duplication-backfill-is-a-committed-file.md)). The trend page gains a duplication chart, draws its charts as lines across gaps up to three days, and is retitled. No gate row. ⚠️ **After merge the owner runs `pnpm trend:sync` once.** [#454](https://github.com/mephistopheles4/stacks/issues/454) carries the trail |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
 **G30–G35**; the second landed **G36 and G38–G43**, derived from its own landing
