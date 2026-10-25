@@ -229,7 +229,7 @@ pnpm fixtures:50         # regenerate the 50-book fixture vault   (--books N for
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
-pnpm duplication:report  # jscpd over the eight scopes and the whole tree, as a table
+pnpm duplication:report  # jscpd over the eight scopes and the whole tree, as a table   (--history)
 pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope   (--markdown)
 pnpm mutation:stamp      # re-derive `stryker.floors.json`'s configHash — G56's remedy   (--check)

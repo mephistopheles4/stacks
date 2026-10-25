@@ -1,0 +1,1101 @@
+{
+  "$comment": [
+    "Written by `pnpm duplication:report --history`, never by hand. The whole-tree",
+    "duplication counts for every first-parent commit up to the parent of #262, measured",
+    "by jscpd --history under THRESHOLDS. Two commits in one second keep the descendant.",
+    "See docs/spec/duplication-backfill.md and ADR-0126."
+  ],
+  "tip": "aecb7cf8ca3af6cefd99e16205fa00d99fd89ded",
+  "jscpdVersion": "5.4.1",
+  "duplicationHash": "sha256:fcddde5239f28815a93ccf24c52b74cf6dc174d26cfc8fef58fa73867442dfd5",
+  "points": [
+    {
+      "commit": "d700bc57adb4d65a7bc27cfeee1136d610056130",
+      "at": 1785506529,
+      "clones": 0,
+      "duplicatedLines": 0,
+      "ignoredLines": 0,
+      "totalLines": 467
+    },
+    {
+      "commit": "7fd7b00daebd7dd26827e5fb661a96da5fa85524",
+      "at": 1785506707,
+      "clones": 0,
+      "duplicatedLines": 0,
+      "ignoredLines": 0,
+      "totalLines": 467
+    },
+    {
+      "commit": "aab5e777dc17445fd2b7ed0a167881372e01e0a2",
+      "at": 1785507661,
+      "clones": 2,
+      "duplicatedLines": 12,
+      "ignoredLines": 0,
+      "totalLines": 2390
+    },
+    {
+      "commit": "1b487309282acedd5b89dbbcec111eef92793fa9",
+      "at": 1785508545,
+      "clones": 2,
+      "duplicatedLines": 12,
+      "ignoredLines": 0,
+      "totalLines": 3147
+    },
+    {
+      "commit": "519fc9497d4cd68fafe8ab839495b37f621ec709",
+      "at": 1785509379,
+      "clones": 2,
+      "duplicatedLines": 12,
+      "ignoredLines": 0,
+      "totalLines": 3351
+    },
+    {
+      "commit": "a219fa6309bc4db22c6109e9dcdc2bb7b5ad7fc9",
+      "at": 1785509768,
+      "clones": 3,
+      "duplicatedLines": 22,
+      "ignoredLines": 0,
+      "totalLines": 3887
+    },
+    {
+      "commit": "3d7aa6d598a1e2d4341789c45368d20a8e4d4f13",
+      "at": 1785509871,
+      "clones": 3,
+      "duplicatedLines": 22,
+      "ignoredLines": 0,
+      "totalLines": 3887
+    },
+    {
+      "commit": "e78dd413289e8f660e3aecf3bff1a12e22b88802",
+      "at": 1785510603,
+      "clones": 3,
+      "duplicatedLines": 22,
+      "ignoredLines": 0,
+      "totalLines": 3965
+    },
+    {
+      "commit": "bb8dc98d4fc36aaa8bb04e148e3e21fc76b5e451",
+      "at": 1785511050,
+      "clones": 4,
+      "duplicatedLines": 28,
+      "ignoredLines": 0,
+      "totalLines": 4195
+    },
+    {
+      "commit": "1e6029d462ca06d1150557985e6d58405153c02d",
+      "at": 1785511816,
+      "clones": 5,
+      "duplicatedLines": 37,
+      "ignoredLines": 0,
+      "totalLines": 4304
+    },
+    {
+      "commit": "95db60f45b2a572f827717b0f469d4127977a4b0",
+      "at": 1785513582,
+      "clones": 5,
+      "duplicatedLines": 37,
+      "ignoredLines": 0,
+      "totalLines": 4354
+    },
+    {
+      "commit": "7f37b7531a3a300005655960f1aa70d4e829aa43",
+      "at": 1785513993,
+      "clones": 6,
+      "duplicatedLines": 43,
+      "ignoredLines": 0,
+      "totalLines": 4877
+    },
+    {
+      "commit": "47dfb4f09fb4be780c27278ee372f6ed3bbc4380",
+      "at": 1785514019,
+      "clones": 6,
+      "duplicatedLines": 43,
+      "ignoredLines": 0,
+      "totalLines": 4877
+    },
+    {
+      "commit": "d19f7de718efc395a768317dabb9a7a2d322832f",
+      "at": 1785514406,
+      "clones": 5,
+      "duplicatedLines": 34,
+      "ignoredLines": 0,
+      "totalLines": 4950
+    },
+    {
+      "commit": "3856393aabd3c3a8f3b7fd1125c7871760ba2287",
+      "at": 1785514968,
+      "clones": 5,
+      "duplicatedLines": 34,
+      "ignoredLines": 0,
+      "totalLines": 4961
+    },
+    {
+      "commit": "0315cc2b47bfb8cfd5bb3d3480f1327c844254ed",
+      "at": 1785515886,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 5444
+    },
+    {
+      "commit": "46bd75bb17c9fabf36b2bb1ccaa8ca758e1f8627",
+      "at": 1785515900,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 5444
+    },
+    {
+      "commit": "2a608612565429aed55aa636930ba22e4310ebac",
+      "at": 1785516156,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 5471
+    },
+    {
+      "commit": "dd0e22fb5e36d5989ffdb63567edc42e2bbd2724",
+      "at": 1785516376,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 5541
+    },
+    {
+      "commit": "89f5cc86f6454f537c059e1f16eecf9860a67004",
+      "at": 1785518016,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 5585
+    },
+    {
+      "commit": "00088b5aa6202f86a4026ada14b26067d7ae3f64",
+      "at": 1785518947,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 5803
+    },
+    {
+      "commit": "ac369b52592dba2b66442b8a26c73631a6415272",
+      "at": 1785519405,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 6052
+    },
+    {
+      "commit": "213b40ea18859e1029c436042e0e406616d230b3",
+      "at": 1785521275,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 6184
+    },
+    {
+      "commit": "c7a0a3e860f6546f216b87a38088f483bae3863d",
+      "at": 1785528081,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 6184
+    },
+    {
+      "commit": "f42a3e4a05bf4bfcea6f339928ce1091688ba936",
+      "at": 1785528113,
+      "clones": 6,
+      "duplicatedLines": 48,
+      "ignoredLines": 0,
+      "totalLines": 6184
+    },
+    {
+      "commit": "8060f3f8b3de2a71727b322acbf5d7fd989d68fe",
+      "at": 1785528678,
+      "clones": 7,
+      "duplicatedLines": 58,
+      "ignoredLines": 0,
+      "totalLines": 6395
+    },
+    {
+      "commit": "88009453a186399ec1ca8c74a1588d29581f2413",
+      "at": 1785529109,
+      "clones": 9,
+      "duplicatedLines": 113,
+      "ignoredLines": 0,
+      "totalLines": 6441
+    },
+    {
+      "commit": "ab9c11ffd88a14dff249da0990c09ad54f6d6c62",
+      "at": 1785530050,
+      "clones": 9,
+      "duplicatedLines": 113,
+      "ignoredLines": 0,
+      "totalLines": 6766
+    },
+    {
+      "commit": "c613ac5f1d3a51b91bddd0c2a7ed05dadf60afe8",
+      "at": 1785530608,
+      "clones": 9,
+      "duplicatedLines": 113,
+      "ignoredLines": 0,
+      "totalLines": 7097
+    },
+    {
+      "commit": "f0df57bf344e4c5358af47ced4e8c354df523b68",
+      "at": 1785532460,
+      "clones": 9,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 7181
+    },
+    {
+      "commit": "b117958e2d89ab9bf31b6c2a89966a43e20dcc48",
+      "at": 1785532560,
+      "clones": 9,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 7184
+    },
+    {
+      "commit": "63a61a7e6fd2484aea5c0c48bc99ad5106c257ca",
+      "at": 1785556008,
+      "clones": 9,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 7184
+    },
+    {
+      "commit": "28e87068fa521cf8a6d3139f613e591e1de2a19b",
+      "at": 1785557166,
+      "clones": 11,
+      "duplicatedLines": 142,
+      "ignoredLines": 0,
+      "totalLines": 9517
+    },
+    {
+      "commit": "075ef2eff0e97dec6683da50fc74418412115686",
+      "at": 1785557564,
+      "clones": 11,
+      "duplicatedLines": 142,
+      "ignoredLines": 0,
+      "totalLines": 9517
+    },
+    {
+      "commit": "f014bbdd86c4aa2e159598b1e4ca64c6d069f71e",
+      "at": 1785558841,
+      "clones": 11,
+      "duplicatedLines": 142,
+      "ignoredLines": 0,
+      "totalLines": 9954
+    },
+    {
+      "commit": "a88fb2ccce3cb97d58153a5a26fa17dae02980a1",
+      "at": 1785587545,
+      "clones": 11,
+      "duplicatedLines": 142,
+      "ignoredLines": 0,
+      "totalLines": 10037
+    },
+    {
+      "commit": "5eafc0c947a3a35f018bf7562e5c11d5d0318308",
+      "at": 1785588284,
+      "clones": 10,
+      "duplicatedLines": 95,
+      "ignoredLines": 0,
+      "totalLines": 10193
+    },
+    {
+      "commit": "7724545bb76a8fc609a2749553f64636e21c5e0a",
+      "at": 1785592213,
+      "clones": 11,
+      "duplicatedLines": 102,
+      "ignoredLines": 0,
+      "totalLines": 10396
+    },
+    {
+      "commit": "d808d44c8b5e47e501da576653eb19574573ee90",
+      "at": 1785594502,
+      "clones": 11,
+      "duplicatedLines": 102,
+      "ignoredLines": 0,
+      "totalLines": 10424
+    },
+    {
+      "commit": "c626507067f0740c4d3d98eda5eaf3fe8cbf0dae",
+      "at": 1785596764,
+      "clones": 12,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 10806
+    },
+    {
+      "commit": "1676734ad653f5be1415f3a889047e152407a065",
+      "at": 1785597177,
+      "clones": 12,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 10816
+    },
+    {
+      "commit": "40a6b0d5c499f024f6ed079d3db23aba5e469016",
+      "at": 1785597601,
+      "clones": 12,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 10887
+    },
+    {
+      "commit": "aa8da74fea88d6cb97bf6af3c879bbdb0db0069a",
+      "at": 1785606653,
+      "clones": 12,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 11262
+    },
+    {
+      "commit": "e6d1f5c0fc125b7ac40d67c1924de29787ee5028",
+      "at": 1785607928,
+      "clones": 12,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 11369
+    },
+    {
+      "commit": "4a18e99af3406c3bbd12d5d12dcf1963056dc665",
+      "at": 1785610028,
+      "clones": 12,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 11499
+    },
+    {
+      "commit": "43201d79826fa03bdf113199b860ed1bb2ce197b",
+      "at": 1785612084,
+      "clones": 12,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 11705
+    },
+    {
+      "commit": "4c430a5c11c7775a2e59e3dafee13d87206ff047",
+      "at": 1785614907,
+      "clones": 12,
+      "duplicatedLines": 111,
+      "ignoredLines": 0,
+      "totalLines": 11972
+    },
+    {
+      "commit": "5773b2e151a85cca5116ade0eb95a3c8061fd26c",
+      "at": 1785624270,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 12650
+    },
+    {
+      "commit": "86d780510a0ab34d2e1b84c4d82223295d2a10e7",
+      "at": 1785626071,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 12817
+    },
+    {
+      "commit": "9ad269cf1f6037958f6b584dd413ff7e71560892",
+      "at": 1785629542,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 13427
+    },
+    {
+      "commit": "97b314e88a02ec0f46ad72f5db9915739787fb61",
+      "at": 1785672540,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 13753
+    },
+    {
+      "commit": "eaade6fed6697a56738fba1ce5a41ff030f40845",
+      "at": 1785674325,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 13854
+    },
+    {
+      "commit": "3cf634e044f1ad596911e657d687750e47092dd8",
+      "at": 1785675366,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 13854
+    },
+    {
+      "commit": "46ec13361d3466b35759fa5e936340f662743a01",
+      "at": 1785706573,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 14133
+    },
+    {
+      "commit": "ac8c2e758ec761107410f6400b89c401ecfc3c1a",
+      "at": 1785707776,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 14209
+    },
+    {
+      "commit": "8de433a5c1e58f335b06ec77bd4b2e78726aa523",
+      "at": 1785774431,
+      "clones": 13,
+      "duplicatedLines": 124,
+      "ignoredLines": 0,
+      "totalLines": 14301
+    },
+    {
+      "commit": "11686508c0d5e632d14d06b83c9e9acd0729a4b0",
+      "at": 1785781768,
+      "clones": 11,
+      "duplicatedLines": 109,
+      "ignoredLines": 0,
+      "totalLines": 15116
+    },
+    {
+      "commit": "95a9edb70c6b83e0d14426e83487475b28de3ef1",
+      "at": 1785790736,
+      "clones": 12,
+      "duplicatedLines": 116,
+      "ignoredLines": 0,
+      "totalLines": 15384
+    },
+    {
+      "commit": "669a72583e3afb531c760680fa9328828f07b233",
+      "at": 1785791640,
+      "clones": 12,
+      "duplicatedLines": 116,
+      "ignoredLines": 0,
+      "totalLines": 15802
+    },
+    {
+      "commit": "1ac250d84a16430f756d96aad905ac1bc016156b",
+      "at": 1785794689,
+      "clones": 9,
+      "duplicatedLines": 98,
+      "ignoredLines": 0,
+      "totalLines": 16128
+    },
+    {
+      "commit": "e5bb42652ff2b139c37cca23b3243ac9ecc15d4e",
+      "at": 1785795760,
+      "clones": 9,
+      "duplicatedLines": 98,
+      "ignoredLines": 0,
+      "totalLines": 16128
+    },
+    {
+      "commit": "ca763097e5eb26da826e7603ee83e84a6b963ba0",
+      "at": 1785798863,
+      "clones": 9,
+      "duplicatedLines": 105,
+      "ignoredLines": 0,
+      "totalLines": 16597
+    },
+    {
+      "commit": "15fd6f1bdbe4bbd0eba0132e4871bee923ecb6b8",
+      "at": 1785818169,
+      "clones": 9,
+      "duplicatedLines": 105,
+      "ignoredLines": 0,
+      "totalLines": 16838
+    },
+    {
+      "commit": "efdc5e2c5dae2488bcc53f45f9da23ab2397a314",
+      "at": 1785818657,
+      "clones": 10,
+      "duplicatedLines": 120,
+      "ignoredLines": 0,
+      "totalLines": 17176
+    },
+    {
+      "commit": "ab66db928562a7ce37c2b21302d883561647077d",
+      "at": 1785862105,
+      "clones": 12,
+      "duplicatedLines": 138,
+      "ignoredLines": 0,
+      "totalLines": 19769
+    },
+    {
+      "commit": "ac113114b88af189cc1b685979276ac18a22c352",
+      "at": 1785881544,
+      "clones": 10,
+      "duplicatedLines": 123,
+      "ignoredLines": 0,
+      "totalLines": 19776
+    },
+    {
+      "commit": "1a153b5fc62f6c7154d1b3748c8e029e1ce3cf43",
+      "at": 1786031773,
+      "clones": 10,
+      "duplicatedLines": 123,
+      "ignoredLines": 0,
+      "totalLines": 20149
+    },
+    {
+      "commit": "1cc2da2cb05a98606320b606d7e9a812f072f45f",
+      "at": 1786039277,
+      "clones": 10,
+      "duplicatedLines": 123,
+      "ignoredLines": 0,
+      "totalLines": 20554
+    },
+    {
+      "commit": "718bfd7525cf09acd8b98daec4e8297d2c3b1965",
+      "at": 1786196761,
+      "clones": 10,
+      "duplicatedLines": 123,
+      "ignoredLines": 0,
+      "totalLines": 20554
+    },
+    {
+      "commit": "6f86dece8c9c5cac097b902f39f6355e6cac32ee",
+      "at": 1786197355,
+      "clones": 10,
+      "duplicatedLines": 123,
+      "ignoredLines": 0,
+      "totalLines": 20554
+    },
+    {
+      "commit": "93730e19809df6625a790623c78bc72804500279",
+      "at": 1786197543,
+      "clones": 10,
+      "duplicatedLines": 123,
+      "ignoredLines": 0,
+      "totalLines": 20554
+    },
+    {
+      "commit": "da209c3ed7b98eb3aa94b442faa6b56326fe3612",
+      "at": 1786198459,
+      "clones": 10,
+      "duplicatedLines": 117,
+      "ignoredLines": 0,
+      "totalLines": 23386
+    },
+    {
+      "commit": "d7f1a0f9c04d3083a448ec65e81053f776b115ba",
+      "at": 1786214448,
+      "clones": 11,
+      "duplicatedLines": 126,
+      "ignoredLines": 0,
+      "totalLines": 23614
+    },
+    {
+      "commit": "ff93f0afb44cfd0fecf0f14151c294e0528a8609",
+      "at": 1786218676,
+      "clones": 11,
+      "duplicatedLines": 126,
+      "ignoredLines": 0,
+      "totalLines": 24130
+    },
+    {
+      "commit": "8fb84f5527a373f93fdab025e157ef18842b05c3",
+      "at": 1786219025,
+      "clones": 11,
+      "duplicatedLines": 126,
+      "ignoredLines": 0,
+      "totalLines": 24130
+    },
+    {
+      "commit": "d67c5767833e203237102ff802339aa1bd64ba36",
+      "at": 1786281071,
+      "clones": 11,
+      "duplicatedLines": 126,
+      "ignoredLines": 0,
+      "totalLines": 24759
+    },
+    {
+      "commit": "390bb653c752902667fa87bc9d889cb5f1975d02",
+      "at": 1786285662,
+      "clones": 11,
+      "duplicatedLines": 126,
+      "ignoredLines": 0,
+      "totalLines": 25141
+    },
+    {
+      "commit": "3ee922dcca176debebb86f3265cf2b5aec523499",
+      "at": 1786287682,
+      "clones": 11,
+      "duplicatedLines": 126,
+      "ignoredLines": 0,
+      "totalLines": 25233
+    },
+    {
+      "commit": "b5cbddceb6874f63188e0422095898399b587a8a",
+      "at": 1786288276,
+      "clones": 12,
+      "duplicatedLines": 140,
+      "ignoredLines": 0,
+      "totalLines": 25502
+    },
+    {
+      "commit": "6cbb380cb6ca9c68ec741e96e4c29b4030bb4113",
+      "at": 1786289505,
+      "clones": 12,
+      "duplicatedLines": 140,
+      "ignoredLines": 0,
+      "totalLines": 25502
+    },
+    {
+      "commit": "4e4f08b6b6a3c47f0a9be69599c925de2d095ae0",
+      "at": 1786300991,
+      "clones": 12,
+      "duplicatedLines": 140,
+      "ignoredLines": 0,
+      "totalLines": 25502
+    },
+    {
+      "commit": "1d0548ffa1b5051c60c551c252589e616cb7cfc5",
+      "at": 1786366665,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "c9a95b5ff2cf199d561625086db5d4f40c520e6d",
+      "at": 1786487160,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "43445f0febe55ed5acc64a127ddf378dbe0df4d9",
+      "at": 1786493124,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "e372e2d955650ae0264fb0d99de484ac2c801d46",
+      "at": 1786494062,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "4d8adce5364de9330abe8244d78e879a2d3c022d",
+      "at": 1786531647,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "f3505ee7fae0df5e0e36fce30a9576b1eb4e052f",
+      "at": 1786533754,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "db19bebd9287dae63961dceeed45f959d607f269",
+      "at": 1786816016,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "0d5f18996782a421477545b841d802b33f280fa7",
+      "at": 1786817186,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "ec064383e9d2c1a0877ea2539bf304ba54064e0a",
+      "at": 1786817351,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "ae674de65f1e55be715c08a556d199b4e728e114",
+      "at": 1786817798,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "69898b34ca11f25e19b7a90eabc06e1e5e158917",
+      "at": 1786824412,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "25b007b80837c25881378aa4b389fbeefb2ac217",
+      "at": 1786915320,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "cfc660412f399b0cac674ba0eaab129b635e86cb",
+      "at": 1787103370,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 29818
+    },
+    {
+      "commit": "d8944c646faee369a52455f1d57b7e1e233c9e77",
+      "at": 1787107240,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 30032
+    },
+    {
+      "commit": "465e824f8f5068e5bfbeb485af2c52aa4ad069f5",
+      "at": 1787140503,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 30336
+    },
+    {
+      "commit": "f8bd379803f202e5e0f3fc2f752292bfb01f35f3",
+      "at": 1787145015,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 31350
+    },
+    {
+      "commit": "9ceada9fafb47d28010c49be84cf51553bffa676",
+      "at": 1787158276,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 31649
+    },
+    {
+      "commit": "0446d7868fc8676a09b8b7498d03de327782d6f1",
+      "at": 1787175822,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 31649
+    },
+    {
+      "commit": "6c83e8aa6f535fad5fa4550d28fcb17cb4544ab7",
+      "at": 1787176357,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 31663
+    },
+    {
+      "commit": "e0279ac3db7032d6670ccc73519133367fae337a",
+      "at": 1787176669,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 31663
+    },
+    {
+      "commit": "9cee3d72ed0a758742d36ce4d597c2f8d02e76c5",
+      "at": 1787177837,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 31779
+    },
+    {
+      "commit": "1f295218106589094d7ab7b423c225b00b6b9a12",
+      "at": 1787180548,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 31779
+    },
+    {
+      "commit": "f6a069ef29c4c257517f77e39bb800a3ae5133a0",
+      "at": 1787183799,
+      "clones": 21,
+      "duplicatedLines": 238,
+      "ignoredLines": 0,
+      "totalLines": 31779
+    },
+    {
+      "commit": "39ef9a19f07a21ef73c65f3a80148f9029b701cd",
+      "at": 1787189096,
+      "clones": 23,
+      "duplicatedLines": 260,
+      "ignoredLines": 0,
+      "totalLines": 32718
+    },
+    {
+      "commit": "3e2fc88603f7446c070f5da7349026846b5977bf",
+      "at": 1787189359,
+      "clones": 23,
+      "duplicatedLines": 260,
+      "ignoredLines": 0,
+      "totalLines": 34296
+    },
+    {
+      "commit": "69a479e442aea28e7fc58ffc06f37a4c4ac64d73",
+      "at": 1787232790,
+      "clones": 23,
+      "duplicatedLines": 260,
+      "ignoredLines": 0,
+      "totalLines": 36845
+    },
+    {
+      "commit": "4c77f84953f41ca44f7507cf57c5673bc3f26463",
+      "at": 1787232791,
+      "clones": 29,
+      "duplicatedLines": 303,
+      "ignoredLines": 0,
+      "totalLines": 39205
+    },
+    {
+      "commit": "7a090ab47fa7e9037b8cfd12ed149dcf4c7b0714",
+      "at": 1787233644,
+      "clones": 29,
+      "duplicatedLines": 303,
+      "ignoredLines": 0,
+      "totalLines": 39790
+    },
+    {
+      "commit": "36a1e71e80d93a8077228106775c4a470cc76167",
+      "at": 1787331154,
+      "clones": 29,
+      "duplicatedLines": 303,
+      "ignoredLines": 0,
+      "totalLines": 39790
+    },
+    {
+      "commit": "54380354e36bc602f8193ab3e545aca21d8733bd",
+      "at": 1787333741,
+      "clones": 29,
+      "duplicatedLines": 303,
+      "ignoredLines": 0,
+      "totalLines": 39790
+    },
+    {
+      "commit": "63cf1c593420d862afc37290b0acb7190605810b",
+      "at": 1787400377,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 39976
+    },
+    {
+      "commit": "9b7f14ee9098928d9976402e6582d64b07156eef",
+      "at": 1787400631,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 39976
+    },
+    {
+      "commit": "d4c7b649a266981bfe3833867872312f98de1cd0",
+      "at": 1787400887,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 39976
+    },
+    {
+      "commit": "98d228547eaf3575d39b714a6d4c8c3b3e1de015",
+      "at": 1787401382,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 40007
+    },
+    {
+      "commit": "523847ec63477f9911c17551eedd632b7695be02",
+      "at": 1787402087,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 40007
+    },
+    {
+      "commit": "52c06b11ba9cf395ab9d1d870ec1bab09f6d26a5",
+      "at": 1787410324,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 40008
+    },
+    {
+      "commit": "44c83388afcf95007af0044e16bc2c328fa73279",
+      "at": 1787411050,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 40008
+    },
+    {
+      "commit": "5f33a11c38a1fdedb08e3d40912d2ed70f80de27",
+      "at": 1787415356,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 40186
+    },
+    {
+      "commit": "69fb5dfec0be02958006ad6e23c42c8cd6a19fe6",
+      "at": 1787416929,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 40565
+    },
+    {
+      "commit": "738ee750a4502ccd15d275303dc618a85fe0bce8",
+      "at": 1787426397,
+      "clones": 31,
+      "duplicatedLines": 351,
+      "ignoredLines": 0,
+      "totalLines": 40565
+    },
+    {
+      "commit": "21114a3649ee0ddc543e0f126294c8060dec49fa",
+      "at": 1787426861,
+      "clones": 33,
+      "duplicatedLines": 366,
+      "ignoredLines": 0,
+      "totalLines": 41551
+    },
+    {
+      "commit": "af670ecff8261b82bf27079f60ed2fb1ef0c38be",
+      "at": 1787427179,
+      "clones": 34,
+      "duplicatedLines": 352,
+      "ignoredLines": 0,
+      "totalLines": 42313
+    },
+    {
+      "commit": "acca52a1764876a80b8cd917f20f28279f397631",
+      "at": 1787427649,
+      "clones": 34,
+      "duplicatedLines": 352,
+      "ignoredLines": 0,
+      "totalLines": 42648
+    },
+    {
+      "commit": "3d4221934046d3e7facf385340a6060ee22b8525",
+      "at": 1787427892,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 44346
+    },
+    {
+      "commit": "6478a697c0e56779af001009f3698674c5676c3c",
+      "at": 1787428213,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45384
+    },
+    {
+      "commit": "22a7b2ee2bb604e56b5894d3e4292ff2dc5dd8a6",
+      "at": 1787453086,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45384
+    },
+    {
+      "commit": "532ec7ccbd0ac80578f6e1f571b50282a27c625b",
+      "at": 1787454552,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45384
+    },
+    {
+      "commit": "c8ba4eed08371a0bfadefeb57cd5c1df004100fd",
+      "at": 1787458945,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45384
+    },
+    {
+      "commit": "a644b47e1445ddc9c58c7ee09bb3d13c5780eb12",
+      "at": 1787504070,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45384
+    },
+    {
+      "commit": "5993f45a2d48db85b6964a9ca71a2e132c0caa64",
+      "at": 1787504234,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45384
+    },
+    {
+      "commit": "99453fc8ebcb747e1df827f164e8b5a1e45debe4",
+      "at": 1787514338,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45384
+    },
+    {
+      "commit": "2f672b1f56fcce427cbb87b3b336ae5568fc85ae",
+      "at": 1787515201,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45384
+    },
+    {
+      "commit": "bc59bf937fcc8e645aae91c82a2f96bd326edfc3",
+      "at": 1787519086,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45399
+    },
+    {
+      "commit": "fdd2be1ebf4f725be29cbf6a3718c437cced2fd9",
+      "at": 1787519430,
+      "clones": 37,
+      "duplicatedLines": 413,
+      "ignoredLines": 0,
+      "totalLines": 45459
+    },
+    {
+      "commit": "aecb7cf8ca3af6cefd99e16205fa00d99fd89ded",
+      "at": 1787677348,
+      "clones": 35,
+      "duplicatedLines": 393,
+      "ignoredLines": 0,
+      "totalLines": 45657
+    }
+  ]
+}

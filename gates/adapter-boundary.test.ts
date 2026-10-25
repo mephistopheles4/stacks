@@ -172,6 +172,11 @@ const ALLOWED = [
   // itself; the root is a parameter, so it does not know which tree it was
   // pointed at, and it writes nothing outside `os.tmpdir()`.
   'scripts/lib/duplication.ts',
+  // Writes `jscpd.history.json`, one fixed filename at the repo root, under
+  // `--history` and nowhere else. It holds duplication counts measured from the
+  // repository's own git history, it reads nothing from disk itself, and it
+  // does not know what a book is.
+  'scripts/duplication-report.ts',
   // Reads `stryker.floors.json` — a fixed filename at the repo root — and opens
   // the mutated source files `scope-check.ts` just listed, to count disable
   // directives in them. Both are repo files, both paths are derived from the

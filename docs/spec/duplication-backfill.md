@@ -6,7 +6,10 @@ built test-first. Written on 2026-10-25 by session `stacks-454` from a grilling
 against the code and three measured runs (§S10). Decisions q1 to q5 are the
 lead's picks under the owner's standing instruction for the day. The panel,
 the lines and the titles are the owner's own words, relayed by the lead.
-**Nothing here is built.**
+**Signed off on 2026-10-25, the title table included, relayed by the lead.
+Built in the pull request for #454.** q6 and q8 were taken on the lead's
+picks. q7, the provenance risk in ADR-0126, is the owner's own call and was
+still open at the build.
 
 Every line number is on `main` at `e6cce7c`. Each place is also named by its
 function, so a rebase can find it again.
@@ -365,6 +368,13 @@ The tables and the two stats have no lines to draw.
   label. The JSON is checked in review. How the titles read is **the owner's
   visual check**.
 
+- **C9. Security: ASVS 5.0.0 V13.4 and V14.2.** No unintended leakage and
+  data minimisation, for the backfill file and the store series. The
+  committed file holds only the six fields per point and the four header
+  fields, the temporary report is removed, and no warning quotes the file. The
+  security pair checks this at Test against the generated file and
+  `writeHistory`. Added on the lead's pick (q8).
+
 C6 to C8 are a reviewed diff plus a look, with no gate test, because ADR-0062
 puts no test on the dashboard file and a `gates/` file would need a G19 row.
 
@@ -401,8 +411,8 @@ a gate.
   line over data the store already holds and invite reading one for the
   other. The backfill covers only what nothing measured, and the step is
   annotated. Driver: §S8.
-- **Reviewability against branch purity.** A committed file adds about 16 KB
-  to the tree. In exchange, the data is reviewed in a diff, reverted by a
+- **Reviewability against branch purity.** A committed file adds 27 KB to
+  the tree. In exchange, the data is reviewed in a diff, reverted by a
   revert, and never pushed to an append-only branch that every ratchet reader
   lists.
 

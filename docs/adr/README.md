@@ -149,3 +149,4 @@ Two other files hold what these deliberately do not:
 | [0119](./0119-one-pane-for-every-debug-instrument.md) | One pane for every `?debug` instrument: a shell, and a view file and a model file per instrument (amends 0104) |
 | [0122](./0122-athanor-runs-the-suite-in-a-sealed-container.md) | athanor runs the suite in a sealed container, from an image that holds the installed workspace |
 | [0123](./0123-a-hook-holds-agents-to-athanor.md) | A hook holds agents to athanor, silent on failure, with a comment as the fallback |
+| [0126](./0126-the-duplication-backfill-is-a-committed-file.md) | The duplication backfill is a committed file under series names of its own, and a chart title may name a direction but never a verdict |

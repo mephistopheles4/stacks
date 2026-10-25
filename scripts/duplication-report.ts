@@ -1,7 +1,7 @@
 /**
  * The duplication counts, for a person, at the machine they are sitting at.
  *
- *     pnpm duplication:report
+ *     pnpm duplication:report [--history]
  *
  * **The same counter CI emits, printed instead of recorded** — one counter, one
  * set of thresholds, two callers, which is `complexity.ts`'s *one counter, one
@@ -19,6 +19,8 @@
  * than a link to nothing.
  */
 
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { populationOf } from './lib/complexity.ts';
 import {
   TREE_POPULATION,
@@ -31,6 +33,33 @@ import { gitOutput } from './lib/git.ts';
 import { readScopes } from './lib/mutation-score.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { sourceFiles } from './lib/scope-check.ts';
+import { HISTORY_FILE, measureHistory, serialiseHistory } from './lib/duplication-history.ts';
+
+/**
+ * `--history`: measure the backfill and write `jscpd.history.json` (#454).
+ *
+ * The one mode here that writes, because the file is committed and reviewed as
+ * a diff rather than recorded. It writes the file itself rather than printing
+ * JSON for a redirect, because a PowerShell redirect writes UTF-16. Run by hand,
+ * once; a rerun at the same jscpd gives the same bytes.
+ */
+if (process.argv.includes('--history')) {
+  const history = measureHistory();
+  writeFileSync(join(REPO_ROOT, HISTORY_FILE), serialiseHistory(history), 'utf8');
+  for (const point of history.points) {
+    const share = point.totalLines === 0 ? 0 : (point.duplicatedLines / point.totalLines) * 100;
+    console.log(
+      `${point.commit.slice(0, 7)}  ${new Date(point.at * 1000).toISOString().slice(0, 10)}  ` +
+        `${String(point.clones).padStart(4)} clones  ${String(point.duplicatedLines).padStart(5)} dup  ` +
+        `${String(point.totalLines).padStart(6)} lines  ${share.toFixed(2)}%`,
+    );
+  }
+  console.log(
+    `\n${String(history.points.length)} points written to ${HISTORY_FILE}, ` +
+      `jscpd ${history.jscpdVersion}, ${history.duplicationHash.slice(0, 19)}…`,
+  );
+  process.exit(0);
+}
 
 const files = sourceFiles();
 const counted = countAllPopulations(readScopes(), (scope) => populationOf(scope, files));
