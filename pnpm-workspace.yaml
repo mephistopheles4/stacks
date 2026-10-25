@@ -59,22 +59,6 @@ verifyDepsBeforeRun: warn
 # window is the only control this hatch removes.
 minimumReleaseAge: 10080
 
-# The hatch above, used for the first time, on the owner's word on 2026-10-21.
-# markdown-it 15.0.3 is the only release fixing GHSA-gfr2-rv44-r23c and was
-# published 2026-10-16T01:25Z; see the markdown-it block above `overrides:`.
-# **Remove this entry after 2026-10-23T01:25Z**, when 15.0.3 is seven days old.
-#
-# argparse 3.0.3 rides along, on the owner's word the same day: markdown-it
-# 15.0.3 asks for `^3.0.3`, and it was published 2026-10-15T21:58Z. Same
-# publisher, no provenance on any release, and its diff from 3.0.2 is one
-# character of one regex (a ReDoS fix). markdown-it reaches it only from its
-# own command-line entry point, which markdownlint never loads. **Remove it
-# after 2026-10-22T21:58Z.** Nothing checks either date, so the next
-# dependency change after them should.
-minimumReleaseAgeExclude:
-  - markdown-it@15.0.3
-  - argparse@3.0.3
-
 # ⚠️ **This does not do what the issue for it (#459) assumed.** Measured on pnpm
 # 11.18.0 with the key at `false` and read back by `pnpm config get`: a `github:`
 # dependency and a codeload.github.com tarball dependency both still installed.
@@ -387,12 +371,13 @@ trustPolicyExclude:
 # `@stacks/core`, the Thoughts extractor's parser (ADR-0107), so it is its own
 # change on the security route.
 #
-# ⚠️ **The fix is inside the seven-day window**, so this override comes with an
-# exact `minimumReleaseAgeExclude` entry for `markdown-it@15.0.3`; see that
-# block. No 15.x release carries provenance and all three came from one
-# account, so the trust policy checks nothing here and the window was the only
-# control this lifts. What stood in for the wait: the published 15.0.1 to
-# 15.0.3 diff, read before this was written, is the three parser fixes
+# ⚠️ **The fix was inside the seven-day window** when this landed, so it came
+# with an exact `minimumReleaseAgeExclude` entry for `markdown-it@15.0.3` (and
+# `argparse@3.0.3`, which it asks for), on the owner's word on 2026-10-21. Both
+# were removed in #521, once each was past seven days old. No 15.x release
+# carries provenance and all three came from one account, so the trust policy
+# checks nothing here and the window was the only control this lifted. What
+# stood in for the wait: the published 15.0.1 to 15.0.3 diff, read before this was written, is the three parser fixes
 # upstream's commits between those tags describe, plus brace reformatting, with
 # no new import, I/O or install script.
 #
