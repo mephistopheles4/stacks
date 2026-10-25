@@ -425,6 +425,19 @@ trustPolicyExclude:
 # line arriving later is caught by `audit`, rather than forced across a major
 # here. Caret, for the nanoid block's. Remove each when its consumers' own
 # floors reach the fixed version and the lockfile carries it unaided.
+
+# GHSA-238p-pmpm-9mq7, low: `katex` below 0.18.2 lets an existing prototype
+# pollution bypass its trust restrictions. It arrives only through
+# `markdownlint-cli2` > `markdownlint` > `micromark-extension-math`, whose
+# `^0.16.0` has no fixed release, and markdownlint uses only the math syntax
+# extension: nothing here calls `renderToString`. Dependabot opens nothing for
+# it, since its security updates move direct dependencies only (#519).
+#
+# Crossing from 0.16 to 0.18 is a combination the package does not declare;
+# G48 loads the extension, and so katex, inside `pnpm test`, and `pnpm lint:md`
+# still lints the tree with 0 findings. Scoped to the 0.16 line, for the
+# brace-expansion block's reason; caret, for the nanoid block's. Remove it when
+# `micromark-extension-math` allows 0.18.2 or later.
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.16.0'
