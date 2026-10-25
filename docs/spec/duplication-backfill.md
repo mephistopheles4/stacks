@@ -277,10 +277,12 @@ draws no segment across an empty bucket. All six time-series charts
   round's behaviour-lens, and after the owner's visual pass.
 - **As built, the join is named.** No renovation marker stands at
   2026-08-25, because the first nightlies predate any declared jscpd bump.
-  The two lines meet at about the same height, 0.86%. Zoomed to that day, the
-  first two nightly runs dip to 0.73%, and the line is back within the hour.
-  At wider ranges the dip is hidden, because a plotted point is the highest
-  run in its bin. The page's text and the chart's tooltip say so. Measured,
+  The two lines meet at about the same height, 0.86%. The first two nightly
+  runs read 0.73% and 0.72%, and the line is back within the hour. The dip
+  shows whenever a plotted point covers less than about half an hour, which
+  is a month's range or less. The default 90 days hides it, because there
+  each point is the highest run in its bin. The page's text and the chart's
+  tooltip say so. Measured,
   the dip is about 0.10 points of counter and 0.03 of code: jscpd 5.4.1 reads
   0.83% at #262 itself.
 - **As built, each series keeps one colour**: nightly green and backfill
@@ -438,7 +440,7 @@ a gate.
   changed 15 times. The tree population has been one rule throughout, and it
   matches the nightly exactly. Driver: §S8.
 - **Comparability against continuity.** Re-measuring the nightly stretch
-  under 5.4.1 would remove the step at 2026-08-25, but it would draw a second
+  under 5.4.1 would remove the dip at 2026-08-25, but it would draw a second
   line over data the store already holds and invite reading one for the
   other. The backfill covers only what nothing measured, and the page's text
   names the join, since no marker stands there. Driver: §S8.

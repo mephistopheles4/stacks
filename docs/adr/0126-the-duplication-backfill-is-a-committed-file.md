@@ -53,10 +53,10 @@ two newest counting stamps.
 ## What it costs
 
 - **A dip where the two lines meet.** The backfill is counted by jscpd 5.4.1,
-  and the first two nightlies by 5.0.16, which read 0.73% against the
-  backfill's 0.86%. The line is back at 0.86% within the hour, so the dip shows
-  only zoomed to that day. It is mostly the counter: 5.4.1 reads 0.83% at #262
-  itself. No renovation marker stands there, because those runs predate any
+  and the first two nightlies by 5.0.16, which read 0.73% and 0.72% against
+  the backfill's 0.86%. The line is back at 0.86% within the hour, so the dip
+  shows at a month's range or less, and the default 90 days hides it. It is
+  mostly the counter: 5.4.1 reads 0.83% at #262 itself. No renovation marker stands there, because those runs predate any
   declared bump, so the page's text and the chart's tooltip name it instead.
   Re-measuring the nightly stretch would remove it, at the price of a second
   line over data the store already holds.
