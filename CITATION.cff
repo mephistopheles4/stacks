@@ -1,11 +1,12 @@
+[WARN] Your node_modules are out of sync with your lockfile. The value of the minimumReleaseAgeExclude setting has changed
 cff-version: 1.2.0
-message: "If you use this software, please cite it using the metadata from this file."
+message: 'If you use this software, please cite it using the metadata from this file.'
 type: software
 title: stacks
-abstract: "A local-first reading tracker that turns your Obsidian vault into a 3D bookshelf."
+abstract: 'A local-first reading tracker that turns your Obsidian vault into a 3D bookshelf.'
 authors:
   - given-names: Ayman
     family-names: Diab
-    orcid: "https://orcid.org/0009-0000-8947-0057"
-repository-code: "https://github.com/mephistopheles4/stacks"
+    orcid: 'https://orcid.org/0009-0000-8947-0057'
+repository-code: 'https://github.com/mephistopheles4/stacks'
 license: MIT
