@@ -322,7 +322,7 @@ describe('historyAction — the rendered copy in the local store', () => {
 
       expect(action.kind).toBe('refuse');
       expect(action.kind === 'refuse' && action.message).toMatch(
-        /1-history\.prom, 2-history\.prom[\s\S]*Delete the other[\s\S]*--rebuild/,
+        /1-history\.prom, 2-history\.prom[\s\S]*Delete each one listed[\s\S]*--rebuild/,
       );
     }
   });

@@ -60,7 +60,7 @@ backfill would land in the store with nothing that draws it.
 | q9 | Sign off §S5.5's title table, and "my graphs" as every time-series chart | The owner saw the table in the lead's chat and changed nothing, relayed |
 | T2 | Accept that `parseHistory` caps neither the point count nor the earliest time | **The owner's own word**, given in the lead's chat and relayed by the lead. Nothing built |
 | q11 | Accept that `parseHistory` drops extra keys and allows a repeated commit, rather than refusing them | **The owner's own word**, given in the lead's chat on 2026-10-25 and relayed by the lead. Nothing built |
-| q12 | Keep `duplication-report.ts` under G1: move its one write into `scripts/lib/history-file.ts`, and exempt only that file | Lead's pick. It narrows an exemption this change made, and accepts no risk |
+| q12 | Keep `duplication-report.ts` under G1 (`adapter-boundary`): move its one write into `scripts/lib/history-file.ts`, and exempt only that file | Lead's pick. It narrows an exemption this change made, and accepts no risk |
 | q13 | Accept two generator risks: an interrupted run may leave jscpd's temporary report behind, and a malformed jscpd report could quote a fragment in its parse error. Both are patterns `runJscpd` already has | **The owner's own word**, given in the lead's chat on 2026-10-25 and relayed by the lead. Nothing built |
 | — | Lines instead of dots | The owner's words, relayed |
 | — | Plain titles saying what is measured and which way is better, with axis labels | The owner's words, relayed. The table in §S5.5 goes to the owner before the build |
