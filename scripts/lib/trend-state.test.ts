@@ -13,10 +13,14 @@ describe('the trend store state file (#522)', () => {
   });
 
   it('reads a state file written before markers and asks existed', () => {
-    expect(parseState('{"tip":"abc","imported":["1-a.prom"]}')).toEqual({
+    expect(parseState('{"tip":"abc","imported":["1-a.prom"]}')).toStrictEqual({
       tip: 'abc',
       imported: ['1-a.prom'],
     });
+  });
+
+  it('reads an empty state file as nothing imported, with no tip', () => {
+    expect(parseState('{}')).toStrictEqual({ imported: [] });
   });
 
   it('is undefined on a file that does not parse', () => {
