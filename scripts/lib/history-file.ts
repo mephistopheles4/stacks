@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { HISTORY_FILE } from './duplication-history.ts';
 import { REPO_ROOT } from './repo-root.ts';
 
-/** Write the serialised backfill to `jscpd.history.json`, as UTF-8 with LF line endings. */
+/** Write the bytes `serialiseHistory` made to `jscpd.history.json`, as UTF-8. */
 export function writeHistoryFile(bytes: string, root: string = REPO_ROOT): void {
   writeFileSync(join(root, HISTORY_FILE), bytes, 'utf8');
 }

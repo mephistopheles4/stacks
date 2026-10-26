@@ -329,7 +329,7 @@ export function historyAction(input: {
       kind: 'refuse',
       message:
         `.trend/local/ holds a history record under another name: ${stray.join(', ')}.\n` +
-        `  Only ${HISTORY_RECORD} is the backfill. Delete the other, then run\n` +
+        `  Only ${HISTORY_RECORD} is the backfill. Delete each one listed, then run\n` +
         '  `pnpm trend:sync --rebuild` so the store drops what it imported from it.',
     };
   }
@@ -367,9 +367,9 @@ export function historyAction(input: {
  * non-zero exit, and `git grep` exits 1 when nothing matched. A failed sweep
  * read as an empty one is a zero nobody measured.
  *
- * So these two helpers are an exception to ADR-0030's rule that git's capture
+ * So `gitLines` and `blobText` are an exception to ADR-0030's rule that git's capture
  * contracts live in `git.ts`, named here the way `commit-metrics.ts` names its
- * own. Both keep the no-shell half: an argument array, never a command line.
+ * own. Both keep its other rule, no shell: an argument array, never a command line.
  */
 function gitLines(args: readonly string[], root: string): string[] {
   const result = spawnSync('git', [...args], {
