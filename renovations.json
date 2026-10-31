@@ -152,6 +152,14 @@
       "reason": "The shelf scope's browser-only exclusion for the ?debug tuning panel moved from debug-panel.ts, which was deleted, to tuning-panel.ts, the view that replaces it (#496, ADR-0119); both are zero-mutant residuals of the kind the 2026-10-09 entry declared. The panel's logic was already in panel-model.ts, a measured file since #495, and the new Node test file is a test file the mutate array leaves out. Reasoned from the configuration diff, which is one negation swapped for another, and not from a mutation run or a resolved file list: no measured file is added or removed, so the mutated set and its mutant inventory are unchanged.",
       "pr": 504,
       "preserves": true
+    },
+    {
+      "date": "2026-10-31",
+      "stamp": "duplicationHash",
+      "value": "sha256:3a7da02a7f9812adb75a42f5fe1a418092ddba54445b6b5d7a329994abc90af9",
+      "reason": "jscpd moved to 5.4.2. Measured over the identical tree, main at 69f7bd0 under 5.4.1 against the bump at 40ec214 under 5.4.2, which differ only in package.json and the lockfile: pnpm duplication:report printed byte-identical output under both. The whole tree reads 74 clones, 783 duplicated lines, 97251 total lines and 0 ignored, and all eight declared scopes are unchanged. 5.4.2 maps more file extensions and changes --ignore-identifiers matching, but this repo's counter reads TypeScript and passes no --ignore-identifiers, so neither reached a count. Totals were compared, not the clone spans one by one as for 5.4.1. So the window is declared preserved; no code reads a duplication calibration window yet (#269).",
+      "pr": 529,
+      "preserves": true
     }
   ]
 }
