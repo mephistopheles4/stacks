@@ -50,6 +50,10 @@
   ],
   "excludedDirectories": [
     {
+      "path": "packages/ask/src",
+      "mechanism": "Not a property of the code: its specs run in-process and could be measured. The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the Worker, because a scope needs a first full run to set its floor and nothing here has been run on the real model. Excluded by that decision, to be replaced by a declared scope once a full run exists; G38 admits only the two states, so this is the second one, named for what it is."
+    },
+    {
       "path": "gates",
       "mechanism": "`gates/repo.ts:13` is `REPO_ROOT = resolve(process.cwd())` and Stryker's sandbox is not the repository, so in a sandbox every repo-shape gate silently retargets at a copy of the tree: four gates shell out to git into a directory that is not a checkout, and G23 regex-matches source text Stryker has rewritten by construction. Mutating anything here pulls those specs in and the run dies at the dry run. Measured, and reversible on a stated condition: `REPO_ROOT` resolved from a marker rather than from `cwd`."
     },
