@@ -6686,3 +6686,34 @@ planted in the real file.
   import is planted on synthetic sources. Disposition `gated`.
 - **Decay** — **gated.** Nothing here depends on a tool version; a moved shell
   fails the vacuity guard, because the file is read by path. Disposition `gated`.
+
+### G69 — `one-ai-call`
+
+**Gate:** [`gates/one-ai-call.test.ts`](../gates/one-ai-call.test.ts)
+**Date:** 2026-11-05
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real files and reverted: a second `env.AI.run(...)`
+appended to `handler.ts` went red on both the repository-wide clause and the
+binding clause, and removing `skipCache: true` from `ai.ts` went red with
+`the call does not pass skipCache: true`. Typecheck and the Worker's own tests
+stayed green under both, which is the reason the gate exists.
+
+- **Weakening** — **exposed.** The gate matches source text. A call whose
+  method name is built at run time, or made through a helper that is handed the
+  binding as an argument, is not matched. The third clause keeps the binding out
+  of every file but `ai.ts` and `env.ts`, which is what makes a helper that
+  receives it impossible to write without tripping the gate. Disposition
+  `accepted`.
+- **Satisfying the letter** — **exposed.** A `gateway` option that names the
+  right id and sits in a dead branch passes. The live proof is C7, a successful
+  call from the deployed Worker tripping a small limit, and it is the owner's
+  step. Disposition `accepted`.
+- **Routing around** — **gated.** A destructured `{ AI }`, `env['AI']` and
+  `env?.AI` in any other Worker file are planted and refused. Disposition
+  `gated`.
+- **Vacuous green** — **gated.** The call in `ai.ts` must be found, and the
+  scan must read at least eight Worker files. Disposition `gated`.
+- **Decay** — **exposed.** If Cloudflare renames the binding's `run` method or
+  the `gateway` option, this row stays green over a call that no longer meters.
+  C7 would show it. Disposition `accepted`.
