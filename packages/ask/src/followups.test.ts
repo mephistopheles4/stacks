@@ -175,12 +175,23 @@ describe('splitFollowUps: a sentence that starts like the marker stays in the an
       '**Follow-ups:**',
       '### Follow ups',
       'Follow-up questions',
+      'FOLLOW-UPS.',
+      'Follow-ups?',
       'follow-ups - What did you think of Nexus?',
     ]) {
       const out = splitFollowUps(
         ['A.', marker, '- What did you think of Nexus?'].join(String.fromCharCode(10)),
       );
       expect(out.answer, marker).toBe('A.');
+    }
+  });
+
+  it('reads the questions under a marker that ends in a full stop or a question mark (behaviour N2)', () => {
+    for (const marker of ['FOLLOW-UPS.', 'Follow-ups?']) {
+      const out = splitFollowUps(
+        ['A.', marker, '- What did you think of Nexus?'].join(String.fromCharCode(10)),
+      );
+      expect(out.followUps, marker).toEqual(['What did you think of Nexus?']);
     }
   });
 });

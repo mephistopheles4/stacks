@@ -214,8 +214,29 @@ describe("a read that never answers ends inside the question's deadline (behavio
     expect(await source.thoughts(book!)).toBeUndefined();
   });
 
-  it('is 5 seconds by default, well inside the 30-second deadline', () => {
+  it('uses 5 seconds when the Worker gives no time', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    const { impl } = site();
+    await createLibrarySource('https://s.example', impl).catalogue();
+    expect(timeout).toHaveBeenCalledWith(DATA_TIMEOUT_MS);
     expect(DATA_TIMEOUT_MS).toBe(5_000);
     expect(DATA_TIMEOUT_MS * 2).toBeLessThan(AI_DEADLINE_MS);
+    timeout.mockRestore();
+  });
+
+  it('does not keep a failed note read as "no Thoughts" (behaviour E1)', async () => {
+    let down = true;
+    const impl = (async (url: string) => {
+      if (url.endsWith('/library.json')) {
+        return Response.json({ books: [{ id: 'a-book', title: 'A', thoughts: true }] });
+      }
+      if (down) throw new Error('stalled');
+      return Response.json({ paragraphs: ['I liked it.'] });
+    }) as unknown as typeof fetch;
+    const source = createLibrarySource('https://s.example', impl);
+    const [a] = await source.catalogue();
+    expect(await source.thoughts(a!)).toBeUndefined();
+    down = false;
+    expect(await source.thoughts(a!)).toEqual(['I liked it.']);
   });
 });

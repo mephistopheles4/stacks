@@ -119,27 +119,32 @@ export function createLibrarySource(
     const held = notes.get(book.id);
     if (held !== undefined && fresh(held)) return held.value;
     notes.delete(book.id);
-    const paragraphs = await fetchNote(current.id);
-    notes.set(book.id, { value: paragraphs, at: now() });
-    return paragraphs;
+    const read = await fetchNote(current.id);
+    // A read that failed or timed out says nothing about the note, so it is not kept as "no
+    // Thoughts" for five minutes (behaviour E1).
+    if (read.settled) notes.set(book.id, { value: read.paragraphs, at: now() });
+    return read.paragraphs;
   }
 
-  async function fetchNote(id: string): Promise<readonly string[] | undefined> {
+  async function fetchNote(
+    id: string,
+  ): Promise<{ settled: boolean; paragraphs: readonly string[] | undefined }> {
     try {
       const response = await fetchImpl(`${origin}/notes/${id}.json`, {
         headers: { accept: 'application/json' },
         signal: AbortSignal.timeout(timeoutMs),
       });
       // A missing note is the home page with status 200 (S12 results).
-      if (!response.ok || !isJson(response)) return undefined;
+      if (!response.ok) return { settled: false, paragraphs: undefined };
+      if (!isJson(response)) return { settled: true, paragraphs: undefined };
       const body = (await response.json()) as { paragraphs?: unknown };
-      if (!Array.isArray(body.paragraphs)) return undefined;
+      if (!Array.isArray(body.paragraphs)) return { settled: true, paragraphs: undefined };
       const paragraphs = (body.paragraphs as unknown[]).filter(
         (p): p is string => typeof p === 'string' && p.length > 0,
       );
-      return paragraphs.length > 0 ? paragraphs : undefined;
+      return { settled: true, paragraphs: paragraphs.length > 0 ? paragraphs : undefined };
     } catch {
-      return undefined;
+      return { settled: false, paragraphs: undefined };
     }
   }
 

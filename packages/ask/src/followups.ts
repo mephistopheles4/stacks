@@ -15,9 +15,11 @@ export const MAX_FOLLOW_UP_CHARS = 120;
  * The marker line: FOLLOW-UPS, in any case, with bold marks or a heading around it. What follows the
  * word is read as the first follow-up only after a colon or a dash; anything else on the line means
  * it is a sentence that happens to start with those words ("Follow up with Nexus, it is great."),
- * and the line stays in the answer (behaviour E3).
+ * and the line stays in the answer (behaviour E3). A single full stop or question mark with nothing
+ * after it still counts as the marker (behaviour N2).
  */
-const MARKER = /^[\s*_#>-]*follow[\s-]*ups?(?:\s+questions?)?[\s*_]*(?:[:\u2013\u2014-]\s*(.*)|)$/i;
+const MARKER =
+  /^[\s*_#>-]*follow[\s-]*ups?(?:\s+questions?)?[\s*_]*(?:[:\u2013\u2014-]\s*(.*)|[.?]?[\s*_]*)$/i;
 const MARKUP = /:\/\/|www\.|[<>`[\]{}|\\]|\]\(/;
 /** What a model puts before a list item: a bullet or a number. */
 const LEADING = /^\s*(?:[-*•–—]+|\d+[.)])\s*/;

@@ -7,7 +7,7 @@ import {
   MAX_THOUGHT_TOKENS,
 } from './limits.ts';
 import { catalogueLine, estimateTokens, plain } from './prompt.ts';
-import { rankLibrary, topRated, usableTerms } from './search.ts';
+import { namesTitle, rankLibrary, topRated, usableTerms } from './search.ts';
 
 /**
  * The two read-only tools the model has (docs/spec/ask-the-library.md S5, S6; T1, T14).
@@ -167,6 +167,12 @@ function listBooks(catalogue: readonly CatalogueBook[], room: number): string {
 async function searchBooks(session: ToolSession, query: string, room: number): Promise<string> {
   const matches = await rankLibrary(session.catalogue, session.source, query, session.returned);
   let hits = matches.slice(0, MAX_SEARCH_BOOKS);
+  // A query that names a book an earlier search already returned still matched it, though T6's
+  // exclude leaves it out of this result (behaviour N1).
+  if (usableTerms(query).length > 0)
+    for (const book of session.catalogue)
+      if (session.returned.has(book.id) && namesTitle(book.title, query))
+        session.matched.add(book.id);
   // A usable word that matched nothing: the top-rated books, said to be that (T6's exclude holds).
   const missed = hits.length === 0 && usableTerms(query).length > 0;
   if (missed) hits = await topRated(session.catalogue, session.source, session.returned);

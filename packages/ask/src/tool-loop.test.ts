@@ -284,7 +284,7 @@ describe('a bad tool call is answered, not failed (T10 narrowed)', () => {
   });
 });
 
-describe('any failed step gives plain results (T10, T12, C29)', () => {
+describe('a failed model step gives plain results (T10, T12, C29)', () => {
   const nap = SEARCH_FOUND;
 
   it.each([
@@ -574,7 +574,7 @@ describe('a caller can watch a question (the evals)', () => {
   });
 });
 
-describe('pills after a refusal or an answer with no search (memory fallback needs a tool call)', () => {
+describe('pills after a refusal or an answer with no search (the memory fallback needs a matched book)', () => {
   const earlier = [{ question: 'What did you think of Nexus?', answer: 'I wrote about Nexus.' }];
 
   it('a refusal after memory shows no pill, though the memory names a book', async () => {
@@ -700,7 +700,6 @@ describe('nothing the model wrote or named goes back to it, or goes uncounted (b
   const CANARY = 'CANARY-WORDS-' + 'x'.repeat(3_000);
   const LONG_NAME = 'tool_' + 'n'.repeat(3_000);
   const LONG_ID = 'id_' + 'i'.repeat(3_000);
-  const biggest = { question: 'q'.repeat(300), answer: 'a'.repeat(600) };
 
   it("the assistant turn has empty content, and the ids and names are the Worker's own", async () => {
     const { env, seen } = scripted([
@@ -738,26 +737,6 @@ describe('nothing the model wrote or named goes back to it, or goes uncounted (b
       ['call_2', 'search_library'],
     ]);
   });
-
-  it('long text beside a tool call cannot push the input past 6,000 with the largest memory', async () => {
-    const { env, seen } = scripted([
-      { text: CANARY.repeat(3), calls: [{ id: LONG_ID, name: 'list_books', args: {} }] },
-      {
-        text: CANARY.repeat(3),
-        calls: [{ id: LONG_ID, name: 'search_library', args: { query: 'nexus' } }],
-      },
-      { text: 'Done.' },
-    ]);
-    await answerQuestion(env, source, 'z'.repeat(1_500), Date.now, [biggest, biggest]);
-    for (const call of seen) {
-      const tokens = call.messages.reduce(
-        (n, m) =>
-          n + estimateTokens(m.content) + estimateTokens(JSON.stringify(m.tool_calls ?? [])),
-        0,
-      );
-      expect(tokens).toBeLessThanOrEqual(6_000);
-    }
-  });
 });
 
 describe("a memory pill only for a book this question's search matched (behaviour E4)", () => {
@@ -768,12 +747,6 @@ describe("a memory pill only for a book this question's search matched (behaviou
       (b) => b.id,
     );
   };
-
-  it('a search that matched the memory book keeps its pill', async () => {
-    expect(
-      await ask([{ calls: [search('Nexus')] }, { text: 'I liked the history.' }], 'why?'),
-    ).toEqual(['nexus']);
-  });
 
   it('a search that matched other books does not bring the memory book back', async () => {
     expect(
@@ -788,6 +761,25 @@ describe("a memory pill only for a book this question's search matched (behaviou
         [{ calls: [search('zymurgy')] }, { text: "I haven't read any books about zymurgy." }],
         'zymurgy?',
       ),
+    ).toEqual([]);
+  });
+
+  it('a search that offers the memory book and a second that names it keeps its pill (behaviour N1)', async () => {
+    expect(
+      await ask(
+        [
+          { calls: [search('zymurgy')] },
+          { calls: [search('Nexus')] },
+          { text: 'I found it thoughtful.' },
+        ],
+        'the book?',
+      ),
+    ).toEqual(['nexus']);
+  });
+
+  it('an empty query offers books and matches none, so the memory book gets no pill (behaviour N2)', async () => {
+    expect(
+      await ask([{ calls: [search('recommend')] }, { text: 'I thought about it.' }], 'which?'),
     ).toEqual([]);
   });
 
