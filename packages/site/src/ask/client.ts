@@ -105,3 +105,19 @@ export async function askLibrary(
     return unavailable;
   }
 }
+
+/**
+ * One question's two steps: a token, then the send. A step that throws or rejects, or a check that
+ * could not run, is the one unavailable reply, so the drawer always has an answer to show.
+ */
+export async function answerWith(
+  getToken: () => Promise<string | undefined>,
+  send: (token: string) => Promise<AskResult>,
+): Promise<AskResult> {
+  try {
+    const token = await getToken();
+    return token === undefined ? unavailable : await send(token);
+  } catch {
+    return unavailable;
+  }
+}

@@ -97,6 +97,11 @@ describe('the conversation lives in a page variable and is sent with each questi
   it('the drawer sends what memory holds and remembers each reply', () => {
     const drawer = code('drawer.ts');
     expect(drawer).toContain('askLibrary(question, token, memory.recent())');
+    // The drawer is not left busy, with its button off and the waiting line up, by a thrown step.
+    const tail = drawer.slice(drawer.indexOf('} finally {', drawer.indexOf('async function ask(')));
+    expect(tail.slice(0, 400)).toContain('busy = false');
+    expect(tail.slice(0, 400)).toContain('ui.send.disabled = false');
+    expect(tail.slice(0, 400)).toContain('waiting.remove()');
     expect(drawer).toContain('memory.remember(question, result)');
   });
 });

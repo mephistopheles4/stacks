@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { UNAVAILABLE, askLibrary, readReply, unavailable } from './client.ts';
+import { UNAVAILABLE, answerWith, askLibrary, readReply, unavailable } from './client.ts';
 
 const json = (body: unknown, status = 200): Response => Response.json(body, { status });
 const html = (status: number): Response =>
@@ -147,5 +147,37 @@ describe('follow-ups in a reply (S6, C4, C15)', () => {
   it('is empty for every non-AI shape and for the unavailable message', () => {
     expect(unavailable.followUps).toEqual([]);
     expect(readReply({ mode: 'search', answer: 'x', books: [] }).followUps).toEqual([]);
+  });
+});
+
+describe('answerWith: a step that throws is the unavailable reply (CodeRabbit)', () => {
+  const ok = { mode: 'ai', answer: 'Hi', books: [], followUps: [] } as const;
+
+  it('sends with the token when there is one', async () => {
+    const send = vi.fn(async () => ok);
+    expect(await answerWith(async () => 'tok', send)).toBe(ok);
+    expect(send).toHaveBeenCalledWith('tok');
+  });
+
+  it('is unavailable, and sends nothing, when there is no token', async () => {
+    const send = vi.fn(async () => ok);
+    expect(await answerWith(async () => undefined, send)).toBe(unavailable);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('is unavailable when getting the token rejects, as the Turnstile script can make it', async () => {
+    const send = vi.fn(async () => ok);
+    const rejects = async (): Promise<string | undefined> => {
+      throw new Error('script threw');
+    };
+    expect(await answerWith(rejects, send)).toBe(unavailable);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('is unavailable when the send rejects', async () => {
+    const boom = async (): Promise<typeof ok> => {
+      throw new Error('boom');
+    };
+    expect(await answerWith(async () => 'tok', boom)).toBe(unavailable);
   });
 });

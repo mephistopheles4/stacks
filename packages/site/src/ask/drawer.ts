@@ -1,5 +1,5 @@
 import { onHeld, requestPickUp } from './bridge.ts';
-import { askLibrary, unavailable, type AskResult } from './client.ts';
+import { answerWith, askLibrary, type AskResult } from './client.ts';
 import { createOutsideClick, escapeTakenBy, type CloseReason } from './close.ts';
 import { createMemory } from './memory.ts';
 import { createPanelMotion } from './motion.ts';
@@ -177,19 +177,26 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
     addEntry('question', question);
     const waiting = addEntry('waiting', WAITING);
     ui.live.textContent = WAITING;
-    const token = await tokens.token();
-    const result: AskResult =
-      token === undefined ? unavailable : await askLibrary(question, token, memory.recent());
-    waiting.remove();
-    memory.remember(question, result);
-    addAnswer(result);
-    // Follow-ups when the answer brought some; otherwise the quick questions again,
-    // after every search fallback, limit and error too.
-    setQuick(result.followUps.length > 0 ? result.followUps : defaults);
-    ui.live.textContent = result.answer;
-    busy = false;
-    ui.send.disabled = false;
-    input.focus();
+    try {
+      // A step that throws, such as Cloudflare's script throwing inside the token's promise, is
+      // the unavailable reply and never leaves the drawer busy (CodeRabbit).
+      const result: AskResult = await answerWith(
+        () => tokens.token(),
+        (token) => askLibrary(question, token, memory.recent()),
+      );
+      waiting.remove();
+      memory.remember(question, result);
+      addAnswer(result);
+      // Follow-ups when the answer brought some; otherwise the quick questions again,
+      // after every search fallback, limit and error too.
+      setQuick(result.followUps.length > 0 ? result.followUps : defaults);
+      ui.live.textContent = result.answer;
+    } finally {
+      waiting.remove();
+      busy = false;
+      ui.send.disabled = false;
+      input.focus();
+    }
   }
 
   function addEntry(kind: 'question' | 'answer' | 'waiting', text: string): HTMLElement {
