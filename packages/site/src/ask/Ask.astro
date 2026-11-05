@@ -162,6 +162,12 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    /* A thin walnut bar with room beside the text; the standard properties, so the browser
+       draws its own bar (no ::-webkit-scrollbar) and the bar is never hidden. */
+    scrollbar-width: thin;
+    scrollbar-color: #58402d transparent;
+    scrollbar-gutter: stable;
+    padding-right: 0.5rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;

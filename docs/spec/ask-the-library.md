@@ -393,6 +393,11 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   and 1.75rem before the next question; answers at line height 1.6; pills one per line, 0.5rem
   apart and 0.75rem above the group; quick questions and follow-ups 0.5rem apart under a thin
   divider.
+- **Scrollbar (owner, 2026-11-05):** the thread's own bar is thin and walnut with a gap beside the text:
+  `scrollbar-width: thin; scrollbar-color: #58402d transparent; scrollbar-gutter: stable;` and `0.5rem` of
+  right padding, standard properties only (no `::-webkit-scrollbar`), and never hidden. On Windows Chromium
+  the bar keeps a tiny arrow at its ends; the browser draws it. At phone width the pills still fit inside the
+  thread (no horizontal overflow) and still clip with an ellipsis.
 - **Motion:** the panel slides in from the right over 220 ms and out over 160 ms. A new
   question, answer or pill rises and fades in over 180 ms, pills 40 ms apart and only on the
   newest answer (an entry is marked new until its animation ends, so reopening replays none).
