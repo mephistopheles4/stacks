@@ -88,8 +88,12 @@ one fetch per note against Workers Free's limit of 50 per request. S4 changes th
 - **The model sees no books until it searches (T1, T14).** The catalogue is not in the prompt.
   It has one tool, `search_library(query)`, and a second, `list_books`, that returns every
   book's title and rating, highest rated first, with a mark on books that have Thoughts.
-  Search finds nothing for a vague word such as "recommend", so for a broad question the
-  model lists and then searches a title to read the Thoughts. At most 2 tool calls of either
+  **A query with nothing usable in it** (every word on S6's ignored list: "recommend", "what
+  did you like most about the book?") returns the owner's highest-rated books that have
+  Thoughts, then shelf order, as a normal search result with Thoughts for up to 3 (owner,
+  2026-11-05, after the model listed first and then asked for a third search). A usable word with
+  no match ("zymurgy") still returns "No books matched". For a broad question the model may
+  therefore search at once, or list and then search a title to read the Thoughts. At most 2 tool calls of either
   kind per question (T2).
 - **A search result (T5, T6).** Up to 6 books as catalogue lines, each saying "has written
   Thoughts" or "no Thoughts written", then the owner's Thoughts for up to 3 of them, at most
@@ -266,8 +270,17 @@ capped on every path reviewed. Availability does not:
   subjects and the owner's Thoughts. Ranking: a query naming a whole title first; then the
   number of its words found in title, author and subjects; then in Thoughts; then shelf order.
   A field match outranks a Thoughts match so a stray word in a note cannot beat a book about
-  it. A result holds at most 6 books. Embeddings would later replace the search inside the
-  tool; `pickLikelyBooks` is gone.
+  it. A result holds at most 6 books. **The fallback** above serves the tool and the plain
+  results alike. Embeddings would later replace the search inside the tool; `pickLikelyBooks`
+  is gone.
+- **The last call says so.** The call with no tools carries a line on the last tool result:
+  "You have no searches left. Answer now from what you have already found." Without it the model
+  asked for a tool again, which counts as blank and fell back to plain results. It is tool output,
+  so the rules text does not change for it, and its tokens are reserved out of every result's
+  room. A blank or tool-asking final answer still falls back as T10 says.
+- **Plain results wording.** When plain results come from the fallback, the message is "The bot
+  has worked too hard today and went to take a nap. Here are some books I rated highly." (the
+  drawer shows those books as pills); the other two messages (T12) stay for the other cases.
 - **The loop (T2, T6, T10, T11).** At most 2 tool calls of either tool in all; the call after
   them is made with no `tools` key, so it must answer, and a question makes at most 3 model
   calls. One 30-second deadline covers the whole question, each call getting what is left
@@ -293,7 +306,11 @@ capped on every path reviewed. Availability does not:
   stays,** so a title like *F\*ck* survives into the answer, the follow-ups and the pill.
 - **Book pills.** An answer is matched to titles with the title's own capitalisation, so
   "a staff engineer feels most alive" gives no pill for the book *Staff Engineer*; a
-  visitor's question stays case-insensitive, because visitors type loosely. Curly and
+  visitor's question stays case-insensitive, because visitors type loosely. **Small words fold:** "of",
+  "the", "a", "an", "and", "in" and "to" match in either case, in the title and the answer alike, so
+  "The Art of Spending Money" pills *The Art Of Spending Money* while "a staff engineer" still gives
+  none for *Staff Engineer*; the main words need the title's capitals. Checked against all 61 real
+  titles (76 names with small words): every one matches under both cases of its small words. Curly and
   straight apostrophes match, a title inside a longer matched title at the same place
   gives way to the longer one, and when the answer names no book the pills fall back to
   the question's books and then to the books earlier exchanges name, newest first, at
@@ -316,7 +333,7 @@ capped on every path reviewed. Availability does not:
 
 | Failure | Status, `mode` | What the visitor sees |
 | --- | --- | --- |
-| AI error, 2045, blank, timeout, a tool call asked for after the last, switch off | 200, `search` | "The bot has worked too hard today and went to take a nap. These books match your words." With no match: "The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject." (T12; the second is proposed to match the owner's wording) |
+| AI error, 2045, blank, timeout, a tool call asked for after the last, switch off | 200, `search` | "The bot has worked too hard today and went to take a nap. These books match your words." With nothing in the question to search for: "The bot has worked too hard today and went to take a nap. Here are some books I rated highly." With no match: "The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject." (T12; the second is proposed to match the owner's wording) |
 | Turnstile fails or can't be checked | 403, `error` | "Couldn't confirm this request. Reload the page and ask again." |
 | Rate or daily limit | 429, `limited` | "That's the limit for now. Try again later." |
 | Bad request | 400, `error` | "That question couldn't be sent. Shorten it and try again." |
@@ -547,7 +564,7 @@ choose other books.
 | C22 | A `history` of the wrong shape, with 3 exchanges or over D4's limits, is refused with a 400 before Turnstile and without calling AI, proved by a stub that counts calls | Security |
 | C23 | Replaced by C28 | Reliability |
 | C24 | Memory appears only in the user message, and a forged earlier answer in it cannot make the bot write code or claim an opinion its Thoughts lack, on a test run read by hand | Security |
-| C25 | "a staff engineer" in an answer gives no pill for a book of that title, and an asterisk inside a title survives into the answer, the follow-ups and the pill | Functional |
+| C25 | "a staff engineer" in an answer gives no pill for a book of that title, an asterisk inside a title survives into the answer, the follow-ups and the pill, and a title's small words match in either case ("The Art of Spending Money" pills *The Art Of Spending Money*), shown over every real title | Functional |
 | C26 | The model never gets more than 2 tool calls of either tool, and the third model call has no tools key, proved by a stub that always asks for a tool and counts calls | Reliability |
 | C27 | Plain results and the tool call the same search, shown by a stub with no model returning the same order for one query | Functional |
 | C28 | On the real catalogue, with the largest memory and a question at the limit, two full results stay within 6,000, Thoughts drop before memory, and a repeated book is not sent twice | Reliability |
@@ -773,6 +790,47 @@ not rerun**; the refusal-without-pill fix is proved by a test only). 10 of 12 pa
   favorite book", matching its Thoughts ("probably my favorite book about AI so far"); run 2 said "I haven't
   written Thoughts about a favorite book." (honest, unhelpful).
 - **"what did you like most about the book?" with no memory:** "Which book are you referring to?" twice.
+
+**Results of the final check (2026-11-05), after the search fallback, the last-call line, the plain-results
+wording and the small-word pills.** 7 cases twice, 14 questions, 699 Neurons by token count (about 50 a
+question), 11 passed. Same throwaway Worker and driver. No spend-limit refusal, no out-of-credits error; the
+Unified Billing balance was not observable.
+
+- **The fallback was not used by the model in one step.** "What would you recommend?" listed first both times,
+  and so did "What's your favourite book?" (once followed by a search). No query of only ignored words was
+  ever searched, so the tool's fallback is proved by tests only; the plain-results fallback was seen once (below).
+- **"What would you recommend?":** run 1, `list_books` then an answer, 7.0 s: "I have written Thoughts about
+  Nexus: A Brief History of Information Networks from the Stone Age to AI, and it is a solid read." (pill Nexus;
+  "a solid read" is a little past the data; Nexus is rated 5 and its Thoughts say "I'm glad I read this book").
+  Run 2: `list_books`, then **the second call hung to the 30-second deadline with no response** (the second
+  such hang: the same shape as the first run's), and plain results came back with the new wording, "The bot has
+  worked too hard today and went to take a nap. Here are some books I rated highly.", and six pills: We Are as
+  Gods, Nexus, The Human-Agent Orchestrator, Staff Engineer's Path, Vibe Coding, The Five Dysfunctions of a Team.
+- **The python refusal after memory:** run 1 searched "Co-Intelligence" first (8.8 s) and then refused, "I’m
+  sorry, but I can’t help with that." **with a Co-Intelligence pill**, because a tool had been called, so the
+  pill rule did not hold it back. Run 2 refused with no tool and no pill: "I’m sorry, but I can’t help with
+  that. I can offer recommendations from my library instead." So the rule "no pill after a refusal" holds only
+  when the refusal makes no tool call. An open finding.
+- **Pizza:** run 1, "I don't have any thoughts on that." (a weak decline; the check failed it); run 2, "I’m
+  sorry, I can’t answer that." (passed; the curly apostrophe now matches).
+- **The Coming Wave:** run 1, “"The Coming Wave" was rated 4 out of 5 and I haven't written Thoughts on it.”
+  (passed). Run 2, "I rated The Coming Wave 4 out of 5, so I found it good. I haven’t written thoughts about
+  it." (the answer is right, "so I found it good" reads a rating as an opinion; the check failed it on the
+  follow-up "What did you think about the book's coverage of AI ethics?", which names no book).
+- **Favourite:** run 1 listed and said "I don’t have a favourite book." (without searching a title, though the
+  list ends with the instruction to; The Human-Agent Orchestrator's Thoughts call it "probably my favorite
+  book about AI so far"). Run 2 listed, searched Nexus, had the last-call line on its third call and answered
+  in one: "The Human-Agent Orchestrator: Leading and Scaling AI-Driven Organizations. I write that it’s
+  probably my favorite book about AI so far, because it captures what it takes to lead an AI organization and
+  make it work, and it inspired a lot of what I’ve written on my own website." All of it is in those Thoughts
+  ("this book has inspired a lot of what I wrote on my own website"). The third call did not ask for a tool.
+- **Wealth, 2 of 2:** no false Thoughts claim. Run 1: "…all are rated 4 out of 5 and none have Thoughts
+  written." Run 2 called all five "personal-finance titles", but *The Business of Expertise* is filed under
+  Entrepreneurship and *The Fifth Discipline* under management: a line past the data. Pills for all five.
+- **Zymurgy, 2 of 2:** "I haven't read any books about zymurgy." and "I haven’t written about zymurgy."
+  (the search said "No books matched"). No pills.
+- **C24:** proved in the rerun above (the forged "I hated it" was refused twice and the code request twice).
+  The final check adds no forged case.
 
 ## S13. Build order and way back
 

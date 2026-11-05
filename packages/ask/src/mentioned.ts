@@ -18,6 +18,15 @@ const APOSTROPHES = /[‘’ʼ′]/g;
 /** One kind of apostrophe, so matching does not depend on typography. */
 const straight = (text: string): string => text.replace(APOSTROPHES, "'");
 
+/**
+ * The small words a title is written either way: "The Art of Spending Money" and "The Art Of
+ * Spending Money" are one book, and so is "the Art of ..." mid-sentence. Only these fold, in the
+ * title and in the answer alike, so the main words still need the title's capitals.
+ */
+const SMALL_WORD = /\b(?:of|the|a|an|and|in|to)\b/gi;
+const foldSmall = (text: string): string =>
+  straight(text).replace(SMALL_WORD, (word) => word.toLowerCase());
+
 /** Lower case as well: how a visitor's question is matched, because visitors type loosely. */
 export function fold(text: string): string {
   return straight(text).toLowerCase();
@@ -82,7 +91,7 @@ function swallowed(span: Span, all: readonly Span[]): boolean {
  * hold a title's words in lower case names no book.
  */
 function named(text: string, catalogue: readonly CatalogueBook[], loose: boolean): CatalogueBook[] {
-  const normalise = loose ? fold : straight;
+  const normalise = loose ? fold : foldSmall;
   const spans = spansIn(normalise(text), catalogue, normalise);
   // A book stays if any occurrence of it is not swallowed by a longer title, so a
   // book named on its own as well as inside a longer one keeps its pill.

@@ -6,7 +6,7 @@ import { AI_DEADLINE_MS, MAX_INPUT_TOKENS, MAX_TOOL_CALLS } from './limits.ts';
 import { mentioned } from './mentioned.ts';
 import type { Outcome, OutcomeDetail } from './outcome.ts';
 import { estimateTokens, systemMessage, userMessage, type Exchange } from './prompt.ts';
-import { searchLibrary } from './search.ts';
+import { searchLibrary, usableTerms } from './search.ts';
 import { TOOLS, runTool, type ToolSession } from './tools.ts';
 
 export interface BookSummary {
@@ -28,6 +28,9 @@ export interface Reply {
 /** T12: the owner's wording, and a matching one for no match. */
 export const SEARCH_FOUND =
   'The bot has worked too hard today and went to take a nap. These books match your words.';
+/** Plain results for a question with nothing in it to search for: the books the owner rated highly. */
+export const SEARCH_RATED =
+  'The bot has worked too hard today and went to take a nap. Here are some books I rated highly.';
 export const SEARCH_NONE =
   'The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject.';
 
@@ -54,9 +57,10 @@ async function searchReply(
   question: string,
 ): Promise<Reply> {
   const found = await searchLibrary(catalogue, source, question).catch(() => []);
+  const fallback = usableTerms(question).length === 0;
   return {
     mode: 'search',
-    answer: found.length > 0 ? SEARCH_FOUND : SEARCH_NONE,
+    answer: found.length === 0 ? SEARCH_NONE : fallback ? SEARCH_RATED : SEARCH_FOUND,
     books: found.map((hit) => summary(hit.book)),
     followUps: [],
   };
@@ -100,6 +104,25 @@ const statsDetail = (stats: Stats): Pick<OutcomeDetail, 'searches' | 'tokensIn' 
   ...(stats.tokensOut !== undefined && { tokensOut: stats.tokensOut }),
 });
 
+/**
+ * The line the call with no tools carries: without it the model asked for a tool again, which
+ * counts as blank. It rides on the last tool result, so it is tool output and the rules text does
+ * not change for it; the call has no tools key, so there is nothing else to say it with.
+ */
+export const LAST_CALL_LINE =
+  'You have no searches left. Answer now from what you have already found.';
+
+/** The messages for the last call: the tool result before it ends with `LAST_CALL_LINE`. */
+export function withLastCallLine(messages: readonly ChatMessage[]): ChatMessage[] {
+  const copy = [...messages];
+  const at = copy.findLastIndex((m) => m.role === 'tool');
+  const last = copy[at];
+  if (last?.role === 'tool') {
+    copy[at] = { ...last, content: [last.content, '', LAST_CALL_LINE].join('\n') };
+  }
+  return copy;
+}
+
 /** A margin on the budget for the message framing the estimate does not see. */
 const FRAMING_TOKENS = 60;
 
@@ -141,7 +164,7 @@ async function converse(
     const left = AI_DEADLINE_MS - elapsed();
     if (left <= 0) throw new AiFailure('timeout');
     const offered = stats.searches < MAX_TOOL_CALLS;
-    const out = await runModel(env, messages, {
+    const out = await runModel(env, offered ? messages : withLastCallLine(messages), {
       timeoutMs: left,
       ...(offered && { tools: TOOLS }),
     });
@@ -165,7 +188,8 @@ async function converse(
     const wires: WireCall[] = [];
     let spent = messageTokens(messages) + FRAMING_TOKENS * calls.length;
     for (const call of calls) {
-      const room = MAX_INPUT_TOKENS - spent;
+      // The last call's line is reserved out of every result's room.
+      const room = MAX_INPUT_TOKENS - spent - estimateTokens(LAST_CALL_LINE);
       const run = await runTool(call, session, room);
       observe?.({
         kind: 'tool',

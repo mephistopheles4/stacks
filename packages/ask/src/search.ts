@@ -43,6 +43,11 @@ async function readThoughts(
   }
 }
 
+/** The query's words that are worth searching for: what is left after the ignored list. */
+export const usableTerms = (query: string): string[] => [
+  ...new Set(words(query).filter((w) => !STOP_WORDS.has(w))),
+];
+
 /**
  * The one search (T3, memory-free): serves the model's tool and the plain results
  * alike. Whole-word and case-insensitive over title, author, subjects and the
@@ -51,6 +56,10 @@ async function readThoughts(
  * found in Thoughts; then shelf order, which is the catalogue's own order. Fields
  * outrank Thoughts so a stray word in a note cannot beat a book that is about it.
  * At most 6 books, none whose id is in `exclude` (T6). It finds what the words say.
+ *
+ * **A query with no usable word** ("recommend", "what did you like most about the book?")
+ * returns the owner's highest-rated books that have Thoughts, then shelf order, as a normal
+ * result. A query with a usable word and no match returns nothing ("zymurgy").
  */
 export async function searchLibrary(
   catalogue: readonly CatalogueBook[],
@@ -68,8 +77,8 @@ export async function rankLibrary(
   query: string,
   exclude: ReadonlySet<string> = new Set(),
 ): Promise<Hit[]> {
-  const terms = [...new Set(words(query).filter((w) => !STOP_WORDS.has(w)))];
-  if (terms.length === 0) return [];
+  const terms = usableTerms(query);
+  if (terms.length === 0) return topRated(catalogue, source, exclude);
   const loaded = await Promise.all(
     catalogue.map(async (book) => ({ book, thoughts: await readThoughts(source, book) })),
   );
@@ -94,4 +103,19 @@ export async function rankLibrary(
         a.position - b.position,
     )
     .map((s) => s.hit);
+}
+
+/** Nothing to search for: the highest-rated books with Thoughts, then shelf order (S6). */
+async function topRated(
+  catalogue: readonly CatalogueBook[],
+  source: LibrarySource,
+  exclude: ReadonlySet<string>,
+): Promise<Hit[]> {
+  const ranked = catalogue
+    .map((book, position) => ({ book, position }))
+    .filter((s) => s.book.thoughts && !exclude.has(s.book.id))
+    .sort((a, b) => (b.book.rating ?? 0) - (a.book.rating ?? 0) || a.position - b.position);
+  return Promise.all(
+    ranked.map(async ({ book }) => ({ book, thoughts: await readThoughts(source, book) })),
+  );
 }

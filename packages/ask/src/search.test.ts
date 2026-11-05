@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogueBook, LibrarySource } from './library.ts';
-import { namesTitle, searchLibrary } from './search.ts';
+import { namesTitle, searchLibrary, usableTerms } from './search.ts';
 
 const b = (id: string, title: string, extra: Partial<CatalogueBook> = {}): CatalogueBook => ({
   id,
@@ -52,9 +52,15 @@ describe('searchLibrary (T3, T4, C27)', () => {
     expect(await ids('financ')).toEqual([]);
   });
 
-  it('ignores common words and returns nothing for only common words', async () => {
-    expect(await ids('what did you read about the books')).toEqual([]);
-    expect(await ids('recommend')).toEqual([]);
+  it('ignores common words, and a query of only common words gets the fallback, not a match', async () => {
+    // Only the books with Thoughts, the highest rated first (see the fallback tests below).
+    expect(await ids('what did you read about the books')).toEqual(['ai', 'gods']);
+    expect(await ids('recommend')).toEqual(['ai', 'gods']);
+  });
+
+  it('a query with a usable word and no match still finds nothing', async () => {
+    expect(await ids('zymurgy')).toEqual([]);
+    expect(await ids('what have you read about zymurgy?')).toEqual([]);
   });
 
   it("reads the owner's Thoughts too, and returns them with the hit", async () => {
@@ -143,5 +149,62 @@ describe('"like" and "most" are ignored words (S6)', () => {
     expect(await find('seeing state')).toEqual(['state']);
     expect(await find('The Most Human Human')).toEqual(['most']);
     expect(await find('human')).toEqual(['most']);
+  });
+});
+
+describe('the search fallback: nothing usable in the query (S6)', () => {
+  const rated = [
+    b('low', 'Low One', { thoughts: true, rating: 2 }),
+    b('none', 'No Thoughts', { thoughts: false, rating: 5 }),
+    b('top', 'Top One', { thoughts: true, rating: 5 }),
+    b('mid-a', 'Mid A', { thoughts: true, rating: 4 }),
+    b('mid-b', 'Mid B', { thoughts: true, rating: 4 }),
+    b('unrated', 'Unrated One', { thoughts: true }),
+    b('x1', 'X One', { thoughts: true, rating: 3 }),
+    b('x2', 'X Two', { thoughts: true, rating: 3 }),
+  ];
+  const notes = { catalogue: async () => rated, thoughts: async () => ['A note.'] };
+  const run = (q: string, exclude?: ReadonlySet<string>) => searchLibrary(rated, notes, q, exclude);
+
+  it('returns the highest-rated books with Thoughts, then shelf order, up to 6, each with its Thoughts', async () => {
+    const hits = await run('what would you recommend?');
+    expect(hits.map((h) => h.book.id)).toEqual(['top', 'mid-a', 'mid-b', 'x1', 'x2', 'low']);
+    expect(hits.every((h) => h.thoughts?.[0] === 'A note.')).toBe(true);
+  });
+
+  it('never returns a book with no Thoughts, however high it is rated', async () => {
+    expect((await run('recommend')).map((h) => h.book.id)).not.toContain('none');
+  });
+
+  it('leaves out books already returned, so a second fallback gets the next ones (T6)', async () => {
+    const hits = await run('recommend', new Set(['top', 'mid-a', 'mid-b']));
+    expect(hits.map((h) => h.book.id)).toEqual(['x1', 'x2', 'low', 'unrated']);
+  });
+
+  it('is only for a query with nothing usable: one usable word searches as before', async () => {
+    expect((await run('recommend one')).map((h) => h.book.id)).toEqual([
+      'low',
+      'top',
+      'unrated',
+      'x1',
+    ]);
+  });
+
+  it('finds nothing when no book has Thoughts', async () => {
+    const bare = [b('a', 'A', { rating: 5 })];
+    expect(
+      await searchLibrary(
+        bare,
+        { catalogue: async () => bare, thoughts: async () => undefined },
+        'recommend',
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('usableTerms', () => {
+  it('drops ignored words and repeats', () => {
+    expect(usableTerms('What would you recommend?')).toEqual([]);
+    expect(usableTerms('finance finance Money')).toEqual(['finance', 'money']);
   });
 });

@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SEARCH_FOUND, SEARCH_NONE, answerQuestion, type TraceEvent } from './answer.ts';
+import {
+  LAST_CALL_LINE,
+  SEARCH_FOUND,
+  SEARCH_NONE,
+  SEARCH_RATED,
+  answerQuestion,
+  withLastCallLine,
+  type TraceEvent,
+} from './answer.ts';
 import type { Env } from './env.ts';
 import type { CatalogueBook, LibrarySource } from './library.ts';
 import { logOutcome } from './outcome.ts';
@@ -189,7 +197,7 @@ describe('the tool loop (T1, T2, T7)', () => {
     ]);
     await answerQuestion(env, source, 'q');
     expect(seen[2]!.messages.at(-1)!.content).toBe(
-      'No other books matched. Try other words, or call list_books.',
+      ['No other books matched. Try other words, or call list_books.', '', LAST_CALL_LINE].join(NL),
     );
   });
 });
@@ -560,5 +568,82 @@ describe('pills after a refusal or an answer with no search (memory fallback nee
     const { env } = scripted([{ text: 'Nexus is a book I rated 4.' }]);
     const named = await answerQuestion(env, source, 'q', Date.now, []);
     expect(named.reply.books.map((b) => b.id)).toEqual(['nexus']);
+  });
+});
+
+describe('the last call says it has no searches left (S6)', () => {
+  it('only the call with no tools carries the line, on the last tool result, not as a new message', async () => {
+    const { env, seen } = scripted([
+      { calls: [search('nexus')] },
+      { calls: [search('history')] },
+      { text: 'I wrote about Nexus.' },
+    ]);
+    await answerQuestion(env, source, 'q');
+    expect(seen.map((s) => s.hasTools)).toEqual([true, true, false]);
+    for (const early of [seen[0]!, seen[1]!]) {
+      expect(JSON.stringify(early.messages)).not.toContain(LAST_CALL_LINE);
+    }
+    const last = seen[2]!.messages;
+    expect(last.map((m) => m.role)).toEqual([
+      'system',
+      'user',
+      'assistant',
+      'tool',
+      'assistant',
+      'tool',
+    ]);
+    expect(last.at(-1)!.content.endsWith(LAST_CALL_LINE)).toBe(true);
+    // The earlier tool result is untouched, and the rules text carries none of it.
+    expect(last[3]!.content).not.toContain(LAST_CALL_LINE);
+    expect(last[0]!.content).not.toContain(LAST_CALL_LINE);
+  });
+
+  it('says to answer now from what it has', () => {
+    expect(LAST_CALL_LINE).toBe(
+      'You have no searches left. Answer now from what you have already found.',
+    );
+  });
+
+  it('adds the line to a copy and leaves the conversation as it was', () => {
+    const original = [
+      { role: 'system', content: 's' },
+      { role: 'tool', tool_call_id: 'a', name: 'search_library', content: 'result' },
+    ] as const;
+    const out = withLastCallLine(original);
+    expect(out.at(-1)).toMatchObject({ content: ['result', '', LAST_CALL_LINE].join(NL) });
+    expect(original[1].content).toBe('result');
+  });
+
+  it('a tool request on the last call, which has no tools, still falls back to plain results', async () => {
+    const { env } = scripted(() => ({ calls: [search('nexus')] }));
+    const answered = await answerQuestion(env, source, 'nexus');
+    expect(answered.detail.reason).toBe('blank');
+    expect(answered.outcome).toBe('search-ai-failed');
+  });
+});
+
+describe('plain results when the question has nothing to search for (S6, T12)', () => {
+  const off = { ASK_AI_ENABLED: 'false' } as unknown as Env;
+
+  it('says the books are ones the owner rated highly, and shows the top-rated books with Thoughts', async () => {
+    const answered = await answerQuestion(off, source, 'what did you like most about the book?');
+    expect(answered.reply.answer).toBe(SEARCH_RATED);
+    expect(SEARCH_RATED).toBe(
+      'The bot has worked too hard today and went to take a nap. Here are some books I rated highly.',
+    );
+    expect(answered.reply.books.map((x) => x.id)).toEqual(['co', 'nexus']);
+    expect(answered.reply.books.every((x) => x.hasThoughts)).toBe(true);
+  });
+
+  it('keeps the two other messages for a real search', async () => {
+    expect((await answerQuestion(off, source, 'nexus')).reply.answer).toBe(SEARCH_FOUND);
+    expect((await answerQuestion(off, source, 'zymurgy')).reply.answer).toBe(SEARCH_NONE);
+  });
+
+  it('a failed model on a question with nothing to search for gets the same wording', async () => {
+    const { env } = scripted([{ throws: new Error('boom') }]);
+    const answered = await answerQuestion(env, source, 'What would you recommend?');
+    expect(answered.reply.mode).toBe('search');
+    expect(answered.reply.answer).toBe(SEARCH_RATED);
   });
 });

@@ -122,3 +122,34 @@ describe('mentioned: case and memory (memory spec)', () => {
     expect(ids(mentioned(CAT, 'Salt Harbour is good.', 'which?', history))).toEqual(['other']);
   });
 });
+
+describe('mentioned: small words in a title (S6, C25)', () => {
+  const ART = book('art', 'The Art Of Spending Money');
+  const STAFF = book('staff', 'Staff Engineer');
+  const LORD = book('lord', 'Lord of the Rings in a Nutshell');
+
+  it('matches a title whatever the case of its small words', () => {
+    expect(ids(mentioned([ART], 'I read The Art of Spending Money last year.'))).toEqual(['art']);
+    expect(ids(mentioned([ART], 'I read the Art Of Spending Money last year.'))).toEqual(['art']);
+    expect(ids(mentioned([ART], 'I read The Art Of Spending Money last year.'))).toEqual(['art']);
+  });
+
+  it('matches a title whose catalogue spelling uses the other case, and several small words', () => {
+    const lower = book('l', 'The Art of Spending Money');
+    expect(ids(mentioned([lower], 'I read The Art Of Spending Money.'))).toEqual(['l']);
+    expect(ids(mentioned([LORD], 'I read Lord Of The Rings In A Nutshell.'))).toEqual(['lord']);
+  });
+
+  it('still requires the main words to have the title capitals', () => {
+    expect(mentioned([ART], 'the art of spending money is hard.')).toEqual([]);
+    expect(mentioned([ART], 'The art of Spending Money is hard.')).toEqual([]);
+    expect(mentioned([STAFF], 'a staff engineer feels most alive when solving things.')).toEqual(
+      [],
+    );
+    expect(ids(mentioned([STAFF], 'I read Staff Engineer last year.'))).toEqual(['staff']);
+  });
+
+  it('does not match a small word inside a longer word', () => {
+    expect(mentioned([book('t', 'The Tomb')], 'I read Theatomb.')).toEqual([]);
+  });
+});

@@ -297,3 +297,19 @@ describe('results that guide the model (T5, T10)', () => {
     expect(out.content).not.toContain('Showing');
   });
 });
+
+describe('a query with nothing to search for gets the top-rated books as a normal result (S6)', () => {
+  it('returns marked lines and Thoughts for up to 3, like any search', async () => {
+    const out = await runTool(search({ query: 'what would you recommend?' }), session(), ROOM);
+    const [lines, ...blocks] = out.content.split(NL + NL);
+    expect(lines!.split(NL)[0]).toBe(
+      '"Wealth Of Notes": read; subjects: Business; rated 5 out of 5; has written Thoughts.',
+    );
+    expect(lines).not.toContain('Money Unlocked');
+    expect(blocks.join(NL)).toContain('Your Thoughts on "Wealth Of Notes"');
+  });
+
+  it('a word with no match is still "No books matched"', async () => {
+    expect((await runTool(search({ query: 'zymurgy' }), session(), ROOM)).content).toBe(NO_MATCH);
+  });
+});
