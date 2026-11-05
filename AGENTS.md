@@ -229,6 +229,9 @@ pnpm fixtures:50         # regenerate the 50-book fixture vault   (--books N for
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
+pnpm deploy:ask          # the Ask the library Worker: main only   (--dry-run, --ai-off, --ai-on, --gateway <id>)
+pnpm evals:ask           # the S9 evals, live, through a test gateway   (--gateway <id>, --site <dir>)
+pnpm ask:status          # yesterday's outcome counts for the Worker, from Workers Logs
 pnpm duplication:report  # jscpd over the eight scopes and the whole tree, as a table   (--history)
 pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope   (--markdown)

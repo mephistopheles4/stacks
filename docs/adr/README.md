@@ -150,3 +150,6 @@ Two other files hold what these deliberately do not:
 | [0122](./0122-athanor-runs-the-suite-in-a-sealed-container.md) | athanor runs the suite in a sealed container, from an image that holds the installed workspace |
 | [0123](./0123-a-hook-holds-agents-to-athanor.md) | A hook holds agents to athanor, silent on failure, with a comment as the fallback |
 | [0126](./0126-the-duplication-backfill-is-a-committed-file.md) | The duplication backfill is a committed file under series names of its own, and a chart title may name a direction but never a verdict |
+| [0127](./0127-the-ask-worker-is-the-sites-first-endpoint-and-its-first-outbound-flow.md) | The Ask the library Worker is the site's first endpoint, and carries the first outbound flow of reading content |
+| [0128](./0128-the-csp-admits-turnstile-and-nothing-else.md) | The CSP admits Turnstile's origin in two directives, and nothing else (amends 0065) |
+| [0129](./0129-terraform-holds-the-sites-cloudflare-rules.md) | Terraform holds the site's Cloudflare rules, under `infra/` |

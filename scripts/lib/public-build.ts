@@ -410,7 +410,13 @@ const CSP_META = /<meta\s+http-equiv="content-security-policy"\s+content="([^"]*
  * passed `pnpm test`, `pnpm build`, `pnpm gate:public` and `pnpm smoke:render`
  * without comment.
  *
- * `script-src` carries the one exception, and the reason it is named rather than
+ * ⚠️ **Two origins were added for the Ask the library drawer** (#532,
+ * docs/spec/ask-the-library.md S8, approved in S14 Q2): `challenges.cloudflare.com`
+ * in `script-src`, and a new `frame-src` holding it alone. Turnstile's script
+ * loads only when the drawer first opens. Any further change to the policy still
+ * reddens this rule, which is C10.
+ *
+ * `script-src` carries the first exception, and the reason it is named rather than
  * merely allowed: `static.cloudflareinsights.com` is Cloudflare Web Analytics,
  * injected at the edge and present in no file in this repo. Refusing it is a real
  * choice and not a no-op — the browser would refuse the script and the analytics
@@ -433,7 +439,12 @@ const CSP_DIRECTIVES: ReadonlyMap<string, readonly string[]> = new Map([
   ['connect-src', ["'self'"]],
   ['base-uri', ["'none'"]],
   ['form-action', ["'none'"]],
-  ['script-src', ["'self'", 'https://static.cloudflareinsights.com']],
+  [
+    'script-src',
+    ["'self'", 'https://static.cloudflareinsights.com', 'https://challenges.cloudflare.com'],
+  ],
+  // The one frame origin: Turnstile's challenge, for the Ask the library drawer.
+  ['frame-src', ['https://challenges.cloudflare.com']],
   ['style-src', ["'self'"]],
 ]);
 

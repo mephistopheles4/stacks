@@ -168,7 +168,13 @@ function headersFile(
  * the configured ones, which is not the `;` it uses everywhere else.
  */
 function cspMeta(
-  options: { connectSrc?: string; scriptSrc?: string; omit?: string; extra?: string } = {},
+  options: {
+    connectSrc?: string;
+    scriptSrc?: string;
+    frameSrc?: string;
+    omit?: string;
+    extra?: string;
+  } = {},
 ): string {
   const keep = ([name]: readonly [string, string]): boolean => name !== options.omit;
   const render = (pairs: readonly (readonly [string, string])[], join: string): string =>
@@ -184,13 +190,14 @@ function cspMeta(
     ['connect-src', options.connectSrc ?? "'self'"],
     ['base-uri', "'none'"],
     ['form-action', "'none'"],
+    ['frame-src', options.frameSrc ?? 'https://challenges.cloudflare.com'],
   ] as const;
 
   // The two Astro generates, each carrying a hash it computed for this page.
   const generated = [
     [
       'script-src',
-      `${options.scriptSrc ?? "'self' https://static.cloudflareinsights.com"} ` +
+      `${options.scriptSrc ?? "'self' https://static.cloudflareinsights.com https://challenges.cloudflare.com"} ` +
         `'sha256-BF0290pkb3jxQsE7z00xR8Imp8X34FLC88L0lkMnrGw='`,
     ],
     ['style-src', "'self' 'sha256-eZThLoRNDbx6YobQlsGZA8+qespsZfD/YQEGSwT5BvU='"],
@@ -1087,8 +1094,41 @@ describe('G20 — every rule goes red', () => {
       await writeIndex(
         indexHtml({
           csp: cspMeta({
-            scriptSrc: "'self' https://static.cloudflareinsights.com https://cdn.example",
+            scriptSrc:
+              "'self' https://static.cloudflareinsights.com https://challenges.cloudflare.com https://cdn.example",
           }),
+        }),
+      );
+    });
+  });
+
+  it('csp: the frame origin widened beyond Turnstile (C10)', async () => {
+    /**
+     * The Ask the library drawer adds exactly two things to the policy, and this
+     * is the second: `frame-src` holding Turnstile's origin alone. A second frame
+     * origin, or the directive loosened to `*`, is a change the owner has not
+     * approved.
+     */
+    await expectOnly('csp', async () => {
+      await writeIndex(
+        indexHtml({
+          csp: cspMeta({ frameSrc: 'https://challenges.cloudflare.com https://cdn.example' }),
+        }),
+      );
+    });
+  });
+
+  it('csp: the frame directive dropped, which would break the drawer silently (C10)', async () => {
+    await expectOnly('csp', async () => {
+      await writeIndex(indexHtml({ csp: cspMeta({ omit: 'frame-src' }) }));
+    });
+  });
+
+  it('csp: Turnstile dropped from the script origins (C10)', async () => {
+    await expectOnly('csp', async () => {
+      await writeIndex(
+        indexHtml({
+          csp: cspMeta({ scriptSrc: "'self' https://static.cloudflareinsights.com" }),
         }),
       );
     });

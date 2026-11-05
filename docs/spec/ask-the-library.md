@@ -19,7 +19,7 @@ The spec for [#532](https://github.com/mephistopheles4/stacks/issues/532). Tier:
 standard, plus the security pair on this spec and on the diff, because it changes
 what the page's CSP admits and opens the site's first public endpoint. Written on
 2026-11-04 from a brainstorm and a working prototype, and revised after two review
-rounds, whose record is on the issue. **Nothing here is built.** **Signed off by the
+rounds, whose record is on the issue. **Steps 2 to 6 of S13 are built on the branch; nothing is deployed.** **Signed off by the
 owner on 2026-11-04 ("Let's file it and proceed").** The owner's decisions are in S14.
 
 ## S1. Problem

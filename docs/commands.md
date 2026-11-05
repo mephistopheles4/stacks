@@ -378,6 +378,42 @@ and that the red is loud.
 gated at merge, by **G43** (`ignored-mutants`) in [`docs/gates.md`](gates.md).
 There are zero such directives in this repo, so any increase is a real event.
 
+## `pnpm deploy:ask`, `pnpm evals:ask` and `pnpm ask:status` — the Ask the library Worker
+
+[`docs/spec/ask-the-library.md`](spec/ask-the-library.md) S5, S8, S9 and S11. All
+three are owner-run and none is a gate.
+
+**`pnpm deploy:ask` publishes `packages/ask`** with `deploy:site`'s guards and its
+own: `main` only (`--any-branch` overrides; `--dry-run` skips it), the lockfile's
+wrangler refused unless it equals its pin, an environment narrowed to wrangler's own
+names, and a refusal if `wrangler.jsonc` does not pin
+`observability.logs.invocation_logs` to false. G67 holds the file to `pnpm exec
+wrangler`. It runs before `deploy:site`.
+
+- **`--dry-run`** bundles to a temp folder, checks that no file holds the vault or
+  checkout path, and uploads nothing.
+- **`--ai-off`** deploys with `ASK_AI_ENABLED` false and no commit: the emergency
+  switch, to be committed afterwards. **`--ai-on`** turns it back on.
+- **A plain deploy reads the live value first** and refuses to turn a switched-off
+  Worker back on without `--ai-on`. ⚠️ **It also refuses when it cannot read the
+  value**, and the read (`wrangler deployments list`, then `versions view`) has
+  only been run against fakes: it is proven live at S13 step 11, C18.
+- **`--gateway <id>`** deploys `main` against a test gateway, for C7 only. A plain
+  `deploy:ask` afterwards puts the real one back.
+
+**`pnpm evals:ask --gateway <id>`** asks S9's nine questions twice through the
+Worker's own answer code and a test gateway, over the real public build in
+`packages/site/dist` (`--site` names another folder), and refuses a library built
+from the fixture vault. It uses the owner's `wrangler login` and
+`CLOUDFLARE_ACCOUNT_ID`, plus `ASK_GATEWAY_TOKEN` if the gateway needs one, and
+prints none of them. It costs about 1,100 Neurons and is outside CI, because G21
+forbids live calls. A failure prints its answer: the session that runs it records
+whether the check or the answer was wrong. The two "was it any good" cases print
+their answer even on a pass, because only a person can see an invented reason.
+
+**`pnpm ask:status`** prints yesterday's outcome counts from Workers Logs. ⚠️ **Its
+query is unverified against the live API**; if refused, it names the dashboard route.
+
 ## `pnpm worktree <branch>`
 
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —

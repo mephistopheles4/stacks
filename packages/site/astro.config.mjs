@@ -26,6 +26,13 @@ export default defineConfig({
 
   // The shelf's outbound record, stated so it can stop being true by accident.
   //
+  // ⚠️ **Corrected for the Ask the library drawer (#532, ADR-0127).** The page's
+  // own requests are still all same-origin, which `connect-src 'self'` holds.
+  // But the drawer's question now leaves the site, from the Worker, to Workers AI
+  // and Turnstile, and no CSP can see that: it is a flow out of the server. The
+  // sentence that follows describes the page and nothing else.
+  //
+  //
   // `connect-src 'self'` is the directive carrying the argument: the requests
   // this site makes are `fetch('/library.json')` in boot.ts, and since #413 a
   // held book's Thoughts, `/notes/<id>.json`, fetched in notes.ts, and its held
@@ -53,6 +60,13 @@ export default defineConfig({
         "connect-src 'self'",
         "base-uri 'none'",
         "form-action 'none'",
+        // Turnstile's challenge frame, for the Ask the library drawer
+        // (docs/spec/ask-the-library.md S8, approved by the owner in S14 Q2).
+        // The one frame origin this site admits. The drawer loads Turnstile's
+        // script only when it is first opened, so a visitor who never opens it
+        // makes no request here; the policy is site-wide because Astro emits
+        // one.
+        'frame-src https://challenges.cloudflare.com',
       ],
       scriptDirective: {
         // static.cloudflareinsights.com is Cloudflare Web Analytics, injected
@@ -78,7 +92,15 @@ export default defineConfig({
         // ⚠️ `'self'` must be listed. `resources` REPLACES Astro's defaults
         // rather than appending to them, and dropping it blocks the shelf's own
         // /_astro/*.js — a black canvas with the page otherwise intact.
-        resources: ["'self'", 'https://static.cloudflareinsights.com'],
+        //
+        // `challenges.cloudflare.com` is the second named origin: Turnstile's
+        // script (S8 of the Ask the library spec). It is the first origin this
+        // project chose to add rather than one Cloudflare injects.
+        resources: [
+          "'self'",
+          'https://static.cloudflareinsights.com',
+          'https://challenges.cloudflare.com',
+        ],
       },
     },
   },

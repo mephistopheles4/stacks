@@ -313,6 +313,13 @@ its own, so *debug panel* is retired.
 *Avoid*: panel on its own (the glossary gives that word to the backboard),
 debug panel.
 
+**Ask the library**:
+The chat drawer on the shelf page and the Worker behind it at `/api/chat`. It
+answers in the owner's first person from public build output only, and falls back
+to word search when AI is unavailable. A visitor never talks to a model directly:
+every model call goes through one function and an AI Gateway.
+*Avoid*: chatbot, assistant.
+
 ### Building and publishing
 
 **Public build**:

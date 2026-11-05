@@ -113,6 +113,15 @@ const ALLOWED = [
   // this invariant working rather than an exception to it. Nothing here parses
   // a note.
   'scripts/deploy.ts',
+  // The Ask the library Worker's deploy: reads the repository's own wrangler
+  // config and the bundle a dry run wrote to a temp folder, to refuse one that
+  // holds the vault path. It never reads a note, and it is how a Worker that has
+  // no access to the vault is checked for having none.
+  'scripts/deploy-ask.ts',
+  // The S9 evals: reads a built public folder (`dist/`), the same files the
+  // Worker fetches over HTTPS, and the fixture vault's note titles to refuse a
+  // library built from them. It reads a title line and nothing else of a note.
+  'scripts/evals-ask.ts',
   // Reads a *built* folder — `dist/`, assembled by `astro build` — to answer
   // whether it is safe to publish. The two scripts above are its callers. It
   // has never seen a vault and could not find one: it is handed a directory and
