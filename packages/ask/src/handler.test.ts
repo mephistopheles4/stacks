@@ -242,9 +242,11 @@ describe('the failure table (C4)', () => {
 
   it('search with no match says so', async () => {
     const { body } = await run(rig({ aiEnabled: 'false' }), ask('zebra'));
+    // A word that matched nothing gets the top-rated books with Thoughts, and says so.
     expect(body.answer).toBe(
-      'The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject.',
+      'The bot has worked too hard today and went to take a nap, and no book matches your words. Here are some books I rated highly.',
     );
+    expect(body.books).toHaveLength(1);
   });
 
   it('a failed Turnstile is 403 error', async () => {

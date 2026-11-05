@@ -19,6 +19,8 @@ export const MAX_HISTORY = 2;
 export const MAX_HISTORY_QUESTION_CHARS = 300;
 export const MAX_HISTORY_ANSWER_CHARS = 600;
 export const MAX_SEARCH_BOOKS = 6;
+/** The top-rated books a search offers when nothing matched, or nothing was asked (S6). */
+export const MAX_RATED_BOOKS = 5;
 export const TURNSTILE_ACTION = 'ask';
 /** A result older than this makes the health address return 503 (S11). */
 export const HEALTH_MAX_AGE_MS = 36 * 60 * 60 * 1_000;

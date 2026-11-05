@@ -6,7 +6,7 @@ import { AI_DEADLINE_MS, MAX_INPUT_TOKENS, MAX_TOOL_CALLS } from './limits.ts';
 import { mentioned } from './mentioned.ts';
 import type { Outcome, OutcomeDetail } from './outcome.ts';
 import { estimateTokens, systemMessage, userMessage, type Exchange } from './prompt.ts';
-import { searchLibrary, usableTerms } from './search.ts';
+import { searchLibrary, topRated, usableTerms } from './search.ts';
 import { TOOLS, runTool, type ToolSession } from './tools.ts';
 
 export interface BookSummary {
@@ -31,6 +31,12 @@ export const SEARCH_FOUND =
 /** Plain results for a question with nothing in it to search for: the books the owner rated highly. */
 export const SEARCH_RATED =
   'The bot has worked too hard today and went to take a nap. Here are some books I rated highly.';
+/**
+ * Plain results for a question with a usable word that matched nothing: the books the owner rated
+ * highly, said to be that (owner, 2026-11-05).
+ */
+export const SEARCH_MISS =
+  'The bot has worked too hard today and went to take a nap, and no book matches your words. Here are some books I rated highly.';
 export const SEARCH_NONE =
   'The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject.';
 
@@ -50,17 +56,29 @@ const summary = (book: CatalogueBook): BookSummary => ({
   hasThoughts: book.thoughts,
 });
 
-/** The plain results: the same search the model's tool uses (T3), with no model. */
+/**
+ * The plain results: the same search the model's tool uses (T3), with no model. Nothing to search
+ * for, or a word that matched nothing, gets the top-rated books with Thoughts and says so.
+ */
 async function searchReply(
   catalogue: readonly CatalogueBook[],
   source: LibrarySource,
   question: string,
 ): Promise<Reply> {
-  const found = await searchLibrary(catalogue, source, question).catch(() => []);
-  const fallback = usableTerms(question).length === 0;
+  const nothingToSearch = usableTerms(question).length === 0;
+  let found = await searchLibrary(catalogue, source, question).catch(() => []);
+  const missed = found.length === 0 && !nothingToSearch;
+  if (missed) found = await topRated(catalogue, source).catch(() => []);
   return {
     mode: 'search',
-    answer: found.length === 0 ? SEARCH_NONE : fallback ? SEARCH_RATED : SEARCH_FOUND,
+    answer:
+      found.length === 0
+        ? SEARCH_NONE
+        : missed
+          ? SEARCH_MISS
+          : nothingToSearch
+            ? SEARCH_RATED
+            : SEARCH_FOUND,
     books: found.map((hit) => summary(hit.book)),
     followUps: [],
   };

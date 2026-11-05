@@ -1,4 +1,4 @@
-import { MAX_SEARCH_BOOKS } from './limits.ts';
+import { MAX_RATED_BOOKS, MAX_SEARCH_BOOKS } from './limits.ts';
 import type { CatalogueBook, LibrarySource } from './library.ts';
 
 /** Common words ignored by the search (S6). */
@@ -58,8 +58,9 @@ export const usableTerms = (query: string): string[] => [
  * At most 6 books, none whose id is in `exclude` (T6). It finds what the words say.
  *
  * **A query with no usable word** ("recommend", "what did you like most about the book?")
- * returns the owner's highest-rated books that have Thoughts, then shelf order, as a normal
- * result. A query with a usable word and no match returns nothing ("zymurgy").
+ * returns the owner's top-rated books that have Thoughts (at most 5), as a normal result. A
+ * query with a usable word and no match returns nothing here ("zymurgy"): the tool and the plain
+ * results each add `topRated` themselves, because each says so in its own words.
  */
 export async function searchLibrary(
   catalogue: readonly CatalogueBook[],
@@ -105,16 +106,22 @@ export async function rankLibrary(
     .map((s) => s.hit);
 }
 
-/** Nothing to search for: the highest-rated books with Thoughts, then shelf order (S6). */
-async function topRated(
+/**
+ * The highest-rated books with Thoughts, then shelf order, at most 5: what a search offers when it
+ * has nothing to search for, and (the tool and the plain results alike) when a usable word matched
+ * nothing. A book with no Thoughts is never offered, however high it is rated.
+ */
+export async function topRated(
   catalogue: readonly CatalogueBook[],
   source: LibrarySource,
-  exclude: ReadonlySet<string>,
+  exclude: ReadonlySet<string> = new Set(),
+  limit: number = MAX_RATED_BOOKS,
 ): Promise<Hit[]> {
   const ranked = catalogue
     .map((book, position) => ({ book, position }))
     .filter((s) => s.book.thoughts && !exclude.has(s.book.id))
-    .sort((a, b) => (b.book.rating ?? 0) - (a.book.rating ?? 0) || a.position - b.position);
+    .sort((a, b) => (b.book.rating ?? 0) - (a.book.rating ?? 0) || a.position - b.position)
+    .slice(0, limit);
   return Promise.all(
     ranked.map(async ({ book }) => ({ book, thoughts: await readThoughts(source, book) })),
   );

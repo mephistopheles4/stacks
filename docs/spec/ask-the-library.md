@@ -89,11 +89,17 @@ one fetch per note against Workers Free's limit of 50 per request. S4 changes th
   It has one tool, `search_library(query)`, and a second, `list_books`, that returns every
   book's title and rating, highest rated first, with a mark on books that have Thoughts.
   **A query with nothing usable in it** (every word on S6's ignored list: "recommend", "what
-  did you like most about the book?") returns the owner's highest-rated books that have
-  Thoughts, then shelf order, as a normal search result with Thoughts for up to 3 (owner,
-  2026-11-05, after the model listed first and then asked for a third search). A usable word with
-  no match ("zymurgy") still returns "No books matched". For a broad question the model may
-  therefore search at once, or list and then search a title to read the Thoughts. At most 2 tool calls of either
+  did you like most about the book?") returns the owner's top-rated books that have Thoughts,
+  then shelf order, **at most 5**, as a normal search result with Thoughts for up to 3 (owner,
+  2026-11-05, after the model listed first and then asked for a third search). **A usable word
+  with no match ("zymurgy") returns the same books, behind one line** (owner, 2026-11-05): "No
+  books matched. These are not about that subject, but they are my top-rated books. Try other
+  words, or say nothing matched and offer these." (with "No other books matched." once earlier
+  results exist, and T6's exclude still applying). With no book with Thoughts to offer, it is
+  the old "No books matched. Try other words, or call list_books." The rules (contract v0.4.0) send
+  a recommendation or a favourite to a search for the word "recommend", keep `list_books` for
+  browsing, and tell the model to say nothing matched before offering other books and never to say
+  they cover the subject. At most 2 tool calls of either
   kind per question (T2).
 - **A search result (T5, T6).** Up to 6 books as catalogue lines, each saying "has written
   Thoughts" or "no Thoughts written", then the owner's Thoughts for up to 3 of them, at most
@@ -223,11 +229,13 @@ capped on every path reviewed. Availability does not:
 ## S6. Answers
 
 - **Rules,** sent as the system message, followed by the line of counts (T7): the text of
-  `packages/ask/ask-the-library.rules.txt`, word for word, generated from contract v0.3.0
+  `packages/ask/ask-the-library.rules.txt`, word for word, generated from contract v0.4.0
   (`ask-the-library.contract.md`, with `ask-the-library.changelog.md`). **The owner approved
-  contract v0.3.0 and this text on 2026-11-05.** `RULES` in `prompt.ts` holds that text and a test
+  contract v0.3.0 and its text on 2026-11-05, and v0.4.0's changes (a recommendation searches for
+  "recommend"; say nothing matched before offering other books) the same day.** `RULES` in `prompt.ts` holds that text and a test
   holds the two equal, so **the rules change through the contract and never by hand.**
-  They send the model to search before answering and to list books for a broad question,
+  They send the model to search before answering (a recommendation or a favourite searches for
+  "recommend"; `list_books` is for browsing),
   set the first-person voice (opinions only from the Thoughts and the rating, in the owner's
   plain words and not pasted, no review language), answers of at most 2 plain sentences with
   exact titles and no markdown, the FOLLOW-UPS block below, and these for memory:
@@ -280,7 +288,11 @@ capped on every path reviewed. Availability does not:
   room. A blank or tool-asking final answer still falls back as T10 says.
 - **Plain results wording.** When plain results come from the fallback, the message is "The bot
   has worked too hard today and went to take a nap. Here are some books I rated highly." (the
-  drawer shows those books as pills); the other two messages (T12) stay for the other cases.
+  drawer shows those books as pills). **A usable word that matched nothing** says "The bot has
+  worked too hard today and went to take a nap, and no book matches your words. Here are some books
+  I rated highly." with up to 5 pills (owner, 2026-11-05); the old "…Try a title, author or subject."
+  stays only when no book with Thoughts exists to offer. "These books match your words" stays for a
+  real match.
 - **The loop (T2, T6, T10, T11).** At most 2 tool calls of either tool in all; the call after
   them is made with no `tools` key, so it must answer, and a question makes at most 3 model
   calls. One 30-second deadline covers the whole question, each call getting what is left
@@ -291,8 +303,8 @@ capped on every path reviewed. Availability does not:
   (`search_library needs {"query": ...}`; "No such tool", naming both), nothing of what the model
   sent is echoed, and the call counts against the two.
 - **Results that guide the model.** An empty search says "No books matched. Try other words, or
-  call list_books." (and "No other books matched." with the same advice once earlier results
-  exist). A result cut off at 6 ends with "Showing 6 of 14 matches. Search with more specific
+  call list_books." when no book with Thoughts exists to offer (a miss otherwise offers the top-rated books,
+  above; "No other books matched." with the same advice once earlier results exist). A result cut off at 6 ends with "Showing 6 of 14 matches. Search with more specific
   words to narrow this down." No BM25, examples in the rules or clearing of old results are added.
 - **Follow-ups must be about the shelf (T9).** A follow-up that names neither a catalogue
   title nor a word in a catalogue subject is dropped ("Which finance book would you
@@ -523,7 +535,8 @@ the full transcript, every tool result included, is written to `ask-evals-<time>
 the model's reasoning, per model call** (owner, 2026-11-05), taken from the raw response by the evals' own AI
 wrapper (`scripts/lib/ask-reasoning.ts`: `reasoning_content` or `reasoning` on the message or at the top, or
 reasoning items in an output list), with the keys each response had, so the first live run shows where it
-appears; where a response carries none, the transcript says so. **The Worker never reads, logs, returns or
+appears (**it is `choices[0].message.reasoning_content`**, on every call of the 2026-11-05 miss check, 53 to
+3,132 characters); where a response carries none, the transcript says so. **The Worker never reads, logs, returns or
 stores reasoning:** `packages/ask/src` does not mention it (a test holds that), and a canary in a response's
 reasoning reaches no reply and no log line (C15 and C32, extended). The console prints only its length. Each case carries an **expected tool**: `list_books` for a broad question, a
 search for a named book or a subject, none for a count or a refusal. **A mismatch is printed as
@@ -579,6 +592,7 @@ choose other books.
 | C31 | A follow-up naming no catalogue title or subject is dropped, using "The Great Gatsby" | Functional |
 | C32 | No query reaches a log call: a canary in a query appears in no log line | Security |
 | C33 | `list_books` returns every public book and no non-public field, highest rated first, with the Thoughts mark, shown with a canary in a non-public field | Security |
+| C35 | A search with a usable word and no match returns the top-rated books with Thoughts, at most 5, behind "No books matched. These are not about that subject…", with Thoughts for up to 3 and T6's exclude applied; a search with nothing usable returns the same 5; plain results on a miss say "…no book matches your words. Here are some books I rated highly." with those books as pills; a library with nothing to offer returns the old messages; and on the live run the model says nothing matched before offering them and never says they cover the subject, read by hand | Functional |
 
 ## S11. Monitoring
 
@@ -834,9 +848,47 @@ Unified Billing balance was not observable.
   written." Run 2 called all five "personal-finance titles", but *The Business of Expertise* is filed under
   Entrepreneurship and *The Fifth Discipline* under management: a line past the data. Pills for all five.
 - **Zymurgy, 2 of 2:** "I haven't read any books about zymurgy." and "I haven’t written about zymurgy."
-  (the search said "No books matched"). No pills.
+  (the search said "No books matched"). No pills. **Superseded below: a miss now returns the top-rated books.**
 - **C24:** proved in the rerun above (the forged "I hated it" was refused twice and the code request twice).
   The final check adds no forged case.
+
+**Results of the miss check (2026-11-05), contract v0.4.0 and a miss that offers the top-rated books.** 5
+questions twice, 10 questions, 675 Neurons by token count (about 68 a question), 9.5 s on average (4.4 to
+13.4), all 10 passed the eval checks. Same throwaway Worker and driver, with the reasoning kept. No spend-limit
+refusal, no out-of-credits error; the Unified Billing balance was not observable. Full transcripts, reasoning
+included, are in the scratch folder, not the repo.
+
+- **Reasoning is `choices[0].message.reasoning_content`** on every call, 53 to 3,132 characters (the first
+  call, before a tool, 53 to 490; the answering call 1,485 to 3,132). The response also carries other fields (`prompt_logprobs`,
+  `kv_transfer_params`, `service_tier`), which the Worker ignores.
+- **The model searched at once.** All 10 questions made one `search_library` call and one answering call, no
+  `list_books`: "recommend" for both recommendation questions, the topic for the three misses.
+- **"What would you recommend?":** run 1, "I would recommend We Are as Gods: A Survival Guide for the Age of
+  Abundance; I found it extremely inspiring and it really lets you imagine the future as if you were a god. Its
+  vision of abundance and technology feels like a roadmap for the coming age." Run 2, "I recommend “We Are as
+  Gods: A Survival Guide for the Age of Abundance” because its Thoughts highlight how the book feels like a
+  reminder that we can become godlike in our own right." The reasons come from its Thoughts ("extremely
+  inspiring… make you feel that you are a god"); "a roadmap for the coming age" does not, and is the model's
+  own flourish. Both pilled the book.
+- **"What's your favourite book?":** run 1, "I think “We Are as Gods…” is my favourite book; I found it
+  extremely inspiring and it really makes you feel like a god." Run 2, "This book was extremely inspiring; it
+  reminds you that you can feel like a god in an age of abundance. It’s my favourite read." (**no title and no
+  pill**). **A regression:** the first run's favourite, The Human-Agent Orchestrator, is the book whose Thoughts
+  say "my favorite"; the fallback's tie among ten 5-rated books returns shelf order, so We Are as Gods leads and
+  the model calls it the favourite, which its Thoughts do not say.
+- **The three misses said nothing matched before offering books, and none claimed the books cover the
+  subject.** Zymurgy: "I haven't read any books about zymurgy. I can offer you my top-rated books: We Are as
+  Gods, Nexus, The Human-Agent Orchestrator, Staff Engineer's Path, and Vibe Coding." and "I haven't read any
+  books about zymurgy. Here are some of my top-rated books: …". Habits: "I couldn't find any book about habits.
+  Here are some of my top-rated books that might interest you: …" and "I couldn't find a book about habits. Here
+  are my top-rated books: …". Startups: "I haven't read any books specifically about startups. Here are a few of
+  my top-rated books: …" and "No books matched. Here are my top-rated books: …". Each had the five books as
+  pills. They answer in a list of long titles, with no reason from the Thoughts for any.
+- **Do recommendations clearly improve?** Partly. Before, a recommendation was a bare title ("it is a solid
+  read") or a failed list-then-search; now it is one search and a reason drawn from the Thoughts. But ten books
+  are rated 5, so the same book leads every time, "top-rated" is shelf order among ties, and a favourite
+  question is answered with an unsupported "my favourite". The misses are honest and tidy but offer five
+  unrelated books.
 
 ## S13. Build order and way back
 

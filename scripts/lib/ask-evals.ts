@@ -85,7 +85,8 @@ export const CASES: readonly EvalCase[] = [
   },
   {
     question: 'What would you recommend?',
-    expects: 'list_books',
+    // Since contract v0.4.0 the rules send a recommendation to a search for the word "recommend".
+    expects: 'search',
     passes: (a, lib) =>
       FIRST_PERSON.test(a) &&
       lib.some((b) => (b.thoughts || (b.rating ?? 0) >= 4) && names(a, b.title)),

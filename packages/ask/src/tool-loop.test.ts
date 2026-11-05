@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   LAST_CALL_LINE,
   SEARCH_FOUND,
+  SEARCH_MISS,
   SEARCH_NONE,
   SEARCH_RATED,
   answerQuestion,
@@ -10,6 +11,7 @@ import {
 } from './answer.ts';
 import type { Env } from './env.ts';
 import type { CatalogueBook, LibrarySource } from './library.ts';
+import { MISS_OTHER } from './tools.ts';
 import { logOutcome } from './outcome.ts';
 import { estimateTokens } from './prompt.ts';
 import { searchLibrary } from './search.ts';
@@ -196,9 +198,12 @@ describe('the tool loop (T1, T2, T7)', () => {
       { text: 'ok' },
     ]);
     await answerQuestion(env, source, 'q');
-    expect(seen[2]!.messages.at(-1)!.content).toBe(
-      ['No other books matched. Try other words, or call list_books.', '', LAST_CALL_LINE].join(NL),
-    );
+    const second = seen[2]!.messages.at(-1)!.content;
+    // Nothing else matched, so the top-rated books not yet returned are offered, and said to be that.
+    expect(second.startsWith(MISS_OTHER)).toBe(true);
+    expect(second).toContain('"Co-Intelligence: Living and Working with AI"');
+    expect(second).not.toContain('"Nexus"');
+    expect(second.endsWith(LAST_CALL_LINE)).toBe(true);
   });
 });
 
@@ -297,10 +302,14 @@ describe('any failed step gives plain results (T10, T12, C29)', () => {
     expect(answered.ai).toBe('failed');
   });
 
-  it("says so with the owner's second wording when no book matches", async () => {
+  it("says so with the owner's wording when no book matches, and offers the books rated highly", async () => {
     const { env } = scripted([{ throws: new Error('boom') }]);
     const answered = await answerQuestion(env, source, 'zymurgy');
-    expect(answered.reply.answer).toBe(SEARCH_NONE);
+    expect(answered.reply.answer).toBe(SEARCH_MISS);
+    expect(SEARCH_MISS).toBe(
+      'The bot has worked too hard today and went to take a nap, and no book matches your words. Here are some books I rated highly.',
+    );
+    expect(answered.reply.books.map((x) => x.id)).toEqual(['co', 'nexus']);
     expect(SEARCH_NONE).toBe(
       'The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject.',
     );
@@ -637,7 +646,28 @@ describe('plain results when the question has nothing to search for (S6, T12)', 
 
   it('keeps the two other messages for a real search', async () => {
     expect((await answerQuestion(off, source, 'nexus')).reply.answer).toBe(SEARCH_FOUND);
-    expect((await answerQuestion(off, source, 'zymurgy')).reply.answer).toBe(SEARCH_NONE);
+    expect((await answerQuestion(off, source, 'zymurgy')).reply.answer).toBe(SEARCH_MISS);
+  });
+
+  it('a miss shows at most 5 top-rated books as pills, and the old message when none have Thoughts', async () => {
+    const many = Array.from({ length: 9 }, (_, i) =>
+      b(`m${String(i)}`, `Topic ${String(i)}`, { thoughts: true, rating: 4 }),
+    );
+    const manySource: LibrarySource = {
+      catalogue: async () => many,
+      thoughts: async () => ['Note.'],
+    };
+    const missed = await answerQuestion(off, manySource, 'zymurgy');
+    expect(missed.reply.answer).toBe(SEARCH_MISS);
+    expect(missed.reply.books).toHaveLength(5);
+    const bare = [b('x', 'Plain')];
+    const none = await answerQuestion(
+      off,
+      { catalogue: async () => bare, thoughts: async () => undefined },
+      'zymurgy',
+    );
+    expect(none.reply.answer).toBe(SEARCH_NONE);
+    expect(none.reply.books).toEqual([]);
   });
 
   it('a failed model on a question with nothing to search for gets the same wording', async () => {

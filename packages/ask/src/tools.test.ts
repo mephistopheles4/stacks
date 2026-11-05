@@ -4,6 +4,8 @@ import { estimateTokens } from './prompt.ts';
 import {
   BAD_ARGUMENTS,
   LIST_INSTRUCTION,
+  MISS,
+  MISS_OTHER,
   NO_MATCH,
   NO_OTHER_MATCH,
   NO_ROOM,
@@ -133,9 +135,9 @@ describe('search_library (T5, T6)', () => {
     expect(thoughts).toContain('Your Thoughts on "Savings Logic": A plain book about habits.');
   });
 
-  it('answers a search with no match plainly', async () => {
+  it('answers a search with no match by saying so and offering the top-rated books', async () => {
     const out = await runTool(search({ query: 'zymurgy' }), session(), ROOM);
-    expect(out.content).toBe(NO_MATCH);
+    expect(out.content.startsWith(MISS)).toBe(true);
   });
 
   it('gives Thoughts for at most 3 books and at most 1,500 estimated tokens', async () => {
@@ -258,8 +260,14 @@ describe('what the model sends is untrusted (T10, C29, C32)', () => {
 });
 
 describe('results that guide the model (T5, T10)', () => {
-  it('an empty result says to try other words or call list_books', async () => {
-    const out = await runTool(search({ query: 'zymurgy' }), session(), ROOM);
+  it('an empty result with no top-rated book to offer says to try other words or call list_books', async () => {
+    const bare = [b('x', 'Plain', { rating: 5 })];
+    const s: ToolSession = {
+      catalogue: bare,
+      source: { catalogue: async () => bare, thoughts: async () => undefined },
+      returned: new Set(),
+    };
+    const out = await runTool(search({ query: 'zymurgy' }), s, ROOM);
     expect(out.content).toBe('No books matched. Try other words, or call list_books.');
     expect(NO_MATCH).toBe('No books matched. Try other words, or call list_books.');
   });
@@ -309,7 +317,67 @@ describe('a query with nothing to search for gets the top-rated books as a norma
     expect(blocks.join(NL)).toContain('Your Thoughts on "Wealth Of Notes"');
   });
 
-  it('a word with no match is still "No books matched"', async () => {
-    expect((await runTool(search({ query: 'zymurgy' }), session(), ROOM)).content).toBe(NO_MATCH);
+  it('is capped at 5 books like a miss, with no truncation note', async () => {
+    const many = Array.from({ length: 9 }, (_, i) =>
+      b(`t${String(i)}`, `Topic ${String(i)}`, { thoughts: true, rating: 4 }),
+    );
+    const s: ToolSession = {
+      catalogue: many,
+      source: { catalogue: async () => many, thoughts: async () => ['A note.'] },
+      returned: new Set(),
+    };
+    const out = await runTool(search({ query: 'recommend' }), s, ROOM);
+    const lines = out.content.split(NL + NL)[0]!.split(NL);
+    expect(lines).toHaveLength(5);
+    expect(out.content).not.toContain('Showing');
+  });
+});
+
+describe('a search with a usable word and no match offers the top-rated books (S6, owner 2026-11-05)', () => {
+  it('says nothing matched and that these are not about it, then up to 5 top-rated books with Thoughts', async () => {
+    const out = await runTool(search({ query: 'zymurgy' }), session(), ROOM);
+    expect(MISS).toBe(
+      'No books matched. These are not about that subject, but they are my top-rated books. Try other words, or say nothing matched and offer these.',
+    );
+    const [head, ...rest] = out.content.split(NL + NL);
+    const lines = head!.split(NL);
+    expect(lines[0]).toBe(MISS);
+    // Only the books with Thoughts, highest rated first: Wealth Of Notes, then Savings Logic.
+    expect(lines.slice(1)).toEqual([
+      '"Wealth Of Notes": read; subjects: Business; rated 5 out of 5; has written Thoughts.',
+      '"Savings Logic": read; subjects: Business; rated 4 out of 5; has written Thoughts.',
+    ]);
+    expect(rest.join(NL)).toContain('Your Thoughts on "Wealth Of Notes"');
+    expect(out.content).not.toContain('Money Unlocked');
+  });
+
+  it('a book already returned is left out, and the message says "other" (T6)', async () => {
+    const s = session();
+    await runTool(search({ query: 'Wealth Of Notes' }), s, ROOM);
+    const out = await runTool(search({ query: 'zymurgy' }, 'c2'), s, ROOM);
+    expect(out.content.startsWith(MISS_OTHER)).toBe(true);
+    expect(MISS_OTHER.startsWith('No other books matched.')).toBe(true);
+    expect(out.content).not.toContain('"Wealth Of Notes"');
+    expect(out.content).toContain('"Savings Logic"');
+  });
+
+  it('is not a miss when something matched', async () => {
+    expect((await runTool(search({ query: 'business' }), session(), ROOM)).content).not.toContain(
+      MISS,
+    );
+  });
+
+  it('is the old plain message when no book with Thoughts exists to offer', async () => {
+    const bare = [b('x', 'Plain')];
+    const s: ToolSession = {
+      catalogue: bare,
+      source: { catalogue: async () => bare, thoughts: async () => undefined },
+      returned: new Set(),
+    };
+    expect((await runTool(search({ query: 'zymurgy' }), s, ROOM)).content).toBe(NO_MATCH);
+  });
+
+  it('counts the offered books against the room, and a result that cannot fit is left out', async () => {
+    expect((await runTool(search({ query: 'zymurgy' }), session(), 5)).content).toBe(NO_ROOM);
   });
 });

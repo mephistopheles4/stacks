@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogueBook, LibrarySource } from './library.ts';
-import { namesTitle, searchLibrary, usableTerms } from './search.ts';
+import { namesTitle, searchLibrary, topRated, usableTerms } from './search.ts';
 
 const b = (id: string, title: string, extra: Partial<CatalogueBook> = {}): CatalogueBook => ({
   id,
@@ -166,9 +166,9 @@ describe('the search fallback: nothing usable in the query (S6)', () => {
   const notes = { catalogue: async () => rated, thoughts: async () => ['A note.'] };
   const run = (q: string, exclude?: ReadonlySet<string>) => searchLibrary(rated, notes, q, exclude);
 
-  it('returns the highest-rated books with Thoughts, then shelf order, up to 6, each with its Thoughts', async () => {
+  it('returns the highest-rated books with Thoughts, then shelf order, at most 5, each with its Thoughts', async () => {
     const hits = await run('what would you recommend?');
-    expect(hits.map((h) => h.book.id)).toEqual(['top', 'mid-a', 'mid-b', 'x1', 'x2', 'low']);
+    expect(hits.map((h) => h.book.id)).toEqual(['top', 'mid-a', 'mid-b', 'x1', 'x2']);
     expect(hits.every((h) => h.thoughts?.[0] === 'A note.')).toBe(true);
   });
 
@@ -206,5 +206,36 @@ describe('usableTerms', () => {
   it('drops ignored words and repeats', () => {
     expect(usableTerms('What would you recommend?')).toEqual([]);
     expect(usableTerms('finance finance Money')).toEqual(['finance', 'money']);
+  });
+});
+
+describe('topRated: what a miss offers (S6)', () => {
+  const rated = [
+    b('a', 'A', { thoughts: true, rating: 3 }),
+    b('b', 'B', { thoughts: true, rating: 5 }),
+    b('c', 'C', { thoughts: false, rating: 5 }),
+    b('d', 'D', { thoughts: true, rating: 5 }),
+    b('e', 'E', { thoughts: true, rating: 4 }),
+    b('f', 'F', { thoughts: true, rating: 4 }),
+    b('g', 'G', { thoughts: true, rating: 4 }),
+  ];
+  const src = { catalogue: async () => rated, thoughts: async () => ['Note.'] };
+
+  it('is the 5 highest rated with Thoughts, shelf order breaking ties, and never one without Thoughts', async () => {
+    expect((await topRated(rated, src)).map((h) => h.book.id)).toEqual(['b', 'd', 'e', 'f', 'g']);
+  });
+
+  it('leaves out what was already returned, and takes a smaller limit', async () => {
+    expect((await topRated(rated, src, new Set(['b', 'd']))).map((h) => h.book.id)).toEqual([
+      'e',
+      'f',
+      'g',
+      'a',
+    ]);
+    expect((await topRated(rated, src, new Set(), 2)).map((h) => h.book.id)).toEqual(['b', 'd']);
+  });
+
+  it('gives each book its Thoughts', async () => {
+    expect((await topRated(rated, src))[0]!.thoughts).toEqual(['Note.']);
   });
 });

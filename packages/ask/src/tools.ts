@@ -7,7 +7,7 @@ import {
   MAX_THOUGHT_TOKENS,
 } from './limits.ts';
 import { catalogueLine, estimateTokens, plain } from './prompt.ts';
-import { rankLibrary } from './search.ts';
+import { rankLibrary, topRated, usableTerms } from './search.ts';
 
 /**
  * The two read-only tools the model has (docs/spec/ask-the-library.md S5, S6; T1, T14).
@@ -46,6 +46,16 @@ const TRY_OTHER = 'Try other words, or call list_books.';
 export const NO_MATCH = `No books matched. ${TRY_OTHER}`;
 export const NO_OTHER_MATCH = `No other books matched. ${TRY_OTHER}`;
 export const NO_ROOM = 'No result could be returned.';
+
+/**
+ * What a search with a usable word and no match says before the top-rated books it offers instead
+ * (owner, 2026-11-05). The rules tell the model to say nothing matched, and never that these cover
+ * the subject.
+ */
+const NOT_ABOUT_THAT =
+  'These are not about that subject, but they are my top-rated books. Try other words, or say nothing matched and offer these.';
+export const MISS = `No books matched. ${NOT_ABOUT_THAT}`;
+export const MISS_OTHER = `No other books matched. ${NOT_ABOUT_THAT}`;
 
 /** The last line of a list: tool output, so the rules text does not carry it. */
 export const LIST_INSTRUCTION = 'Search a title to read your Thoughts before recommending.';
@@ -150,9 +160,13 @@ function listBooks(catalogue: readonly CatalogueBook[], room: number): string {
  */
 async function searchBooks(session: ToolSession, query: string, room: number): Promise<string> {
   const matches = await rankLibrary(session.catalogue, session.source, query, session.returned);
-  const hits = matches.slice(0, MAX_SEARCH_BOOKS);
+  let hits = matches.slice(0, MAX_SEARCH_BOOKS);
+  // A usable word that matched nothing: the top-rated books, said to be that (T6's exclude holds).
+  const missed = hits.length === 0 && usableTerms(query).length > 0;
+  if (missed) hits = await topRated(session.catalogue, session.source, session.returned);
   if (hits.length === 0) return session.returned.size > 0 ? NO_OTHER_MATCH : NO_MATCH;
   const shown = hits.map((h) => catalogueLine(h.book));
+  if (missed) shown.unshift(session.returned.size > 0 ? MISS_OTHER : MISS);
   if (matches.length > hits.length) shown.push(showing(hits.length, matches.length));
   const lines = shown.join('\n');
   const base = estimateTokens(lines);
