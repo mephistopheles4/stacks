@@ -15,7 +15,9 @@ The Worker runs both, and its plain results (no model) call the same search.
 
 At most 2 tool calls of either kind per question; the call after them has no `tools` key,
 so a question makes at most 3 model calls. One 30-second deadline covers the whole
-question. Any failed step falls back to plain results. The system message ends with one
+question. A blank answer, the deadline, a spent limit or a tool call after the last falls back to
+plain results; bad tool arguments and an unknown tool get a short guiding message instead
+(narrowed from "any failed step" the same day). The system message ends with one
 line of counts by status. The search reads title, author, subjects and Thoughts, with
 field matches ranked above Thoughts matches and a query naming a whole title first. A
 follow-up that names neither a catalogue title nor a subject word is dropped.

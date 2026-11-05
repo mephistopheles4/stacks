@@ -406,7 +406,7 @@ Worker's own answer code and a test gateway, over the real public build in
 `packages/site/dist` (`--site` names another folder), and refuses a library built
 from the fixture vault. It uses the owner's `wrangler login` and
 `CLOUDFLARE_ACCOUNT_ID`, plus `ASK_GATEWAY_TOKEN` if the gateway needs one, and
-prints none of them. It prints searches and tokens per question, costs about 2,000 Neurons (about 70 calls) and is outside CI, because G21
+prints none of them. It prints, per question, the tools called with their arguments, tool errors, model calls, Neurons, the answer and a hand-check sheet, keeps the full transcript in `artifacts/`, costs about 2,000 Neurons (about 70 calls) and is outside CI, because G21
 forbids live calls. A failure prints its answer: the session that runs it records
 whether the check or the answer was wrong. The two "was it any good" cases print
 their answer even on a pass, because only a person can see an invented reason.
@@ -417,7 +417,7 @@ reads `packages/ask/.dev.vars` over the config's `vars`. The config names the re
 `ASK_GATEWAY_ID` to a test gateway and `ASK_AI_ENABLED=true` in `.dev.vars`, or every question
 falls back to search within milliseconds. Without `--local` the AI binding reaches Cloudflare,
 so a local answer spends real Neurons. The log says why a question fell back:
-`reason` is `budget` (with `code` 2045), `timeout`, `blank`, `tool` (a bad tool call) or `error`, and `searches` counts the model's tool calls, and `code` is the
+`reason` is `budget` (with `code` 2045), `timeout`, `blank` or `error`, and `searches` counts the model's tool calls, and `code` is the
 platform's four-digit code when its message starts with one (such as 3043); it is digits only.
 
 **`pnpm ask:status`** prints yesterday's outcome counts from Workers Logs. ⚠️ **Its

@@ -264,9 +264,16 @@ capped on every path reviewed. Availability does not:
 - **The loop (T2, T6, T10, T11).** At most 2 tool calls of either tool in all; the call after
   them is made with no `tools` key, so it must answer, and a question makes at most 3 model
   calls. One 30-second deadline covers the whole question, each call getting what is left
-  (the drawer puts no timer of its own on the request, held by a test). Any failed step falls
-  back to plain results: bad tool arguments, an unknown tool, a blank final answer, a spent
-  limit or the deadline.
+  (the drawer puts no timer of its own on the request, held by a test). A blank final answer,
+  a spent limit, the deadline, or a tool call asked for once none are left falls back to plain
+  results. **T10 is narrowed (owner, 2026-11-05):** bad tool arguments and an unknown tool no
+  longer fail the question. While calls remain they get a short message naming the right input
+  (`search_library needs {"query": ...}`; "No such tool", naming both), nothing of what the model
+  sent is echoed, and the call counts against the two.
+- **Results that guide the model.** An empty search says "No books matched. Try other words, or
+  call list_books." (and "No other books matched." with the same advice once earlier results
+  exist). A result cut off at 6 ends with "Showing 6 of 14 matches. Search with more specific
+  words to narrow this down." No BM25, examples in the rules or clearing of old results are added.
 - **Follow-ups must be about the shelf (T9).** A follow-up that names neither a catalogue
   title nor a word in a catalogue subject is dropped ("Which finance book would you
   recommend?" stays, "Have you written about The Great Gatsby?" goes). A subject match is a
@@ -297,7 +304,7 @@ capped on every path reviewed. Availability does not:
 
 | Failure | Status, `mode` | What the visitor sees |
 | --- | --- | --- |
-| AI error, 2045, blank, timeout, bad tool call, switch off | 200, `search` | "The bot has worked too hard today and went to take a nap. These books match your words." With no match: "The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject." (T12; the second is proposed to match the owner's wording) |
+| AI error, 2045, blank, timeout, a tool call asked for after the last, switch off | 200, `search` | "The bot has worked too hard today and went to take a nap. These books match your words." With no match: "The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject." (T12; the second is proposed to match the owner's wording) |
 | Turnstile fails or can't be checked | 403, `error` | "Couldn't confirm this request. Reload the page and ask again." |
 | Rate or daily limit | 429, `limited` | "That's the limit for now. Try again later." |
 | Bad request | 400, `error` | "That question couldn't be sent. Shorten it and try again." |
@@ -477,8 +484,17 @@ would have dropped. Run again after this change.
 one of the search's ignored words. Broad questions are the known weak spot: the evals report
 what they show and no behaviour is added for them. A question whose first search finds
 nothing useful, chosen after a dry run, is recorded either way (did it search twice?); none
-is chosen yet. The run prints searches and Neurons per question, and is about 15 questions
-and 3 memory cases, twice each, about 70 calls and 2,000 Neurons.
+is chosen yet. The run is about 15 questions and 3 memory cases, twice each, about 70 calls and
+2,000 Neurons.
+
+**What the run prints (owner, 2026-11-05).** For each question: the tools called in order with their
+arguments, tool errors (a bad call that got guidance), model calls, Neurons and the final answer;
+the full transcript, every tool result included, is written to `artifacts/ask-evals-<time>.json`
+for reading by hand. Each case carries an **expected tool**: `list_books` for a broad question, a
+search for a named book or a subject, none for a count or a refusal. **A mismatch is printed as
+something to read and never fails a question.** Each answer is followed by a hand check, not a
+grade: its claims (sentences) in a list, with the Thoughts of every book it names beside them, or
+"(none written)", so a claim the Thoughts do not support stands out. No model grades anything.
 
 The finance question stays an eval though it is no longer a quick question: it is a valid hard case. The Coming Wave and Antifragile checks assume no Thoughts. If the owner writes some,
 choose other books.
@@ -515,7 +531,7 @@ choose other books.
 | C26 | The model never gets more than 2 tool calls of either tool, and the third model call has no tools key, proved by a stub that always asks for a tool and counts calls | Reliability |
 | C27 | Plain results and the tool call the same search, shown by a stub with no model returning the same order for one query | Functional |
 | C28 | On the real catalogue, with the largest memory and a question at the limit, two full results stay within 6,000, Thoughts drop before memory, and a repeated book is not sent twice | Reliability |
-| C29 | Bad tool arguments, an unknown tool, a blank answer and the deadline each return plain results, proved by stubs | Reliability |
+| C29 | A blank answer, the deadline, a spent limit and a tool call asked for once none are left each return plain results, and bad tool arguments or an unknown tool get a guiding message and the question carries on, proved by stubs | Reliability |
 | C30 | A book with no Thoughts reads "no Thoughts written" in every result, and the S9 search-tool questions hold on the live run, read by hand | Functional |
 | C31 | A follow-up naming no catalogue title or subject is dropped, using "The Great Gatsby" | Functional |
 | C32 | No query reaches a log call: a canary in a query appears in no log line | Security |

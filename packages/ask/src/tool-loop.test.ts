@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SEARCH_FOUND, SEARCH_NONE, answerQuestion } from './answer.ts';
+import { SEARCH_FOUND, SEARCH_NONE, answerQuestion, type TraceEvent } from './answer.ts';
 import type { Env } from './env.ts';
 import type { CatalogueBook, LibrarySource } from './library.ts';
 import { logOutcome } from './outcome.ts';
@@ -188,7 +188,9 @@ describe('the tool loop (T1, T2, T7)', () => {
       { text: 'ok' },
     ]);
     await answerQuestion(env, source, 'q');
-    expect(seen[2]!.messages.at(-1)!.content).toBe('No other books matched.');
+    expect(seen[2]!.messages.at(-1)!.content).toBe(
+      'No other books matched. Try other words, or call list_books.',
+    );
   });
 });
 
@@ -222,17 +224,53 @@ describe('at most 2 tool calls, then a call with no tools (T2, C26)', () => {
   });
 });
 
+describe('a bad tool call is answered, not failed (T10 narrowed)', () => {
+  it.each([
+    ['arguments that are not JSON', { name: 'search_library', args: '{nope' }],
+    ['a query that is missing', { name: 'search_library', args: {} }],
+    ['an unknown tool', { name: 'drop_table', args: {} }],
+  ])('%s gets guidance and the model answers with the call it has left', async (_name, call) => {
+    const { env, seen } = scripted([
+      { calls: [call] },
+      { calls: [search('nexus')] },
+      { text: 'I wrote about Nexus.' },
+    ]);
+    const answered = await answerQuestion(env, source, 'nexus');
+    expect(answered.reply.mode).toBe('ai');
+    expect(answered.detail.searches).toBe(2);
+    const guided = seen[1]!.messages.at(-1)!.content;
+    expect(guided).toMatch(/search_library|No such tool/);
+    expect(guided).not.toContain('nope');
+    expect(guided).not.toContain('drop_table');
+    // The assistant message sent back names no tool the model made up.
+    const assistant = seen[1]!.messages.find((m) => m.role === 'assistant')!;
+    expect(JSON.stringify(assistant.tool_calls)).not.toContain('drop_table');
+  });
+
+  it('still counts against the two calls: two bad calls leave a final call with no tools, and its answer stands', async () => {
+    const { env, seen } = scripted([
+      { calls: [{ name: 'search_library', args: {} }] },
+      { calls: [{ name: 'drop_table', args: {} }] },
+      { text: 'I could not search.' },
+    ]);
+    const answered = await answerQuestion(env, source, 'nexus');
+    expect(seen.map((s) => s.hasTools)).toEqual([true, true, false]);
+    expect(answered.reply.mode).toBe('ai');
+  });
+
+  it('asking for a tool once none are left is still a failure, and gives plain results', async () => {
+    const { env } = scripted(() => ({ calls: [{ name: 'search_library', args: {} }] }));
+    const answered = await answerQuestion(env, source, 'nexus');
+    expect(answered.outcome).toBe('search-ai-failed');
+    expect(answered.detail.reason).toBe('blank');
+    expect(answered.reply.mode).toBe('search');
+  });
+});
+
 describe('any failed step gives plain results (T10, T12, C29)', () => {
   const nap = SEARCH_FOUND;
 
   it.each([
-    [
-      'arguments that are not JSON',
-      [{ calls: [{ name: 'search_library', args: '{nope' }] }],
-      'tool',
-    ],
-    ['a query that is missing', [{ calls: [{ name: 'search_library', args: {} }] }], 'tool'],
-    ['an unknown tool', [{ calls: [{ name: 'drop_table', args: {} }] }], 'tool'],
     ['a blank final answer', [{ calls: [search('nexus')] }, { text: '  **  ' }], 'blank'],
     [
       'an answer that was only a block',
@@ -458,6 +496,37 @@ describe('the input stays within 6,000 before every call (T8, C28)', () => {
       [biggest, biggest],
     );
     expect(seen[1]!.messages.at(-1)!.content).toBe('No result could be returned.');
+    expect(answered.reply.mode).toBe('ai');
+  });
+});
+
+describe('a caller can watch a question (the evals)', () => {
+  it('gets each model call and each tool call, in order, with the arguments and the result', async () => {
+    const events: TraceEvent[] = [];
+    const { env } = scripted([
+      { calls: [search('Nexus', 'a')], usage: [1000, 20] },
+      { calls: [{ name: 'search_library', args: {} }], usage: [1200, 10] },
+      { text: 'I wrote about Nexus.', usage: [1500, 40] },
+    ]);
+    await answerQuestion(env, source, 'q', Date.now, [], (e) => events.push(e));
+    expect(events.map((e) => e.kind)).toEqual(['model', 'tool', 'model', 'tool', 'model']);
+    expect(events[0]).toMatchObject({
+      kind: 'model',
+      call: 1,
+      tools: true,
+      toolCalls: 1,
+      tokensIn: 1000,
+    });
+    expect(events[1]).toMatchObject({ kind: 'tool', name: 'search_library', error: false });
+    expect((events[1] as { arguments: string }).arguments).toBe('{"query":"Nexus"}');
+    expect((events[1] as { result: string }).result).toContain('Your Thoughts on "Nexus"');
+    expect(events[3]).toMatchObject({ kind: 'tool', error: true });
+    expect(events[4]).toMatchObject({ kind: 'model', call: 3, tools: false, toolCalls: 0 });
+  });
+
+  it('is not needed: with no observer the question runs the same and nothing is traced', async () => {
+    const { env } = scripted([{ calls: [search('Nexus')] }, { text: 'ok' }]);
+    const answered = await answerQuestion(env, source, 'q');
     expect(answered.reply.mode).toBe('ai');
   });
 });

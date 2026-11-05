@@ -58,6 +58,16 @@ export async function searchLibrary(
   query: string,
   exclude: ReadonlySet<string> = new Set(),
 ): Promise<Hit[]> {
+  return (await rankLibrary(catalogue, source, query, exclude)).slice(0, MAX_SEARCH_BOOKS);
+}
+
+/** Every match, ranked as `searchLibrary` ranks them: the tool says how many it cut off. */
+export async function rankLibrary(
+  catalogue: readonly CatalogueBook[],
+  source: LibrarySource,
+  query: string,
+  exclude: ReadonlySet<string> = new Set(),
+): Promise<Hit[]> {
   const terms = [...new Set(words(query).filter((w) => !STOP_WORDS.has(w)))];
   if (terms.length === 0) return [];
   const loaded = await Promise.all(
@@ -83,6 +93,5 @@ export async function searchLibrary(
         b.note - a.note ||
         a.position - b.position,
     )
-    .slice(0, MAX_SEARCH_BOOKS)
     .map((s) => s.hit);
 }

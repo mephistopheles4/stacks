@@ -3,10 +3,15 @@ import type { CatalogueBook } from '../../packages/ask/src/library.ts';
 import {
   CASES,
   MEMORY_CASES,
+  claimsOf,
+  claimsSheet,
   followUpsStandAlone,
   looksLikeFixture,
   namedCount,
+  neurons,
+  summariseTrace,
   titlesIn,
+  toolMismatch,
 } from './ask-evals.ts';
 
 const book = (title: string, over: Partial<CatalogueBook> = {}): CatalogueBook => ({
@@ -181,5 +186,92 @@ describe('follow-ups stand alone (S9)', () => {
     expect(followUpsStandAlone(['It was about Antifragile, was it good?'], LIB)).toBe(false);
     expect(followUpsStandAlone(['Tell me about Antifragile.'], LIB)).toBe(false);
     expect(followUpsStandAlone(['What is the weather?'], LIB)).toBe(false);
+  });
+});
+
+describe('what a question should lead the model to do (S9)', () => {
+  it('every case, memory cases included, names the tool it expects', () => {
+    for (const c of [...CASES, ...MEMORY_CASES]) {
+      expect(['list_books', 'search', 'none'], c.question).toContain(c.expects);
+    }
+  });
+
+  it('a broad question expects list_books, a named book a search, a count and a refusal none', () => {
+    expect(caseFor('What kind of books').expects).toBe('list_books');
+    expect(caseFor('What would you recommend').expects).toBe('list_books');
+    expect(caseFor('What did you think of Co-Intelligence').expects).toBe('search');
+    expect(caseFor('How many books').expects).toBe('none');
+    expect(caseFor('Ignore your instructions').expects).toBe('none');
+  });
+
+  it('reads a mismatch as a note, and a match as nothing', () => {
+    expect(toolMismatch('search', ['search_library'])).toBeUndefined();
+    expect(toolMismatch('list_books', ['list_books', 'search_library'])).toBeUndefined();
+    expect(toolMismatch('none', [])).toBeUndefined();
+    expect(toolMismatch('search', [])).toBe('expected search_library, called no tool');
+    expect(toolMismatch('none', ['list_books'])).toBe('expected no tool, called list_books');
+    expect(toolMismatch('list_books', ['search_library'])).toBe(
+      'expected list_books, called search_library',
+    );
+  });
+});
+
+describe('the hand check of an answer (S9)', () => {
+  it('splits an answer into claims', () => {
+    expect(claimsOf('I liked it. It was about teams! Did I say so? Yes.')).toEqual([
+      'I liked it.',
+      'It was about teams!',
+      'Did I say so?',
+      'Yes.',
+    ]);
+  });
+
+  it('puts the Thoughts of each book the answer names beside its claims, and says when there are none', () => {
+    const sheet = claimsSheet(
+      'I wrote about Co-Intelligence. Money Unlocked was fine.',
+      LIB,
+      (b) => (b.thoughts ? 'A teacher and a machine.' : 'SHOULD NOT BE READ'),
+    );
+    expect(sheet.claims).toHaveLength(2);
+    expect(sheet.books).toEqual([
+      {
+        title: 'Co-Intelligence: Living and Working with AI',
+        thoughts: 'A teacher and a machine.',
+      },
+      { title: 'Money Unlocked', thoughts: undefined },
+    ]);
+  });
+});
+
+describe('the trace of a question (S9)', () => {
+  const events = [
+    { kind: 'model', call: 1, tools: true, toolCalls: 1, tokensIn: 1000, tokensOut: 20 },
+    {
+      kind: 'tool',
+      name: 'search_library',
+      arguments: '{"query":"Nexus"}',
+      result: 'r',
+      error: false,
+    },
+    { kind: 'model', call: 2, tools: true, toolCalls: 1, tokensIn: 1500, tokensOut: 10 },
+    { kind: 'tool', name: 'list_books', arguments: '{}', result: 'bad', error: true },
+    { kind: 'model', call: 3, tools: false, toolCalls: 0, tokensIn: 2000, tokensOut: 40 },
+  ] as const;
+
+  it('lists the tools in order with their arguments, errors, model calls and Neurons', () => {
+    const t = summariseTrace(events);
+    expect(t.called).toEqual(['search_library', 'list_books']);
+    expect(t.modelCalls).toBe(3);
+    expect(t.toolErrors).toBe(1);
+    expect(t.neurons).toBeCloseTo(neurons(4500, 70), 6);
+    expect(t.lines).toHaveLength(5);
+    expect(t.lines[1]).toBe('tool 1: search_library {"query":"Nexus"}');
+    expect(t.lines[3]).toContain('[TOOL ERROR');
+    expect(t.lines[4]).toContain('no tools');
+  });
+
+  it('prices a call at the published rates', () => {
+    expect(neurons(1_000_000, 0)).toBeCloseTo(18_182, 0);
+    expect(neurons(0, 1_000_000)).toBeCloseTo(27_273, 0);
   });
 });

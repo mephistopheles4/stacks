@@ -11,18 +11,21 @@
  * `CLOUDFLARE_ACCOUNT_ID` names the account.
  */
 import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { answerQuestion } from '../packages/ask/src/answer.ts';
+import { answerQuestion, type TraceEvent } from '../packages/ask/src/answer.ts';
 import type { Env } from '../packages/ask/src/env.ts';
 import { createLibrarySource } from '../packages/ask/src/library.ts';
 import { NOT_A_TEST_GATEWAY } from './lib/ask-deploy.ts';
 import {
   CASES,
   MEMORY_CASES,
+  claimsSheet,
   followUpsStandAlone,
   looksLikeFixture,
+  summariseTrace,
   titlesIn,
+  toolMismatch,
 } from './lib/ask-evals.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
@@ -124,10 +127,27 @@ let passed = 0;
 let total = 0;
 let tokensIn = 0;
 let tokensOut = 0;
+let totalNeurons = 0;
+let mismatches = 0;
+/** Everything each question did, kept whole for reading by hand. */
+const transcript: unknown[] = [];
+const THOUGHTS_SHOWN = 700;
+/** The owner's Thoughts for each book that has them, read once, for the hand check. */
+const thoughtsText = new Map<string, string>();
+for (const book of library) {
+  if (!book.thoughts) continue;
+  const paragraphs = await source.thoughts(book);
+  if (paragraphs !== undefined) thoughtsText.set(book.id, paragraphs.join(' '));
+}
+
 for (const c of [...CASES, ...MEMORY_CASES]) {
   for (let run = 1; run <= RUNS; run += 1) {
     total += 1;
-    const answered = await answerQuestion(env, source, c.question, undefined, c.history);
+    const events: TraceEvent[] = [];
+    const answered = await answerQuestion(env, source, c.question, undefined, c.history, (event) =>
+      events.push(event),
+    );
+    const trace = summariseTrace(events);
     const standAlone = followUpsStandAlone(answered.reply.followUps, library);
     const pilled =
       c.pill === undefined || answered.reply.books.some((b) => b.title.startsWith(c.pill ?? ''));
@@ -139,18 +159,65 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
     if (ok) passed += 1;
     tokensIn += answered.detail.tokensIn ?? 0;
     tokensOut += answered.detail.tokensOut ?? 0;
+    totalNeurons += trace.neurons;
+    // A tool mismatch is something to read, never a failure.
+    const mismatch = toolMismatch(c.expects, trace.called);
+    if (mismatch !== undefined) mismatches += 1;
+
     console.log(
-      `${ok ? 'PASS' : 'FAIL'}  [${answered.reply.mode}] run ${String(run)}  ${c.history === undefined ? '' : '(after Co-Intelligence) '}${c.question}` +
-        `  (${String(answered.detail.searches ?? '?')} searches, ${String(answered.detail.tokensIn ?? '?')} in, ${String(answered.detail.tokensOut ?? '?')} out)`,
+      `${ok ? 'PASS' : 'FAIL'}  [${answered.reply.mode}] run ${String(run)}  ${c.history === undefined ? '' : '(after Co-Intelligence) '}${c.question}`,
     );
-    // A failure, or a pass that needs a person to read it, shows its answer.
-    if (!ok || c.readByHand === true) console.log(`      ${answered.reply.answer}`);
+    console.log(
+      `      ${String(trace.modelCalls)} model calls, ${String(trace.called.length)} tool calls` +
+        ` (${trace.called.join(' > ') || 'none'}), ${String(trace.toolErrors)} tool errors, ~${trace.neurons.toFixed(1)} Neurons`,
+    );
+    console.log(
+      `      expected tool: ${c.expects}${mismatch === undefined ? '' : `  <-- READ THIS: ${mismatch}`}`,
+    );
+    for (const line of trace.lines) console.log(`        ${line}`);
+    console.log(`      answer: ${answered.reply.answer}`);
     for (const f of answered.reply.followUps)
       console.log(`      follow-up: ${f}${standAlone ? '' : '  (does not stand alone)'}`);
+
+    // A hand check, not a grade: each claim, and the Thoughts of every book the answer names.
+    const sheet = claimsSheet(answered.reply.answer, library, (book) => thoughtsText.get(book.id));
+    console.log('      claims to check against the Thoughts:');
+    for (const [i, claim] of sheet.claims.entries())
+      console.log(`        ${String(i + 1)}. ${claim}`);
+    for (const { title, thoughts } of sheet.books) {
+      const shown =
+        thoughts === undefined
+          ? '(none written)'
+          : thoughts.slice(0, THOUGHTS_SHOWN) + (thoughts.length > THOUGHTS_SHOWN ? ' ...' : '');
+      console.log(`        Thoughts on "${title}": ${shown}`);
+    }
+    transcript.push({
+      question: c.question,
+      afterCoIntelligence: c.history !== undefined,
+      run,
+      ok,
+      mode: answered.reply.mode,
+      expectedTool: c.expects,
+      toolMismatch: mismatch ?? null,
+      neurons: trace.neurons,
+      events,
+      answer: answered.reply.answer,
+      followUps: answered.reply.followUps,
+      books: answered.reply.books.map((b) => b.title),
+      thoughts: Object.fromEntries(sheet.books.map((b) => [b.title, b.thoughts ?? null])),
+    });
   }
 }
+
+const folder = join(REPO_ROOT, 'artifacts');
+mkdirSync(folder, { recursive: true });
+const file = join(folder, `ask-evals-${new Date().toISOString().replaceAll(':', '-')}.json`);
+writeFileSync(file, JSON.stringify(transcript, null, 2));
+
 console.log(
-  `\n${String(passed)} of ${String(total)} passed; ${String(tokensIn)} input and ${String(tokensOut)} output tokens in all`,
+  `\n${String(passed)} of ${String(total)} passed; ${String(tokensIn)} input and ${String(tokensOut)} output tokens in all, ~${totalNeurons.toFixed(0)} Neurons`,
 );
+console.log(`${String(mismatches)} questions called a different tool than expected: read them.`);
+console.log(`Full transcript, every tool result included: ${file}`);
 console.log("Record each failure as the check's fault or the answer's on the issue.");
 process.exit(passed === total ? 0 : 1);

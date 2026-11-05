@@ -20,7 +20,7 @@ export type Outcome =
 
 export interface OutcomeDetail {
   /** Why AI did not answer: the day's budget is spent, or it failed. */
-  readonly reason?: 'budget' | 'timeout' | 'blank' | 'tool' | 'error';
+  readonly reason?: 'budget' | 'timeout' | 'blank' | 'error';
   /** The AI platform's four-digit error code, when it gave one. */
   readonly code?: number;
   readonly ms?: number;

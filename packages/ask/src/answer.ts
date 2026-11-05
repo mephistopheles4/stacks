@@ -62,6 +62,28 @@ async function searchReply(
   };
 }
 
+/**
+ * What happened inside one question, for a caller that asks to watch (the evals). The Worker
+ * never passes one, so none of this reaches a log: a query is in here and must stay out of one.
+ */
+export type TraceEvent =
+  | {
+      readonly kind: 'model';
+      readonly call: number;
+      readonly tools: boolean;
+      readonly toolCalls: number;
+      readonly tokensIn: number | undefined;
+      readonly tokensOut: number | undefined;
+    }
+  | {
+      readonly kind: 'tool';
+      readonly name: string;
+      readonly arguments: string;
+      readonly result: string;
+      /** The call was bad and `result` is the guidance it got. */
+      readonly error: boolean;
+    };
+
 /** What a question cost, kept as it goes so a failed question still reports it (T13). */
 interface Stats {
   searches: number;
@@ -107,12 +129,14 @@ async function converse(
   history: readonly Exchange[],
   stats: Stats,
   elapsed: () => number,
+  observe: ((event: TraceEvent) => void) | undefined,
 ): Promise<string> {
   const messages: ChatMessage[] = [
     { role: 'system', content: systemMessage(catalogue) },
     { role: 'user', content: userMessage(question, history) },
   ];
   const session: ToolSession = { catalogue, source, returned: new Set() };
+  let modelCalls = 0;
   for (;;) {
     const left = AI_DEADLINE_MS - elapsed();
     if (left <= 0) throw new AiFailure('timeout');
@@ -123,6 +147,15 @@ async function converse(
     });
     stats.tokensIn = add(stats.tokensIn, out.tokensIn);
     stats.tokensOut = add(stats.tokensOut, out.tokensOut);
+    modelCalls += 1;
+    observe?.({
+      kind: 'model',
+      call: modelCalls,
+      tools: offered,
+      toolCalls: out.toolCalls.length,
+      tokensIn: out.tokensIn,
+      tokensOut: out.tokensOut,
+    });
     if (out.toolCalls.length === 0) return out.text;
     // Asking for a tool after the tools were taken away is not an answer.
     if (!offered) throw new AiFailure('blank');
@@ -134,6 +167,16 @@ async function converse(
     for (const call of calls) {
       const room = MAX_INPUT_TOKENS - spent;
       const run = await runTool(call, session, room);
+      observe?.({
+        kind: 'tool',
+        name: call.name,
+        arguments:
+          typeof call.arguments === 'string'
+            ? call.arguments
+            : JSON.stringify(call.arguments ?? null),
+        result: run.content,
+        error: run.error === true,
+      });
       wires.push(run.wire);
       results.push({ id: call.id, name: call.name, content: run.content });
       spent += estimateTokens(run.content);
@@ -157,6 +200,7 @@ export async function answerQuestion(
   question: string,
   clock: () => number = Date.now,
   history: readonly Exchange[] = [],
+  observe?: (event: TraceEvent) => void,
 ): Promise<Answered> {
   const catalogue = await source.catalogue();
   if (env.ASK_AI_ENABLED !== 'true') {
@@ -178,6 +222,7 @@ export async function answerQuestion(
       history,
       stats,
       () => clock() - started,
+      observe,
     );
     // The follow-ups are cut off the answer; an answer that was only a block is blank.
     const split = splitFollowUps(text);
@@ -211,6 +256,5 @@ function failureDetail(error: unknown): Pick<OutcomeDetail, 'reason' | 'code'> {
   if (error.spent) return { reason: 'budget', ...code };
   if (error.message === 'timeout') return { reason: 'timeout' };
   if (error.message === 'blank') return { reason: 'blank' };
-  if (error.message === 'tool') return { reason: 'tool' };
   return { reason: 'error', ...code };
 }

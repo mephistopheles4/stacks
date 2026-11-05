@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { AiFailure } from './ai.ts';
 import { createLibrarySource, type CatalogueBook, type LibrarySource } from './library.ts';
 import { estimateTokens } from './prompt.ts';
-import { NO_MATCH, NO_OTHER_MATCH, NO_ROOM, runTool, type ToolSession } from './tools.ts';
+import {
+  BAD_ARGUMENTS,
+  NO_MATCH,
+  NO_OTHER_MATCH,
+  NO_ROOM,
+  UNKNOWN_TOOL,
+  runTool,
+  showing,
+  type ToolSession,
+} from './tools.ts';
 
 const b = (id: string, title: string, extra: Partial<CatalogueBook> = {}): CatalogueBook => ({
   id,
@@ -185,11 +193,24 @@ describe('what the model sends is untrusted (T10, C29, C32)', () => {
     ['a blank query', search({ query: '  ' })],
     ['null arguments', search(null)],
     ['no arguments', search(undefined)],
-  ])('refuses %s without carrying anything it sent', async (_name, call) => {
-    const error = await runTool(call, session(), ROOM).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(AiFailure);
-    expect((error as AiFailure).message).toBe('tool');
-    expect(String((error as AiFailure).message)).not.toContain(canary);
+  ])('answers %s with guidance and nothing it sent', async (name, call) => {
+    const out = await runTool(call, session(), ROOM);
+    expect(out.error).toBe(true);
+    expect(out.content).toBe(name === 'an unknown tool' ? UNKNOWN_TOOL : BAD_ARGUMENTS);
+    expect(JSON.stringify(out)).not.toContain(canary);
+    expect(JSON.stringify(out)).not.toContain('delete_everything');
+  });
+
+  it('names the right input in each message', () => {
+    expect(BAD_ARGUMENTS).toContain('{"query": "a title or a few key words"}');
+    expect(BAD_ARGUMENTS).toContain('list_books');
+    expect(UNKNOWN_TOOL).toContain('search_library');
+    expect(UNKNOWN_TOOL).toContain('list_books');
+  });
+
+  it('a good call is not an error', async () => {
+    const out = await runTool(search({ query: 'business' }), session(), ROOM);
+    expect(out.error).toBeUndefined();
   });
 
   it('reads arguments given as a JSON string or as an object', async () => {
@@ -213,5 +234,46 @@ describe('what the model sends is untrusted (T10, C29, C32)', () => {
       type: 'function',
       function: { name: 'search_library' },
     });
+  });
+});
+
+describe('results that guide the model (T5, T10)', () => {
+  it('an empty result says to try other words or call list_books', async () => {
+    const out = await runTool(search({ query: 'zymurgy' }), session(), ROOM);
+    expect(out.content).toBe('No books matched. Try other words, or call list_books.');
+    expect(NO_MATCH).toBe('No books matched. Try other words, or call list_books.');
+  });
+
+  it('a second search that finds only books already returned says so, with the same advice', async () => {
+    const s = session();
+    await runTool(search({ query: 'business' }), s, ROOM);
+    const again = await runTool(search({ query: 'business' }, 'c2'), s, ROOM);
+    expect(again.content).toBe('No other books matched. Try other words, or call list_books.');
+    expect(NO_OTHER_MATCH).toBe(again.content);
+  });
+
+  it('a result cut off at 6 says how many it shows of how many matched', async () => {
+    const many = Array.from({ length: 14 }, (_, i) =>
+      b(`m${String(i)}`, `Money ${String(i)}`, { subjects: 'Business' }),
+    );
+    const s: ToolSession = {
+      catalogue: many,
+      source: { catalogue: async () => many, thoughts: async () => undefined },
+      returned: new Set(),
+    };
+    const out = await runTool(search({ query: 'money' }), s, ROOM);
+    const lines = out.content.split(NL);
+    expect(lines).toHaveLength(7);
+    expect(lines[6]).toBe(
+      'Showing 6 of 14 matches. Search with more specific words to narrow this down.',
+    );
+    expect(showing(6, 14)).toBe(lines[6]);
+    // Only the 6 shown count as returned, so the next search can reach the rest.
+    expect(s.returned.size).toBe(6);
+  });
+
+  it('says nothing about a cut when every match is shown', async () => {
+    const out = await runTool(search({ query: 'business' }), session(), ROOM);
+    expect(out.content).not.toContain('Showing');
   });
 });
