@@ -1,4 +1,8 @@
-/** Every number in S5 and S6 of docs/spec/ask-the-library.md, in one place. */
+/**
+ * The numbers of S5 and S6 of docs/spec/ask-the-library.md, in one place, except three that live
+ * beside their code: the follow-up limits in `followups.ts`, the input budget's framing margin in
+ * `answer.ts`, and the 5-a-minute rate limit, which is in `wrangler.jsonc`.
+ */
 export const MAX_BODY_BYTES = 8 * 1024;
 export const MAX_QUESTION_CHARS = 1_500;
 export const MAX_TOKEN_CHARS = 2_048;

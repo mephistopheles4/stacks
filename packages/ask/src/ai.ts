@@ -150,8 +150,8 @@ interface RawCall {
 
 /**
  * The tool calls in a reply: `choices[0].message.tool_calls` in the OpenAI shape, or a
- * `tool_calls` list at the top. A call with no usable name is skipped here and an
- * unknown name is refused by the caller (T10); nothing in a call is trusted.
+ * `tool_calls` list at the top. A call with no usable name is skipped here, and an unknown
+ * name is answered with guidance by `runTool` (T10, narrowed); nothing in a call is trusted.
  */
 function extractToolCalls(out: unknown): ToolCall[] {
   const o = (out ?? {}) as {

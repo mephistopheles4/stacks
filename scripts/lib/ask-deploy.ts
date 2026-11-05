@@ -152,7 +152,10 @@ export function keyProblem(key: string): string | undefined {
 /** The same, read back from the built page: what is about to be uploaded, not what was meant. */
 export function siteKeyProblem(html: string): string | undefined {
   const found = /data-site-key="([^"]*)"/.exec(html);
-  if (found === null) return 'the built page has no Ask the library panel (no data-site-key)';
+  // Astro leaves the attribute out when the variable is unset, so "no attribute" is "no key" too.
+  if (found === null) {
+    return 'the built page has no data-site-key: PUBLIC_TURNSTILE_SITE_KEY was not set when it was built, or the Ask the library panel is gone';
+  }
   const problem = keyProblem(found[1] ?? '');
   return problem === undefined ? undefined : `the built page carries a bad site key: ${problem}`;
 }

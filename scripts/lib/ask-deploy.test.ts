@@ -138,7 +138,7 @@ describe('siteKeyProblem (behaviour E7)', () => {
   it('refuses an empty key, a missing panel, and each of the test keys of Cloudflare', () => {
     expect(siteKeyProblem(page(''))).toMatch(/empty/);
     expect(siteKeyProblem(page('   '))).toMatch(/empty/);
-    expect(siteKeyProblem('<html></html>')).toMatch(/no Ask the library panel/);
+    expect(siteKeyProblem('<html></html>')).toMatch(/no data-site-key/);
     for (const key of [
       '1x00000000000000000000AA',
       '2x00000000000000000000AB',

@@ -5,7 +5,7 @@
 //
 // The Turnstile site key is public by design. Unset in a plain local build, the
 // drawer opens, finds no key, and answers with the unavailable message.
-const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 ---
 
 <button

@@ -39,8 +39,9 @@ export class HealthState {
 const stub = (env: Env) => env.HEALTH.get(env.HEALTH.idFromName('daily'));
 
 /**
- * Passes unless the AI answered wrongly. A spent budget passes, and so does AI
- * switched off on purpose; a failed data load fails. The record is a bool and a time.
+ * Passes unless the AI call failed (a blank answer counts as failed; nothing reads what a good
+ * answer says). A spent budget passes, and so does AI switched off on purpose; a failed data
+ * load fails. The record is a bool and a time.
  */
 export async function runDailyTest(
   env: Env,

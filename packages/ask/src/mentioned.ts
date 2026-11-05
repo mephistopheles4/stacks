@@ -1,9 +1,10 @@
 import { MAX_SEARCH_BOOKS } from './limits.ts';
 import type { CatalogueBook } from './library.ts';
+import type { Exchange } from './prompt.ts';
 
 /**
- * Which catalogue books a text names, for the pills under an answer and for the
- * Thoughts a follow-up needs (S4, S6, S7).
+ * Which catalogue books a text names, for the pills under an answer and for the memory
+ * fallback (S6, S7).
  *
  * Four things a model's text does that a plain substring match gets wrong:
  * it writes a curly apostrophe where the title has a straight one (or the other
@@ -30,12 +31,6 @@ const foldSmall = (text: string): string =>
 /** Lower case as well: how a visitor's question is matched, because visitors type loosely. */
 export function fold(text: string): string {
   return straight(text).toLowerCase();
-}
-
-/** The text of an exchange kept by the page: what the visitor asked, what the bot said. */
-export interface Remembered {
-  readonly question: string;
-  readonly answer: string;
 }
 
 interface Span {
@@ -105,7 +100,7 @@ function named(text: string, catalogue: readonly CatalogueBook[], loose: boolean
  */
 export function namedInMemory(
   catalogue: readonly CatalogueBook[],
-  history: readonly Remembered[],
+  history: readonly Exchange[],
   only?: ReadonlySet<string>,
 ): CatalogueBook[] {
   const found = new Map<string, CatalogueBook>();
@@ -130,7 +125,7 @@ export function mentioned(
   catalogue: readonly CatalogueBook[],
   answer: string,
   question = '',
-  history: readonly Remembered[] = [],
+  history: readonly Exchange[] = [],
   only?: ReadonlySet<string>,
 ): CatalogueBook[] {
   const fromAnswer = named(answer, catalogue, false);

@@ -32,7 +32,6 @@ import {
 import { capture, type CallCapture } from './lib/ask-reasoning.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
-const MODEL = '@cf/openai/gpt-oss-20b';
 const RUNS = 2;
 
 function fail(message: string): never {
@@ -101,10 +100,10 @@ const captures: CallCapture[] = [];
 /** The binding's `run`, over the gateway's REST address. */
 const env = {
   AI: {
-    run: async (_model: string, input: unknown, options?: unknown): Promise<unknown> => {
+    run: async (model: string, input: unknown, options?: unknown): Promise<unknown> => {
       const id = (options as { gateway?: { id?: string } } | undefined)?.gateway?.id ?? gateway;
       const response = await fetch(
-        `https://gateway.ai.cloudflare.com/v1/${account}/${id}/workers-ai/${MODEL}`,
+        `https://gateway.ai.cloudflare.com/v1/${account}/${id}/workers-ai/${model}`,
         {
           method: 'POST',
           headers: {

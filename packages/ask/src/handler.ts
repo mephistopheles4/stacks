@@ -54,8 +54,8 @@ export async function handleChat(request: Request, env: Env, deps: Deps): Promis
   ).catch(() => false);
   if (!human) return end('refused-turnstile', refusal(403, 'error', COULDNT_CONFIRM));
 
-  const limited = await withinLimits(env, address, (deps.now ?? (() => new Date()))());
-  if (!limited) {
+  const within = await withinLimits(env, address, (deps.now ?? (() => new Date()))());
+  if (!within) {
     return end(
       'refused-limit',
       refusal(429, 'limited', "That's the limit for now. Try again later."),

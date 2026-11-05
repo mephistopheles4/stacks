@@ -15,8 +15,8 @@ export interface Exchange {
 }
 
 export const MAX_EXCHANGES = 2;
-export const MAX_QUESTION_CHARS = 300;
-export const MAX_ANSWER_CHARS = 600;
+export const MAX_HISTORY_QUESTION_CHARS = 300;
+export const MAX_HISTORY_ANSWER_CHARS = 600;
 
 export interface Memory {
   /** Keeps the exchange if it was answered by the model; otherwise leaves memory as it was. */
@@ -33,8 +33,8 @@ export function createMemory(): Memory {
       kept = [
         ...kept,
         {
-          question: question.trim().slice(0, MAX_QUESTION_CHARS),
-          answer: result.answer.slice(0, MAX_ANSWER_CHARS),
+          question: question.trim().slice(0, MAX_HISTORY_QUESTION_CHARS),
+          answer: result.answer.slice(0, MAX_HISTORY_ANSWER_CHARS),
         },
       ].slice(-MAX_EXCHANGES);
     },

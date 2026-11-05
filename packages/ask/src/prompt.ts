@@ -50,8 +50,9 @@ export const RULES =
 export const estimateTokens = (text: string): number => Math.ceil(text.length / 3);
 
 /**
- * Provider text goes into the system message on every question, and a provider
- * record can be edited by anyone (Open Library is a wiki). One line, no control
+ * Provider text reaches the model in every tool result (and a title in the line of counts'
+ * neighbour, the follow-up check), and a provider record can be edited by anyone (Open Library
+ * is a wiki). One line, no control
  * characters, no quote that could close the title, and a length cap.
  */
 export function plain(text: string, cap = 200): string {

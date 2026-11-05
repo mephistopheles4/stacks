@@ -4,9 +4,10 @@
  * it: `packages/ask/src` has no mention of reasoning (a test holds that), and these functions
  * run in the eval's own AI wrapper, on the raw response, before the Worker's code sees it.
  *
- * Where the reasoning appears in a Workers AI response is not yet known from a saved response,
- * so `reasoningOf` looks in the places a chat or responses-style reply puts it, and
- * `responseKeys` records which keys the response had, so the first live run says where it is.
+ * Workers AI puts it at `choices[0].message.reasoning_content` (docs/spec/ask-the-library.md S9,
+ * from the 2026-11-05 live runs). `reasoningOf` also looks in the other places a chat or
+ * responses-style reply puts it, and `responseKeys` records which keys a response had, so a change
+ * of shape shows in the next transcript.
  */
 interface Item {
   readonly type?: unknown;

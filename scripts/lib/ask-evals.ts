@@ -148,7 +148,7 @@ export const CASES: readonly EvalCase[] = [
   {
     question: 'How many books have you read?',
     expects: 'none',
-    // The count comes from the one status line (T7), not from anything the model saw.
+    // The count comes from the line of counts at the end of the rules (T7), not from a search.
     passes: (a, lib) => a.includes(String(lib.filter((b) => b.status === 'read').length)),
   },
   {
@@ -237,7 +237,10 @@ export function looksLikeFixture(
   return library.some((b) => known.has(lower(b.title)));
 }
 
-/** The tool names the model called, in order, as `list_books` or `search_library`. */
+/**
+ * A note for a person when the tools the model called (by name, in order) differ from what the
+ * case expects, or undefined when they match. Never a failure.
+ */
 export function toolMismatch(expects: Expected, called: readonly string[]): string | undefined {
   const searched = called.includes('search_library');
   const listed = called.includes('list_books');

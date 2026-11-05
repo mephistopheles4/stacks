@@ -163,8 +163,9 @@ function messageTokens(messages: readonly ChatMessage[]): number {
  * and the call after them is made with no `tools` key, which forces an answer, so a question
  * makes at most 3 model calls. Each call gets what is left of one 30-second deadline (T11).
  * The input is checked before every call (T8): a result is sized to what the budget has
- * left, and rules, counts and memory are never cut. Anything wrong with a tool call throws
- * an `AiFailure`, which the caller turns into plain results (T10).
+ * left, and rules, counts and memory are never cut. A tool call asked for once none are left
+ * throws an `AiFailure`, which the caller turns into plain results (T10); a bad call before that
+ * gets a short message from `runTool` and the question carries on.
  */
 async function converse(
   env: Env,
