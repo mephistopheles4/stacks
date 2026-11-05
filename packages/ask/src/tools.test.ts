@@ -3,6 +3,7 @@ import { createLibrarySource, type CatalogueBook, type LibrarySource } from './l
 import { estimateTokens } from './prompt.ts';
 import {
   BAD_ARGUMENTS,
+  LIST_INSTRUCTION,
   NO_MATCH,
   NO_OTHER_MATCH,
   NO_ROOM,
@@ -47,10 +48,11 @@ describe('list_books (T14, C33)', () => {
   it('lists every book, highest rated first, each marked either way', async () => {
     const out = await runTool({ id: 'l', name: 'list_books', arguments: {} }, session(), ROOM);
     expect(out.content.split(NL)).toEqual([
-      '"Wealth Of Notes" | 5/5 | has written Thoughts',
-      '"Savings Logic" | 4/5 | has written Thoughts',
-      '"Money Unlocked" | 3/5 | no Thoughts written',
-      '"Unrated Thing" | unrated | no Thoughts written',
+      '"Wealth Of Notes": rated 5 out of 5; has written Thoughts.',
+      '"Savings Logic": rated 4 out of 5; has written Thoughts.',
+      '"Money Unlocked": rated 3 out of 5; no Thoughts written.',
+      '"Unrated Thing": not rated; no Thoughts written.',
+      LIST_INSTRUCTION,
     ]);
   });
 
@@ -76,7 +78,9 @@ describe('list_books (T14, C33)', () => {
       { catalogue: await real.catalogue(), source: real, returned: new Set() },
       ROOM,
     );
-    expect(out.content).toBe('"Quiet" | 4/5 | no Thoughts written');
+    expect(out.content).toBe(
+      ['"Quiet": rated 4 out of 5; no Thoughts written.', LIST_INSTRUCTION].join(NL),
+    );
     expect(out.content).not.toContain('CANARY');
   });
 
@@ -88,6 +92,22 @@ describe('list_books (T14, C33)', () => {
     expect(found.content).toContain(
       'Your Thoughts on "Wealth Of Notes": I thought it was about patience.',
     );
+  });
+
+  it('ends with an instruction to search a title before recommending, as tool output', async () => {
+    const out = await runTool({ id: 'l', name: 'list_books', arguments: {} }, session(), ROOM);
+    expect(LIST_INSTRUCTION).toBe('Search a title to read your Thoughts before recommending.');
+    expect(out.content.split(NL).at(-1)).toBe(LIST_INSTRUCTION);
+  });
+
+  it('counts the instruction against the room, so a list that fits only without it is left out', async () => {
+    const lines = (await runTool({ id: 'l', name: 'list_books', arguments: {} }, session(), ROOM))
+      .content;
+    const without = lines.slice(0, lines.lastIndexOf(NL));
+    const fits = estimateTokens(without);
+    expect(
+      (await runTool({ id: 'l', name: 'list_books', arguments: {} }, session(), fits)).content,
+    ).toBe(NO_ROOM);
   });
 
   it('is left out whole when there is no room for it (T8)', async () => {
@@ -102,10 +122,10 @@ describe('search_library (T5, T6)', () => {
     const [lines, ...blocks] = out.content.split(NL + NL);
     const thoughts = blocks.join(NL + NL);
     expect(lines!.split(NL)).toEqual([
-      '"Money Unlocked" | read | subjects: Business | rating 3/5 | no Thoughts written',
-      '"Wealth Of Notes" | read | subjects: Business | rating 5/5 | has written Thoughts',
-      '"Savings Logic" | read | subjects: Business | rating 4/5 | has written Thoughts',
-      '"Unrated Thing" | read | subjects: Business | no Thoughts written',
+      '"Money Unlocked": read; subjects: Business; rated 3 out of 5; no Thoughts written.',
+      '"Wealth Of Notes": read; subjects: Business; rated 5 out of 5; has written Thoughts.',
+      '"Savings Logic": read; subjects: Business; rated 4 out of 5; has written Thoughts.',
+      '"Unrated Thing": read; subjects: Business; no Thoughts written.',
     ]);
     expect(thoughts).toContain(
       'Your Thoughts on "Wealth Of Notes": I thought it was about patience.',

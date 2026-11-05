@@ -6,7 +6,7 @@ export const STOP_WORDS: ReadonlySet<string> = new Set(
   (
     'a an and any are about did do does for from had has have how i in is it me my of on or ' +
     'read reading recommend should some that the their them they this to was what which who ' +
-    'why with would you your book books'
+    'why with would you your book books like most'
   ).split(' '),
 );
 

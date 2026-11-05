@@ -53,12 +53,18 @@ describe('catalogueLine', () => {
       }),
     );
     expect(line).toBe(
-      '"Title a" | by Ann | read | finished 2026-01-02 | subjects: Tech | rating 4/5 | has written Thoughts',
+      '"Title a" by Ann: read, finished 2026-01-02; subjects: Tech; rated 4 out of 5; has written Thoughts.',
     );
   });
 
   it('says so when a book has no Thoughts (C30)', () => {
-    expect(catalogueLine(book('b'))).toBe('"Title b" | read | no Thoughts written');
+    expect(catalogueLine(book('b'))).toBe('"Title b": read; no Thoughts written.');
+  });
+
+  it('reads as a sentence, not a table the model can copy a row of', () => {
+    const line = catalogueLine(book('c', { author: 'Ann', rating: 4 }));
+    expect(line).not.toContain(' | ');
+    expect(line).not.toMatch(/\b\d\/5\b/);
   });
 });
 

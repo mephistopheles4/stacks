@@ -122,3 +122,26 @@ describe('namesTitle', () => {
     expect(namesTitle('Why: A Book', 'why')).toBe(false);
   });
 });
+
+describe('"like" and "most" are ignored words (S6)', () => {
+  const cat = [
+    b('state', 'Seeing Like a State', { subjects: 'Political Science' }),
+    b('most', 'The Most Human Human', { subjects: 'Computers' }),
+    b('plain', 'Nexus', { subjects: 'History' }),
+  ];
+  const find = async (q: string): Promise<string[]> =>
+    (
+      await searchLibrary(cat, { catalogue: async () => cat, thoughts: async () => undefined }, q)
+    ).map((h) => h.book.id);
+
+  it('finds nothing for a question made only of loose words', async () => {
+    expect(await find('what did you like most about the book?')).toEqual([]);
+  });
+
+  it('still finds a title that holds them, by the whole title or by its other words', async () => {
+    expect(await find('Seeing Like a State')).toEqual(['state']);
+    expect(await find('seeing state')).toEqual(['state']);
+    expect(await find('The Most Human Human')).toEqual(['most']);
+    expect(await find('human')).toEqual(['most']);
+  });
+});

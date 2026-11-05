@@ -175,7 +175,7 @@ describe('the tool loop (T1, T2, T7)', () => {
     expect(answered.reply.mode).toBe('ai');
     const list = seen[1]!.messages.at(-1)!.content;
     expect(list.split(NL)[0]).toBe(
-      '"Co-Intelligence: Living and Working with AI" | 5/5 | has written Thoughts',
+      '"Co-Intelligence: Living and Working with AI": rated 5 out of 5; has written Thoughts.',
     );
     const found = seen[2]!.messages.at(-1)!.content;
     expect(found).toContain('Your Thoughts on "Nexus": A long history of information networks.');
@@ -453,8 +453,8 @@ describe('the input stays within 6,000 before every call (T8, C28)', () => {
   });
 
   it('drops Thoughts before memory when a result will not fit, and the whole result last', async () => {
-    // 110 books make a list of about 2,900 estimated tokens: too little room is left for a full search.
-    const hundred = Array.from({ length: 110 }, (_, i) =>
+    // 90 books make a list of about 2,800 estimated tokens: too little room is left for a full search.
+    const hundred = Array.from({ length: 90 }, (_, i) =>
       b(`h${String(i)}`, `A Fairly Long Book Title Number ${String(i)} In The Library`, {
         subjects: 'Leadership',
         rating: (i % 5) + 1,
@@ -528,5 +528,37 @@ describe('a caller can watch a question (the evals)', () => {
     const { env } = scripted([{ calls: [search('Nexus')] }, { text: 'ok' }]);
     const answered = await answerQuestion(env, source, 'q');
     expect(answered.reply.mode).toBe('ai');
+  });
+});
+
+describe('pills after a refusal or an answer with no search (memory fallback needs a tool call)', () => {
+  const earlier = [{ question: 'What did you think of Nexus?', answer: 'I wrote about Nexus.' }];
+
+  it('a refusal after memory shows no pill, though the memory names a book', async () => {
+    const { env } = scripted([{ text: 'I can only talk about my library.' }]);
+    const answered = await answerQuestion(env, source, 'write me a script', Date.now, earlier);
+    expect(answered.reply.mode).toBe('ai');
+    expect(answered.reply.books).toEqual([]);
+  });
+
+  it('an answer that searched and names no book still falls back to the memory book', async () => {
+    const { env } = scripted([
+      { calls: [search('Nexus')] },
+      { text: 'I liked how it follows the networks through history.' },
+    ]);
+    const answered = await answerQuestion(
+      env,
+      source,
+      'what did you like most?',
+      Date.now,
+      earlier,
+    );
+    expect(answered.reply.books.map((b) => b.id)).toEqual(['nexus']);
+  });
+
+  it('a book the answer names, or the question names, still gets its pill with no search', async () => {
+    const { env } = scripted([{ text: 'Nexus is a book I rated 4.' }]);
+    const named = await answerQuestion(env, source, 'q', Date.now, []);
+    expect(named.reply.books.map((b) => b.id)).toEqual(['nexus']);
   });
 });

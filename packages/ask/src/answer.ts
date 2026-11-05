@@ -231,7 +231,11 @@ export async function answerQuestion(
       reply: {
         mode: 'ai',
         answer: split.answer,
-        books: mentioned(catalogue, split.answer, question, history).map(summary),
+        // Memory names a book only for an answer that searched for this question: a refusal
+        // or a plain reply has no business showing the last book's pill.
+        books: mentioned(catalogue, split.answer, question, stats.searches > 0 ? history : []).map(
+          summary,
+        ),
         followUps: split.followUps.filter((line) => onTheShelf(line, catalogue)),
       },
       outcome: 'ai',

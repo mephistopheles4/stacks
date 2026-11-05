@@ -64,15 +64,15 @@ export function plain(text: string, cap = 200): string {
 }
 
 export function catalogueLine(book: CatalogueBook): string {
-  const parts = [`"${plain(book.title)}"`];
-  if (book.author) parts.push(`by ${plain(book.author)}`);
-  parts.push(book.status);
-  if (book.finished) parts.push(`finished ${book.finished}`);
-  if (book.subjects) parts.push(`subjects: ${plain(book.subjects)}`);
-  if (book.rating !== undefined) parts.push(`rating ${String(book.rating)}/5`);
-  // Both marks, always: the false claim of Thoughts stopped only when each line said so.
-  parts.push(book.thoughts ? 'has written Thoughts' : 'no Thoughts written');
-  return parts.join(' | ');
+  // A sentence, not a row of a table: the model copied "Title | 4/5" back to the visitor when
+  // the result looked like one. Both marks always: the false claim of Thoughts stopped only
+  // when each line said so.
+  const by = book.author ? ` by ${plain(book.author)}` : '';
+  const finished = book.finished ? `, finished ${book.finished}` : '';
+  const subjects = book.subjects ? `; subjects: ${plain(book.subjects)}` : '';
+  const rated = book.rating !== undefined ? `; rated ${String(book.rating)} out of 5` : '';
+  const mark = book.thoughts ? 'has written Thoughts' : 'no Thoughts written';
+  return `"${plain(book.title)}"${by}: ${book.status}${finished}${subjects}${rated}; ${mark}.`;
 }
 
 export interface Exchange {

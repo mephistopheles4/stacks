@@ -47,6 +47,9 @@ export const NO_MATCH = `No books matched. ${TRY_OTHER}`;
 export const NO_OTHER_MATCH = `No other books matched. ${TRY_OTHER}`;
 export const NO_ROOM = 'No result could be returned.';
 
+/** The last line of a list: tool output, so the rules text does not carry it. */
+export const LIST_INSTRUCTION = 'Search a title to read your Thoughts before recommending.';
+
 /**
  * What a bad tool call gets back instead of failing the question: a short message naming the
  * right input and nothing of what was sent (C32). The model may fix it with a call it has left.
@@ -125,20 +128,18 @@ export async function runTool(
   };
 }
 
-const rating = (book: CatalogueBook): string =>
-  book.rating === undefined ? 'unrated' : `${String(book.rating)}/5`;
-
 /** Every book, highest rated first then shelf order, with the Thoughts mark (T14, C33). */
 function listBooks(catalogue: readonly CatalogueBook[], room: number): string {
-  const text = catalogue
+  const lines = catalogue
     .map((book, position) => ({ book, position }))
     .sort((a, b) => (b.book.rating ?? 0) - (a.book.rating ?? 0) || a.position - b.position)
-    .map(
-      ({ book }) =>
-        `"${plain(book.title)}" | ${rating(book)} | ` +
-        (book.thoughts ? 'has written Thoughts' : 'no Thoughts written'),
-    )
-    .join('\n');
+    .map(({ book }) => {
+      const rated =
+        book.rating === undefined ? 'not rated' : `rated ${String(book.rating)} out of 5`;
+      const mark = book.thoughts ? 'has written Thoughts' : 'no Thoughts written';
+      return `"${plain(book.title)}": ${rated}; ${mark}.`;
+    });
+  const text = [...lines, LIST_INSTRUCTION].join('\n');
   return estimateTokens(text) > room ? NO_ROOM : text;
 }
 
