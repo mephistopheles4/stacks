@@ -1,4 +1,5 @@
 import type { Library, LibraryBook } from '@stacks/core';
+import { onPickUpRequest } from '../ask/bridge.ts';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountBookViewer, type BookViewerElements } from './book-viewer.ts';
 import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
@@ -447,6 +448,10 @@ export async function boot(
     viewer: mountBookViewer(page.bookViewer, host),
   });
   held.pickup = live;
+  // The Ask the library drawer asks for a book by id when a visitor clicks its link.
+  onPickUpRequest(window, (id) => {
+    live.pickUpById(id);
+  });
   publish(handle, () => fallback().kind, live);
 
   /**

@@ -1,0 +1,288 @@
+---
+// "Ask the library": a walnut drawer on the shelf page that sends a question to
+// the Worker at /api/chat (docs/spec/ask-the-library.md S7). Markup and styles
+// only; all logic lives in ./*.ts, which is typechecked and counted.
+//
+// The Turnstile site key is public by design. Unset in a plain local build, the
+// drawer opens, finds no key, and answers with the unavailable message.
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+---
+
+<button
+  id="ask-launcher"
+  class="ask-launcher"
+  type="button"
+  aria-expanded="false"
+  aria-controls="ask-panel"
+>
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"></path>
+    <path d="M12 6.5v13"></path>
+  </svg>
+  <span>Ask the library</span>
+</button>
+
+<section id="ask-panel" class="ask-panel" aria-label="Ask the library" data-site-key={siteKey} hidden>
+  <header class="ask-head">
+    <h2>Ask the library</h2>
+    <button id="ask-close" class="ask-icon" type="button">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+        <path d="M6 6l12 12M18 6L6 18"></path>
+      </svg>
+      <span class="ask-sr">Close</span>
+    </button>
+  </header>
+
+  <div id="ask-thread" class="ask-thread"></div>
+
+  <div id="ask-quick" class="ask-quick">
+    <button type="button">What have you read about finance?</button>
+    <button type="button">What would you recommend?</button>
+    <button type="button">What did you think of Co-Intelligence?</button>
+  </div>
+
+  <form id="ask-form" class="ask-form">
+    <div class="ask-box">
+      <label class="ask-sr" for="ask-input">Your question</label>
+      <textarea id="ask-input" rows="1" maxlength="1500" placeholder="Ask about the books"></textarea>
+      <button id="ask-send" class="ask-send" type="submit">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M12 19V5M5 12l7-7 7 7"></path>
+        </svg>
+        <span class="ask-sr">Send</span>
+      </button>
+    </div>
+    <p class="ask-fine">
+      This is an AI answering from my notes. It can be wrong.
+      <a href="/attribution#ask-privacy">Privacy</a>
+    </p>
+  </form>
+
+  <p id="ask-live" class="ask-sr" role="status" aria-live="polite"></p>
+  <div id="ask-widget" class="ask-widget"></div>
+</section>
+
+<script>
+  import { startAsk } from './start.ts';
+
+  startAsk();
+</script>
+
+<style>
+  .ask-launcher {
+    position: absolute;
+    right: clamp(1rem, 4vw, 2.5rem);
+    bottom: clamp(1rem, 4vw, 2.5rem);
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 44px;
+    padding: 0 1rem;
+    border: 1px solid #4a3323;
+    border-radius: 22px;
+    background: #1f1610;
+    color: #f2e8dc;
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .ask-launcher:hover,
+  .ask-launcher:focus-visible {
+    border-color: #d3a35f;
+    color: #d3a35f;
+  }
+
+  .ask-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    width: min(25rem, 100%);
+    background: #1f1610;
+    color: #f2e8dc;
+    border-left: 1px solid #4a3323;
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+  .ask-panel[hidden] {
+    display: none;
+  }
+
+  .ask-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ask-head h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #d3a35f;
+  }
+
+  .ask-icon,
+  .ask-send {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #a89684;
+    cursor: pointer;
+  }
+  .ask-icon:hover,
+  .ask-icon:focus-visible {
+    color: #f2e8dc;
+  }
+
+  .ask-thread {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .ask-thread :global(p) {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .ask-thread :global(.ask-question) {
+    align-self: flex-end;
+    max-width: 85%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+    background: #2c2017;
+    border: 1px solid #58402d;
+  }
+  .ask-thread :global(.ask-waiting) {
+    color: #a89684;
+    font-style: italic;
+  }
+  .ask-thread :global(.ask-books) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+  }
+  .ask-thread :global(.ask-book) {
+    padding: 0.2rem 0.6rem;
+    border: 1px solid #58402d;
+    border-radius: 999px;
+    background: transparent;
+    color: #d3a35f;
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .ask-thread :global(.ask-book:hover),
+  .ask-thread :global(.ask-book:focus-visible) {
+    background: #2c2017;
+  }
+
+  .ask-quick {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .ask-quick[hidden] {
+    display: none;
+  }
+  .ask-quick button {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #58402d;
+    border-radius: 10px;
+    background: #2c2017;
+    color: #f2e8dc;
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .ask-quick button:hover,
+  .ask-quick button:focus-visible {
+    border-color: #d3a35f;
+  }
+
+  .ask-box {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.25rem;
+    padding: 0.4rem 0.4rem 0.4rem 0.75rem;
+    border: 1px solid #58402d;
+    border-radius: 14px;
+    background: #2c2017;
+  }
+  .ask-box:focus-within {
+    border-color: #d3a35f;
+  }
+  .ask-box textarea {
+    flex: 1;
+    min-height: 1.5rem;
+    max-height: 40vh;
+    resize: none;
+    overflow-y: hidden;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #f2e8dc;
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+    padding: 0.3rem 0;
+    transition: height 140ms ease;
+  }
+  .ask-box textarea::placeholder {
+    color: #a89684;
+  }
+  .ask-send {
+    flex: none;
+    background: #e8c88f;
+    color: #1f1610;
+  }
+  .ask-send:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .ask-fine {
+    margin: 0.5rem 0 0;
+    font-size: 0.75rem;
+    color: #a89684;
+  }
+  .ask-fine a {
+    color: #a89684;
+    text-decoration: underline;
+  }
+
+  .ask-widget {
+    min-height: 0;
+  }
+
+  .ask-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ask-box textarea {
+      transition: none;
+    }
+  }
+</style>
