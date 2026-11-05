@@ -157,3 +157,4 @@ Two other files hold what these deliberately do not:
 | [0131](./0131-the-input-budget-is-6000-and-memory-is-never-dropped.md) | The Ask input budget is 6,000 estimated tokens, and memory is never dropped |
 | [0132](./0132-the-model-searches-the-library-with-two-tools-and-the-catalogue-leaves-the-prompt.md) | The model searches the library with two tools, and the catalogue leaves the Ask prompt (changes 0131) |
 | [0133](./0133-the-ask-worker-runs-on-workers-paid-and-the-spend-limit-is-its-only-cap.md) | The Ask Worker runs on Workers Paid, and the spend limit is its only cap (changes 0127) |
+| [0134](./0134-mutation-scoring-has-a-dated-exception-for-code-not-yet-measured.md) | Mutation scoring has a dated exception for code not yet measured (the Ask Worker and drawer) |

@@ -42,20 +42,30 @@
     "            measuring an inconvenient one - and unlike lowering a floor, it",
     "            does not read as a lowering. It reads as cleanup.",
     "",
-    "EXCLUDED DIRECTORIES are the second and last state a source directory may",
-    "be in: declared, or excluded with a mechanism. There is no third. Each entry",
-    "covers the files DIRECTLY in that directory and never a subtree - a subtree",
-    "exclusion would silently swallow a declared scope beneath it, which is the",
-    "same invisible-removal move the rules above exist to close."
+    "EXCLUDED DIRECTORIES are the second state a source directory may be in:",
+    "declared, or excluded with a mechanism. Each entry covers the files DIRECTLY",
+    "in that directory and never a subtree - a subtree exclusion would silently",
+    "swallow a declared scope beneath it, which is the same invisible-removal move",
+    "the rules above exist to close.",
+    "",
+    "There is ONE third state, and it is dated (ADR-0134, 2026-11-05): a DATED",
+    "EXCEPTION. A directory the code could measure, kept out only because a",
+    "recorded decision says a scope needs a first full run to set its floor and",
+    "no run has been made. Its `mechanism` begins `DATED EXCEPTION <date>:`, says",
+    "what it excludes and why, and names the condition that ends it (a full run",
+    "exists, and the directory becomes a declared scope). It is not a mechanism,",
+    "and it is the only entry here that may say so. An undated entry that admits",
+    "the code could be measured is still refused, and the exception is not a",
+    "precedent: a second one needs its own record."
   ],
   "excludedDirectories": [
     {
       "path": "packages/site/src/ask",
-      "mechanism": "Mixed. `drawer.ts` and `start.ts` are DOM glue reached only by a browser, so no in-process spec runs them; `client.ts`, `close.ts`, `bridge.ts` and `turnstile.ts` have specs and could be measured. The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the drawer, because a scope needs a first full run to set its floor. Excluded by that decision, to be replaced by a declared scope for the four measurable files once a full run exists."
+      "mechanism": "Mixed. `drawer.ts` and `start.ts` are DOM glue reached only by a browser, so no in-process spec runs them (a mechanism). `client.ts`, `close.ts`, `bridge.ts`, `turnstile.ts`, `memory.ts` and `motion.ts` have specs and could be measured: for those six, DATED EXCEPTION 2026-11-05 (ADR-0134). The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the drawer, because a scope needs a first full run to set its floor. Ends when a full run exists and the six become a declared scope."
     },
     {
       "path": "packages/ask/src",
-      "mechanism": "Not a property of the code: its specs run in-process and could be measured. The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the Worker, because a scope needs a first full run to set its floor and nothing here has been run on the real model. Excluded by that decision, to be replaced by a declared scope once a full run exists; G38 admits only the two states, so this is the second one, named for what it is."
+      "mechanism": "DATED EXCEPTION 2026-11-05 (ADR-0134), not a mechanism: the Worker's specs run in-process and could be measured. The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the Worker, because a scope needs a first full run to set its floor, and none has been made on the branch. Ends when a full run exists and the directory becomes a declared scope; until then the Worker's tests are held by the plant-and-observe-red record in the spec's S12 instead of a score."
     },
     {
       "path": "gates",
