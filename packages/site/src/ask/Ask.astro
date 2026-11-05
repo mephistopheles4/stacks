@@ -260,6 +260,12 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     font: inherit;
     font-size: 0.875rem;
     cursor: pointer;
+    /* The hover and the keyboard focus fade: three properties, never `all`, so this does not touch
+       the rise animation's opacity and transform. */
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
   }
   /* One after another, 40ms apart, on the newest answer: a pill is only built once. */
   .ask-thread :global(.ask-book.ask-new) {
@@ -305,6 +311,12 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     font: inherit;
     font-size: 0.875rem;
     cursor: pointer;
+    /* The hover and the keyboard focus fade: three properties, never `all`, so this does not touch
+       the rise animation's opacity and transform. */
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
   }
   .ask-quick :global(button:hover),
   .ask-quick :global(button:focus-visible) {
@@ -354,6 +366,7 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
   .ask-fine {
     margin: 0.5rem 0 0;
+    text-align: center;
     font-size: 0.75rem;
     color: #a89684;
   }
@@ -381,7 +394,9 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
   /* No motion at all: drawer.ts reads the same query and hides the panel at once. */
   @media (prefers-reduced-motion: reduce) {
-    .ask-box textarea {
+    .ask-box textarea,
+    .ask-quick :global(button),
+    .ask-thread :global(.ask-book) {
       transition: none;
     }
     .ask-panel:global(.is-entering),

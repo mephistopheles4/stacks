@@ -155,3 +155,31 @@ describe('the waiting line shines in CSS only, and only where motion is allowed 
     expect(astro).toMatch(/<p id="ask-live"[^>]*role="status"/);
   });
 });
+
+describe('hover and focus fade on the suggestions and the pills (S7)', () => {
+  const astro = readFileSync(join(DIR, 'Ask.astro'), 'utf8');
+  /** The declarations of the first rule that opens with this selector. */
+  const rule = (selector: string): string => {
+    const start = astro.indexOf(`${selector} {`);
+    return start < 0 ? '' : astro.slice(start, astro.indexOf('}', start));
+  };
+
+  it.each(['.ask-quick :global(button)', '.ask-thread :global(.ask-book)'])(
+    '%s fades background-color, border-color and color over 150 ms, and never `all`',
+    (selector) => {
+      const block = rule(selector);
+      expect(block).toContain('background-color 150ms ease');
+      expect(block).toContain('border-color 150ms ease');
+      expect(block).toContain('color 150ms ease');
+      expect(block).not.toMatch(/transition:\s*all/);
+    },
+  );
+
+  it('turns the transitions off under reduced motion', () => {
+    const start = astro.indexOf('@media (prefers-reduced-motion: reduce) {');
+    const reduced = astro.slice(start);
+    expect(reduced).toContain('.ask-quick :global(button)');
+    expect(reduced).toContain('.ask-thread :global(.ask-book)');
+    expect(reduced).toContain('transition: none');
+  });
+});

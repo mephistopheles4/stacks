@@ -382,7 +382,7 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   window, then scrolls. Enter sends, Shift+Enter adds a line. No animation under
   `prefers-reduced-motion`.
 - **Fine print:** "This is an AI answering from my notes. It can be wrong." under the
-  box, with a small "Privacy" link to the line on `/attribution`:
+  box, centred, with a small "Privacy" link to the line on `/attribution`:
 
   > Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs
   > when this box opens, and a hashed address is counted for a day to limit use. Please
@@ -401,7 +401,9 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
 - **Motion:** the panel slides in from the right over 220 ms and out over 160 ms. A new
   question, answer or pill rises and fades in over 180 ms, pills 40 ms apart and only on the
   newest answer (an entry is marked new until its animation ends, so reopening replays none).
-  No typing effect. **All of it is off under `prefers-reduced-motion`,** and then closing sets
+  The quick questions, follow-ups and pills fade on hover and keyboard focus over 150 ms ease, on
+  `background-color`, `border-color` and `color` only (never `all`), which does not touch the pills'
+  rise. No typing effect. **All of it is off under `prefers-reduced-motion`,** and then closing sets
   `hidden` in the same call. Otherwise `hidden` is set when the slide out ends, and the panel is
   inert while it plays; focus returns to the launcher at the start of the close either way. No
   timer is involved: the slide ends on `animationend` (`motion.ts`). In a tab that is not
