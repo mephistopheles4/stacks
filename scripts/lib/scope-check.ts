@@ -311,7 +311,7 @@ function excludedDirectoryFaults(
     if (entry.mechanism.trim().length === 0) {
       faults.push({
         clause: 'blank-mechanism',
-        detail: `excluded directory ${entry.path} carries no mechanism. Two reasons only: a named mechanism puts it out of reach, or it is not excluded.`,
+        detail: `excluded directory ${entry.path} carries no mechanism. Two reasons only (plus the one dated exception of ADR-0134, which still needs its mechanism text): a named mechanism puts it out of reach, or it is not excluded.`,
       });
     }
     if (!directories.has(entry.path)) {

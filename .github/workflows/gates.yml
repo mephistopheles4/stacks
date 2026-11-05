@@ -179,7 +179,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # `high` and above. Moderate advisories in a dev-only dependency of a
-      # local-first tool with no server are not worth blocking a merge on; a
+      # local-first tool (its one Worker is named in SECURITY.md) are not worth blocking a merge on; a
       # high or critical one is.
       - name: pnpm audit
         run: pnpm audit --audit-level=high

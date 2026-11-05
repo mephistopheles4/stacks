@@ -4,8 +4,10 @@
 
 `stacks` is a local-first tool. It reads and writes Markdown notes in a vault on
 your own disk, fetches book metadata and cover images over HTTPS from three
-public APIs, and generates a static site with no server behind it. There is no
-account, no database, no authentication, and nothing is uploaded anywhere.
+public APIs, and generates a static site. **The CLI and the static site have no
+server behind them, no account, no database and no authentication, and upload
+nothing.** One thing does: the *Ask the library* Worker (`packages/ask`), which
+answers visitors' questions at `/api/chat` on the site's own hostname.
 
 So the realistic risks are narrow, and worth naming precisely:
 
@@ -22,6 +24,16 @@ So the realistic risks are narrow, and worth naming precisely:
   of three magic-byte signatures so an SVG or an HTML error page never reaches
   the decoder (row G18). It was none of those things until August 2026, and
   this list said so.
+- **The Ask the library Worker, the one public endpoint.** It reads public build
+  output only (never the vault or a note body: invariants 1, 2 and 4 hold by
+  structure), but a visitor's question goes to Workers AI, and the endpoint can be
+  flooded. What stands in the way: a WAF rate rule, a Turnstile token per question, a
+  daily per-visitor count, and an AI Gateway spend limit that is the only hard cap on
+  AI cost (G69 holds every model call to it); the model has two read-only tools and
+  its text reaches the page only as text. No question is stored or logged. What it
+  cannot stop is recorded in `docs/spec/ask-the-library.md` S5 ("What these limits
+  cannot stop") and ADR-0127. There is no separate threat model file
+  (`docs/spec/ask-the-library.md` S14 Q11 left it open).
 - **Data loss in a vault.** The tool writes to files somebody edits by hand.
   `updateBook` has overwritten a value it should have left alone (row G4), and
   the public build deletes files it does not recognise inside its own staging

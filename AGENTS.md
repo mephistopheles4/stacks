@@ -58,6 +58,8 @@ packages/
   core/     # vault adapter interface + obsidian adapter, metadata fetchers, library.json builder
   cli/      # stacks CLI (commander), depends on core
   site/     # Astro site, vanilla Three.js island, reads library.json
+  ask/      # the Ask the library Worker: answers questions at /api/chat from public build output
+infra/      # Terraform: the WAF rule, the AI Gateway with its spend limit, the Health Check
 fixtures/
   vault/    # ~10 seed books: 2 missing covers, 1 malformed, 1 audiobook
 docs/
@@ -229,6 +231,9 @@ pnpm fixtures:50         # regenerate the 50-book fixture vault   (--books N for
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
+pnpm deploy:ask          # the Ask the library Worker: main only   (--dry-run, --ai-off, --ai-on, --gateway <id>)
+pnpm evals:ask           # the S9 evals, live, through a test gateway   (--gateway <id>, --site <dir>)
+pnpm ask:status          # yesterday's outcome counts for the Worker, from Workers Logs
 pnpm duplication:report  # jscpd over the eight scopes and the whole tree, as a table   (--history)
 pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope   (--markdown)
@@ -376,4 +381,4 @@ The five canonical roles, each label string equal to its name. All five exist on
 
 ### Domain docs
 
-Single-context — three packages, one vocabulary. That vocabulary is [`CONTEXT.md`](CONTEXT.md), and it holds only the terms **no gate pins down** — anything a gate already enforces is linked from there, never restated, for [ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md)'s reason. Decisions live in [`docs/adr/`](docs/adr/), one file each, carrying the original reasoning verbatim. See [`docs/agents/domain.md`](docs/agents/domain.md).
+Single-context — four packages (`core`, `cli`, `site`, `ask`), one vocabulary. That vocabulary is [`CONTEXT.md`](CONTEXT.md), and it holds only the terms **no gate pins down** — anything a gate already enforces is linked from there, never restated, for [ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md)'s reason. Decisions live in [`docs/adr/`](docs/adr/), one file each, carrying the original reasoning verbatim. See [`docs/agents/domain.md`](docs/agents/domain.md).

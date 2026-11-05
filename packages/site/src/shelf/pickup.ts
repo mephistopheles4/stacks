@@ -34,6 +34,7 @@ import * as THREE from 'three';
 import { gsap } from 'gsap/gsap-core';
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import type { LibraryBook } from '@stacks/core';
+import { announceHeld } from '../ask/bridge.ts';
 import { SQUARE } from './book-turn.ts';
 import type { BookViewer } from './book-viewer.ts';
 import { announcement } from './card.ts';
@@ -203,6 +204,8 @@ export interface Pickup {
   select(book: LibraryBook | undefined): void;
   /** Picks up the book at this index of the shelf, as a click on it would. */
   pickUp(index: number): void;
+  /** Picks up the book with this id, as a click on it would; false when no book has it. */
+  pickUpById(id: string): boolean;
   putBack(): void;
   /** A new shelf, after a rebuild or a fallback. Anything held is dropped first. */
   attach(stage: ShelfStage): void;
@@ -301,6 +304,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       },
       announce: (book) => {
         elements.status.textContent = book === undefined ? '' : announcement(book);
+        // The Ask the library drawer closes on this, a signal and not a timer.
+        if (book !== undefined) announceHeld(window, book.id);
         // The hand emptied, by whichever way down: the pages are about to hide.
         if (book === undefined) catchFocus();
       },
@@ -809,6 +814,9 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   });
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
+    // An open Ask the library drawer took this Escape (it listens first, on the
+    // window): it closes and the book stays held.
+    if (event.defaultPrevented) return;
     // The examining view is a modal `<dialog>`: the platform closes it on
     // Escape, and the keydown still reaches here. One Escape leaves the view
     // and keeps the book held (§3.5, check 9). Also while the book is still
@@ -866,6 +874,17 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     pickUp: (index) => {
       const book = current.books[index]?.entry.book;
       if (book !== undefined) state.select(book);
+    },
+    pickUpById: (id) => {
+      // Already in the hand: no new pickup, but the drawer still has to hear it.
+      if (state.holding()?.book.id === id) {
+        announceHeld(window, id);
+        return true;
+      }
+      const book = current.books.find((placed) => placed.entry.book.id === id)?.entry.book;
+      if (book === undefined) return false;
+      state.select(book);
+      return true;
     },
     putBack: () => {
       state.putBack();

@@ -168,7 +168,13 @@ function headersFile(
  * the configured ones, which is not the `;` it uses everywhere else.
  */
 function cspMeta(
-  options: { connectSrc?: string; scriptSrc?: string; omit?: string; extra?: string } = {},
+  options: {
+    connectSrc?: string;
+    scriptSrc?: string;
+    frameSrc?: string;
+    omit?: string;
+    extra?: string;
+  } = {},
 ): string {
   const keep = ([name]: readonly [string, string]): boolean => name !== options.omit;
   const render = (pairs: readonly (readonly [string, string])[], join: string): string =>
@@ -184,13 +190,14 @@ function cspMeta(
     ['connect-src', options.connectSrc ?? "'self'"],
     ['base-uri', "'none'"],
     ['form-action', "'none'"],
+    ['frame-src', options.frameSrc ?? 'https://challenges.cloudflare.com'],
   ] as const;
 
   // The two Astro generates, each carrying a hash it computed for this page.
   const generated = [
     [
       'script-src',
-      `${options.scriptSrc ?? "'self' https://static.cloudflareinsights.com"} ` +
+      `${options.scriptSrc ?? "'self' https://static.cloudflareinsights.com https://challenges.cloudflare.com"} ` +
         `'sha256-BF0290pkb3jxQsE7z00xR8Imp8X34FLC88L0lkMnrGw='`,
     ],
     ['style-src', "'self' 'sha256-eZThLoRNDbx6YobQlsGZA8+qespsZfD/YQEGSwT5BvU='"],
@@ -1064,7 +1071,9 @@ describe('G20 — every rule goes red', () => {
     /**
      * The directive that carries the argument. #119 decided stacks adds no
      * outbound flow carrying anything derived from the owner's reading, and
-     * this is the line that makes that decision cost something to break.
+     * this is the line that makes that decision cost something to break. (The
+     * Ask the library Worker's flow leaves from the server, which this rule
+     * cannot see: ADR-0127.)
      */
     await expectOnly('csp', async () => {
       await writeIndex(
@@ -1087,8 +1096,53 @@ describe('G20 — every rule goes red', () => {
       await writeIndex(
         indexHtml({
           csp: cspMeta({
-            scriptSrc: "'self' https://static.cloudflareinsights.com https://cdn.example",
+            scriptSrc:
+              "'self' https://static.cloudflareinsights.com https://challenges.cloudflare.com https://cdn.example",
           }),
+        }),
+      );
+    });
+  });
+
+  it('csp: the frame origin widened beyond Turnstile (C10)', async () => {
+    /**
+     * The Ask the library drawer adds exactly two things to the policy, and this
+     * is the second: `frame-src` holding Turnstile's origin alone. A second frame
+     * origin, or the directive loosened to `*`, is a change the owner has not
+     * approved.
+     */
+    await expectOnly('csp', async () => {
+      await writeIndex(
+        indexHtml({
+          csp: cspMeta({ frameSrc: 'https://challenges.cloudflare.com https://cdn.example' }),
+        }),
+      );
+    });
+  });
+
+  it('csp: the frame directive dropped, which would break the drawer silently (C10)', async () => {
+    await expectOnly('csp', async () => {
+      await writeIndex(indexHtml({ csp: cspMeta({ omit: 'frame-src' }) }));
+    });
+  });
+
+  it('csp: Turnstile dropped from the script origins (C10)', async () => {
+    await expectOnly('csp', async () => {
+      await writeIndex(
+        indexHtml({
+          csp: cspMeta({ scriptSrc: "'self' https://static.cloudflareinsights.com" }),
+        }),
+      );
+    });
+  });
+
+  it('csp: a repeated source standing in for a missing one (CodeRabbit)', async () => {
+    // Three sources, as many as wanted, each one wanted, and Turnstile absent: a count and a
+    // membership test alone pass it.
+    await expectOnly('csp', async () => {
+      await writeIndex(
+        indexHtml({
+          csp: cspMeta({ scriptSrc: "'self' 'self' https://static.cloudflareinsights.com" }),
         }),
       );
     });
@@ -1118,12 +1172,12 @@ describe('G20 — every rule goes red', () => {
      * finding above: the rule walked `CSP_DIRECTIVES` and never looked at what
      * else the policy declared. **A specific fetch directive overrides
      * `default-src` for its own resource type**, so `object-src *`,
-     * `frame-src https://example.com` or `worker-src *` each widen the policy
+     * `media-src *` or `worker-src *` each widen the policy
      * with every named directive still exactly right.
      *
      * `script-src-elem` is the one that matters most: it takes precedence over
      * `script-src` for `<script>` elements, so it would have defeated the pinned
-     * beacon origin — the one exception this rule exists to keep enumerable —
+     * beacon and Turnstile origins — the exceptions this rule exists to keep enumerable —
      * without touching the `script-src` line the rule was reading.
      */
     await expectOnly('csp', async () => {

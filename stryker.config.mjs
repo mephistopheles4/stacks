@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
  *
  * The eight scopes and their exclusions live in `stryker.scopes.json`, because
  * a flat `mutate` array cannot say which of eight populations a glob belongs to
- * and every exclusion owes a named mechanism. `mutate` is derived from it below.
+ * and every exclusion owes a named mechanism (or, for one dated case, the exception of ADR-0134). `mutate` is derived from it below.
  */
 
 // The shape is documented once, in `scripts/mutation-scopes.ts`'s `Scope` and

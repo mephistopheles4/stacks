@@ -32,6 +32,7 @@ WORKDIR /home/node/work
 # The manifests only, so a source edit never rebuilds the image. athanor keys
 # the image on these same files through `inputs` in package.json.
 COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=node:node packages/ask/package.json packages/ask/
 COPY --chown=node:node packages/cli/package.json packages/cli/
 COPY --chown=node:node packages/core/package.json packages/core/
 COPY --chown=node:node packages/site/package.json packages/site/

@@ -378,6 +378,56 @@ and that the red is loud.
 gated at merge, by **G43** (`ignored-mutants`) in [`docs/gates.md`](gates.md).
 There are zero such directives in this repo, so any increase is a real event.
 
+## `pnpm deploy:ask`, `pnpm evals:ask` and `pnpm ask:status` — the Ask the library Worker
+
+[`docs/spec/ask-the-library.md`](spec/ask-the-library.md) S5, S8, S9 and S11. All
+three are owner-run and none is a gate.
+
+**`pnpm deploy:ask` publishes `packages/ask`** with `deploy:site`'s guards and its
+own: `main` only (`--any-branch` overrides; `--dry-run` skips it), the lockfile's
+wrangler refused unless it equals its pin, an environment narrowed to wrangler's own
+names, and a refusal if `wrangler.jsonc` does not pin
+`observability.logs.invocation_logs` to false. G67 holds the file to `pnpm exec
+wrangler`. It runs before `deploy:site`.
+
+- **`--dry-run`** bundles to a temp folder, checks that no file holds the vault or
+  checkout path, and uploads nothing.
+- **`--ai-off`** deploys with `ASK_AI_ENABLED` false and no commit: the emergency
+  switch, to be committed afterwards. **`--ai-on`** turns it back on.
+- **A plain deploy reads the live value first** and refuses to turn a switched-off
+  Worker back on without `--ai-on`. ⚠️ **It also refuses when it cannot read the
+  value**, and the read (`wrangler deployments list`, then `versions view`) has
+  only been run against fakes: it is proven live at S13 step 11, C18.
+- **`--gateway <id>`** deploys `main` against a test gateway, for C7 only. A plain
+  `deploy:ask` afterwards puts the real one back.
+
+**`pnpm deploy:site` and the Turnstile site key.** The drawer's `PUBLIC_TURNSTILE_SITE_KEY` is read at build
+time (`.env.example` says where to set it), and `deploy:site` refuses to upload a page built with it
+empty or with one of Cloudflare's test keys, on `--dry-run` as well; `--check-only` builds nothing and
+skips it.
+
+**`pnpm evals:ask --gateway <id>`** asks S9's questions (the ten, the memory cases and the search-tool cases) twice through the
+Worker's own answer code and a test gateway, over the real public build in
+`packages/site/dist` (`--site` names another folder), and refuses a library built
+from the fixture vault. It uses the owner's `wrangler login` and
+`CLOUDFLARE_ACCOUNT_ID`, plus `ASK_GATEWAY_TOKEN` if the gateway needs one, and
+prints none of them. It prints, per question, the tools called with their arguments, tool errors, model calls, Neurons, the answer and a hand-check sheet, writes the full transcript, with the model's reasoning per call, to `--out` (default: the system temp directory, outside the repo), costs what the spec's S9 says (18 cases twice, about 1,800 to 2,500 Neurons) and is outside CI, because G21
+forbids live calls. A failure prints its answer: the session that runs it records
+whether the check or the answer was wrong. The two "was it any good" cases print
+their answer even on a pass, because only a person can see an invented reason.
+
+**Running the Worker locally with AI.** `wrangler dev --config packages/ask/wrangler.jsonc` (not `--local`, under which the AI binding is not supported)
+reads `packages/ask/.dev.vars` over the config's `vars`. The config names the real gateway,
+`stacks-ask`, which does not exist until the owner applies Terraform, so for a local run set
+`ASK_GATEWAY_ID` to a test gateway and `ASK_AI_ENABLED=true` in `.dev.vars`, or every question
+falls back to search within milliseconds. Without `--local` the AI binding reaches Cloudflare,
+so a local answer spends real Neurons. The log says why a question fell back:
+`reason` is `budget` (with `code` 2045), `timeout`, `blank` or `error`; `toolCalls` counts the model's tool calls; and `code` is the
+platform's four-digit code when its message starts with one (such as 3043); it is digits only.
+
+**`pnpm ask:status`** prints yesterday's outcome counts from Workers Logs. ⚠️ **Its
+query is unverified against the live API**; if refused, it names the dashboard route.
+
 ## `pnpm worktree <branch>`
 
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —

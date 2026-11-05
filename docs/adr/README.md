@@ -150,3 +150,11 @@ Two other files hold what these deliberately do not:
 | [0122](./0122-athanor-runs-the-suite-in-a-sealed-container.md) | athanor runs the suite in a sealed container, from an image that holds the installed workspace |
 | [0123](./0123-a-hook-holds-agents-to-athanor.md) | A hook holds agents to athanor, silent on failure, with a comment as the fallback |
 | [0126](./0126-the-duplication-backfill-is-a-committed-file.md) | The duplication backfill is a committed file under series names of its own, and a chart title may name a direction but never a verdict |
+| [0127](./0127-the-ask-worker-is-the-sites-first-endpoint-and-its-first-outbound-flow.md) | The Ask the library Worker is the site's first endpoint, and carries the first outbound flow of reading content |
+| [0128](./0128-the-csp-admits-turnstile-and-nothing-else.md) | The CSP admits Turnstile's origin in two directives, and nothing else (amends 0065) |
+| [0129](./0129-terraform-holds-the-sites-cloudflare-rules.md) | Terraform holds the site's Cloudflare rules, under `infra/` |
+| [0130](./0130-the-page-remembers-two-exchanges-and-sends-them-in-the-user-message.md) | The page remembers two exchanges and sends them in the user message (reverses the Ask spec's S14 Q7) |
+| [0131](./0131-the-input-budget-is-6000-and-memory-is-never-dropped.md) | The Ask input budget is 6,000 estimated tokens, and memory is never dropped |
+| [0132](./0132-the-model-searches-the-library-with-two-tools-and-the-catalogue-leaves-the-prompt.md) | The model searches the library with two tools, and the catalogue leaves the Ask prompt (changes 0131) |
+| [0133](./0133-the-ask-worker-runs-on-workers-paid-and-the-spend-limit-is-its-only-cap.md) | The Ask Worker runs on Workers Paid, and the spend limit is its only cap (changes 0127) |
+| [0134](./0134-mutation-scoring-has-a-dated-exception-for-code-not-yet-measured.md) | Mutation scoring has a dated exception for code not yet measured (the Ask Worker and drawer) (changes 0053) |

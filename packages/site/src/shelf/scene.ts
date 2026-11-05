@@ -350,7 +350,7 @@ export interface ShelfHandle {
 
 export interface MountOptions {
   /** Called when a book is clicked, or with `undefined` when one is dismissed. */
-  readonly onSelect?: (book: LibraryBook | undefined) => void;
+  readonly onSelect?: (book: LibraryBook | undefined, prevented: boolean) => void;
   /**
    * What the shelf runs with. Total — see `ShelfSettings`.
    *
@@ -2894,7 +2894,7 @@ class Picker {
   readonly #camera: THREE.Camera;
   readonly #books: THREE.Object3D[];
   readonly #lookup: BookLookup;
-  readonly #onSelect: ((book: LibraryBook | undefined) => void) | undefined;
+  readonly #onSelect: ((book: LibraryBook | undefined, prevented: boolean) => void) | undefined;
   #downAt: { x: number; y: number } | undefined;
 
   constructor(
@@ -2902,7 +2902,7 @@ class Picker {
     camera: THREE.Camera,
     books: readonly THREE.Object3D[],
     lookup: BookLookup,
-    onSelect: ((book: LibraryBook | undefined) => void) | undefined,
+    onSelect: ((book: LibraryBook | undefined, prevented: boolean) => void) | undefined,
   ) {
     this.#canvas = canvas;
     this.#camera = camera;
@@ -2933,7 +2933,13 @@ class Picker {
 
     // Recursive: a book is a group of parts, and any of them counts as a hit.
     const hit = this.#raycaster.intersectObjects(this.#books, true)[0];
-    this.#onSelect?.(hit === undefined ? undefined : this.#lookup.get(hit.object));
+    // `prevented`: something earlier in the event's path took this click (the Ask
+    // the library drawer closing on it), so a click that only closed it must not
+    // also put a held book back.
+    this.#onSelect?.(
+      hit === undefined ? undefined : this.#lookup.get(hit.object),
+      event.defaultPrevented,
+    );
   };
 
   dispose(): void {

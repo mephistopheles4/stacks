@@ -1,0 +1,48 @@
+// The Ask the library Worker (docs/spec/ask-the-library.md S8). Owner-run
+// deploys only: `pnpm deploy:ask`. Secrets (TURNSTILE_SECRET, VISITOR_KEY) are
+// set with `wrangler secret put` and never live in this file.
+{
+  "name": "stacks-ask",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-01",
+
+  // Two exact routes on the site's own hostname, so connect-src 'self' stays as
+  // it is. An exact route matches the bare path only (S12 results): a query
+  // string, a trailing slash or another case falls through to Pages.
+  "routes": [
+    { "pattern": "stacks.aymandiab.com/api/chat", "zone_name": "aymandiab.com" },
+    { "pattern": "stacks.aymandiab.com/api/chat/health", "zone_name": "aymandiab.com" }
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+
+  "ai": { "binding": "AI" },
+
+  // Approximate by design (S5 step 4); the Durable Object is the exact count.
+  "ratelimits": [
+    { "name": "RATE", "namespace_id": "5320", "simple": { "limit": 5, "period": 60 } }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "VISITORS", "class_name": "VisitorCounter" },
+      { "name": "HEALTH", "class_name": "HealthState" }
+    ]
+  },
+  // SQLite-backed: the kind Cloudflare recommends for a new Durable Object, and the only kind Workers Free
+  // allows. The account is on Workers Paid now (ADR-0133).
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VisitorCounter", "HealthState"] }],
+
+  // The daily test (S11), once a day.
+  "triggers": { "crons": ["17 4 * * *"] },
+
+  // Workers Logs on for the outcome codes this Worker writes; Cloudflare's own
+  // per-request invocation records stay off, since they may hold request details.
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
+
+  "vars": {
+    "SITE_ORIGIN": "https://stacks.aymandiab.com",
+    "ASK_GATEWAY_ID": "stacks-ask",
+    "ASK_AI_ENABLED": "true"
+  }
+}

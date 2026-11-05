@@ -85,6 +85,7 @@ import {
 } from './lib/metrics-record.ts';
 import { readDeclarations, scoreRun, type Tally } from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
+import { keyProblem, siteKeyProblem } from './lib/ask-deploy.ts';
 import { numbersFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
@@ -799,6 +800,10 @@ if (checkOnly) {
 // nothing; `--dry-run` builds, because a dry run that skipped the build would
 // have no artifact to pre-flight.
 if (!checkOnly) {
+  // Before the build rather than after it: a key that cannot ship costs nothing to refuse now.
+  // No flag clears it on a path that publishes (behaviour E7).
+  const early = keyProblem(process.env['PUBLIC_TURNSTILE_SITE_KEY'] ?? '');
+  if (early !== undefined) fail(`before building: ${early}`);
   run('pnpm', [
     'stacks',
     'build',
@@ -954,6 +959,14 @@ if (applicable.length > 0) {
         '  Nothing is uploaded until this passes.',
     );
   }
+}
+
+// No flag clears this on a path that publishes: a page built with no Turnstile site key, or with
+// Cloudflare's test key, is refused (the Ask the library drawer, behaviour E7). `--check-only` builds
+// nothing and uploads nothing, so it does not reach it; `--dry-run` does.
+if (!checkOnly) {
+  const pageProblem = siteKeyProblem(html);
+  if (pageProblem !== undefined) fail(`pre-flight: ${pageProblem}`);
 }
 
 /**

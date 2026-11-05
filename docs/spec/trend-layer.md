@@ -487,7 +487,8 @@ reconsidered.
 > it is transferable-only.
 
 That covers the beacon, the transcript upload, and the next one, **and it is why the
-localhost dashboard survives.**
+localhost dashboard survives.** (One flow was later approved by the owner as an exception,
+the Ask the library Worker's questions to Workers AI: ADR-0127.)
 
 ⚠️ **The decision was enforced by nothing, and now is.** As this section was written
 there was no `Content-Security-Policy` in `packages/site/public/_headers`, no

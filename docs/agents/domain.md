@@ -3,7 +3,7 @@
 How the engineering skills should consume this repo's domain documentation when
 exploring the codebase.
 
-This repo is **single-context**. It has three packages — `core`, `cli`, `site` —
+This repo is **single-context**. It has four packages — `core`, `cli`, `site`, `ask` —
 but they are layers of one domain sharing one vocabulary (a *book*, a *note*, a
 *vault*, a *shelf*, a *public build*), not separate bounded contexts. There is no
 `CONTEXT-MAP.md` and there should not be one unless a package grows a genuinely

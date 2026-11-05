@@ -63,3 +63,14 @@ survivors/
 # which only this machine has, which is why `pnpm trend:sync --rebuild` replays
 # them from .trend/local/ rather than re-probing history it cannot re-ask for.
 .trend/
+
+# The Ask the library Worker and its Terraform (docs/spec/ask-the-library.md S8).
+# State, plans and variable files can hold account ids, tokens and the alert
+# recipient; `.dev.vars` holds local secrets; `.wrangler/` is wrangler's local
+# state. Ignored before any of them can exist on a build branch.
+*.tfstate*
+.terraform/
+*.tfvars
+*.tfplan
+.dev.vars*
+.wrangler/

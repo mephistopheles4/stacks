@@ -15,7 +15,7 @@
     "other four vanish into it with their floors. The glob below is deliberate.",
     "",
     "A file is excluded because a named mechanism puts it out of reach, or it is",
-    "not excluded. `covers/measure.ts` has no spec and stays in the denominator",
+    "not excluded (one dated exception below changes that, ADR-0134). `covers/measure.ts` has no spec and stays in the denominator",
     "anyway, because 'nothing tests it' is a gap and not a mechanism - which is",
     "why every core scope's exclusion list is empty.",
     "",
@@ -42,13 +42,31 @@
     "            measuring an inconvenient one - and unlike lowering a floor, it",
     "            does not read as a lowering. It reads as cleanup.",
     "",
-    "EXCLUDED DIRECTORIES are the second and last state a source directory may",
-    "be in: declared, or excluded with a mechanism. There is no third. Each entry",
-    "covers the files DIRECTLY in that directory and never a subtree - a subtree",
-    "exclusion would silently swallow a declared scope beneath it, which is the",
-    "same invisible-removal move the rules above exist to close."
+    "EXCLUDED DIRECTORIES are the second state a source directory may be in:",
+    "declared, or excluded with a mechanism. Each entry covers the files DIRECTLY",
+    "in that directory and never a subtree - a subtree exclusion would silently",
+    "swallow a declared scope beneath it, which is the same invisible-removal move",
+    "the rules above exist to close.",
+    "",
+    "There is a dated THIRD REASON beside those two (ADR-0134, 2026-11-05, which",
+    "changes ADR-0053 and the mutation spec's section 5): a DATED EXCEPTION. A",
+    "directory the code could measure, kept out only because it has not been",
+    "declared yet. Its `mechanism` carries `DATED EXCEPTION <date>`, says what it",
+    "excludes and why, and names the condition that ends it (the directory is",
+    "declared as an unarmed scope, and the next full run measures it). It is not",
+    "a mechanism, and it is the only entry here that may say so. An undated entry",
+    "that admits the code could be measured is refused by review, and the",
+    "exception is not a precedent: a second one needs its own record."
   ],
   "excludedDirectories": [
+    {
+      "path": "packages/site/src/ask",
+      "mechanism": "DATED EXCEPTION 2026-11-05 (ADR-0134), for six of the files here and a mechanism for two. `drawer.ts` and `start.ts` are DOM glue reached only by a browser, so no in-process spec runs them (a mechanism). `client.ts`, `close.ts`, `bridge.ts`, `turnstile.ts`, `memory.ts` and `motion.ts` have specs and could be measured, and are the exception: the Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the drawer yet. Ends when the six are declared as an unarmed scope and the next full run measures them."
+    },
+    {
+      "path": "packages/ask/src",
+      "mechanism": "DATED EXCEPTION 2026-11-05 (ADR-0134), not a mechanism: the Worker's specs run in-process and could be measured. The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the Worker yet. Ends when the directory is declared as an unarmed scope and the next full run measures it; until then the Worker's tests are held by the plant-and-observe-red record in the spec's S12 instead of a score."
+    },
     {
       "path": "gates",
       "mechanism": "`gates/repo.ts:13` is `REPO_ROOT = resolve(process.cwd())` and Stryker's sandbox is not the repository, so in a sandbox every repo-shape gate silently retargets at a copy of the tree: four gates shell out to git into a directory that is not a checkout, and G23 regex-matches source text Stryker has rewritten by construction. Mutating anything here pulls those specs in and the run dies at the dry run. Measured, and reversible on a stated condition: `REPO_ROOT` resolved from a marker rather than from `cwd`."
