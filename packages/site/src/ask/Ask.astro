@@ -200,19 +200,37 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     background: #2c2017;
     border: 1px solid #58402d;
   }
+  /* Muted text; where the browser can clip a background to letters, and motion is allowed,
+     a lighter band sweeps left to right across it. The band only ever blends #a89684 with
+     #f2e8dc, both well above 4.5:1 on the panel, so the text is readable at every point. The
+     announcement is the live region's, set once, and this element is not in it. */
   .ask-thread :global(.ask-waiting) {
     color: #a89684;
     font-style: italic;
-    animation: ask-pulse 1.6s ease-in-out 180ms infinite;
   }
-  .ask-thread :global(.ask-waiting.ask-new) {
-    animation:
-      ask-rise 180ms ease-out both,
-      ask-pulse 1.6s ease-in-out 180ms infinite;
+  @supports (background-clip: text) or (-webkit-background-clip: text) {
+    @media (prefers-reduced-motion: no-preference) {
+      .ask-thread :global(.ask-waiting) {
+        color: transparent;
+        background-image: linear-gradient(90deg, #a89684 35%, #f2e8dc 50%, #a89684 65%);
+        background-size: 250% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        animation: ask-shine 1.6s linear infinite;
+      }
+      .ask-thread :global(.ask-waiting.ask-new) {
+        animation:
+          ask-rise 180ms ease-out both,
+          ask-shine 1.6s linear infinite;
+      }
+    }
   }
-  @keyframes ask-pulse {
-    50% {
-      opacity: 0.5;
+  @keyframes ask-shine {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: 0 0;
     }
   }
   .ask-thread :global(.ask-books) {

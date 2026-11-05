@@ -134,3 +134,24 @@ describe('motion is an addition that reduced motion removes (S7)', () => {
     expect(code('drawer.ts')).not.toMatch(/typewriter|charAt|slice\(0, *i/i);
   });
 });
+
+describe('the waiting line shines in CSS only, and only where motion is allowed (S7)', () => {
+  const astro = readFileSync(join(DIR, 'Ask.astro'), 'utf8');
+
+  it('clips a moving gradient to the letters inside a no-preference query, with no script animation', () => {
+    const block =
+      /@supports \(background-clip: text\)[\s\S]*?@keyframes ask-shine/.exec(astro)?.[0] ?? '';
+    expect(block).toContain('prefers-reduced-motion: no-preference');
+    expect(block).toContain('background-clip: text');
+    expect(block).toContain('#a89684');
+    expect(block).toContain('#f2e8dc');
+    expect(block).toContain('1.6s');
+    expect(code('drawer.ts')).not.toMatch(/\.animate\(|requestAnimationFrame/);
+  });
+
+  it('is announced once, by the live region, which does not hold the waiting line', () => {
+    const drawer = code('drawer.ts');
+    expect(drawer.match(/ui\.live\.textContent = WAITING/g)).toHaveLength(1);
+    expect(astro).toMatch(/<p id="ask-live"[^>]*role="status"/);
+  });
+});

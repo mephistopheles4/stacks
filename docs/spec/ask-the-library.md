@@ -334,7 +334,7 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   > Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs
   > when this box opens, and a hashed address is counted for a day to limit use. Please
   > don't type personal details.
-- **Waiting:** "Looking through the shelf" while a question is out, with a soft pulse.
+- **Waiting:** "Looking through the shelf" while a question is out, with a shine sweeping left to right across the letters (CSS only: a gradient clipped to the text over 1.6 s, between the muted #a89684 and #f2e8dc, so it stays readable throughout). Under reduced motion it is plain muted text.
   Answers are announced through a live region.
 - **Spacing (owner's starting points, 2026-11-05):** 1rem between the messages of an exchange
   and 1.75rem before the next question; answers at line height 1.6; pills one per line, 0.5rem
