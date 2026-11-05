@@ -1160,12 +1160,12 @@ describe('G20 — every rule goes red', () => {
      * finding above: the rule walked `CSP_DIRECTIVES` and never looked at what
      * else the policy declared. **A specific fetch directive overrides
      * `default-src` for its own resource type**, so `object-src *`,
-     * `frame-src https://example.com` or `worker-src *` each widen the policy
+     * `media-src *` or `worker-src *` each widen the policy
      * with every named directive still exactly right.
      *
      * `script-src-elem` is the one that matters most: it takes precedence over
      * `script-src` for `<script>` elements, so it would have defeated the pinned
-     * beacon origin — the one exception this rule exists to keep enumerable —
+     * beacon and Turnstile origins — the exceptions this rule exists to keep enumerable —
      * without touching the `script-src` line the rule was reading.
      */
     await expectOnly('csp', async () => {

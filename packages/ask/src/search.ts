@@ -58,8 +58,8 @@ export const usableTerms = (query: string): string[] => [
 ];
 
 /**
- * The one search (T3). It never reads the conversation's memory, so an old topic cannot outrank the new question: serves the model's tool and the plain results
- * alike. Whole-word and case-insensitive over title, author, subjects and the
+ * The one search (T3). It serves the model's tool and the plain results alike, and never reads the
+ * conversation's memory, so an old topic cannot outrank the new question. Whole-word and case-insensitive over title, author, subjects and the
  * owner's Thoughts (T4), ranked: a query naming a whole title first; then the
  * number of the query's words found in title, author and subjects; then the number
  * found in Thoughts; then shelf order, which is the catalogue's own order. Fields

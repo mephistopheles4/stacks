@@ -411,7 +411,7 @@ Worker's own answer code and a test gateway, over the real public build in
 `packages/site/dist` (`--site` names another folder), and refuses a library built
 from the fixture vault. It uses the owner's `wrangler login` and
 `CLOUDFLARE_ACCOUNT_ID`, plus `ASK_GATEWAY_TOKEN` if the gateway needs one, and
-prints none of them. It prints, per question, the tools called with their arguments, tool errors, model calls, Neurons, the answer and a hand-check sheet, writes the full transcript, with the model's reasoning per call, to `--out` (default: the system temp directory, outside the repo), costs about 2,000 Neurons (about 70 calls) and is outside CI, because G21
+prints none of them. It prints, per question, the tools called with their arguments, tool errors, model calls, Neurons, the answer and a hand-check sheet, writes the full transcript, with the model's reasoning per call, to `--out` (default: the system temp directory, outside the repo), costs what the spec's S9 says (18 cases twice, about 1,800 to 2,500 Neurons) and is outside CI, because G21
 forbids live calls. A failure prints its answer: the session that runs it records
 whether the check or the answer was wrong. The two "was it any good" cases print
 their answer even on a pass, because only a person can see an invented reason.

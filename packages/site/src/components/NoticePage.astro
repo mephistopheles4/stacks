@@ -1,4 +1,5 @@
 ---
+import type { NoticeProps } from '../site-meta.ts';
 import { absoluteUrl } from '../site-meta.ts';
 
 // A page of notice text: the shelf's palette, no canvas, and `noindex`. Shared by `/attribution`
@@ -7,11 +8,7 @@ import { absoluteUrl } from '../site-meta.ts';
 // Deliberately **no canvas**: this is a page of legal text, and a WebGL scene
 // behind it would be the most prominent element on a page whose entire purpose
 // is a notice Google says must not be outshone.
-interface Props {
-  title: string;
-  description: string;
-}
-const { title, description } = Astro.props;
+const { title, description } = Astro.props as NoticeProps;
 const ogImage = absoluteUrl('/og.png', Astro.site);
 ---
 

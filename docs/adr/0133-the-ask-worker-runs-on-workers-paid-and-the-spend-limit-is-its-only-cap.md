@@ -30,7 +30,8 @@ feature. ADR-0127 had named exactly this as the reason to refuse it; the owner c
   Paid's allowance and cost still need reading from Cloudflare's current pricing.
 - **Unified Billing is not yet read:** whether free daily Neurons still apply, the Terraform field
   that pays Workers AI from prepaid credits, and the error when credits run out. S12 records them
-  as open, and the Worker treats an out-of-credits error as `spent`, as it does 2045.
+  as open. The Worker treats 2045 as `spent`, and will treat the out-of-credits error the same once
+  its code is known.
 - **The `stacks-ask` gateway's billing setting** stays the owner's decision.
 
 ## What was rejected

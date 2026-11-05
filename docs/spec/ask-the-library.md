@@ -22,7 +22,7 @@ what the page's CSP admits and opens the site's first public endpoint. Written o
 rounds, whose record is on the issue. **Steps 2 to 6 of S13 are built on the branch; nothing is deployed.** **Signed off by the
 owner on 2026-11-04 ("Let's file it and proceed").** The owner's decisions are in S14.
 
-**Amended on 2026-11-05 for conversation memory, signed off by the owner ("start the memory build").** S14 Q7 and S16 had ruled memory out and the owner reversed both ("i think it needs memory"). The amendment touches S4 to S7, S9, S10, S14 and S16, and adds S12's memory results; it is folded into those sections below. The decisions D1 to D7 are in S4.
+**Amended on 2026-11-05 for conversation memory, signed off by the owner ("start the memory build").** S14 Q7 and S16 had ruled memory out and the owner reversed both ("i think it needs memory"). The amendment touches S4 to S7, S9, S10, S14 and S16, and adds S12's memory results; it is folded into those sections below. The decisions D1 to D7 and T1 to T14 are in the Decisions section above.
 
 **Amended again on 2026-11-05 for the search tool, signed off by the owner ("Proceed").** The model gets two read-only tools and the catalogue leaves the prompt. The owner approved contract v0.3.0 and its rules text. The amendment touches S4 to S10, S12, S14 and S16 and is folded into them below (decisions T1 to T14, ADR-0132).
 
@@ -51,10 +51,13 @@ ADR-0132). Each says where it lives now.
 | T8 | The 6,000 budget is checked before every call; Thoughts drop, then the result; memory and rules never | S4 |
 | T9 | A follow-up naming neither a catalogue title nor a subject word is dropped | S6 |
 | T10 | Any failed step falls back to plain results (narrowed 2026-11-05: bad tool arguments and an unknown tool get guidance instead) | S6 |
-| T11 | One 30-second deadline covers the whole question | S6 |
-| T12 | The fallback wording, "…went to take a nap…" | S6 |
+| T11 | One 30-second deadline covers the model calls; the reads for plain results sit outside it, so two faults at once take about 40 seconds | S6 |
+| T12 | The plain-results wording, "…went to take a nap…" | S6 |
 | T13 | The log adds a count of tool calls (`toolCalls`) and sums tokens; queries are never logged | S6, S11 |
 | T14 | `list_books`, a second tool, returns every title and rating, marked | S4 |
+
+Labels such as "behaviour E1", "integrity F16" and "conventions F2" are lens findings, recorded in the review comments
+of [#532](https://github.com/mephistopheles4/stacks/issues/532); they are not defined in this file.
 
 The phrase "the memory spec" in older comments means D1 to D7 and S14 Q7.
 
@@ -218,8 +221,8 @@ A request passes these in order. The first refusal ends it without calling AI.
    Cloudflare documents a gateway setting that pays for Workers AI from prepaid credits
    (`postpaid` or `unified`), which would add a second stop for those calls. Unread: its
    Terraform field name, whether the free daily Neurons still apply, and the error when
-   credits run out. S12 records all three, and the Worker treats that error as `spent`,
-   as it does 2045. The `stacks-ask` gateway's billing setting is the owner's decision
+   credits run out. S12 records all three. The Worker treats 2045 as `spent`, and will treat the
+   out-of-credits error the same once its code is known. The `stacks-ask` gateway's billing setting is the owner's decision
    and is left as it is.
 
 Every AI call goes through one function, which always passes the gateway option
@@ -228,7 +231,7 @@ and `skipCache`. A gate fails the build if `AI.run` appears anywhere else (C8).
 **Output:** the model has two read-only tools over public build output, `search_library` and
 `list_books`, and the Worker runs every call: it caps the query at 200 characters through `plain()` and passes results back
 as data. A visitor could already aim a search with their words, so what the tool adds is cost.
-The model's text reaches the page only through `textContent`. Book links come from matching
+The model's text reaches the page only through `textContent`. Pills come from matching
 catalogue titles. Replies carry only S6's fields. The rules treat search results as data,
 because provider records supply some of that text. Queries are never logged (T13).
 
@@ -241,7 +244,7 @@ The change is committed afterwards. C18 times it.
 **What these limits cannot stop (accepted by the owner, S14, Q1).** The bill stays
 capped on every path reviewed. Availability does not:
 
-- About 5 addresses in a real browser, at 30 questions each and 56 Neurons a question,
+- About 5 addresses in a real browser, at 30 questions each and about 50 Neurons a question,
   spend the day's AI budget. With the search tool a typical question measured about 50
   Neurons (down from at least 56 for input alone) and the worst case is about 300 (up from
   about 130): 3 model calls with up to 5,650 estimated tokens on the last, about 9,600 real
@@ -260,12 +263,12 @@ capped on every path reviewed. Availability does not:
 ## S6. Answers
 
 - **Rules,** sent as the system message, followed by the line of counts (T7): the text of
-  `packages/ask/ask-the-library.rules.txt`, word for word, generated from contract v0.5.0
+  `packages/ask/ask-the-library.rules.txt`, word for word, written from contract v0.5.0
   (`ask-the-library.contract.md`, with `ask-the-library.changelog.md`). **The owner approved
   contract v0.3.0 and its text on 2026-11-05, and v0.4.0's, v0.4.1's and v0.5.0's changes (a recommendation searches for
   "recommend", and only a recommendation; say nothing matched before offering other books; a count comes
   from the line of counts; a favourite only if the Thoughts say so) the same day.** `RULES` in `prompt.ts` holds that text and a test
-  holds the two equal, so **the rules change through the contract and never by hand.**
+  holds the two equal, so **the rules change in the contract first, and the text is then edited to match by the steps at the top of the contract, with the owner's approval.**
   They send the model to search before answering (a recommendation searches for "recommend";
   `list_books` is for browsing),
   set the first-person voice (opinions only from the Thoughts and the rating, in the owner's
@@ -312,7 +315,7 @@ capped on every path reviewed. Availability does not:
   subjects and the owner's Thoughts. Ranking: a query naming a whole title first; then the
   number of its words found in title, author and subjects; then in Thoughts; then shelf order.
   A field match outranks a Thoughts match so a stray word in a note cannot beat a book about
-  it. A result holds at most 6 books. **The fallback** above serves the tool and the plain
+  it. A result holds at most 6 books. **The top-rated offer** above serves the tool and the plain
   results alike. Embeddings would later replace the search inside the tool; `pickLikelyBooks`
   is gone.
 - **The last call says so.** The call with no tools carries a line on the last tool result:
@@ -320,7 +323,7 @@ capped on every path reviewed. Availability does not:
   asked for a tool again, which counts as blank and fell back to plain results. It is tool output,
   so the rules text does not change for it, and its tokens are reserved out of every result's
   room. A blank or tool-asking final answer still falls back as T10 says.
-- **Plain results wording.** When plain results come from the fallback, the message is "The bot
+- **Plain results wording.** When plain results take the place of the model's answer, the message is "The bot
   has worked too hard today and went to take a nap. Here are some books I rated highly." (the
   drawer shows those books as pills). **A usable word that matched nothing** says "The bot has
   worked too hard today and went to take a nap, and no book matches your words. Here are some books
@@ -329,10 +332,12 @@ capped on every path reviewed. Availability does not:
   real match.
 - **The loop (T2, T6, T10, T11).** At most 2 tool calls of either tool in all; the call after
   them is made with no `tools` key, so it must answer, and a question makes at most 3 model
-  calls. One 30-second deadline covers the whole question, each call getting what is left
+  calls. One 30-second deadline covers the model calls, each getting what is left
   (the drawer puts no timer of its own on the request, held by a test). Reads of public build output
   have their own signal, 5 seconds each, so a stalled read ends well inside the deadline (a catalogue that
-  times out is a data failure; a note that does is searched by its catalogue fields only; behaviour E1).
+  times out is a data failure; a note that does is searched by its catalogue fields only, and is not kept as "no Thoughts"; behaviour E1).
+  The catalogue read before the first call and the plain results' own reads sit outside the 30 seconds, so a model
+  that hangs and a data read that stalls at once take about 40 seconds, the worst case (a model that hangs alone takes 30).
   What the model writes beside a tool call is not sent back: the assistant turn has empty content, and
   the ids and names in the tool turn are the Worker's own (`call_1`, `search_library`, `unknown_tool`),
   so the input budget counts everything that is sent (behaviour E2). A blank final answer,
@@ -380,7 +385,7 @@ capped on every path reviewed. Availability does not:
   your, book, books, like and most. (**"like" and "most" were added on 2026-11-05** after a live
   question made only of loose words, "what did you like most about the book?", matched *Seeing Like a
   State* in a plain search; a title that holds either word is still found by its whole title or its
-  other words.) The ranking, the Thoughts and the fallbacks are in "The search" above. It finds what the
+  other words.) The ranking, the Thoughts and the top-rated offer are in "The search" above. It finds what the
   words say, so a "finance" search misses a book filed only under "Business & Economics".
 - **Replies:** `{ mode: 'ai' | 'search' | 'limited' | 'error', answer, books, followUps }`,
   where each book is `{ id, title, author, hasThoughts }` and `followUps` is a list of at
@@ -403,13 +408,13 @@ capped on every path reviewed. Availability does not:
 
 Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
 
-- **Walnut values:** panel `#1f1610`, edge `#4a3323`, text `#f2e8dc`, muted
+- **Walnut values:** drawer `#1f1610`, edge `#4a3323`, text `#f2e8dc`, muted
   `#a89684`, accent `#d3a35f`, box `#2c2017` with border `#58402d`, send `#e8c88f`.
   Answers in the serif stack `'Iowan Old Style', 'Palatino Linotype', Palatino,
   'Book Antiqua', Georgia, serif`.
 - **Launcher:** an open-book SVG and "Ask the library", 44px tall, bottom right,
   on the attribution row's line.
-- **Panel:** full height on the right, 1.25rem of padding, at most 27rem wide, full width on a
+- **Drawer:** full height on the right, 1.25rem of padding, at most 27rem wide, full width on a
   phone. Close and send are SVG icon buttons with labels for screen readers.
 - **Quick questions and follow-ups:** above the box, one place. At first it holds three
   quick questions: "What have you read about leadership?", "What would you recommend?"
@@ -445,30 +450,30 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   right padding, standard properties only (no `::-webkit-scrollbar`), and never hidden. On Windows Chromium
   the bar keeps a tiny arrow at its ends; the browser draws it. At phone width the pills still fit inside the
   thread (no horizontal overflow) and still clip with an ellipsis.
-- **Motion:** the panel slides in from the right over 220 ms and out over 160 ms. A new
+- **Motion:** the drawer slides in from the right over 220 ms and out over 160 ms. A new
   question, answer or pill rises and fades in over 180 ms, pills 40 ms apart and only on the
   newest answer (an entry is marked new until its animation ends, so reopening replays none).
   The quick questions, follow-ups and pills fade on hover and keyboard focus over 150 ms ease, on
   `background-color`, `border-color` and `color` only (never `all`), which does not touch the pills'
   rise. No typing effect. **All of it is off under `prefers-reduced-motion`,** and then closing sets
-  `hidden` in the same call. Otherwise `hidden` is set when the slide out ends, and the panel is
+  `hidden` in the same call. Otherwise `hidden` is set when the slide out ends, and the drawer is
   inert while it plays; focus returns to the launcher at the start of the close either way. No
   timer is involved: the slide ends on `animationend` (`motion.ts`). In a tab that is not
   drawing frames a close finishes when frames resume.
-- **Closing:** the X, Escape, or a click outside the panel. A drag on the shelf
+- **Closing:** the X, Escape, or a click outside the drawer. A drag on the shelf
   to look around does not close it. Focus returns to the launcher. **With a book
-  held, a click outside the panel closes the panel and leaves the book held**, as
+  held, a click outside the drawer closes the drawer and leaves the book held**, as
   Escape does: the click is marked as taken, and the shelf ignores a marked click
   only while a book is in hand. With an empty hand a shelf click still closes the
-  panel and picks up as usual (decided by the owner on 2026-11-05).
-- **With a held book:** picking a book up from any source closes the panel, by a
-  signal from the shelf rather than a timer. The panel can be reopened with a book
-  held. With both open, Escape closes the panel and leaves the book held, wherever
+  drawer and picks up as usual (decided by the owner on 2026-11-05).
+- **With a held book:** picking a book up from any source closes the drawer, by a
+  signal from the shelf rather than a timer. The drawer can be reopened with a book
+  held. With both open, Escape closes the drawer and leaves the book held, wherever
   focus is. **The held book's own buttons act on the closing click** (owner, 2026-11-05, behaviour E5):
-  with the panel open, clicking "Put back" closes the panel and puts the book back, and "Turn the book
+  with the drawer open, clicking "Put back" closes the drawer and puts the book back, and "Turn the book
   over" closes it and acts, because the visitor aimed at the button. A click on the shelf itself leaves
   the book held, as above.
-- **Book links:** one pill a line, stacked with a gap, each a small open-book icon
+- **Pills:** one pill a line, stacked with a gap, each a small open-book icon
   and the title clipped with an ellipsis on overflow. The whole title stays in the
   text, for a screen reader, and in the tooltip. A pill is 40px tall, 44px on a touch
   screen. Clicking one picks that book up by id.
@@ -486,7 +491,7 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
 | The privacy line | `/privacy`, its own page (`privacy.astro`), on the layout it shares with `/attribution` |
 | Drawer | `packages/site/src/ask/`, with one component |
 | The tool loop: `answer.ts` runs it, `tools.ts` holds the two tools, `search.ts` the one search; `AI.run` stays once, in `ai.ts`, whose `runModel` takes a `tools` option and returns tool calls | `packages/ask/src/` |
-| Shelf seam: a pickup signal, pick up by id, Escape yielding to an open panel | `packages/site/src/shelf/pickup.ts`, `boot.ts` |
+| Shelf seam: a pickup signal, pick up by id, Escape yielding to an open drawer | `packages/site/src/shelf/pickup.ts`, `boot.ts` |
 | CSP | `astro.config.mjs` and `CSP_DIRECTIVES` in `scripts/lib/public-build.ts` |
 | WAF rule, AI Gateway with spend limit, Health Check and its notification | `infra/`, Terraform |
 | Turnstile widget and secret, by hand (S14) | Dashboard, then `wrangler secret put` |
@@ -571,8 +576,7 @@ the answer was wrong.
 A question that is unclear with no memory ("what did you like most about the book?") must
 ask which book. Read the finance question's result by hand: it came back blank twice,
 probably from hidden reasoning using the 1,500-token limit, and more Thoughts in the prompt
-could change that either way. The run is 10 questions and 3 memory cases, twice each, 26
-calls, about 2,500 Neurons. ⚠️ The 2026-11-04 run of the draft rules overstated them: its
+could change that either way. The size of a run is stated above. ⚠️ The 2026-11-04 run of the draft rules overstated its Neurons: its
 harness swapped the rules in after the budget check and so sent Thoughts the real code
 would have dropped. Run again after this change.
 
@@ -580,14 +584,14 @@ would have dropped. Run again after this change.
 
 | Question | The answer must |
 | --- | --- |
-| "How many books have you read?" | Give the count from the status line |
+| "How many books have you read?" | Give the count from the line of counts |
 | "Any books on personal wealth or saving up?" | Name a book, and claim no Thoughts on a book without them (read by hand) |
 | "Which finance book would you recommend?" | Name a real book from a search, described from the Thoughts or rating (read by hand) |
 
 "What would you recommend?" expects a search for the word "recommend", which is one of the
-search's ignored words, so it returns the top-rated books (the fallback above). Broad questions are the known weak spot: the evals report
+search's ignored words, so it returns the top-rated books (the top-rated offer above). Broad questions are the known weak spot: the evals report
 what they show and no behaviour is added for them. A question whose first search finds
-nothing useful is recorded either way (did it search twice?); the wealth and zymurgy cases serve. 
+nothing useful is recorded either way (did it search twice?); the wealth case serves. 
 
 **What the run prints (owner, 2026-11-05).** For each question: the tools called in order with their
 arguments, tool errors (a bad call that got guidance), model calls, Neurons and the final answer;
@@ -628,7 +632,7 @@ choose other books.
 | C6 | The 31st question from one key in a UTC day is refused, parallel requests can't pass it, a compressed IPv6 address maps to its /64, and the record goes when the day ends | Security |
 | C7 | On a test gateway with a small limit, successful calls from the deployed Worker trip a 2045 within 10% of the limit, and the Worker is back on the real gateway after | Security |
 | C8 | A planted `AI.run` outside the one function, or one without the gateway option and `skipCache`, fails a new gate | Security |
-| C9 | Every S7 behaviour holds in a browser, closing by X, Escape, outside click and pickup, not by drag, an outside click with a book held leaving the book held, with focus outside the panel and a book held, on desktop and phone widths, and the Privacy link opens `/privacy` in a new tab, leaving the conversation in the original tab | Interaction |
+| C9 | Every S7 behaviour holds in a browser, closing by X, Escape, outside click and pickup, not by drag, an outside click with a book held leaving the book held, with focus outside the drawer and a book held, on desktop and phone widths, and the Privacy link opens `/privacy` in a new tab, leaving the conversation in the original tab | Interaction |
 | C10 | G20 fails on any CSP change beyond S8's two | Compatibility |
 | C11 | Loading the page without opening the drawer makes no new third-party request | Security |
 | C12 | `pnpm test`, `pnpm lint`, `pnpm build` and `wrangler deploy --dry-run` are green with `smoke:render`, no test makes a live call (G21), and a planted type error in `packages/ask` fails `pnpm typecheck` | Maintainability |
@@ -643,7 +647,6 @@ choose other books.
 | C21 | Memory never reaches `localStorage`, a cookie, a log call or a stored record: a canary in `history`, valid and malformed, appears in none, and reloading the page sends none | Security |
 | C22 | A `history` of the wrong shape, with 3 exchanges or over D4's limits, is refused with a 400 before Turnstile and without calling AI, proved by a stub that counts calls | Security |
 | C23 | Replaced by C28 | Reliability |
-| C34 | Not used: the number was skipped when the tool amendment was cut | |
 | C24 | Memory appears only in the user message, and a forged earlier answer in it cannot make the bot write code or claim an opinion its Thoughts lack, on a test run read by hand | Security |
 | C25 | "a staff engineer" in an answer gives no pill for a book of that title, an asterisk inside a title survives into the answer, the follow-ups and the pill, and a title's small words match in either case ("The Art of Spending Money" pills *The Art Of Spending Money*), shown over every real title | Functional |
 | C26 | The model never gets more than 2 tool calls of either tool, and the third model call has no tools key, proved by a stub that always asks for a tool and counts calls | Reliability |
@@ -654,6 +657,7 @@ choose other books.
 | C31 | A follow-up naming no catalogue title or subject is dropped, using "The Great Gatsby" | Functional |
 | C32 | No query reaches a log call: a canary in a query appears in no log line | Security |
 | C33 | `list_books` returns every public book and no non-public field, highest rated first, with the Thoughts mark, shown with a canary in a non-public field | Security |
+| C34 | Not used: the number was skipped when the tool amendment was cut | |
 | C35 | A search with a usable word and no match returns the top-rated books with Thoughts, at most 5, behind "No books matched. These are not about that subject…", with Thoughts for up to 3 and T6's exclude applied; a search with nothing usable returns the same 5; plain results on a miss say "…no book matches your words. Here are some books I rated highly." with those books as pills; a library with nothing to offer returns the old messages; and on the live run the model says nothing matched before offering them and never says they cover the subject, read by hand | Functional |
 
 ## S11. Monitoring
@@ -693,10 +697,9 @@ and the rest run after it, on a day's fresh Neurons, before the site goes public
 
 What is not settled when the runs stop, one line each, with who decides. Details are in the results below.
 
-- **Hung model calls.** Three times a model call never answered until the 30-second deadline. Cause unknown; the
-  deadline catches it. Owner: watch it live.
-- **"Favourite" is unsupported.** The model calls a top-rated book the favourite where its Thoughts never say
-  so; ten books are rated 5, so shelf order decides. A known limit (owner's stop rule). Owner.
+- **Hung model calls.** Twice in the recorded runs a model call never answered until the 30-second deadline, and
+  the owner saw one locally on 2026-11-05 at 30,009 ms. Cause unknown; the deadline catches it. Owner: watch it live.
+- **"Favourite" is much reduced, not gone:** what is left is the "my favorite leadership book" line below. Owner.
 - **A refusal that first searches the memory book keeps its pill.** Only a refusal with no search, or after a
   search for other books, is clean. Owner.
 - **"up" is not an ignored word** ("saving up" matches four books' Thoughts). S6's list is spec text. Owner.
@@ -707,10 +710,17 @@ What is not settled when the runs stop, one line each, with who decides. Details
   candidate under S16's cost limit; accepted, build nothing.
 - **Unified Billing:** whether free daily Neurons still apply, the Terraform field name, and the error when credits
   run out are unread (S5 step 6); the balance was never observable from a session. Owner, in the dashboard.
-- **Live claims not run:** C1, C7, C13, C16 (live part), C18 and C19's alert wait for S13 steps 8 to 11.
-- **The 30-second deadline and the drawer's wait** have been exercised only by stubs and by the three hangs.
+- **Out of credits:** the Worker treats 2045 as `spent`, and will treat the out-of-credits error the same once
+  its code is known; until then that error reads as an ordinary failure and gives plain results. Owner, in the dashboard.
+- **Workers Paid's allowance and cost** (S5, the availability bullets) are unread from Cloudflare's current pricing. Owner.
+- **A memory question has not run live since the pill rule changed** (C20): "the book" after a book was named. The
+  next live run asks one.
+- **Live claims not run:** C1, C2, C7, C13, C16 (live part), C18 and C19's alert wait for S13 steps 8 to 11.
+- **The 30-second deadline and the drawer's wait** have been exercised only by stubs and by the hangs above.
 - **C11 held offline:** with a stubbed Worker and Turnstile on the real build, 0 third-party requests before the
   drawer opened and then only Turnstile's script (behaviour lens, 2026-11-05). The real widget was not run.
+
+### Run results
 
 **Results of the no-AI checks, run 2026-11-05 (S13 step 2).** A throwaway Worker,
 `stacks-spike-routes`, was deployed with the two exact routes, locked to a request
@@ -890,7 +900,7 @@ not rerun**; the refusal-without-pill fix is proved by a test only). 10 of 12 pa
 - **"What would you recommend?":** run 1 listed, searched Nexus and recommended it ("It opens up new ways to
   think about how information powers society and how AI fits into that", supported by its Thoughts). **Run 2
   failed: after `list_books` and one search, the third call, which has no tools, asked for a tool again, which
-  counts as blank, and the fallback said "no book matches your words" for a question the search ignores.** An
+  counts as blank, and plain results said "no book matches your words" for a question the search ignores.** An
   open finding, not fixed.
 - **"What's your favourite book?":** run 1 searched "favorite" and said The Human-Agent Orchestrator is "my
   favorite book", matching its Thoughts ("probably my favorite book about AI so far"); run 2 said "I haven't
@@ -902,7 +912,7 @@ wording and the small-word pills.** 7 cases twice, 14 questions, 699 Neurons by 
 question), 11 passed. Same throwaway Worker and driver. No spend-limit refusal, no out-of-credits error; the
 Unified Billing balance was not observable.
 
-- **The fallback was not used by the model in one step.** "What would you recommend?" listed first both times,
+- **The top-rated offer was not used by the model in one step.** "What would you recommend?" listed first both times,
   and so did "What's your favourite book?" (once followed by a search). No query of only ignored words was
   ever searched, so the tool's fallback is proved by tests only; the plain-results fallback was seen once (below).
 - **"What would you recommend?":** run 1, `list_books` then an answer, 7.0 s: "I have written Thoughts about
@@ -960,7 +970,7 @@ included, are in the scratch folder, not the repo.
   extremely inspiring and it really makes you feel like a god." Run 2, "This book was extremely inspiring; it
   reminds you that you can feel like a god in an age of abundance. It’s my favourite read." (**no title and no
   pill**). **A regression:** the first run's favourite, The Human-Agent Orchestrator, is the book whose Thoughts
-  say "my favorite"; the fallback's tie among ten 5-rated books returns shelf order, so We Are as Gods leads and
+  say "my favorite"; the top-rated offer's tie among ten 5-rated books returns shelf order, so We Are as Gods leads and
   the model calls it the favourite, which its Thoughts do not say.
 - **The three misses said nothing matched before offering books, and none claimed the books cover the
   subject.** Zymurgy: "I haven't read any books about zymurgy. I can offer you my top-rated books: We Are as
@@ -982,7 +992,7 @@ each), 3.7 to 14.0 s, same throwaway Worker and driver with the reasoning kept (
 2,609 characters). No spend-limit refusal; the Unified Billing balance was not observable.
 
 - **The spelling fix was not exercised live:** the model searched "recommend" on all three, not "favourite" or
-  "favorite" (so the fallback's top-rated books answered), which is also why the rule was narrowed. The fix
+  "favorite" (so the top-rated offer answered), which is also why the rule was narrowed. The fix
   is proved by tests only.
 - **Run 1:** "I consider “We Are as Gods: A Survival Guide for the Age of Abundance” my favourite book. It is a
   book that inspires and feels like a reminder of our godlike potential." Run 2: "I have written thoughts on
@@ -994,7 +1004,7 @@ each), 3.7 to 14.0 s, same throwaway Worker and driver with the reasoning kept (
 - **Are the favourite claims supported?** The reasons are: "extremely inspiring" and the godlike, summon-food
   example are in its Thoughts. **The claim that it is the favourite is not**: its Thoughts never say so (The
   Human-Agent Orchestrator's do, "probably my favorite book about AI so far"), and ten books are rated 5, so
-  the fallback leads with shelf order. A known limit, per the owner's stop rule: no further rounds.
+  the top-rated offer leads with shelf order. A known limit, per the owner's stop rule: no further rounds.
 
 **Results of the review-fixes check (2026-11-05), contract v0.5.0 and the review's fixes.** "How many books have you
 read?" twice, "What's your favourite book?" twice, "I want to read a book about leadership" once: 5 questions,
@@ -1039,7 +1049,8 @@ Each step ends with its claims passing. Steps marked **owner** wait for a yes in
    a day's fresh Neurons, with any fixes going through review. Create a test gateway with
    logging off, run C7 with `--gateway`, redeploy plainly, delete the test gateway.
    **The site does not go public until C7 passes.**
-10. **Owner, published:** `pnpm deploy:site`, then C1, C2 and C19. Delete every leftover test gateway by
+10. **Owner, published:** set `PUBLIC_TURNSTILE_SITE_KEY` to the widget's site key (S8), because the deploy refuses an
+    empty or test key, then `pnpm deploy:site`, then C1, C2 and C19. Delete every leftover test gateway by
     name: `stacks-spike`, `stacks-ask-test` and the earlier $0.05 test gateway, so no unmetered one
     remains.
 11. **Owner, hard to undo:** rehearse the way back (C18), reading the destroy plan first,
@@ -1053,10 +1064,10 @@ CSP with the site. `terraform destroy` on `infra/`. Delete the widget by hand.
 **The owner's stop rule** (2026-11-05): when a round of fixes still leaves an answer imperfect, record it as
 a known limit in S12's open list and ship, with no further rounds on it.
 
-**Where each claim is proved:** C1, C2, C13, C18, C19 at steps 9 and 10; C7 at step 9; C16 at step 8; C3 to
-C6, C8, C10 to C12, C14, C15, C17, C21 to C23, C25 to C29, C31 to C33 and C35's offline halves by tests
-(S10); C20, C24, C30 and C35's live halves by the S12 runs; C9 in a browser at step 5; C34 was never
-assigned.
+**Where each claim is proved:** C13 at step 9, C1, C2 and C19 at step 10 and C18 at step 11; C7 at step 9; C16
+at step 8; C3 to C6, C8, C10, C12, C14, C15, C17, C21 to C23, C25 to C29, C31 to C33 and C35's offline halves
+by tests (S10); C20, C24, C30 and C35's live halves by the S12 runs; C9 and C11 in a browser at step 5, with no
+automated test; C34 was never assigned.
 
 **Stop and ask if:** a failed S12 item has no answer here, C7 fails, any charge appears beyond the Workers Paid
 plan's fixed fee and the day's AI spend limit, or any `terraform plan`, destroy included, changes a rule outside `infra/`.
@@ -1132,7 +1143,7 @@ picks"), including the numbers in Q8. The questions stay as the record.
 - **Reliability against cost.** A 1,500-token limit reduces blank answers at about 20
   extra Neurons on hard questions. One prototype question still fell back, cause unknown.
 - **Answer quality against cost and availability (memory).** Memory and working Thoughts
-  take the worst question from 114 to about 130 Neurons, so abuse uses up the day sooner.
+  take the worst question from 114 to about 130 Neurons before the search tool (S5 has the later figure), so abuse uses up the day sooner.
   Quality takes this side, because a bot that can't follow one question and misses the
   owner's Thoughts fails its purpose. The spend limit still holds the bill. The repo names
   no business driver, so the owner's "it needs memory" decides this.

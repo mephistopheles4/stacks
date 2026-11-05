@@ -42,3 +42,9 @@ export function absoluteUrl(path: string, site: URL | undefined): string {
 export function isShareable(site: URL | undefined): boolean {
   return site !== undefined;
 }
+
+/** What a notice page (`components/NoticePage.astro`) is given: its title and its meta description. */
+export interface NoticeProps {
+  readonly title: string;
+  readonly description: string;
+}

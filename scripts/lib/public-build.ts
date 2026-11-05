@@ -858,11 +858,11 @@ export async function inspectPublicBuild(
     // ⚠️ **The set is closed, and reading only the names above left it open.**
     //
     // A specific fetch directive overrides `default-src` for its own resource
-    // type, so `object-src *`, `frame-src https://…` or `worker-src *` each
+    // type, so `object-src *`, `media-src *` or `worker-src *` each
     // widen the policy with every directive above still exactly right.
     // `script-src-elem` is the one that matters: it takes precedence over
     // `script-src` for `<script>` elements, so it defeats the pinned beacon
-    // origin — the one exception this rule exists to keep enumerable — without
+    // and Turnstile origins — the exceptions this rule exists to keep enumerable — without
     // touching the line the loop above reads.
     //
     // Raised by review on the pull request that added this rule, which is the

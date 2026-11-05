@@ -119,7 +119,7 @@ function namedInMemory(
 /**
  * The books the answer names; when it names none, the books the visitor's question
  * names; when neither does, the books earlier exchanges name, newest first, and only those in
- * `only` when it is given (the books this question's search returned). At most 6.
+ * `only` when it is given (the books this question's search matched, not merely offered). At most 6.
  */
 export function mentioned(
   catalogue: readonly CatalogueBook[],

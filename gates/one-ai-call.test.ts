@@ -5,7 +5,7 @@
  * The AI Gateway spend limit only counts calls that go through the gateway, and
  * the prototype measured that a call made without the `gateway` option is not
  * blocked at all. So a second call site, or one that forgot the option, is a
- * bill with no cap and nothing red to say so. Three clauses:
+ * bill with no cap and nothing red to say so. Four clauses:
  *
  *   1. `AI.run` appears in `packages/ask/src/ai.ts` exactly once, and nowhere
  *      else in the repository's TypeScript;
@@ -13,7 +13,9 @@
  *      `skipCache: true`;
  *   3. no other source file in `packages/ask/src` touches the binding at all,
  *      `env.ts`'s declaration of it excepted. A destructured `AI` would route
- *      round clause 1.
+ *      round clause 1;
+ *   4. `ai.ts` names the binding exactly once, by the call, so a local alias
+ *      cannot let a second call through while the count of calls stays 1.
  *
  * See docs/gates.md, row G69 (one-ai-call).
  */
