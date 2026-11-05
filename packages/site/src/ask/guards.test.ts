@@ -183,3 +183,33 @@ describe('hover and focus fade on the suggestions and the pills (S7)', () => {
     expect(reduced).toContain('transition: none');
   });
 });
+
+describe('the privacy line has its own page, and the drawer opens it in a new tab (S7, S14 Q9)', () => {
+  const pages = 'packages/site/src/pages';
+  const read = (name: string): string => readFileSync(join(pages, name), 'utf8');
+
+  it('the drawer links to /privacy in a new tab with noopener, and says so for a screen reader', () => {
+    const astro = readFileSync(join(DIR, 'Ask.astro'), 'utf8');
+    const link = /<a href="\/privacy"[\s\S]*?<\/a\s*>/.exec(astro)?.[0] ?? '';
+    expect(link).toContain('target="_blank"');
+    expect(link).toContain('rel="noopener"');
+    expect(link).toContain('(opens in a new tab)');
+    expect(astro).not.toContain('/attribution#ask-privacy');
+  });
+
+  it('the line of the owner is on /privacy alone: /attribution only links to it', () => {
+    const line = "Questions pass through Cloudflare, and we don't keep them.";
+    expect(read('privacy.astro').replace(/\s+/g, ' ')).toContain(line);
+    expect(read('attribution.astro').replace(/\s+/g, ' ')).not.toContain(line);
+    expect(read('attribution.astro')).toContain('href="/privacy"');
+    expect(read('attribution.astro')).not.toContain('ask-privacy');
+  });
+
+  it('both notice pages use the one layout, which is noindex', () => {
+    for (const name of ['privacy.astro', 'attribution.astro']) {
+      expect(read(name)).toContain("import NoticePage from '../components/NoticePage.astro'");
+    }
+    const layout = readFileSync('packages/site/src/components/NoticePage.astro', 'utf8');
+    expect(layout).toMatch(/name="robots" content="noindex, nofollow"/);
+  });
+});

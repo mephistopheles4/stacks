@@ -1,0 +1,18 @@
+---
+import NoticePage from '../components/NoticePage.astro';
+
+// What the Ask the library box does with a question (docs/spec/ask-the-library.md S7, S14 Q9).
+// Markup only: the layout, the `noindex` and the style are `NoticePage`'s, as on `/attribution`.
+---
+
+<NoticePage title="Privacy — Stacks" description="How the Ask the library box treats your questions.">
+  <h1>Privacy</h1>
+
+  <p>
+    Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs when the
+    Ask the library box opens, and a hashed address is counted for a day to limit use. Please
+    don't type personal details.
+  </p>
+
+  <p class="back"><a href="/">Back to the shelf</a></p>
+</NoticePage>
