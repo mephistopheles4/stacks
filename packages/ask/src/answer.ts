@@ -1,8 +1,8 @@
 import { AiFailure, runModel } from './ai.ts';
 import type { Env } from './env.ts';
 import { DataError, type CatalogueBook, type LibrarySource } from './library.ts';
-import { MAX_SEARCH_BOOKS } from './limits.ts';
 import type { Outcome, OutcomeDetail } from './outcome.ts';
+import { mentioned } from './mentioned.ts';
 import { buildMessages, type ThoughtsEntry } from './prompt.ts';
 import { search } from './search.ts';
 import { splitFollowUps } from './followups.ts';
@@ -87,7 +87,7 @@ export async function answerQuestion(
       reply: {
         mode: 'ai',
         answer: split.answer,
-        books: mentioned(catalogue, split.answer).map(summary),
+        books: mentioned(catalogue, split.answer, question).map(summary),
         followUps: split.followUps,
       },
       outcome: 'ai',
@@ -138,16 +138,4 @@ async function loadThoughts(
     }),
   );
   return loaded.filter((entry): entry is ThoughtsEntry => entry !== undefined);
-}
-
-/** Catalogue books whose title (or the part before its colon) the answer names. */
-function mentioned(catalogue: readonly CatalogueBook[], answer: string): CatalogueBook[] {
-  const text = answer.toLowerCase();
-  return catalogue
-    .filter((book) => {
-      const full = book.title.toLowerCase();
-      const head = (book.title.split(':')[0] ?? book.title).toLowerCase();
-      return text.includes(full) || (head.length >= 5 && text.includes(head));
-    })
-    .slice(0, MAX_SEARCH_BOOKS);
 }

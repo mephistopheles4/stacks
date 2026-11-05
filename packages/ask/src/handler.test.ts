@@ -550,3 +550,14 @@ describe('follow-ups (S6, C4, C15)', () => {
     expect((refused.body as { followUps?: string[] }).followUps).toEqual([]);
   });
 });
+
+describe('pills when the answer names no book', () => {
+  it('shows the book the visitor asked about', async () => {
+    const r = rig({ ai: async () => ({ response: "I haven't written about that yet." }) });
+    const { body } = await run(r, ask('What did you think of Co-Intelligence?'));
+    expect(body.mode).toBe('ai');
+    expect(body.books).toEqual([
+      { id: 'co-int', title: 'Co-Intelligence', author: 'Ethan Mollick', hasThoughts: true },
+    ]);
+  });
+});
