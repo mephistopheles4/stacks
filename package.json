@@ -34,7 +34,8 @@
     "deploy:site": "tsx scripts/deploy.ts",
     "deploy:ask": "tsx scripts/deploy-ask.ts",
     "evals:ask": "tsx scripts/evals-ask.ts",
-    "ask:status": "tsx scripts/ask-status.ts"
+    "ask:status": "tsx scripts/ask-status.ts",
+    "turnstile": "tsx scripts/turnstile.ts"
   },
   "athanor": {
     "dockerfile": "docker/athanor/Dockerfile",

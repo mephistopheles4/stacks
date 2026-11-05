@@ -301,6 +301,14 @@ const readerProblems = (source: string): string[] => [
     : []),
 ];
 /**
+ * A script that asks wrangler for the owner's login token, in either spelling: the string form
+ * (`wrangler ... auth token`) and the array form (`['auth', 'token']`, which is how this module
+ * would build the call).
+ */
+const readsLogin = (source: string): boolean =>
+  /\bwrangler\b[^\n]*\bauth token\b/.test(source) ||
+  /['"`]auth['"`]\s*,\s*['"`]token['"`]/.test(source);
+/**
  * `scripts/deploy.ts` runs at import, so G67 reads its source text. An
  * allowlist, as invariant 2 is: the upload's argument list starts
  * `'exec', 'wrangler'`, the printed command starts `pnpm exec wrangler`, and
@@ -481,6 +489,36 @@ describe('G67 — the release-age window is stated, at seven days or more', () =
     // `pnpm exec`: neither may name a package runner or a wrangler version of its own.
     for (const file of ['scripts/evals-ask.ts', 'scripts/ask-status.ts']) {
       expect(readerProblems(read(file)), file).toEqual([]);
+    }
+    // #537: the Turnstile script runs wrangler in one place, in its module, and the entry that supplies
+    // the real effects names it nowhere. Neither reads the owner's login, and the entry never loads `.env`.
+    expect(
+      deployProblems(read('scripts/lib/turnstile.ts'), {
+        file: 'turnstile.ts',
+        calls: 1,
+        full: false,
+      }),
+    ).toEqual([]);
+    expect(
+      deployProblems(read('scripts/turnstile.ts'), {
+        file: 'turnstile entry',
+        calls: 0,
+        full: false,
+      }),
+    ).toEqual([]);
+    for (const file of ['scripts/lib/turnstile.ts', 'scripts/turnstile.ts']) {
+      expect(readsLogin(read(file)), file).toBe(false);
+    }
+    expect(read('scripts/turnstile.ts')).toContain('pinMismatch(');
+    expect(read('scripts/turnstile.ts')).not.toContain('loadEnv');
+    // The entry calls the helpers whose decisions are tested, and hides the typed token.
+    for (const call of [
+      'isInteractive(process.stdin.isTTY, process.stdout.isTTY)',
+      'envFilePaths(',
+      'envFileIsEmpty(',
+      'setRawMode(true)',
+    ]) {
+      expect(read('scripts/turnstile.ts'), call).toContain(call);
     }
     // The site deploy calls both Turnstile key checks, which are tested on their own (integrity N1).
     expect(read('scripts/deploy.ts')).toContain('siteKeyProblem(html)');
@@ -836,6 +874,28 @@ describe('G67 — door 3: wrangler is an exact pin, run through pnpm exec', () =
     ]) {
       expect(readerProblems(reader), reader).not.toEqual([]);
     }
+    // #537: the Turnstile module's form, planted. One `'exec', 'wrangler'` call is the form; a second
+    // call spelled any other way, a package runner, a wrangler version of its own and a read of the
+    // login are each refused.
+    const turnstileOptions = { file: 'turnstile.ts', calls: 1, full: false };
+    const call = "run(['exec', 'wrangler', 'secret', 'put']);";
+    expect(deployProblems(call, turnstileOptions)).toEqual([]);
+    for (const [name, source] of [
+      ['a second call', `${call} run(['wrangler', 'secret', 'list']);`],
+      ['a package runner', `${call} run(['dlx', 'wrangler']);`],
+      ['a version of its own', `${call} run('pnpm exec wrangler@4 secret');`],
+      ['a pnpm form other than exec', `${call} // pnpm run wrangler secret`],
+      ['no call at all', "run(['secret', 'put']);"],
+    ] as const) {
+      expect(deployProblems(source, turnstileOptions), name).not.toEqual([]);
+    }
+    expect(readsLogin("spawnSync('pnpm exec wrangler auth token');")).toBe(true);
+    expect(readsLogin("run(['exec', 'wrangler', 'secret', 'put']);")).toBe(false);
+    // S2: the array form, written through the module's own helper, is refused too.
+    expect(readsLogin("wrangler(ctx, ['auth', 'token'], { timeoutMs: 1 });")).toBe(true);
+    expect(readsLogin('wrangler(ctx, ["auth", "token"], { timeoutMs: 1 });')).toBe(true);
+    expect(readsLogin('wrangler(ctx, [`auth`,`token`], { timeoutMs: 1 });')).toBe(true);
+    expect(readsLogin("wrangler(ctx, ['secret', 'list'], { timeoutMs: 1 });")).toBe(false);
     // ask-live.ts: a dlx call is refused (conventions F15).
     expect(
       deployProblems("run('pnpm', ['dlx', 'wrangler']);", {

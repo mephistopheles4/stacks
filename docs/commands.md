@@ -428,6 +428,94 @@ platform's four-digit code when its message starts with one (such as 3043); it i
 **`pnpm ask:status`** prints yesterday's outcome counts from Workers Logs. ⚠️ **Its
 query is unverified against the live API**; if refused, it names the dashboard route.
 
+## `pnpm turnstile` — the Ask the library Turnstile widget and its secret
+
+[`docs/spec/ask-the-library.md`](spec/ask-the-library.md) S13 steps 8 to 11,
+[ADR-0135](adr/0135-the-turnstile-widget-is-made-and-rotated-by-a-script.md), issue
+[#537](https://github.com/mephistopheles4/stacks/issues/537). **Owner-run at a terminal,
+and never by an agent**: it needs the owner's API token typed at a prompt and the owner's
+`wrangler login`. It is not a gate, and the agent guard does not refuse it; what stops
+an agent is that it has no token and no terminal.
+
+```bash
+pnpm turnstile --create    # once, after pnpm deploy:ask: make the widget, set TURNSTILE_SECRET, print the site key
+pnpm turnstile             # rotate: a new secret on the widget, set on the Worker (old one valid for 2 hours)
+pnpm turnstile --sync      # set the widget's current secret on the Worker, rotating nothing (recovery)
+pnpm turnstile --dry-run   # with any mode: print the calls; prompt, send and run nothing
+```
+
+**The token.** Make a Cloudflare API token with **Account > Turnstile > Edit** ("Turnstile
+Sites Write") on this one account and nothing else, with an **expiry within 24 hours**
+(the script reads it back and refuses a longer one or none; it cannot check scope). It is
+**typed at the script's no-echo prompt**, never taken from an environment variable, a flag
+or a file, and the script refuses when stdin is not a terminal. **Delete the token in the
+dashboard when the run ends**; every successful run says so. **Wait for the prompt before typing or
+pasting the token**: an empty Enter is asked once more, and a paste that arrives before the prompt
+would reach the shell. A pasted token may stay in the clipboard history: type it, or use a password
+manager's typing feature.
+
+**What it refuses before it asks for anything** (no flag clears these): off `main`, a dirty
+tree or a `HEAD` that is not `origin/main` (except `--dry-run`); a wrangler that is not the
+pin; the shell, the repo root `.env` or `.env.local`, or the main checkout's `.env` naming
+`TURNSTILE_API_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CF_API_TOKEN`, `CLOUDFLARE_API_KEY`,
+`CF_API_KEY`, `CLOUDFLARE_EMAIL`, `CF_EMAIL`, `CF_API_BASE_URL`, `CLOUDFLARE_BASE_URL` or a
+`CLOUDFLARE_API_BASE_URL` that is not Cloudflare's own (each would replace the owner's wrangler
+login, put a token on disk or move the API host; **close the shell that held the Terraform
+token first**); `NODE_TLS_REJECT_UNAUTHORIZED` in the shell unless `1`; `NODE_EXTRA_CA_CERTS`,
+`NODE_USE_SYSTEM_CA` and `NODE_USE_ENV_PROXY` in the shell, and a `NODE_OPTIONS` holding
+`--use-env-proxy`, `--use-system-ca`, `--use-openssl-ca` or `--tls-keylog`, in either the dash or the
+underscore spelling Node reads as the same (the first three change who the script's own requests
+trust or go through, and `--tls-keylog` writes their TLS session keys to a file; Node reads them for
+its `fetch` as well as wrangler's); and an account id
+(`CLOUDFLARE_ACCOUNT_ID` or `--account`) or site key (`PUBLIC_TURNSTILE_SITE_KEY` or
+`--sitekey`, for rotate and sync) of the wrong shape. Refusals name the place and the
+name, never a value. The account id is not a secret to Cloudflare, but `--account` and a
+`$env:CLOUDFLARE_ACCOUNT_ID = ...` line land in PowerShell history; that is accepted.
+
+**Then, in order:** the typed token must verify as active with an expiry within 24 hours;
+the `stacks-ask` Worker must exist (a read-only `wrangler deployments list`, parsed and never
+printed), or the script says to run `pnpm deploy:ask` first, so it never creates a widget or
+rotates a secret it has nowhere to store; the widget must be named `stacks-ask` with exactly
+`stacks.aymandiab.com` as its domain, checked before a rotate and again on the response; then
+the change, then `wrangler secret put TURNSTILE_SECRET` with the secret on **stdin only**, then
+`wrangler secret list` to confirm the name is there (the value is never read). A create is
+`name: stacks-ask`, Managed mode, other fields at their defaults; a rotate always sends
+`invalidate_immediately: false`.
+
+**What it prints.** The site key (public), the time the old secret stops working, and its own
+messages. It never prints the secret, the token, a response body or wrangler's raw output
+(only the one success line and a count of the lines withheld), and the account id appears as
+`<account>`. An error it did not raise prints only its class. Run the read-only wrangler
+command by hand to see wrangler's own error.
+
+**If something fails after a secret exists**, the secret is still at Cloudflare:
+`pnpm turnstile --sync` reads it back and sets it. It is safe whether or not the failed put
+landed. After a rotate, the old secret works for 2 hours, so the site keeps answering while you
+sync; after a create the Worker refuses every question until the sync. A create that timed out
+may have made the widget: `pnpm turnstile --create` again lists by name and, if it exists,
+prints its site key for `--sync --sitekey <key>`. A second rotation inside the 2-hour overlap is
+refused by Cloudflare. A 4xx answer means nothing changed, and the script says so; a 5xx, a 2xx that says
+`success: false`, or an answer it cannot read, does not say whether the rotation ran, so the script says that instead and
+names `--sync`.
+
+**wrangler runs under its own rules.** Every call is `pnpm exec wrangler`, with
+`--env-file scripts/turnstile.empty.env` (a committed empty file, so wrangler loads no `.env`
+or `.env.local`), and an environment built from an **allowlist** of what the spawn and the
+login store need plus eight forced values: the run's account id, Cloudflare's API base URL,
+`NODE_TLS_REJECT_UNAUTHORIZED=1`, telemetry and error reports off, `WRANGLER_WRITE_LOGS=false`
+(no log file), log sanitising on, and `WRANGLER_LOG=log`. The allowlist leaves out
+`XDG_CONFIG_HOME`: if the login lives there, the Worker check refuses and says so. G67 holds
+both files to `pnpm exec wrangler`.
+
+**Accepted, and recorded in the ADR:** the secret stays readable at Cloudflare by any token with
+Turnstile Sites Read or Account Settings Read (true of every widget); the secret and the token sit
+in this process's memory for one run; there is no mode that invalidates the old secret
+immediately (the dashboard's rotation remains); and a hostile process running as the owner is out
+of scope. ⚠️ **Nothing here has run against Cloudflare**: the account-token verify path, the
+error a second rotation gets, a site key's exact length, wrangler's output lines, and whether
+`pnpm exec` restores a `NODE_OPTIONS` from `.npmrc` into wrangler's environment are unverified until
+the first run, and each fails closed.
+
 ## `pnpm worktree <branch>`
 
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —

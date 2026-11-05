@@ -2,7 +2,8 @@
 
 Terraform for the WAF rate limit, the `stacks-ask` AI Gateway and the Health Check
 with its notification (`docs/spec/ask-the-library.md` S5, S8, S11). Not created
-here: the Turnstile widget, which the owner makes by hand (S14 Q4).
+here: the Turnstile widget, which `pnpm turnstile` makes through Cloudflare's API so
+its secret never enters Terraform state (S14 Q4, ADR-0135).
 
 Pinned: Terraform `1.17.1`, `cloudflare/cloudflare` provider `5.28.1`
 (`.terraform.lock.hcl` committed). State is local and never committed.
@@ -67,7 +68,8 @@ first; the plan or apply error says so.
 ## Way back
 
 `terraform destroy` removes all four resources. Read the destroy plan first; it must
-touch nothing outside `infra/`. Delete the Turnstile widget by hand.
+touch nothing outside `infra/`. Delete the Turnstile widget by hand, and make a new
+one with `pnpm turnstile --create` once the Worker is redeployed.
 
 ## Open items (not verified live, nothing here has been applied)
 
@@ -92,6 +94,10 @@ touch nothing outside `infra/`. Delete the Turnstile widget by hand.
 - **Health Check interval.** 60 s is the Pro minimum per Cloudflare docs mirrors;
   the official page was not reachable. Probes pass through the WAF rule too, at 1
   per minute per probe IP, under the limit of 10.
+- **The Terraform token is not the Turnstile token.** `pnpm turnstile` refuses to run
+  while `CLOUDFLARE_API_TOKEN` is in the shell or an env file, so close the shell that
+  held the Terraform token before it (S13 step 9). The widget needs its own short-lived
+  token, typed at that script's prompt (`docs/commands.md`).
 - **Secrets in shell history.** Read the token and recipient without echoing them (`read -rs CLOUDFLARE_API_TOKEN`, or `Read-Host -AsSecureString`) rather than typing them on a command line.
 - **Destroy deletes the whole entrypoint.** The ruleset is the zone's one `http_ratelimit` entrypoint, root domain included: `terraform destroy` removes any rule added later by hand. Record the existing rules (S13 step 1) before the first plan.
 - **`VISITOR_KEY`** is generated with a CSPRNG, for example 32 random bytes in hex, never typed.

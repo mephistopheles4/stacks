@@ -118,6 +118,10 @@ const ALLOWED = [
   // holds the vault path. It never reads a note, and it is how a Worker that has
   // no access to the vault is checked for having none.
   'scripts/deploy-ask.ts',
+  // The Turnstile widget script: reads the repository's package manifest and wrangler's manifest
+  // (the pin check), the committed empty env file, and the names (never the values) in `.env`
+  // files, to refuse a credential that would replace the owner's login. It never reads a note.
+  'scripts/turnstile.ts',
   // The S9 evals: reads a built public folder (`dist/`), the same files the
   // Worker fetches over HTTPS, and writes a transcript. The fixture vault's
   // titles, which it needs to refuse a library built from them, come through
