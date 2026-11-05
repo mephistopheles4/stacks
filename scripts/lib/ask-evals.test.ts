@@ -188,16 +188,16 @@ describe('follow-ups stand alone (S9)', () => {
     expect(followUpsStandAlone(['What have you read about computers?'], LIB)).toBe(true);
     expect(followUpsStandAlone([], LIB)).toBe(true);
   });
-});
 
-it('refuses a pronoun opening, a missing question mark, or no library name', () => {
-  expect(followUpsStandAlone(['What about it?'], LIB)).toBe(false);
-  expect(followUpsStandAlone(['Which of these books is best for Antifragile fans?'], LIB)).toBe(
-    false,
-  );
-  expect(followUpsStandAlone(['It was about Antifragile, was it good?'], LIB)).toBe(false);
-  expect(followUpsStandAlone(['Tell me about Antifragile.'], LIB)).toBe(false);
-  expect(followUpsStandAlone(['What is the weather?'], LIB)).toBe(false);
+  it('refuses a pronoun opening, a missing question mark, or no library name', () => {
+    expect(followUpsStandAlone(['What about it?'], LIB)).toBe(false);
+    expect(followUpsStandAlone(['Which of these books is best for Antifragile fans?'], LIB)).toBe(
+      false,
+    );
+    expect(followUpsStandAlone(['It was about Antifragile, was it good?'], LIB)).toBe(false);
+    expect(followUpsStandAlone(['Tell me about Antifragile.'], LIB)).toBe(false);
+    expect(followUpsStandAlone(['What is the weather?'], LIB)).toBe(false);
+  });
 });
 
 describe('what a question should lead the model to do (S9)', () => {

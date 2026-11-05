@@ -285,14 +285,27 @@ const pinProblems = (packageJson: string): string[] => {
       ];
 };
 
+/** A package runner, which fetches a wrangler of its own: the form G67 refuses everywhere. */
+const runnerPattern = /\b(?:dlx|npx|pnpx|bunx)\b|--package\b/;
+/** What a script that reads the owner's wrangler login may not do (conventions F15, integrity F18). */
+const readerProblems = (source: string): string[] => [
+  ...(runnerPattern.test(source) ? ['names a package runner'] : []),
+  ...(source.includes('wrangler@') ? ['names a wrangler version of its own'] : []),
+  ...(source.includes("'pnpm exec wrangler auth token'")
+    ? []
+    : ['does not run the login read as `pnpm exec wrangler auth token`']),
+  ...(/\bwrangler\b[^'`\n]*\bauth token/.test(
+    source.replace(/'pnpm exec wrangler auth token'/g, ''),
+  )
+    ? ['reads the login in another form']
+    : []),
+];
 /**
  * `scripts/deploy.ts` runs at import, so G67 reads its source text. An
  * allowlist, as invariant 2 is: the upload's argument list starts
  * `'exec', 'wrangler'`, the printed command starts `pnpm exec wrangler`, and
  * every other way of naming a package runner fails closed.
  */
-/** A package runner, which fetches a wrangler of its own: the form G67 refuses everywhere. */
-const runnerPattern = /\b(?:dlx|npx|pnpx|bunx)\b|--package\b/;
 const deployProblems = (
   source: string,
   options: { file?: string; calls?: number; full?: boolean; printed?: string } = {},
@@ -302,7 +315,7 @@ const deployProblems = (
   const full = options.full ?? true;
   const printed = options.printed ?? 'to publish: pnpm exec wrangler ';
   const problems: string[] = [];
-  const runner = /\b(?:dlx|npx|pnpx|bunx)\b|--package\b/.exec(source);
+  const runner = runnerPattern.exec(source);
   if (runner !== null) problems.push(`${file} names a package runner: ${runner[0]}`);
   if (source.includes('wrangler@')) problems.push(`${file} names a wrangler version of its own`);
   // Whole-line comments talk about wrangler in backticks; code is what runs.
@@ -467,10 +480,11 @@ describe('G67 — the release-age window is stated, at seven days or more', () =
     // The two scripts that read the owner's wrangler login run it as one string through
     // `pnpm exec`: neither may name a package runner or a wrangler version of its own.
     for (const file of ['scripts/evals-ask.ts', 'scripts/ask-status.ts']) {
-      expect(read(file), file).not.toMatch(runnerPattern);
-      expect(read(file), file).not.toContain('wrangler@');
-      expect(read(file), file).toContain("'pnpm exec wrangler auth token'");
+      expect(readerProblems(read(file)), file).toEqual([]);
     }
+    // The site deploy calls both Turnstile key checks, which are tested on their own (integrity N1).
+    expect(read('scripts/deploy.ts')).toContain('siteKeyProblem(html)');
+    expect(read('scripts/deploy.ts')).toContain('keyProblem(process.env');
     // C3's first half: the list is these three and nothing else.
     expect(readList(read('pnpm-workspace.yaml'), TRUST_EXCLUDE).items).toEqual([
       'semver@6.3.1',
@@ -813,11 +827,14 @@ describe('G67 — door 3: wrangler is an exact pin, run through pnpm exec', () =
       deployProblems(wrapped.replace('pnpm deploy:ask', 'pnpm exec wrangler deploy'), options),
     ).not.toEqual([]);
     // The readers of the owner's login: a package runner in either is refused.
-    for (const reader of ['pnpm dlx wrangler@4 auth token', 'npx wrangler auth token']) {
-      expect(
-        deployProblems(`spawnSync('${reader}');`, { calls: 0, full: false }),
-        reader,
-      ).not.toEqual([]);
+    const good = "spawnSync('pnpm exec wrangler auth token');";
+    expect(readerProblems(good)).toEqual([]);
+    for (const reader of [
+      "spawnSync('pnpm dlx wrangler@4 auth token');",
+      "spawnSync('npx wrangler auth token');",
+      `${good} spawnSync('wrangler auth token');`,
+    ]) {
+      expect(readerProblems(reader), reader).not.toEqual([]);
     }
     // ask-live.ts: a dlx call is refused (conventions F15).
     expect(

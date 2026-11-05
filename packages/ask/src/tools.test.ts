@@ -158,13 +158,12 @@ describe('search_library (T5, T6)', () => {
     expect(blocksIn(out.content)).toBe(3);
   });
 
-  it('stops at 1,500 estimated tokens of Thoughts, though the book cap would allow a third', async () => {
-    // About 600 estimated tokens a block: two fit 1,500, three would fit only a cap of 1,800 or more.
-    const out = await runTool(search({ query: 'topic' }), topicSession(1_770), ROOM);
-    expect(blocksIn(out.content)).toBe(2);
-    expect(
-      estimateTokens(out.content.slice(out.content.indexOf('Your Thoughts on'))),
-    ).toBeLessThanOrEqual(1_500 + 40);
+  it('stops at 1,500 estimated tokens of Thoughts, exactly (integrity F10)', async () => {
+    // Three blocks of this size cost exactly 1,500 and fit; two characters a block more cost 1,503 and do not.
+    const fits = await runTool(search({ query: 'topic' }), topicSession(1_472), ROOM);
+    expect(blocksIn(fits.content)).toBe(3);
+    const over = await runTool(search({ query: 'topic' }), topicSession(1_475), ROOM);
+    expect(blocksIn(over.content)).toBe(2);
   });
 
   it('returns no book a first search already returned, and says so when none are left (T6)', async () => {

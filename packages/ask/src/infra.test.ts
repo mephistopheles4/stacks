@@ -33,10 +33,13 @@ describe('infra/ (C16, repo side)', () => {
   it('pins Terraform and the provider to one exact version each', () => {
     const main = read('main.tf');
     expect(main).toMatch(/required_version\s*=\s*"=\s*\d+\.\d+\.\d+"/);
-    // Every `version =` line in the file is exact, so a second, unpinned provider fails too.
-    const versions = main.match(/^\s*version\s*=.*$/gm) ?? [];
-    expect(versions.length).toBeGreaterThan(0);
-    for (const line of versions) expect(line).toMatch(/version\s*=\s*"=\s*\d+\.\d+\.\d+"/);
+    // Every provider `source =` has its own exact `version =`, so a second, unpinned provider fails
+    // too, on one line or on several (integrity F12).
+    const sources = main.match(/(?<![\w-])source\s*=/g) ?? [];
+    const versions = main.match(/(?<![\w-])version\s*=\s*[^,}\n]*/g) ?? [];
+    expect(sources.length).toBeGreaterThan(0);
+    expect(versions).toHaveLength(sources.length);
+    for (const v of versions) expect(v).toMatch(/version\s*=\s*"=\s*\d+\.\d+\.\d+"/);
   });
 
   it('takes the alert recipient from a sensitive variable with no default', () => {

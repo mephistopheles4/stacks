@@ -1,7 +1,7 @@
 /**
  * The S9 evals (docs/spec/ask-the-library.md): ten questions and the memory cases, each twice,
  * through the Worker's own answer code and a test gateway. Live calls, so
- * outside CI (G21), and about 2,500 to 2,700 Neurons.
+ * outside CI (G21); S9 states its size and cost.
  *
  *   pnpm evals:ask --gateway <test-gateway-id> [--site <dir>]
  *
@@ -78,6 +78,11 @@ const library = await source
 const fixtureTitles = (
   await new ObsidianAdapter(join(REPO_ROOT, 'fixtures', 'vault')).listBooks()
 ).map((book) => book.title);
+if (fixtureTitles.length === 0) {
+  fail(
+    'the fixture vault could not be read, so a fixture library cannot be told from the real one',
+  );
+}
 if (looksLikeFixture(library, fixtureTitles)) {
   fail(
     'this library was built from the fixture vault; build the real one first (pnpm stacks build --public)',

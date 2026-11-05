@@ -441,8 +441,9 @@ describe('Thoughts sent (C3)', () => {
       expect(result.split('Your Thoughts on').length - 1).toBe(3);
       sent.push(result);
     }
-    // A search reads every note with Thoughts (6 books, each cached for the second round), and no
-    // more: the cost of searching Thoughts, held to its number (integrity F16).
+    // A search reads every note with Thoughts: 6 books, once each per round, and each round builds
+    // its own source, so nothing is cached across rounds. The cost of searching Thoughts, held to
+    // its number (integrity F16).
     expect(noteFetches).toBe(12);
     expect(sent[0]).toBe(sent[1]);
     expect(sent[0]).toContain('note ');

@@ -172,7 +172,7 @@ describe('hover and focus fade on the suggestions and the pills (S7)', () => {
       const block = rule(selector);
       expect(block).toContain('background-color 150ms ease');
       expect(block).toContain('border-color 150ms ease');
-      expect(block).toContain('color 150ms ease');
+      expect(block).toMatch(/[\s,]color 150ms ease/);
       expect(block).not.toMatch(/transition:\s*all/);
     },
   );
@@ -180,9 +180,10 @@ describe('hover and focus fade on the suggestions and the pills (S7)', () => {
   it('turns the transitions off under reduced motion', () => {
     const start = astro.indexOf('@media (prefers-reduced-motion: reduce) {');
     const reduced = astro.slice(start);
-    expect(reduced).toContain('.ask-quick :global(button)');
-    expect(reduced).toContain('.ask-thread :global(.ask-book)');
-    expect(reduced).toContain('transition: none');
+    // The selectors and `transition: none` must be one rule, not two things that sit in one block.
+    const selectors = /([^{}]+)\{\s*transition: none;\s*\}/.exec(reduced)?.[1] ?? '';
+    expect(selectors).toContain('.ask-quick :global(button)');
+    expect(selectors).toContain('.ask-thread :global(.ask-book)');
   });
 });
 
@@ -221,6 +222,7 @@ describe('the shelf seam the drawer relies on (C9, integrity F7)', () => {
 
   it('Escape yields to a keydown the drawer already took, and a held book is announced when picked up by id', () => {
     expect(pickup).toContain('if (event.defaultPrevented) return;');
-    expect(pickup).toContain('announceHeld');
+    expect(pickup).toContain('announceHeld(window, book.id)');
+    expect(pickup).toContain('announceHeld(window, id)');
   });
 });

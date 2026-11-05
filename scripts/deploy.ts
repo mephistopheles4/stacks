@@ -965,8 +965,8 @@ if (applicable.length > 0) {
 // Cloudflare's test key, is refused (the Ask the library drawer, behaviour E7). `--check-only` builds
 // nothing and uploads nothing, so it does not reach it; `--dry-run` does.
 if (!checkOnly) {
-  const keyProblem = siteKeyProblem(html);
-  if (keyProblem !== undefined) fail(`pre-flight: ${keyProblem}`);
+  const pageProblem = siteKeyProblem(html);
+  if (pageProblem !== undefined) fail(`pre-flight: ${pageProblem}`);
 }
 
 /**
