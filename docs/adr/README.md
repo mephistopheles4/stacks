@@ -158,3 +158,4 @@ Two other files hold what these deliberately do not:
 | [0132](./0132-the-model-searches-the-library-with-two-tools-and-the-catalogue-leaves-the-prompt.md) | The model searches the library with two tools, and the catalogue leaves the Ask prompt (changes 0131) |
 | [0133](./0133-the-ask-worker-runs-on-workers-paid-and-the-spend-limit-is-its-only-cap.md) | The Ask Worker runs on Workers Paid, and the spend limit is its only cap (changes 0127) |
 | [0134](./0134-mutation-scoring-has-a-dated-exception-for-code-not-yet-measured.md) | Mutation scoring has a dated exception for code not yet measured (the Ask Worker and drawer) (changes 0053) |
+| [0135](./0135-the-turnstile-widget-is-made-and-rotated-by-a-script.md) | The Turnstile widget is made and rotated by a script, outside Terraform (changes the Ask spec's S14 Q4 mechanism) |

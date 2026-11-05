@@ -183,6 +183,7 @@ one fetch per note against Workers Free's limit of 50 per request, which is why 
 | Browser signals, address | `challenges.cloudflare.com`, after the drawer opens | Turnstile |
 | Token, secret, address | Turnstile siteverify, from the Worker | Turnstile |
 | Terraform token and config | Cloudflare API | Infrastructure as code |
+| Turnstile token (typed, short-lived), widget calls; the widget's secret, to the Worker through wrangler | Cloudflare's Turnstile and token-verify APIs; the Workers secrets API | `pnpm turnstile` creates the widget and rotates its secret (#537, ADR-0135) |
 
 ⚠️ **This reverses a standing principle.** `docs/spec/trend-layer.md` says the
 project "adds no new outbound flow carrying anything derived from the owner's
@@ -494,7 +495,7 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
 | Shelf seam: a pickup signal, pick up by id, Escape yielding to an open drawer | `packages/site/src/shelf/pickup.ts`, `boot.ts` |
 | CSP | `astro.config.mjs` and `CSP_DIRECTIVES` in `scripts/lib/public-build.ts` |
 | WAF rule, AI Gateway with spend limit, Health Check and its notification | `infra/`, Terraform |
-| Turnstile widget and secret, by hand (S14) | Dashboard, then `wrangler secret put` |
+| Turnstile widget and its secret | `pnpm turnstile` (`scripts/turnstile.ts`): the widget is made outside Terraform so its secret never enters state (S14 Q4, ADR-0135) |
 
 **Configuration**
 
@@ -1040,22 +1041,27 @@ Each step ends with its claims passing. Steps marked **owner** wait for a yes in
 5. The drawer, privacy line and shelf seam, against a local Worker (C9, C11).
 6. CSP and G20, then monitoring and the repo's checks (C10, C12).
 7. Security pair and QA pair on the diff, then a merge the owner confirms.
-8. **Owner, hard to undo:** create the widget by hand, read `terraform plan`, apply (C16). The
-   secrets are not set here.
-9. **Owner, published:** `pnpm deploy:ask`, then set the two Worker secrets with `wrangler secret put`:
-   `TURNSTILE_SECRET` (the widget's secret) and `VISITOR_KEY` (generate it with a CSPRNG, 32 random
-   bytes in hex, for example `openssl rand -hex 32`; it is the HMAC key for the daily counter and has
-   nothing to do with Terraform), then C13. Run S12's AI checks on
+8. **Owner, hard to undo:** read `terraform plan`, apply (C16). No widget and no secret here. Close
+   the shell that held the Terraform token before step 9: `pnpm turnstile` refuses a
+   `CLOUDFLARE_API_TOKEN` in the shell.
+9. **Owner, published:** `pnpm deploy:ask`, then `VISITOR_KEY` with `wrangler secret put` (generate it
+   with a CSPRNG, 32 random bytes in hex, for example `openssl rand -hex 32`; it is the HMAC key for
+   the daily counter and has nothing to do with Terraform), then **`pnpm turnstile --create`**, which
+   makes the widget, sets `TURNSTILE_SECRET` on the Worker and prints the site key (the widget's
+   token, a short-lived one with only Turnstile Sites Write, is typed at its prompt and deleted in
+   the dashboard afterwards; `docs/commands.md`, ADR-0135). Until the secret is set the Worker
+   refuses every question, and the site is not public. Then C13. Run S12's AI checks on
    a day's fresh Neurons, with any fixes going through review. Create a test gateway with
    logging off, run C7 with `--gateway`, redeploy plainly, delete the test gateway.
    **The site does not go public until C7 passes.**
-10. **Owner, published:** set `PUBLIC_TURNSTILE_SITE_KEY` to the widget's site key (S8), because the deploy refuses an
+10. **Owner, published:** set `PUBLIC_TURNSTILE_SITE_KEY` to the site key `pnpm turnstile --create` printed (S8), because the deploy refuses an
     empty or test key, then `pnpm deploy:site`, then C1, C2 and C19. Delete every leftover test gateway by
     name: `stacks-spike`, `stacks-ask-test` and the earlier $0.05 test gateway, so no unmetered one
     remains.
 11. **Owner, hard to undo:** rehearse the way back (C18), reading the destroy plan first,
-    then restore. A recreated widget has new keys, so the site key is rebuilt into the
-    site and the secret set again.
+    then restore. A recreated widget has new keys: delete the widget by hand, run
+    `pnpm turnstile --create` again once the Worker is redeployed, and rebuild the site with the new
+    site key.
 
 **Way back:** AI off with `--ai-off`. To remove it, delete the routes and Worker, and the
 drawer shows S6's last message until the site is redeployed without it. Revert the
@@ -1098,6 +1104,9 @@ picks"), including the numbers in Q8. The questions stay as the record.
   principle? My pick: yes.
 - **Q4. Turnstile secret.** The widget by hand, so the secret never enters Terraform
   state, as written? Or in Terraform with an encrypted state backend? My pick: by hand.
+  **Mechanism changed (#537, ADR-0135):** still outside Terraform, but made by `pnpm turnstile`
+  through Cloudflare's API instead of by hand in the dashboard; the secret still never enters
+  state.
 - **Q5. Thoughts in the prompt.** Send only likely books' Thoughts, as written? It keeps
   the cost down as you write, and a broad question won't see every opinion. My pick: yes. **Replaced by the search tool (ADR-0132):** the model
   now asks for Thoughts through `search_library`, and the Worker no longer picks.
