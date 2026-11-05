@@ -50,7 +50,7 @@ words in the owner's mouth. **Confirmed**
 Thoughts and reports ratings. **Confirmed**
 
 **Automatic checks enforce, whatever the model says:** Turnstile, rate and daily
-limits, the spend cap, the input and output size limits, the limit of 2 searches per
+limits, the spend cap, the input and output size limits, the limit of 2 tool calls per
 question, and matching the book links. The bot has no say in these. **Confirmed**
 Gated by: the Worker and the AI Gateway.
 
@@ -96,8 +96,8 @@ this tool, so the built output is plain `RULES` text and not an agent file. **Co
 tells no one first, because no one is asked at answer time. The Worker and gateway limits,
 which the owner sets, stand in for a yes. **Confirmed**
 
-**Record:** the Worker's logs keep outcome codes and token counts, never the questions,
-the searches or the answers. **Confirmed**
+**Record:** the Worker's logs keep outcome codes, token counts and a count of tool calls,
+never the questions, the searches or the answers. **Confirmed**
 
 **Needs installed:** nothing. **Settings that act without approval:** none. **Confirmed**
 
