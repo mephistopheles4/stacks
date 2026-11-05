@@ -196,18 +196,16 @@ reaches the code through `boot`, as the other page pieces do.
 
 ## S6. The drawer's code
 
-One result in S3 differs from #532's branch at e2a803e, with or without this spec. A click
-outside the panel also reaches the canvas, so with a book held, a click on empty space closes
-the drawer and puts the book back. S3 says the canvas ignores it.
+Both of S3's drawer results are built on #532's branch at e0bc3c9 (O3). This build keeps them.
 
-**The seam.** In `drawer.ts`, the document's capturing `pointerup` handler calls
-`event.preventDefault()` when it closes the drawer for an outside click. This is how it already
-marks Escape. `Picker.#handleUp` in `scene.ts` passes `event.defaultPrevented` through
-`onSelect`, and `boot.ts` hands it to `clicked`. Button clicks are a separate event, so the X
-and the Open button still act.
+**The click.** In `drawer.ts`, the document's capturing `pointerup` handler calls
+`event.preventDefault()` when it closes the drawer for an outside click, as it already marks
+Escape. `Picker.#handleUp` in `scene.ts` passes `event.defaultPrevented` as `onSelect`'s second
+argument. `boot.ts` then skips `select` when it is true and a book is in hand. **This build
+replaces that check:** `onSelect` calls `clicked(book, prevented)`, which holds the rule. Button
+clicks are a separate event, so the X and the Open button still act.
 
-A chat link to the book in hand is already built: `pickUpById` sends `announceHeld` and the
-drawer closes. The build keeps it. #532's build makes the click change (O3), and `clicked` reads the same event.
+**The link.** `pickUpById` sends `announceHeld` for the book in hand, and the drawer closes.
 
 ## S7. Tests
 
