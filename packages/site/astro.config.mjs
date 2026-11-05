@@ -15,7 +15,14 @@ export default defineConfig({
   // The debug pane's stylesheet, extracted from Tweakpane's JavaScript as
   // text and written where `debug-pane.ts` imports it with `?url`. Neither
   // package ships a `.css` file; see `scripts/lib/tuner-css-plugin.ts`.
-  vite: { plugins: [tunerCssPlugin()] },
+  //
+  // `server.proxy` is the dev server only: it sends the drawer's /api/chat to a
+  // local Worker (`wrangler dev` in packages/ask), the way the zone's route does
+  // in production. A build has no server, so it carries none of this.
+  vite: {
+    plugins: [tunerCssPlugin()],
+    server: { proxy: { '/api/chat': 'http://localhost:8787' } },
+  },
 
   // The shelf's outbound record, stated so it can stop being true by accident.
   //

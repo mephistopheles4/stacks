@@ -8,6 +8,21 @@
       "port": 4321
     },
     {
+      "name": "ask worker",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "exec",
+        "wrangler",
+        "dev",
+        "--config",
+        "packages/ask/wrangler.jsonc",
+        "--port",
+        "8787",
+        "--local"
+      ],
+      "port": 8787
+    },
+    {
       "name": "site (watch vault)",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["run", "dev:watch"],

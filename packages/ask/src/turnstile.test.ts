@@ -36,6 +36,18 @@ describe('verifyTurnstile (S5 step 3)', () => {
     expect(await verifyTurnstile(input, reply(body))).toBe(false);
   });
 
+  it('checks the verdict alone when its own origin is localhost, for the test secret', async () => {
+    const local = { ...input, siteOrigin: 'http://localhost:4321' };
+    const testAnswer = { success: true, hostname: 'example.com', action: '' };
+    expect(await verifyTurnstile(local, reply(testAnswer))).toBe(true);
+    expect(await verifyTurnstile(local, reply({ success: false }))).toBe(false);
+  });
+
+  it('never relaxes for a production origin, whatever the hostname looks like', async () => {
+    const testAnswer = { success: true, hostname: 'localhost', action: '' };
+    expect(await verifyTurnstile(input, reply(testAnswer))).toBe(false);
+  });
+
   it('refuses when the check cannot run', async () => {
     const boom = (async () => {
       throw new Error('network');

@@ -33,11 +33,13 @@ export async function verifyTurnstile(
       hostname?: unknown;
       action?: unknown;
     };
-    return (
-      result.success === true &&
-      result.hostname === new URL(input.siteOrigin).hostname &&
-      result.action === TURNSTILE_ACTION
-    );
+    if (result.success !== true) return false;
+    const host = new URL(input.siteOrigin).hostname;
+    // Cloudflare's published test secret answers with a made-up hostname and no
+    // action, so a Worker whose own origin is localhost (set in its config, never
+    // by a request) checks the verdict alone. Production's origin is not localhost.
+    if (host === 'localhost') return true;
+    return result.hostname === host && result.action === TURNSTILE_ACTION;
   } catch {
     return false;
   }

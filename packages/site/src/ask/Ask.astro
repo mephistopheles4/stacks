@@ -23,7 +23,7 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 </button>
 
 <section id="ask-panel" class="ask-panel" aria-label="Ask the library" data-site-key={siteKey} hidden>
-  <header class="ask-head">
+  <div class="ask-head">
     <h2>Ask the library</h2>
     <button id="ask-close" class="ask-icon" type="button">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
@@ -31,7 +31,7 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       </svg>
       <span class="ask-sr">Close</span>
     </button>
-  </header>
+  </div>
 
   <div id="ask-thread" class="ask-thread"></div>
 
@@ -260,6 +260,7 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     color: #a89684;
   }
   .ask-fine a {
+    margin-left: 0.25rem;
     color: #a89684;
     text-decoration: underline;
   }
