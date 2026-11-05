@@ -71,6 +71,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/.astro/**',
+      '**/.wrangler/**',
       'coverage/**',
       'artifacts/**',
       'reports/**',
