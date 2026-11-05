@@ -13,7 +13,7 @@ function reply(status: number, body: Reply): Response {
 }
 
 const refusal = (status: number, mode: 'error' | 'limited', answer: string): Response =>
-  reply(status, { mode, answer, books: [] });
+  reply(status, { mode, answer, books: [], followUps: [] });
 
 const COULDNT_CONFIRM = "Couldn't confirm this request. Reload the page and ask again.";
 

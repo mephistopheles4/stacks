@@ -18,7 +18,9 @@ describe('the rules (S6)', () => {
     );
     expect(RULES).toContain('Never invent an opinion or a reaction.');
     expect(RULES).toContain('at most 4 plain sentences');
-    expect(RULES.endsWith('with no markdown.')).toBe(true);
+    expect(RULES).toContain('FOLLOW-UPS:');
+    expect(RULES).toContain('at most 5 of the closest books');
+    expect(RULES.endsWith('write none.')).toBe(true);
   });
 });
 

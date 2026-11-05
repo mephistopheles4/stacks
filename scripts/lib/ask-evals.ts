@@ -21,6 +21,36 @@ const names = (answer: string, title: string): boolean =>
 const NOTHING_WRITTEN =
   /(?:haven't|have not|not) (?:written|yet)|nothing (?:written|in my notes)|rated|rating|\d(?:\/| out of )5/i;
 
+/** How many of the library's books an answer names. */
+export const namedCount = (answer: string, lib: readonly CatalogueBook[]): number =>
+  lib.filter((b) => names(answer, b.title)).length;
+
+const PRONOUN_START =
+  /^(?:it|its|that|this|those|these|they|them|he|she|his|her|there|and|but|so|then)\b/i;
+
+/**
+ * S9: every follow-up must stand alone, because questions are sent with no memory:
+ * a question that names a library book or a subject in full and does not open with
+ * a pronoun. No follow-ups passes (the model may write none).
+ */
+export function followUpsStandAlone(
+  followUps: readonly string[],
+  lib: readonly CatalogueBook[],
+): boolean {
+  const subjects = new Set(
+    lib
+      .flatMap((b) => (b.subjects ?? '').split(';').map((s) => lower(s.trim())))
+      .filter((s) => s.length >= 4),
+  );
+  return followUps.every(
+    (q) =>
+      q.endsWith('?') &&
+      q.length <= 120 &&
+      !PRONOUN_START.test(q.trim()) &&
+      (lib.some((b) => names(q, b.title)) || [...subjects].some((s) => lower(q).includes(s))),
+  );
+}
+
 export const CASES: readonly EvalCase[] = [
   {
     question: 'What kind of books have you read?',
@@ -41,7 +71,14 @@ export const CASES: readonly EvalCase[] = [
   },
   {
     question: 'What have you read about finance?',
-    passes: (a) => /the art of spending money|money unlocked/i.test(a),
+    passes: (a, lib) =>
+      /the art of spending money|money unlocked/i.test(a) && namedCount(a, lib) <= 5,
+  },
+  {
+    question: 'What have you read about leadership?',
+    passes: (a, lib) =>
+      lib.some((b) => /leadership/i.test(`${b.title} ${b.subjects ?? ''}`) && names(a, b.title)) &&
+      namedCount(a, lib) <= 5,
   },
   {
     question: 'Which book about AI should I read first?',

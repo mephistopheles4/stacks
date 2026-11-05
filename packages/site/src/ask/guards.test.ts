@@ -72,3 +72,12 @@ describe('an outside click closes the drawer and nothing else (S7, C9)', () => {
     );
   });
 });
+
+describe('follow-ups replace the quick questions, and they come back (S7)', () => {
+  it('shows follow-ups when there are some and the quick questions otherwise, as text', () => {
+    const drawer = code('drawer.ts');
+    expect(drawer).toContain('setQuick(result.followUps.length > 0 ? result.followUps : defaults)');
+    const set = /function setQuick[\s\S]*?\n {2}\}/.exec(drawer)?.[0] ?? '';
+    expect(set).toContain('button.textContent = text');
+  });
+});

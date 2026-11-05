@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogueBook } from '../../packages/ask/src/library.ts';
-import { CASES, looksLikeFixture, titlesIn } from './ask-evals.ts';
+import { CASES, followUpsStandAlone, looksLikeFixture, namedCount, titlesIn } from './ask-evals.ts';
 
 const book = (title: string, over: Partial<CatalogueBook> = {}): CatalogueBook => ({
   id: title.toLowerCase().replaceAll(' ', '-'),
@@ -18,8 +18,8 @@ const LIB = [
 const caseFor = (q: string) => CASES.find((c) => c.question.startsWith(q))!;
 
 describe('S9 cases', () => {
-  it('has the nine questions', () => {
-    expect(CASES).toHaveLength(9);
+  it('has the ten questions', () => {
+    expect(CASES).toHaveLength(10);
   });
 
   it('finance passes on either named book and fails on neither', () => {
@@ -77,5 +77,43 @@ describe('fixture detection', () => {
     expect(titles).toEqual(['The Salt Road Ledger']);
     expect(looksLikeFixture([book('the salt road ledger')], titles)).toBe(true);
     expect(looksLikeFixture(LIB, titles)).toBe(false);
+  });
+});
+
+describe('topic questions name few books (S9)', () => {
+  const lead = [
+    ...LIB,
+    book('Lead Well', { subjects: 'Business; Leadership' }),
+    ...Array.from({ length: 6 }, (_, i) => book(`Filler ${String(i)}`)),
+  ];
+
+  it('leadership needs a leadership book and no more than 5 named', () => {
+    const c = caseFor('What have you read about leadership');
+    expect(c.passes('I have read Lead Well.', lead)).toBe(true);
+    expect(c.passes('I have read Antifragile.', lead)).toBe(false);
+    const all = 'Lead Well, Filler 0, Filler 1, Filler 2, Filler 3, Filler 4, Filler 5';
+    expect(namedCount(all, lead)).toBe(7);
+    expect(c.passes(all, lead)).toBe(false);
+  });
+
+  it('finance also caps the list at 5', () => {
+    const c = caseFor('What have you read about finance');
+    const many = 'Money Unlocked, Filler 0, Filler 1, Filler 2, Filler 3, Filler 4';
+    expect(c.passes(many, lead)).toBe(false);
+  });
+});
+
+describe('follow-ups stand alone (S9)', () => {
+  it('accepts a question naming a book or a subject, and none at all', () => {
+    expect(followUpsStandAlone(['What did you think of Antifragile?'], LIB)).toBe(true);
+    expect(followUpsStandAlone(['What have you read about computers?'], LIB)).toBe(true);
+    expect(followUpsStandAlone([], LIB)).toBe(true);
+  });
+
+  it('refuses a pronoun opening, a missing question mark, or no library name', () => {
+    expect(followUpsStandAlone(['What about it?'], LIB)).toBe(false);
+    expect(followUpsStandAlone(['It was about Antifragile, was it good?'], LIB)).toBe(false);
+    expect(followUpsStandAlone(['Tell me about Antifragile.'], LIB)).toBe(false);
+    expect(followUpsStandAlone(['What is the weather?'], LIB)).toBe(false);
   });
 });

@@ -160,7 +160,7 @@ describe('the AI path (C1 in miniature, C3)', () => {
     const { status, body } = await run(r, ask());
     expect(status).toBe(200);
     expect(body.mode).toBe('ai');
-    expect(Object.keys(body).sort()).toEqual(['answer', 'books', 'mode']);
+    expect(Object.keys(body).sort()).toEqual(['answer', 'books', 'followUps', 'mode']);
     expect(body.books).toEqual([
       { id: 'co-int', title: 'Co-Intelligence', author: 'Ethan Mollick', hasThoughts: true },
     ]);
@@ -225,6 +225,7 @@ describe('the failure table (C4)', () => {
       mode: 'error',
       answer: "Couldn't confirm this request. Reload the page and ask again.",
       books: [],
+      followUps: [],
     });
   });
 
@@ -235,6 +236,7 @@ describe('the failure table (C4)', () => {
       mode: 'limited',
       answer: "That's the limit for now. Try again later.",
       books: [],
+      followUps: [],
     });
   });
 
@@ -482,5 +484,69 @@ describe('why AI did not answer, in the log (S11)', () => {
         throw new Error('plain failure');
       }),
     ).not.toContain('"code"');
+  });
+});
+
+describe('follow-ups (S6, C4, C15)', () => {
+  const NL = String.fromCharCode(10);
+  const reply = (text: string) => async () => ({ response: text });
+  const answered = (text: string) => run(rig({ ai: reply(text) }), ask());
+
+  it('splits the follow-ups off the answer, in the same one call', async () => {
+    const r = rig({
+      ai: reply(
+        [
+          'I rated Co-Intelligence 5.',
+          'FOLLOW-UPS:',
+          '- What did you think of Co-Intelligence?',
+        ].join(NL),
+      ),
+    });
+    const { body } = await run(r, ask());
+    expect(r.aiCalls).toHaveLength(1);
+    expect(body).toMatchObject({ mode: 'ai', answer: 'I rated Co-Intelligence 5.' });
+    expect((body as { followUps?: string[] }).followUps).toEqual([
+      'What did you think of Co-Intelligence?',
+    ]);
+  });
+
+  it.each([
+    ['no marker', 'Just an answer about Co-Intelligence.'],
+    ['a marker with none', ['An answer.', 'FOLLOW-UPS: none'].join(NL)],
+    [
+      'only malformed lines',
+      ['An answer.', 'FOLLOW-UPS:', '- see https://evil.example?', '- <b>x</b> what?'].join(NL),
+    ],
+  ])('still gives the answer, with no follow-ups, for %s', async (_n, text) => {
+    const { status, body } = await answered(text);
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ mode: 'ai' });
+    expect((body as { followUps?: string[] }).followUps).toEqual([]);
+    expect(body.answer).not.toContain('FOLLOW-UPS');
+  });
+
+  it('drops an oversized follow-up and keeps no more than 2', async () => {
+    const q = (n: number) => `- What did you think of Book ${String(n)}?`;
+    const big = `- ${'X'.repeat(200)}?`;
+    const { body } = await answered(['A.', 'FOLLOW-UPS:', big, q(1), q(2), q(3)].join(NL));
+    expect((body as { followUps?: string[] }).followUps).toEqual([
+      'What did you think of Book 1?',
+      'What did you think of Book 2?',
+    ]);
+  });
+
+  it('falls back to search when the reply was only a block', async () => {
+    const { body } = await answered(
+      ['FOLLOW-UPS:', '- What did you think of Co-Intelligence?'].join(NL),
+    );
+    expect(body.mode).toBe('search');
+    expect((body as { followUps?: string[] }).followUps).toEqual([]);
+  });
+
+  it('a search fallback and every refusal carry an empty follow-up list', async () => {
+    const search = await run(rig({ aiEnabled: 'false' }), ask('money'));
+    expect((search.body as { followUps?: string[] }).followUps).toEqual([]);
+    const refused = await run(rig({ turnstile: { success: false } }), ask());
+    expect((refused.body as { followUps?: string[] }).followUps).toEqual([]);
   });
 });

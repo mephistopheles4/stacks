@@ -5,6 +5,7 @@ import { MAX_SEARCH_BOOKS } from './limits.ts';
 import type { Outcome, OutcomeDetail } from './outcome.ts';
 import { buildMessages, type ThoughtsEntry } from './prompt.ts';
 import { search } from './search.ts';
+import { splitFollowUps } from './followups.ts';
 import { pickLikelyBooks } from './select.ts';
 
 export interface BookSummary {
@@ -19,6 +20,8 @@ export interface Reply {
   readonly mode: 'ai' | 'search' | 'limited' | 'error';
   readonly answer: string;
   readonly books: readonly BookSummary[];
+  /** At most 2 questions the model wrote for the visitor to ask next; empty unless mode is ai. */
+  readonly followUps: readonly string[];
 }
 
 export const SEARCH_FOUND = 'AI answers are unavailable right now. These books match your words.';
@@ -47,6 +50,7 @@ function searchReply(catalogue: readonly CatalogueBook[], question: string): Rep
     mode: 'search',
     answer: found.length > 0 ? SEARCH_FOUND : SEARCH_NONE,
     books: found.map(summary),
+    followUps: [],
   };
 }
 
@@ -76,11 +80,15 @@ export async function answerQuestion(
     const entries = await loadThoughts(source, picked);
     const { messages } = buildMessages(catalogue, entries, question);
     const result = await runModel(env, messages);
+    // The follow-ups are cut off the answer; an answer that was only a block is blank.
+    const split = splitFollowUps(result.text);
+    if (split.answer === '') throw new AiFailure('blank');
     return {
       reply: {
         mode: 'ai',
-        answer: result.text,
-        books: mentioned(catalogue, result.text).map(summary),
+        answer: split.answer,
+        books: mentioned(catalogue, split.answer).map(summary),
+        followUps: split.followUps,
       },
       outcome: 'ai',
       detail: {

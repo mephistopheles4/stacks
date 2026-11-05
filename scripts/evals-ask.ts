@@ -17,7 +17,7 @@ import { answerQuestion } from '../packages/ask/src/answer.ts';
 import type { Env } from '../packages/ask/src/env.ts';
 import { createLibrarySource } from '../packages/ask/src/library.ts';
 import { NOT_A_TEST_GATEWAY } from './lib/ask-deploy.ts';
-import { CASES, looksLikeFixture, titlesIn } from './lib/ask-evals.ts';
+import { CASES, followUpsStandAlone, looksLikeFixture, titlesIn } from './lib/ask-evals.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const MODEL = '@cf/openai/gpt-oss-20b';
@@ -122,7 +122,9 @@ for (const c of CASES) {
   for (let run = 1; run <= RUNS; run += 1) {
     total += 1;
     const answered = await answerQuestion(env, source, c.question);
-    const ok = answered.reply.mode === 'ai' && c.passes(answered.reply.answer, library);
+    const standAlone = followUpsStandAlone(answered.reply.followUps, library);
+    const ok =
+      answered.reply.mode === 'ai' && c.passes(answered.reply.answer, library) && standAlone;
     if (ok) passed += 1;
     tokensIn += answered.detail.tokensIn ?? 0;
     tokensOut += answered.detail.tokensOut ?? 0;
@@ -132,6 +134,8 @@ for (const c of CASES) {
     );
     // A failure, or a pass that needs a person to read it, shows its answer.
     if (!ok || c.readByHand === true) console.log(`      ${answered.reply.answer}`);
+    for (const f of answered.reply.followUps)
+      console.log(`      follow-up: ${f}${standAlone ? '' : '  (does not stand alone)'}`);
   }
 }
 console.log(

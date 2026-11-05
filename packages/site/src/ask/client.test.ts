@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { UNAVAILABLE, askLibrary, readReply } from './client.ts';
+import { UNAVAILABLE, askLibrary, readReply, unavailable } from './client.ts';
 
 const json = (body: unknown, status = 200): Response => Response.json(body, { status });
 const html = (status: number): Response =>
@@ -62,7 +62,7 @@ describe('askLibrary (C4: the drawer text for every row)', () => {
     ],
   ])('turns %s into the one unavailable message', async (_n, response) => {
     const result = await askLibrary('q', 't', via(response));
-    expect(result).toEqual({ mode: 'unavailable', answer: UNAVAILABLE, books: [] });
+    expect(result).toEqual({ mode: 'unavailable', answer: UNAVAILABLE, books: [], followUps: [] });
   });
 });
 
@@ -76,7 +76,7 @@ describe('readReply', () => {
       extra: '<script>',
     }));
     const result = readReply({ mode: 'ai', answer: 'x', books, secret: 'no', usage: 1 });
-    expect(Object.keys(result).sort()).toEqual(['answer', 'books', 'mode']);
+    expect(Object.keys(result).sort()).toEqual(['answer', 'books', 'followUps', 'mode']);
     expect(result.books).toHaveLength(6);
     expect(Object.keys(result.books[0]!).sort()).toEqual(['author', 'hasThoughts', 'id', 'title']);
   });
@@ -93,5 +93,46 @@ describe('readReply', () => {
   it('carries markup in an answer through unchanged, for textContent to show as text', () => {
     const result = readReply({ mode: 'ai', answer: '<b>bold</b> & <script>x</script>', books: [] });
     expect(result.answer).toBe('<b>bold</b> & <script>x</script>');
+  });
+});
+
+describe('follow-ups in a reply (S6, C4, C15)', () => {
+  const reply = (followUps: unknown) =>
+    readReply({ mode: 'ai', answer: 'x', books: [], followUps });
+
+  it('keeps plain short questions, at most 2', () => {
+    expect(
+      reply([
+        'What did you think of Nexus?',
+        'What did you think of Sapiens?',
+        'What did you think of Homo Deus?',
+      ]).followUps,
+    ).toEqual(['What did you think of Nexus?', 'What did you think of Sapiens?']);
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['not a list', 'What about Nexus?'],
+    ['non-strings', [1, null, {}]],
+  ])('gives none when it is %s, and keeps the answer', (_n, value) => {
+    const r = reply(value);
+    expect(r.followUps).toEqual([]);
+    expect(r.answer).toBe('x');
+  });
+
+  it('drops a URL, markup, a missing question mark and an oversized line, keeping the rest', () => {
+    const r = reply([
+      'See https://evil.example now?',
+      'What about <b>Nexus</b>?',
+      'Tell me about Nexus.',
+      `${'x'.repeat(130)}?`,
+      'What did you think of Nexus?',
+    ]);
+    expect(r.followUps).toEqual(['What did you think of Nexus?']);
+  });
+
+  it('is empty for every non-AI shape and for the unavailable message', () => {
+    expect(unavailable.followUps).toEqual([]);
+    expect(readReply({ mode: 'search', answer: 'x', books: [] }).followUps).toEqual([]);
   });
 });

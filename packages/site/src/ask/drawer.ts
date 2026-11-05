@@ -135,10 +135,24 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
     event.preventDefault();
     void ask(input.value);
   });
-  for (const chip of ui.quick.querySelectorAll('button')) {
-    chip.addEventListener('click', () => {
-      void ask(chip.textContent);
+  // One place above the box holds the three quick questions, and after an answer
+  // that brings them, the model's follow-ups instead. Every button in it sends its
+  // text as a new question, through the same limits as a typed one.
+  const defaults = [...ui.quick.querySelectorAll('button')].map((b) => b.textContent ?? '');
+  ui.quick.addEventListener('click', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('button') : null;
+    if (button !== null && ui.quick.contains(button)) void ask(button.textContent);
+  });
+
+  function setQuick(texts: readonly string[]): void {
+    const buttons = texts.map((text) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = text;
+      return button;
     });
+    ui.quick.replaceChildren(...buttons);
+    ui.quick.hidden = buttons.length === 0;
   }
 
   async function ask(raw: string | null): Promise<void> {
@@ -156,6 +170,9 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
     const result: AskResult = token === undefined ? unavailable : await askLibrary(question, token);
     waiting.remove();
     addAnswer(result);
+    // Follow-ups when the answer brought some; otherwise the quick questions again,
+    // after every search fallback, limit and error too.
+    setQuick(result.followUps.length > 0 ? result.followUps : defaults);
     ui.live.textContent = result.answer;
     busy = false;
     ui.send.disabled = false;

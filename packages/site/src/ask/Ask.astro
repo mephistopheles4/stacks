@@ -36,7 +36,7 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   <div id="ask-thread" class="ask-thread"></div>
 
   <div id="ask-quick" class="ask-quick">
-    <button type="button">What have you read about finance?</button>
+    <button type="button">What have you read about leadership?</button>
     <button type="button">What would you recommend?</button>
     <button type="button">What did you think of Co-Intelligence?</button>
   </div>
@@ -218,7 +218,7 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   .ask-quick[hidden] {
     display: none;
   }
-  .ask-quick button {
+  .ask-quick :global(button) {
     text-align: left;
     padding: 0.5rem 0.75rem;
     border: 1px solid #58402d;
@@ -229,8 +229,8 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     font-size: 0.875rem;
     cursor: pointer;
   }
-  .ask-quick button:hover,
-  .ask-quick button:focus-visible {
+  .ask-quick :global(button:hover),
+  .ask-quick :global(button:focus-visible) {
     border-color: #d3a35f;
   }
 
