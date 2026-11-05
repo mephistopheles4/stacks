@@ -428,6 +428,15 @@ afterwards. **These do not replace C7 or the eval run at step 9 on the deployed 
   book's status and not from a note: small, but it is a claim about the owner. The
   rating branch could not be tried, because the live build carries no ratings. About 66
   Neurons a question, input 2.9k tokens.
+- **Lower reasoning on `gpt-oss-20b`: no documented setting, nothing changed.**
+  Cloudflare's model page lists reasoning levels (low, medium by default, high) in its
+  model info, but its input schema (`sync-input.json`, read 2026-11-05) has no
+  `reasoning`, `reasoning_effort` or `effort` property, in either the `prompt` or the
+  `messages` variant, and no Responses-style `input`. The only token limit is
+  `max_tokens` (default 256). So `max_tokens` stays at 1,500 and the model call is
+  unchanged. Whether the binding silently honours an undocumented field was not tried:
+  a setting the schema does not name could be dropped or rejected without notice, and
+  nothing here should depend on it.
 - **Not covered:** the Turnstile token, `wrangler`-path evals, the Health Check, a full
   request's CPU with the model call, and anything on the deployed Worker.
 
