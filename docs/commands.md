@@ -411,6 +411,15 @@ forbids live calls. A failure prints its answer: the session that runs it record
 whether the check or the answer was wrong. The two "was it any good" cases print
 their answer even on a pass, because only a person can see an invented reason.
 
+**Running the Worker locally with AI.** `wrangler dev --local --config packages/ask/wrangler.jsonc`
+reads `packages/ask/.dev.vars` over the config's `vars`. The config names the real gateway,
+`stacks-ask`, which does not exist until the owner applies Terraform, so for a local run set
+`ASK_GATEWAY_ID` to a test gateway and `ASK_AI_ENABLED=true` in `.dev.vars`, or every question
+falls back to search within milliseconds. The AI binding always reaches Cloudflare, even
+under `--local`, so it spends real Neurons. The log says why a question fell back:
+`reason` is `budget` (with `code` 2045), `timeout`, `blank` or `error`, and `code` is the
+platform's four-digit code when its message starts with one (such as 3043); it is digits only.
+
 **`pnpm ask:status`** prints yesterday's outcome counts from Workers Logs. ⚠️ **Its
 query is unverified against the live API**; if refused, it names the dashboard route.
 
