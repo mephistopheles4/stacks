@@ -6,9 +6,21 @@ export class AiFailure extends Error {
     message: string,
     /** The gateway refused: the day's spend limit is used up (error 2045). */
     readonly spent = false,
+    /** The four-digit code the AI platform gave, when its message starts with one. */
+    readonly code?: number,
   ) {
     super(message);
   }
+}
+
+/**
+ * The code at the start of a Workers AI error message, such as `2045: Spend limit
+ * exceeded` or `3043: Internal server error`, and only that: digits, never any
+ * other text, so nothing a visitor typed can reach a log through it (C15).
+ */
+export function errorCode(message: string): number | undefined {
+  const found = /^\s*(?:\w*Error:\s*)?(\d{4}):/.exec(message)?.[1];
+  return found === undefined ? undefined : Number(found);
 }
 
 export interface AiAnswer {
@@ -58,7 +70,8 @@ export async function runModel(
   } catch (error) {
     if (error instanceof AiFailure) throw error;
     const message = error instanceof Error ? error.message : '';
-    throw new AiFailure('error', /\b2045\b/.test(message));
+    const code = errorCode(message);
+    throw new AiFailure('error', code === 2045 || /\b2045\b/.test(message), code);
   } finally {
     clearTimeout(timer);
   }

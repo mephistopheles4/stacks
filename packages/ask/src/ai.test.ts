@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AiFailure, cleanAnswer, runModel } from './ai.ts';
+import { AiFailure, cleanAnswer, errorCode, runModel } from './ai.ts';
 import type { Env } from './env.ts';
 
 function env(run: (model: string, input: unknown, options?: unknown) => Promise<unknown>): Env {
@@ -95,5 +95,28 @@ describe('runModel (C8)', () => {
 describe('cleanAnswer', () => {
   it('replaces non-breaking hyphens and removes asterisks', () => {
     expect(cleanAnswer(' **Co‑Intelligence** is *good* ')).toBe('Co-Intelligence is good');
+  });
+});
+
+describe('error codes reach the log as digits only (S11, C15)', () => {
+  it.each([
+    ['2045: Spend limit exceeded: rule x', 2045],
+    ['3043: Internal server error', 3043],
+    ['AiError: 2001: Please configure AI Gateway', 2001],
+    ['no code here', undefined],
+    ['the question said 3043: leak', undefined],
+  ])('reads %s', (message, code) => {
+    expect(errorCode(message)).toBe(code);
+  });
+
+  it('carries the code on the failure, and a spent budget keeps 2045', async () => {
+    const e = env(async () => {
+      throw new Error('2045: Spend limit exceeded');
+    });
+    await expect(runModel(e, msgs)).rejects.toMatchObject({ spent: true, code: 2045 });
+    const f = env(async () => {
+      throw new Error('3043: Internal server error');
+    });
+    await expect(runModel(f, msgs)).rejects.toMatchObject({ spent: false, code: 3043 });
   });
 });

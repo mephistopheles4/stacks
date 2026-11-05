@@ -449,6 +449,38 @@ describe('outcome codes', () => {
     expect(lines.join('\n')).toContain('"refused-secret"');
     expect(lines.join('\n')).toContain('"refused-address"');
     expect(lines.join('\n')).toContain('"reason":"budget"');
-    expect(lines.join('\n')).toContain('"reason":"failed"');
+    expect(lines.join('\n')).toContain('"reason":"error"');
+  });
+});
+
+describe('why AI did not answer, in the log (S11)', () => {
+  const logged = async (ai: () => Promise<unknown>): Promise<string> => {
+    const lines: string[] = [];
+    vi.spyOn(console, 'log').mockImplementation((line: unknown) => void lines.push(String(line)));
+    await run(rig({ ai }), ask(CANARY_Q));
+    return lines.join('\n');
+  };
+
+  it('a spent budget logs reason budget with 2045, a fault logs its own code, and neither logs the question', async () => {
+    const spent = await logged(async () => {
+      throw new Error('2045: Spend limit exceeded ' + CANARY_Q);
+    });
+    expect(spent).toContain('"reason":"budget"');
+    expect(spent).toContain('"code":2045');
+    const fault = await logged(async () => {
+      throw new Error('3043: Internal server error');
+    });
+    expect(fault).toContain('"reason":"error"');
+    expect(fault).toContain('"code":3043');
+    expect(spent + fault).not.toContain(CANARY_Q);
+  });
+
+  it('a blank answer and a timeout log their own reasons with no code', async () => {
+    expect(await logged(async () => ({ response: ' ' }))).toContain('"reason":"blank"');
+    expect(
+      await logged(async () => {
+        throw new Error('plain failure');
+      }),
+    ).not.toContain('"code"');
   });
 });

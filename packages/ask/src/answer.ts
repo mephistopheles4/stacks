@@ -97,11 +97,21 @@ export async function answerQuestion(
       outcome: 'search-ai-failed',
       detail: {
         ms: clock() - started,
-        reason: error instanceof AiFailure && error.spent ? 'budget' : 'failed',
+        ...failureDetail(error),
       },
       ai: error instanceof AiFailure && error.spent ? 'spent' : 'failed',
     };
   }
+}
+
+/** Why AI did not answer, as fixed words and a code: never text from the error. */
+function failureDetail(error: unknown): Pick<OutcomeDetail, 'reason' | 'code'> {
+  if (!(error instanceof AiFailure)) return { reason: 'error' };
+  const code = error.code === undefined ? {} : { code: error.code };
+  if (error.spent) return { reason: 'budget', ...code };
+  if (error.message === 'timeout') return { reason: 'timeout' };
+  if (error.message === 'blank') return { reason: 'blank' };
+  return { reason: 'error', ...code };
 }
 
 /** A note that cannot be read is left out; the rules still say the book has Thoughts. */
