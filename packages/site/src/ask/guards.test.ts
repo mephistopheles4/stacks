@@ -17,7 +17,7 @@ describe('the drawer renders text, never markup (C15)', () => {
     '%s sets no HTML',
     (name) => {
       expect(code(name)).not.toMatch(
-        /innerHTML|outerHTML|insertAdjacentHTML|document\.write|set:html/,
+        /innerHTML|outerHTML|insertAdjacentHTML|document\.write|set:html|createContextualFragment|DOMParser|\.parseFromString|srcdoc/,
       );
     },
   );
@@ -89,6 +89,8 @@ describe('the conversation lives in a page variable and is sent with each questi
 
   it.each(sources)('%s touches no storage, cookie or history API', (_name, source) => {
     expect(source).not.toMatch(/localStorage|sessionStorage|indexedDB|document\.cookie|caches\./);
+    // Memory reaches no log call either (C21): nothing in the drawer's code writes to the console.
+    expect(source).not.toMatch(/console\./);
     expect(source).not.toMatch(/history\.(pushState|replaceState)|location\.(hash|search)\s*=/);
   });
 
@@ -211,5 +213,14 @@ describe('the privacy line has its own page, and the drawer opens it in a new ta
     }
     const layout = readFileSync('packages/site/src/components/NoticePage.astro', 'utf8');
     expect(layout).toMatch(/name="robots" content="noindex, nofollow"/);
+  });
+});
+
+describe('the shelf seam the drawer relies on (C9, integrity F7)', () => {
+  const pickup = readFileSync('packages/site/src/shelf/pickup.ts', 'utf8');
+
+  it('Escape yields to a keydown the drawer already took, and a held book is announced when picked up by id', () => {
+    expect(pickup).toContain('if (event.defaultPrevented) return;');
+    expect(pickup).toContain('announceHeld');
   });
 });

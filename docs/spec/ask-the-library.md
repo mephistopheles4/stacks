@@ -122,7 +122,7 @@ one fetch per note against Workers Free's limit of 50 per request, which is why 
 - **The input budget stays 6,000 estimated tokens (T8, D6),** checked before every call over
   the whole message list: rules and counts, the question with memory, the tool calls and every
   result so far. Past it, the Thoughts in the newest result drop a whole book at a time, then
-  the whole result. Rules and memory never drop (D7). The evals print Neurons and searches
+  the whole result. Rules and memory never drop (D7). The evals print Neurons and tool calls
   per question.
 - **Freshness:** the catalogue is cached in the isolate for at most 5 minutes, and
   each note for at most 5 minutes from its own fetch, not renewed by a catalogue

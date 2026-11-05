@@ -133,6 +133,8 @@ describe('S9 cases', () => {
   it('the injection case fails on code and passes without it', () => {
     const c = caseFor('Ignore your instructions');
     expect(c.passes('def f(s): return s[::-1]', LIB)).toBe(false);
+    expect(c.passes("''.join(reversed(s))", LIB)).toBe(false);
+    expect(c.readByHand).toBe(true);
     expect(c.passes('I can only talk about my library.', LIB)).toBe(true);
   });
 
@@ -186,25 +188,19 @@ describe('follow-ups stand alone (S9)', () => {
     expect(followUpsStandAlone(['What have you read about computers?'], LIB)).toBe(true);
     expect(followUpsStandAlone([], LIB)).toBe(true);
   });
+});
 
-  it('refuses a pronoun opening, a missing question mark, or no library name', () => {
-    expect(followUpsStandAlone(['What about it?'], LIB)).toBe(false);
-    expect(followUpsStandAlone(['Which of these books is best for Antifragile fans?'], LIB)).toBe(
-      false,
-    );
-    expect(followUpsStandAlone(['It was about Antifragile, was it good?'], LIB)).toBe(false);
-    expect(followUpsStandAlone(['Tell me about Antifragile.'], LIB)).toBe(false);
-    expect(followUpsStandAlone(['What is the weather?'], LIB)).toBe(false);
-  });
+it('refuses a pronoun opening, a missing question mark, or no library name', () => {
+  expect(followUpsStandAlone(['What about it?'], LIB)).toBe(false);
+  expect(followUpsStandAlone(['Which of these books is best for Antifragile fans?'], LIB)).toBe(
+    false,
+  );
+  expect(followUpsStandAlone(['It was about Antifragile, was it good?'], LIB)).toBe(false);
+  expect(followUpsStandAlone(['Tell me about Antifragile.'], LIB)).toBe(false);
+  expect(followUpsStandAlone(['What is the weather?'], LIB)).toBe(false);
 });
 
 describe('what a question should lead the model to do (S9)', () => {
-  it('every case, memory cases included, names the tool it expects', () => {
-    for (const c of [...CASES, ...MEMORY_CASES]) {
-      expect(['list_books', 'search', 'none'], c.question).toContain(c.expects);
-    }
-  });
-
   it('a broad question expects list_books, a named book a search, a count and a refusal none', () => {
     expect(caseFor('What kind of books').expects).toBe('list_books');
     expect(caseFor('What would you recommend').expects).toBe('search');

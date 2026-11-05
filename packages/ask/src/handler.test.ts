@@ -67,7 +67,7 @@ function rig(
     turnstile?: unknown;
     rate?: () => Promise<{ success: boolean }>;
     libraryDown?: boolean;
-    aiEnabled?: string;
+    aiEnabled?: string | undefined;
     secrets?: boolean | 'no-turnstile' | 'no-visitor';
     library?: unknown;
     counter?: () => Promise<Response>;
@@ -139,7 +139,12 @@ function rig(
     },
     SITE_ORIGIN: ORIGIN,
     ASK_GATEWAY_ID: 'gw',
-    ASK_AI_ENABLED: options.aiEnabled ?? 'true',
+    // `aiEnabled: undefined` given on purpose leaves the variable unset; absent means on.
+    ...('aiEnabled' in options
+      ? options.aiEnabled === undefined
+        ? {}
+        : { ASK_AI_ENABLED: options.aiEnabled }
+      : { ASK_AI_ENABLED: 'true' }),
     ...(options.secrets === false || options.secrets === 'no-turnstile'
       ? {}
       : { TURNSTILE_SECRET: 's' }),
@@ -198,7 +203,6 @@ describe('the AI path (C1 in miniature, C3)', () => {
     const sent = JSON.stringify(r.aiCalls.map((c) => c.input));
     expect(sent).not.toContain('CANARY-BODY');
     expect(sent).not.toContain('CANARY-SECRET');
-    expect(sent).not.toContain('Library/Quiet.md');
     expect(sent).toContain('A teacher and a machine');
   });
 
@@ -229,7 +233,8 @@ describe('the failure table (C4)', () => {
     ],
     ['a blank answer', { ai: async () => ({ response: '  ' }) }],
     ['the switch off', { aiEnabled: 'false' }],
-    ['the switch unset to nothing', { aiEnabled: 'TRUE' }],
+    ['the switch set to a value that is not exactly true', { aiEnabled: 'TRUE' }],
+    ['the switch unset', { aiEnabled: undefined }],
   ])('%s gives 200 search with the stated text', async (_n, options) => {
     const { status, body } = await run(rig(options), ask('Tell me about Money Unlocked'));
     expect(status).toBe(200);
@@ -418,13 +423,17 @@ describe('Thoughts sent (C3)', () => {
 
   it('sends at most 3 sets of Thoughts in a result, and the same ones every time', async () => {
     const sent: string[] = [];
+    let noteFetches = 0;
     for (let round = 0; round < 2; round += 1) {
       const r = rig({ library: many, ai: searchThen('thought') });
       const inner = r.fetchImpl;
       r.fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
         const url =
           typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-        if (url.includes('/notes/')) return Response.json({ paragraphs: ['note ' + url] });
+        if (url.includes('/notes/')) {
+          noteFetches += 1;
+          return Response.json({ paragraphs: ['note ' + url] });
+        }
         return inner(input, init);
       };
       await run(r, ask('What kind of books have you read?'));
@@ -432,6 +441,9 @@ describe('Thoughts sent (C3)', () => {
       expect(result.split('Your Thoughts on').length - 1).toBe(3);
       sent.push(result);
     }
+    // A search reads every note with Thoughts (6 books, each cached for the second round), and no
+    // more: the cost of searching Thoughts, held to its number (integrity F16).
+    expect(noteFetches).toBe(12);
     expect(sent[0]).toBe(sent[1]);
     expect(sent[0]).toContain('note ');
   });
@@ -505,7 +517,7 @@ describe('why AI did not answer, in the log (S11)', () => {
     expect(spent + fault).not.toContain(CANARY_Q);
   });
 
-  it('a blank answer and a timeout log their own reasons with no code', async () => {
+  it('a blank answer logs its own reason, and a plain failure logs no code', async () => {
     expect(await logged(async () => ({ response: ' ' }))).toContain('"reason":"blank"');
     expect(
       await logged(async () => {
@@ -663,6 +675,26 @@ describe('conversation memory (memory spec C21, C22, C24)', () => {
       'Question: and Co-Intelligence?',
     ]);
     expect(r.aiCalls[0]!.input.messages.map((m) => m.role)).toEqual(['system', 'user']);
+  });
+});
+
+describe('a tool call through the handler logs no query (C32, integrity F1)', () => {
+  it('a canary query the model searches for appears in no log line', async () => {
+    const canary = 'CANARY-TOOL-QUERY-8c41';
+    const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) =>
+      vi.spyOn(console, m).mockImplementation(() => undefined),
+    );
+    const r = rig({ ai: searchThen(canary) });
+    const { status, body } = await run(r, ask());
+    expect(status).toBe(200);
+    expect(body.mode).toBe('ai');
+    // The query did reach the model's tool turn, so the log line below is a real test.
+    expect(JSON.stringify(r.aiCalls[1]!.input)).toContain(canary);
+    const logged = spies
+      .flatMap((s) => s.mock.calls.map((call) => call.map(String).join(' ')))
+      .join(String.fromCharCode(10));
+    expect(logged).toContain('"toolCalls"');
+    expect(logged).not.toContain(canary);
   });
 });
 

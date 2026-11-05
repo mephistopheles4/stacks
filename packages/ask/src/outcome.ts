@@ -25,7 +25,7 @@ export interface OutcomeDetail {
   readonly code?: number;
   readonly ms?: number;
   /** Tool calls the model made: a count, never a query (T13, C32). */
-  readonly searches?: number;
+  readonly toolCalls?: number;
   readonly tokensIn?: number;
   readonly tokensOut?: number;
 }

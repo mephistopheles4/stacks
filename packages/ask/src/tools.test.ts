@@ -141,22 +141,30 @@ describe('search_library (T5, T6)', () => {
     expect(out.content.startsWith(MISS)).toBe(true);
   });
 
-  it('gives Thoughts for at most 3 books and at most 1,500 estimated tokens', async () => {
+  /** Six books on one topic, each with a note of `chars` characters. */
+  const topicSession = (chars: number): ToolSession => {
     const many = Array.from({ length: 6 }, (_, i) =>
       b(`t${String(i)}`, `Topic ${String(i)}`, { thoughts: true, subjects: 'topic' }),
     );
-    const long = { paragraphs: 'w '.repeat(1000) };
-    const notes = Object.fromEntries(many.map((x) => [x.id, [long.paragraphs]]));
-    const manySource: LibrarySource = {
-      catalogue: async () => many,
-      thoughts: async (book: CatalogueBook) => notes[book.id],
-    };
-    const s = session(manySource, many);
-    const out = await runTool(search({ query: 'topic' }), s, ROOM);
-    const blocks = out.content.split('Your Thoughts on').length - 1;
-    expect(blocks).toBeLessThanOrEqual(3);
-    const thoughts = out.content.slice(out.content.indexOf('Your Thoughts on'));
-    expect(estimateTokens(thoughts)).toBeLessThanOrEqual(1_500 + 40);
+    const note = ['w'.repeat(chars)];
+    const topicSource: LibrarySource = { catalogue: async () => many, thoughts: async () => note };
+    return session(topicSource, many);
+  };
+  const blocksIn = (content: string): number => content.split('Your Thoughts on').length - 1;
+
+  it('gives Thoughts for at most 3 books, though more would fit the token cap', async () => {
+    // 900 characters is about 300 estimated tokens: four would fit 1,500, so only the book cap stops it.
+    const out = await runTool(search({ query: 'topic' }), topicSession(900), ROOM);
+    expect(blocksIn(out.content)).toBe(3);
+  });
+
+  it('stops at 1,500 estimated tokens of Thoughts, though the book cap would allow a third', async () => {
+    // About 600 estimated tokens a block: two fit 1,500, three would fit only a cap of 1,800 or more.
+    const out = await runTool(search({ query: 'topic' }), topicSession(1_770), ROOM);
+    expect(blocksIn(out.content)).toBe(2);
+    expect(
+      estimateTokens(out.content.slice(out.content.indexOf('Your Thoughts on'))),
+    ).toBeLessThanOrEqual(1_500 + 40);
   });
 
   it('returns no book a first search already returned, and says so when none are left (T6)', async () => {

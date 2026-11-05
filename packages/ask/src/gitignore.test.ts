@@ -25,6 +25,8 @@ describe('C17: the Worker and Terraform leave no tracked secret', () => {
   });
 
   it('a committed brand file is not swept in', () => {
-    expect(() => execFileSync('git', ['check-ignore', '-q', '--', 'infra/main.tf'])).toThrow();
+    expect(() =>
+      execFileSync('git', ['check-ignore', '-q', '--no-index', '--', 'infra/main.tf']),
+    ).toThrow();
   });
 });

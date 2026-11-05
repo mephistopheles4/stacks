@@ -108,7 +108,7 @@ export type TraceEvent =
 
 /** What a question cost, kept as it goes so a failed question still reports it (T13). */
 interface Stats {
-  searches: number;
+  toolCalls: number;
   /** The books this question's searches matched (not an offer of top-rated books, not `list_books`). */
   matched: ReadonlySet<string>;
   tokensIn: number | undefined;
@@ -118,8 +118,10 @@ interface Stats {
 const add = (sum: number | undefined, next: number | undefined): number | undefined =>
   next === undefined ? sum : (sum ?? 0) + next;
 
-const statsDetail = (stats: Stats): Pick<OutcomeDetail, 'searches' | 'tokensIn' | 'tokensOut'> => ({
-  searches: stats.searches,
+const statsDetail = (
+  stats: Stats,
+): Pick<OutcomeDetail, 'toolCalls' | 'tokensIn' | 'tokensOut'> => ({
+  toolCalls: stats.toolCalls,
   ...(stats.tokensIn !== undefined && { tokensIn: stats.tokensIn }),
   ...(stats.tokensOut !== undefined && { tokensOut: stats.tokensOut }),
 });
@@ -184,7 +186,7 @@ async function converse(
   for (;;) {
     const left = AI_DEADLINE_MS - elapsed();
     if (left <= 0) throw new AiFailure('timeout');
-    const offered = stats.searches < MAX_TOOL_CALLS;
+    const offered = stats.toolCalls < MAX_TOOL_CALLS;
     const out = await runModel(env, offered ? messages : withLastCallLine(messages), {
       timeoutMs: left,
       ...(offered && { tools: TOOLS }),
@@ -204,7 +206,7 @@ async function converse(
     // Asking for a tool after the tools were taken away is not an answer.
     if (!offered) throw new AiFailure('blank');
 
-    const calls = out.toolCalls.slice(0, MAX_TOOL_CALLS - stats.searches);
+    const calls = out.toolCalls.slice(0, MAX_TOOL_CALLS - stats.toolCalls);
     const results: { id: string; name: string; content: string }[] = [];
     const wires: WireCall[] = [];
     let spent = messageTokens(messages) + FRAMING_TOKENS * calls.length;
@@ -213,7 +215,7 @@ async function converse(
       const room = MAX_INPUT_TOKENS - spent - estimateTokens(LAST_CALL_LINE);
       // The id is the Worker's own (behaviour E2): a model's id is text it wrote, and it would go
       // back to it, uncounted by the budget.
-      const id = `call_${String(stats.searches + 1)}`;
+      const id = `call_${String(stats.toolCalls + 1)}`;
       const run = await runTool({ ...call, id }, session, room);
       observe?.({
         kind: 'tool',
@@ -229,7 +231,7 @@ async function converse(
       // The wire's name, which is one of ours: never the raw name the model sent.
       results.push({ id, name: run.wire.function.name, content: run.content });
       spent += estimateTokens(run.content);
-      stats.searches += 1;
+      stats.toolCalls += 1;
     }
     // Empty content on a tool turn: the text beside a tool call is never used, and counting it
     // would be guessing (behaviour E2).
@@ -264,7 +266,7 @@ export async function answerQuestion(
   }
   const started = clock();
   const stats: Stats = {
-    searches: 0,
+    toolCalls: 0,
     matched: new Set(),
     tokensIn: undefined,
     tokensOut: undefined,

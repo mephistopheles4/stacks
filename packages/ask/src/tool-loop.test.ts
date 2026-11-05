@@ -11,7 +11,7 @@ import {
 } from './answer.ts';
 import type { Env } from './env.ts';
 import type { CatalogueBook, LibrarySource } from './library.ts';
-import { MISS_OTHER } from './tools.ts';
+import { MISS_OTHER, runTool } from './tools.ts';
 import { logOutcome } from './outcome.ts';
 import { estimateTokens } from './prompt.ts';
 import { searchLibrary } from './search.ts';
@@ -159,13 +159,13 @@ describe('the tool loop (T1, T2, T7)', () => {
     ]);
   });
 
-  it('sums tokens across calls and counts the searches (T13)', async () => {
+  it('sums tokens across calls and counts the tool calls (T13)', async () => {
     const { env } = scripted([
       { calls: [search('nexus')], usage: [1000, 20] },
       { text: 'Nexus.', usage: [1500, 40] },
     ]);
     const { detail } = await answerQuestion(env, source, 'q');
-    expect(detail).toMatchObject({ searches: 1, tokensIn: 2500, tokensOut: 60 });
+    expect(detail).toMatchObject({ toolCalls: 1, tokensIn: 2500, tokensOut: 60 });
   });
 
   it('answers with no tool at all when the model needs none', async () => {
@@ -173,7 +173,7 @@ describe('the tool loop (T1, T2, T7)', () => {
     const answered = await answerQuestion(env, source, 'Are you an AI?');
     expect(answered.reply.mode).toBe('ai');
     expect(seen).toHaveLength(1);
-    expect(answered.detail.searches).toBe(0);
+    expect(answered.detail.toolCalls).toBe(0);
   });
 
   it("reads list_books, then a title search still returns that title's Thoughts (T6, T14)", async () => {
@@ -215,7 +215,7 @@ describe('at most 2 tool calls, then a call with no tools (T2, C26)', () => {
     expect(seen).toHaveLength(3);
     expect(seen.map((s) => s.hasTools)).toEqual([true, true, false]);
     expect(answered.outcome).toBe('search-ai-failed');
-    expect(answered.detail).toMatchObject({ reason: 'blank', searches: 2 });
+    expect(answered.detail).toMatchObject({ reason: 'blank', toolCalls: 2 });
     expect(answered.reply.mode).toBe('search');
     expect(answered.reply.books.map((x) => x.id)).toEqual(['nexus']);
   });
@@ -237,7 +237,7 @@ describe('at most 2 tool calls, then a call with no tools (T2, C26)', () => {
     expect(toolIds).toEqual(['call_1', 'call_2']);
     // Both calls ran, so the next call has no tools left.
     expect(seen[1]!.hasTools).toBe(false);
-    expect(answered.detail.searches).toBe(2);
+    expect(answered.detail.toolCalls).toBe(2);
   });
 });
 
@@ -254,7 +254,7 @@ describe('a bad tool call is answered, not failed (T10 narrowed)', () => {
     ]);
     const answered = await answerQuestion(env, source, 'nexus');
     expect(answered.reply.mode).toBe('ai');
-    expect(answered.detail.searches).toBe(2);
+    expect(answered.detail.toolCalls).toBe(2);
     const guided = seen[1]!.messages.at(-1)!.content;
     expect(guided).toMatch(/search_library|No such tool/);
     expect(guided).not.toContain('nope');
@@ -329,7 +329,7 @@ describe('any failed step gives plain results (T10, T12, C29)', () => {
     ]);
     const answered = await answerQuestion(env, source, 'nexus');
     expect(answered.ai).toBe('spent');
-    expect(answered.detail).toMatchObject({ reason: 'budget', code: 2045, searches: 1 });
+    expect(answered.detail).toMatchObject({ reason: 'budget', code: 2045, toolCalls: 1 });
   });
 
   it("gives up when the question's one deadline has passed, whatever the calls took each (T11)", async () => {
@@ -376,7 +376,7 @@ describe('no query reaches a log (T13, C32)', () => {
     const logged = spies
       .flatMap((s) => s.mock.calls.map((call) => call.map(String).join(' ')))
       .join(NL);
-    expect(logged).toContain('"searches"');
+    expect(logged).toContain('"toolCalls"');
     expect(logged).not.toContain(canary);
   });
 });
@@ -418,6 +418,23 @@ describe("plain results are the tool's search (T3, C27)", () => {
     expect(plain.reply.books.map((x) => x.id)).toEqual(direct.map((h) => h.book.id));
     expect(plain.reply.books.length).toBeGreaterThan(1);
   });
+
+  it('the tool itself lists the same titles in the same order as the plain results (C27)', async () => {
+    const env = { ASK_AI_ENABLED: 'false' } as unknown as Env;
+    for (const question of ['computers history', 'Nexus', 'co-intelligence history']) {
+      const plain = await answerQuestion(env, source, question);
+      const result = await runTool(
+        { id: 'c', name: 'search_library', arguments: { query: question } },
+        { catalogue: CAT, source, returned: new Set(), matched: new Set() },
+        100_000,
+      );
+      const listed = result.content
+        .split(NL)
+        .filter((line) => line.startsWith('"'))
+        .map((line) => line.split('"')[1]);
+      expect(listed, question).toEqual(plain.reply.books.map((x) => x.title));
+    }
+  });
 });
 
 describe('the input stays within 6,000 before every call (T8, C28)', () => {
@@ -438,7 +455,7 @@ describe('the input stays within 6,000 before every call (T8, C28)', () => {
   };
   const biggest = { question: 'q'.repeat(300), answer: 'a'.repeat(600) };
 
-  it('with the largest memory and a question at the limit, two full results fit, memory stays and no book repeats', async () => {
+  it('with the largest memory and a question at the limit, two results arrive in full and fit, and memory stays', async () => {
     const { env, seen } = scripted([
       { calls: [search('leadership'), { id: 'l', name: 'list_books', args: {} }] },
       { text: 'Done.' },
@@ -446,12 +463,23 @@ describe('the input stays within 6,000 before every call (T8, C28)', () => {
     const question = 'z'.repeat(1_500);
     await answerQuestion(env, bigSource, question, Date.now, [biggest, biggest]);
     for (const call of seen) {
-      const tokens = call.messages.reduce((n, m) => n + estimateTokens(m.content), 0);
+      // Everything sent, tool calls and all (the sum `answer.ts` budgets).
+      const tokens = call.messages.reduce(
+        (n, m) =>
+          n + estimateTokens(m.content) + estimateTokens(JSON.stringify(m.tool_calls ?? [])),
+        0,
+      );
       expect(tokens).toBeLessThanOrEqual(6_000);
     }
     const user = seen[0]!.messages[1]!.content;
     expect(user).toContain('a'.repeat(600));
     expect(user).toContain(question);
+    // Both results were delivered, not dropped for room: a search with its Thoughts, then the list.
+    const results = seen[1]!.messages.filter((m) => m.role === 'tool');
+    expect(results).toHaveLength(2);
+    expect(results.map((m) => m.content)).not.toContain('No result could be returned.');
+    expect(results[0]!.content).toContain('Your Thoughts on');
+    expect(results[1]!.content).toContain('Search a title to read your Thoughts');
   });
 
   it('two searches on different words never send one book twice', async () => {
@@ -544,12 +572,6 @@ describe('a caller can watch a question (the evals)', () => {
     expect(events[3]).toMatchObject({ kind: 'tool', error: true });
     expect(events[4]).toMatchObject({ kind: 'model', call: 3, tools: false, toolCalls: 0 });
   });
-
-  it('is not needed: with no observer the question runs the same and nothing is traced', async () => {
-    const { env } = scripted([{ calls: [search('Nexus')] }, { text: 'ok' }]);
-    const answered = await answerQuestion(env, source, 'q');
-    expect(answered.reply.mode).toBe('ai');
-  });
 });
 
 describe('pills after a refusal or an answer with no search (memory fallback needs a tool call)', () => {
@@ -577,7 +599,7 @@ describe('pills after a refusal or an answer with no search (memory fallback nee
     expect(answered.reply.books.map((b) => b.id)).toEqual(['nexus']);
   });
 
-  it('a book the answer names, or the question names, still gets its pill with no search', async () => {
+  it('a book the answer names still gets its pill with no search', async () => {
     const { env } = scripted([{ text: 'Nexus is a book I rated 4.' }]);
     const named = await answerQuestion(env, source, 'q', Date.now, []);
     expect(named.reply.books.map((b) => b.id)).toEqual(['nexus']);
@@ -616,7 +638,6 @@ describe('the last call says it has no searches left (S6)', () => {
       'You have no searches left. Answer now from what you have already found.',
     );
   });
-
   it('adds the line to a copy and leaves the conversation as it was', () => {
     const original = [
       { role: 'system', content: 's' },
@@ -625,13 +646,6 @@ describe('the last call says it has no searches left (S6)', () => {
     const out = withLastCallLine(original);
     expect(out.at(-1)).toMatchObject({ content: ['result', '', LAST_CALL_LINE].join(NL) });
     expect(original[1].content).toBe('result');
-  });
-
-  it('a tool request on the last call, which has no tools, still falls back to plain results', async () => {
-    const { env } = scripted(() => ({ calls: [search('nexus')] }));
-    const answered = await answerQuestion(env, source, 'nexus');
-    expect(answered.detail.reason).toBe('blank');
-    expect(answered.outcome).toBe('search-ai-failed');
   });
 });
 

@@ -100,18 +100,12 @@ describe('searchLibrary (T3, T4, C27)', () => {
     );
     expect(hits).toHaveLength(6);
   });
-
   it('searches a book by its catalogue fields only when its note cannot be read', async () => {
     const s = source({ ai: 'fail', gods: 'fail' });
     expect(await ids('machine', undefined, s)).toEqual([]);
     expect(await ids('mollick', undefined, s)).toEqual(['ai']);
     const hits = await searchLibrary(CAT, s, 'mollick');
     expect(hits[0]!.thoughts).toBeUndefined();
-  });
-
-  it('finds the same books in the same order each time (C27)', async () => {
-    const first = await ids('money computers');
-    expect(await ids('money computers')).toEqual(first);
   });
 });
 
@@ -271,5 +265,17 @@ describe('"favourite" and "favorite" are one word to the search, and nothing els
     expect(await find('favourites')).toEqual([]);
     expect(await find('favorites')).toEqual([]);
     expect(await find('colour')).toEqual([]);
+  });
+});
+
+describe('what the words say, and nothing more (S6)', () => {
+  it('a finance search finds no book filed only under Business & Economics', async () => {
+    const cat = [b('econ', 'Money Unlocked', { subjects: 'Business & Economics' })];
+    const hits = await searchLibrary(
+      cat,
+      { catalogue: async () => cat, thoughts: async () => undefined },
+      'finance',
+    );
+    expect(hits).toEqual([]);
   });
 });

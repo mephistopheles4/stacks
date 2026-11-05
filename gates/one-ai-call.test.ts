@@ -26,8 +26,8 @@ const DECLARATION = 'packages/ask/src/env.ts';
 
 /** A call to the binding's `run`, however it is spaced or optionally chained. */
 const RUN = /\bAI\s*(?:\?\.|\.)\s*run\b/g;
-/** The binding named at all: `env.AI`, `{ AI }`, `['AI']`. */
-const BINDING = /\.\s*AI\b|\bAI\s*[},]|\[\s*['"`]AI['"`]\s*\]/;
+/** The binding named at all: `env.AI`, `{ AI }`, `{ AI: alias }`, `['AI']`. */
+const BINDING = /\.\s*AI\b|\bAI\s*[},:]|\[\s*['"`]AI['"`]\s*\]/;
 
 /** Comments out: a doc comment may say `AI.run` without calling it. */
 function code(source: string): string {
@@ -69,6 +69,17 @@ export function callFaults(raw: string): string[] {
   return faults;
 }
 
+/**
+ * In the home file the binding is named exactly once, by the call: a local alias next to it
+ * (`const m = env.AI`) would let a second call through while the count of calls stays 1.
+ */
+export function aliasFaults(raw: string): string[] {
+  const names = [...code(raw).matchAll(new RegExp(BINDING.source, 'g'))].length;
+  return names === 1
+    ? []
+    : [`${String(names)} mentions of the AI binding in ai.ts, expected exactly 1`];
+}
+
 export function bindingFaults(files: ReadonlyMap<string, string>): string[] {
   return [...files]
     .filter(([path]) => path !== HOME && path !== DECLARATION)
@@ -101,6 +112,10 @@ describe('G69 — the model is called from one function, through the gateway', (
 
   it('has the one call pass the gateway id and skipCache', () => {
     expect(callFaults(readRepoFile(HOME))).toEqual([]);
+  });
+
+  it('names the binding once in ai.ts, by the call', () => {
+    expect(aliasFaults(readRepoFile(HOME))).toEqual([]);
   });
 
   it('has no other Worker file name the binding', () => {
@@ -149,6 +164,7 @@ describe('G69 — the model is called from one function, through the gateway', (
         ['x.ts', 'const { AI } = env;'],
         ['y.ts', "env['AI']"],
         ['z.ts', 'const a = env.AI;'],
+        ['w.ts', 'const { AI: model } = env; await model.run(M, i);'],
         ['ok.ts', 'const brain = 1; // AIM'],
         [DECLARATION, 'readonly AI: AiBinding;'],
       ]);
@@ -156,7 +172,16 @@ describe('G69 — the model is called from one function, through the gateway', (
         'x.ts names the AI binding',
         'y.ts names the AI binding',
         'z.ts names the AI binding',
+        'w.ts names the AI binding',
       ]);
+    });
+
+    it('refuses a local alias of the binding in the home file', () => {
+      expect(aliasFaults(good)).toEqual([]);
+      expect(aliasFaults(`const m = env.AI;\n${good}`)).toEqual([
+        '2 mentions of the AI binding in ai.ts, expected exactly 1',
+      ]);
+      expect(aliasFaults(`const { AI: m } = env;\n${good}`)).not.toEqual([]);
     });
   });
 });

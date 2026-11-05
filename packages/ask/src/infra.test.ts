@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -8,13 +9,20 @@ import { describe, expect, it } from 'vitest';
  * is read back by the owner at S13 step 8.
  */
 const DIR = 'infra';
-// The committed files by name. Listing the folder would read local state, plan and
-// variable files after an apply, and a failure message quotes what it read.
-const tracked = ['main.tf', '.terraform.lock.hcl', 'README.md'];
+// The committed files, from git: a new tracked file holding an address is read too, and local
+// state, plan and variable files after an apply are not, because they are not tracked (a failure
+// message quotes what it read).
+const tracked = execFileSync('git', ['ls-files', '--', DIR], { encoding: 'utf8' })
+  .split(/\r?\n/)
+  .filter((path) => path !== '')
+  .map((path) => path.slice(DIR.length + 1));
 const read = (name: string): string => readFileSync(join(DIR, name), 'utf8');
 
 describe('infra/ (C16, repo side)', () => {
   it('holds the Terraform, its lock file and its README', () => {
+    expect(tracked).toEqual(
+      expect.arrayContaining(['main.tf', '.terraform.lock.hcl', 'README.md']),
+    );
     expect(readdirSync(DIR)).toEqual(expect.arrayContaining(tracked));
   });
 
@@ -25,7 +33,10 @@ describe('infra/ (C16, repo side)', () => {
   it('pins Terraform and the provider to one exact version each', () => {
     const main = read('main.tf');
     expect(main).toMatch(/required_version\s*=\s*"=\s*\d+\.\d+\.\d+"/);
-    expect(main).toMatch(/^\s*version\s*=\s*"=\s*\d+\.\d+\.\d+"/m);
+    // Every `version =` line in the file is exact, so a second, unpinned provider fails too.
+    const versions = main.match(/^\s*version\s*=.*$/gm) ?? [];
+    expect(versions.length).toBeGreaterThan(0);
+    for (const line of versions) expect(line).toMatch(/version\s*=\s*"=\s*\d+\.\d+\.\d+"/);
   });
 
   it('takes the alert recipient from a sensitive variable with no default', () => {
