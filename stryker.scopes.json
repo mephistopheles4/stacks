@@ -15,7 +15,7 @@
     "other four vanish into it with their floors. The glob below is deliberate.",
     "",
     "A file is excluded because a named mechanism puts it out of reach, or it is",
-    "not excluded. `covers/measure.ts` has no spec and stays in the denominator",
+    "not excluded (one dated exception below changes that, ADR-0134). `covers/measure.ts` has no spec and stays in the denominator",
     "anyway, because 'nothing tests it' is a gap and not a mechanism - which is",
     "why every core scope's exclusion list is empty.",
     "",
@@ -48,24 +48,24 @@
     "swallow a declared scope beneath it, which is the same invisible-removal move",
     "the rules above exist to close.",
     "",
-    "There is ONE third state, and it is dated (ADR-0134, 2026-11-05): a DATED",
-    "EXCEPTION. A directory the code could measure, kept out only because a",
-    "recorded decision says a scope needs a first full run to set its floor and",
-    "no run has been made. Its `mechanism` begins `DATED EXCEPTION <date>:`, says",
-    "what it excludes and why, and names the condition that ends it (a full run",
-    "exists, and the directory becomes a declared scope). It is not a mechanism,",
-    "and it is the only entry here that may say so. An undated entry that admits",
-    "the code could be measured is still refused, and the exception is not a",
-    "precedent: a second one needs its own record."
+    "There is a dated THIRD REASON beside those two (ADR-0134, 2026-11-05, which",
+    "changes ADR-0053 and the mutation spec's section 5): a DATED EXCEPTION. A",
+    "directory the code could measure, kept out only because it has not been",
+    "declared yet. Its `mechanism` carries `DATED EXCEPTION <date>`, says what it",
+    "excludes and why, and names the condition that ends it (the directory is",
+    "declared as an unarmed scope, and the next full run measures it). It is not",
+    "a mechanism, and it is the only entry here that may say so. An undated entry",
+    "that admits the code could be measured is refused by review, and the",
+    "exception is not a precedent: a second one needs its own record."
   ],
   "excludedDirectories": [
     {
       "path": "packages/site/src/ask",
-      "mechanism": "Mixed. `drawer.ts` and `start.ts` are DOM glue reached only by a browser, so no in-process spec runs them (a mechanism). `client.ts`, `close.ts`, `bridge.ts`, `turnstile.ts`, `memory.ts` and `motion.ts` have specs and could be measured: for those six, DATED EXCEPTION 2026-11-05 (ADR-0134). The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the drawer, because a scope needs a first full run to set its floor. Ends when a full run exists and the six become a declared scope."
+      "mechanism": "DATED EXCEPTION 2026-11-05 (ADR-0134), for six of the files here and a mechanism for two. `drawer.ts` and `start.ts` are DOM glue reached only by a browser, so no in-process spec runs them (a mechanism). `client.ts`, `close.ts`, `bridge.ts`, `turnstile.ts`, `memory.ts` and `motion.ts` have specs and could be measured, and are the exception: the Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the drawer yet. Ends when the six are declared as an unarmed scope and the next full run measures them."
     },
     {
       "path": "packages/ask/src",
-      "mechanism": "DATED EXCEPTION 2026-11-05 (ADR-0134), not a mechanism: the Worker's specs run in-process and could be measured. The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the Worker, because a scope needs a first full run to set its floor, and none has been made on the branch. Ends when a full run exists and the directory becomes a declared scope; until then the Worker's tests are held by the plant-and-observe-red record in the spec's S12 instead of a score."
+      "mechanism": "DATED EXCEPTION 2026-11-05 (ADR-0134), not a mechanism: the Worker's specs run in-process and could be measured. The Ask the library spec (docs/spec/ask-the-library.md S8) declares no mutation scope with the Worker yet. Ends when the directory is declared as an unarmed scope and the next full run measures it; until then the Worker's tests are held by the plant-and-observe-red record in the spec's S12 instead of a score."
     },
     {
       "path": "gates",
