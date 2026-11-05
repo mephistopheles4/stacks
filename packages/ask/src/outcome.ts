@@ -20,10 +20,12 @@ export type Outcome =
 
 export interface OutcomeDetail {
   /** Why AI did not answer: the day's budget is spent, or it failed. */
-  readonly reason?: 'budget' | 'timeout' | 'blank' | 'error';
+  readonly reason?: 'budget' | 'timeout' | 'blank' | 'tool' | 'error';
   /** The AI platform's four-digit error code, when it gave one. */
   readonly code?: number;
   readonly ms?: number;
+  /** Tool calls the model made: a count, never a query (T13, C32). */
+  readonly searches?: number;
   readonly tokensIn?: number;
   readonly tokensOut?: number;
 }

@@ -1,6 +1,6 @@
 import { stripAsterisks } from './asterisks.ts';
 import type { Env } from './env.ts';
-import { AI_TIMEOUT_MS, MAX_OUTPUT_TOKENS, MODEL } from './limits.ts';
+import { AI_DEADLINE_MS, MAX_OUTPUT_TOKENS, MODEL } from './limits.ts';
 
 export class AiFailure extends Error {
   constructor(
@@ -24,25 +24,72 @@ export function errorCode(message: string): number | undefined {
   return found === undefined ? undefined : Number(found);
 }
 
+/** A tool the model may call, in the OpenAI function format Workers AI reads. */
+export interface ToolDefinition {
+  readonly type: 'function';
+  readonly function: {
+    readonly name: string;
+    readonly description: string;
+    readonly parameters: unknown;
+  };
+}
+
+/** A tool call as the model made it. `arguments` is untrusted: a string or an object. */
+export interface ToolCall {
+  readonly id: string;
+  readonly name: string;
+  readonly arguments: unknown;
+}
+
 export interface AiAnswer {
+  /** The model's text; empty when it only asked for tools. */
   readonly text: string;
+  readonly toolCalls: readonly ToolCall[];
   readonly tokensIn?: number;
   readonly tokensOut?: number;
 }
 
-type ChatMessage = { readonly role: 'system' | 'user'; readonly content: string };
+/** A tool call as sent back to the model in the assistant message. */
+export interface WireCall {
+  readonly id: string;
+  readonly type: 'function';
+  readonly function: { readonly name: string; readonly arguments: string };
+}
+
+export type ChatMessage =
+  | { readonly role: 'system' | 'user'; readonly content: string }
+  | {
+      readonly role: 'assistant';
+      readonly content: string;
+      readonly tool_calls: readonly WireCall[];
+    }
+  | {
+      readonly role: 'tool';
+      readonly tool_call_id: string;
+      readonly name: string;
+      readonly content: string;
+    };
+
+export interface RunOptions {
+  /** Offered to the model. Leave it out, and the key is left out of the request. */
+  readonly tools?: readonly ToolDefinition[];
+  /** How long this call may take: what is left of the question's deadline (T11). */
+  readonly timeoutMs?: number;
+}
 
 /**
  * The one place this Worker calls the model (C8). It always passes the gateway
- * option and `skipCache`, runs under the 20-second limit, treats a blank answer
- * as a failure and cleans the text the model emits despite the rules. A gate
- * fails the build if `AI.run` appears anywhere else.
+ * option and `skipCache`, runs under the time it is given (the question's 30-second
+ * deadline, T11), treats an answer with neither text nor a tool call as a failure
+ * and cleans the text the model emits despite the rules. A gate fails the build if
+ * `AI.run` appears anywhere else.
  */
 export async function runModel(
   env: Env,
   messages: readonly ChatMessage[],
-  timeoutMs: number = AI_TIMEOUT_MS,
+  options: RunOptions = {},
 ): Promise<AiAnswer> {
+  const { tools, timeoutMs = AI_DEADLINE_MS } = options;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const limit = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => {
@@ -52,19 +99,21 @@ export async function runModel(
   try {
     const call = env.AI.run(
       MODEL,
-      { max_tokens: MAX_OUTPUT_TOKENS, messages },
+      { max_tokens: MAX_OUTPUT_TOKENS, messages, ...(tools !== undefined && { tools }) },
       { gateway: { id: env.ASK_GATEWAY_ID, skipCache: true } },
     );
     // Whichever loses the race must not become an unhandled rejection.
     call.catch(() => undefined);
     const out = await Promise.race([call, limit]);
     const text = cleanAnswer(extractText(out));
-    if (text === '') throw new AiFailure('blank');
+    const toolCalls = extractToolCalls(out);
+    if (text === '' && toolCalls.length === 0) throw new AiFailure('blank');
     const usage = (
       out as { usage?: { prompt_tokens?: unknown; completion_tokens?: unknown } } | null
     )?.usage;
     return {
       text,
+      toolCalls,
       ...(typeof usage?.prompt_tokens === 'number' && { tokensIn: usage.prompt_tokens }),
       ...(typeof usage?.completion_tokens === 'number' && { tokensOut: usage.completion_tokens }),
     };
@@ -90,6 +139,35 @@ function extractText(out: unknown): string {
   const message = o.output?.find((item) => item.type === 'message');
   const part = message?.content?.find((c) => c.type === 'output_text');
   return typeof part?.text === 'string' ? part.text : '';
+}
+
+interface RawCall {
+  id?: unknown;
+  name?: unknown;
+  arguments?: unknown;
+  function?: { name?: unknown; arguments?: unknown };
+}
+
+/**
+ * The tool calls in a reply: `choices[0].message.tool_calls` in the OpenAI shape, or a
+ * `tool_calls` list at the top. A call with no usable name is skipped here and an
+ * unknown name is refused by the caller (T10); nothing in a call is trusted.
+ */
+function extractToolCalls(out: unknown): ToolCall[] {
+  const o = (out ?? {}) as {
+    choices?: { message?: { tool_calls?: unknown } }[];
+    tool_calls?: unknown;
+  };
+  const raw = o.choices?.[0]?.message?.tool_calls ?? o.tool_calls;
+  if (!Array.isArray(raw)) return [];
+  const calls: ToolCall[] = [];
+  for (const [index, item] of (raw as RawCall[]).entries()) {
+    const name = item.function?.name ?? item.name;
+    if (typeof name !== 'string' || name === '') continue;
+    const id = typeof item.id === 'string' && item.id !== '' ? item.id : `call_${String(index)}`;
+    calls.push({ id, name, arguments: item.function?.arguments ?? item.arguments });
+  }
+  return calls;
 }
 
 /** Non-breaking hyphens become hyphens and `*` marks go (S6). */

@@ -141,7 +141,7 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
     tokensOut += answered.detail.tokensOut ?? 0;
     console.log(
       `${ok ? 'PASS' : 'FAIL'}  [${answered.reply.mode}] run ${String(run)}  ${c.history === undefined ? '' : '(after Co-Intelligence) '}${c.question}` +
-        `  (${String(answered.detail.tokensIn ?? '?')} in, ${String(answered.detail.tokensOut ?? '?')} out)`,
+        `  (${String(answered.detail.searches ?? '?')} searches, ${String(answered.detail.tokensIn ?? '?')} in, ${String(answered.detail.tokensOut ?? '?')} out)`,
     );
     // A failure, or a pass that needs a person to read it, shows its answer.
     if (!ok || c.readByHand === true) console.log(`      ${answered.reply.answer}`);

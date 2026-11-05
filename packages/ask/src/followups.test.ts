@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acceptable, splitFollowUps } from './followups.ts';
+import { acceptable, onTheShelf, splitFollowUps } from './followups.ts';
 
 const NL = String.fromCharCode(10);
 const lines = (...l: string[]): string => l.join(NL);
@@ -112,5 +112,32 @@ describe('acceptable', () => {
     [`What${String.fromCharCode(7)} about Nexus?`, false],
   ])('%s', (line, ok) => {
     expect(acceptable(line)).toBe(ok);
+  });
+});
+
+describe('onTheShelf (T9, C31)', () => {
+  const cat = [
+    {
+      id: 'n',
+      title: 'Nexus: A Brief History',
+      status: 'read',
+      thoughts: false,
+      subjects: 'History; Business & Personal Finance',
+    },
+    { id: 's', title: "Staff Engineer's Path", status: 'read', thoughts: false },
+  ];
+  it.each([
+    ['What did you think of Nexus?', true],
+    ["Did you like Staff Engineer's Path?", true],
+    ['Which finance book would you recommend?', true],
+    ['What have you read about history?', true],
+    ['Have you written about The Great Gatsby?', false],
+    ['Do you like jazz?', false],
+  ])('%s -> %s', (line, kept) => {
+    expect(onTheShelf(line, cat)).toBe(kept);
+  });
+
+  it('does not take a short subject word, a stop word or an unrelated word as a subject', () => {
+    expect(onTheShelf('Is it about me?', cat)).toBe(false);
   });
 });

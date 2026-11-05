@@ -401,23 +401,23 @@ wrangler`. It runs before `deploy:site`.
 - **`--gateway <id>`** deploys `main` against a test gateway, for C7 only. A plain
   `deploy:ask` afterwards puts the real one back.
 
-**`pnpm evals:ask --gateway <id>`** asks S9's nine questions twice through the
+**`pnpm evals:ask --gateway <id>`** asks S9's questions (the ten, the memory cases and the search-tool cases) twice through the
 Worker's own answer code and a test gateway, over the real public build in
 `packages/site/dist` (`--site` names another folder), and refuses a library built
 from the fixture vault. It uses the owner's `wrangler login` and
 `CLOUDFLARE_ACCOUNT_ID`, plus `ASK_GATEWAY_TOKEN` if the gateway needs one, and
-prints none of them. It costs about 1,100 Neurons and is outside CI, because G21
+prints none of them. It prints searches and tokens per question, costs about 2,000 Neurons (about 70 calls) and is outside CI, because G21
 forbids live calls. A failure prints its answer: the session that runs it records
 whether the check or the answer was wrong. The two "was it any good" cases print
 their answer even on a pass, because only a person can see an invented reason.
 
-**Running the Worker locally with AI.** `wrangler dev --local --config packages/ask/wrangler.jsonc`
+**Running the Worker locally with AI.** `wrangler dev --config packages/ask/wrangler.jsonc` (not `--local`, under which the AI binding is not supported)
 reads `packages/ask/.dev.vars` over the config's `vars`. The config names the real gateway,
 `stacks-ask`, which does not exist until the owner applies Terraform, so for a local run set
 `ASK_GATEWAY_ID` to a test gateway and `ASK_AI_ENABLED=true` in `.dev.vars`, or every question
-falls back to search within milliseconds. The AI binding always reaches Cloudflare, even
-under `--local`, so it spends real Neurons. The log says why a question fell back:
-`reason` is `budget` (with `code` 2045), `timeout`, `blank` or `error`, and `code` is the
+falls back to search within milliseconds. Without `--local` the AI binding reaches Cloudflare,
+so a local answer spends real Neurons. The log says why a question fell back:
+`reason` is `budget` (with `code` 2045), `timeout`, `blank`, `tool` (a bad tool call) or `error`, and `searches` counts the model's tool calls, and `code` is the
 platform's four-digit code when its message starts with one (such as 3043); it is digits only.
 
 **`pnpm ask:status`** prints yesterday's outcome counts from Workers Logs. ⚠️ **Its

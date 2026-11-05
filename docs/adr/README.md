@@ -155,3 +155,4 @@ Two other files hold what these deliberately do not:
 | [0129](./0129-terraform-holds-the-sites-cloudflare-rules.md) | Terraform holds the site's Cloudflare rules, under `infra/` |
 | [0130](./0130-the-page-remembers-two-exchanges-and-sends-them-in-the-user-message.md) | The page remembers two exchanges and sends them in the user message (reverses the Ask spec's S14 Q7) |
 | [0131](./0131-the-input-budget-is-6000-and-memory-is-never-dropped.md) | The Ask input budget is 6,000 estimated tokens, and memory is never dropped |
+| [0132](./0132-the-model-searches-the-library-with-two-tools-and-the-catalogue-leaves-the-prompt.md) | The model searches the library with two tools, and the catalogue leaves the Ask prompt (changes 0131) |

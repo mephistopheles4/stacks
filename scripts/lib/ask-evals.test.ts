@@ -60,9 +60,29 @@ describe('S9 memory cases', () => {
   });
 });
 
+describe('S9 cases added with the search tool', () => {
+  it('"how many have you read" needs the count of read books', () => {
+    const c = caseFor('How many books have you read');
+    const lib = [...LIB, { ...LIB[0]!, id: 'x', status: 'reading' }];
+    const read = lib.filter((x) => x.status === 'read').length;
+    expect(c.passes(`I have read ${String(read)} books.`, lib)).toBe(true);
+    expect(c.passes(`I have read ${String(read + 1)} books.`, lib)).toBe(false);
+  });
+
+  it.each(['Any books on personal wealth', 'Which finance book'])(
+    '%s needs a library book named, and a person reads the claims about Thoughts',
+    (q) => {
+      const c = caseFor(q);
+      expect(c.readByHand).toBe(true);
+      expect(c.passes('I would pick Money Unlocked.', LIB)).toBe(true);
+      expect(c.passes('Nothing comes to mind.', LIB)).toBe(false);
+    },
+  );
+});
+
 describe('S9 cases', () => {
-  it('has the ten questions', () => {
-    expect(CASES).toHaveLength(10);
+  it('has the ten questions and the three added with the search tool', () => {
+    expect(CASES).toHaveLength(13);
   });
 
   it('finance passes on either named book and fails on neither', () => {

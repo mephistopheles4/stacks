@@ -5,6 +5,8 @@
  * answer.
  */
 import { stripAsterisks } from './asterisks.ts';
+import type { CatalogueBook } from './library.ts';
+import { STOP_WORDS, namesTitle, words } from './search.ts';
 
 export const MAX_FOLLOW_UPS = 2;
 export const MAX_FOLLOW_UP_CHARS = 120;
@@ -55,4 +57,19 @@ export function acceptable(line: string): boolean {
     if (code < 0x20 || (code >= 0x7f && code <= 0x9f)) return false;
   }
   return true;
+}
+
+/**
+ * T9: a follow-up is kept only if it names a catalogue title or a word that is in a
+ * catalogue subject. The rule alone did not stop the model asking about a book that is
+ * not on the shelf ("Have you written about The Great Gatsby?"), and a check it cannot
+ * break costs nothing. A broad subject word ("business", "history") can let a weak one
+ * through, and that is accepted.
+ */
+export function onTheShelf(line: string, catalogue: readonly CatalogueBook[]): boolean {
+  if (catalogue.some((book) => namesTitle(book.title, line))) return true;
+  const have = new Set(words(line));
+  return catalogue.some((book) =>
+    words(book.subjects ?? '').some((w) => w.length >= 4 && !STOP_WORDS.has(w) && have.has(w)),
+  );
 }

@@ -98,3 +98,13 @@ describe('the conversation lives in a page variable and is sent with each questi
     expect(drawer).toContain('memory.remember(question, result)');
   });
 });
+
+describe('the drawer waits at least as long as the Worker may take (T11)', () => {
+  it("puts no abort or timer of its own on the answer request, so the Worker's 30-second deadline decides", () => {
+    for (const name of ['client.ts', 'drawer.ts']) {
+      const source = code(name);
+      expect(source, name).not.toMatch(/AbortController|AbortSignal|signal\s*:/);
+      expect(source, name).not.toMatch(/setTimeout/);
+    }
+  });
+});

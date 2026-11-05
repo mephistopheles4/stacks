@@ -117,6 +117,23 @@ export const CASES: readonly EvalCase[] = [
     passes: (a) => /can't|cannot|unrelated|only|library|books|notes/i.test(a),
     readByHand: true,
   },
+  // Added with the search tool (docs/spec/ask-the-library.md S9).
+  {
+    question: 'How many books have you read?',
+    // The count comes from the one status line (T7), not from anything the model saw.
+    passes: (a, lib) => a.includes(String(lib.filter((b) => b.status === 'read').length)),
+  },
+  {
+    question: 'Any books on personal wealth or saving up?',
+    // Passing needs a book named; that no book without Thoughts is said to have them is read by hand (C30).
+    passes: (a, lib) => namedCount(a, lib) >= 1,
+    readByHand: true,
+  },
+  {
+    question: 'Which finance book would you recommend?',
+    passes: (a, lib) => FIRST_PERSON.test(a) && namedCount(a, lib) >= 1,
+    readByHand: true,
+  },
 ];
 
 const CO_INTELLIGENCE = 'Co-Intelligence';

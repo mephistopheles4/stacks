@@ -51,7 +51,7 @@ describe('runModel (C8)', () => {
         env(async () => out),
         msgs,
       ),
-    ).toEqual({ text: 'A', tokensIn: 10, tokensOut: 4 });
+    ).toEqual({ text: 'A', toolCalls: [], tokensIn: 10, tokensOut: 4 });
   });
 
   it('treats a blank answer as a failure', async () => {
@@ -84,11 +84,90 @@ describe('runModel (C8)', () => {
   it('gives up after the time limit', async () => {
     vi.useFakeTimers();
     const e = env(() => new Promise(() => undefined));
-    const pending = runModel(e, msgs, 20_000);
+    const pending = runModel(e, msgs, { timeoutMs: 20_000 });
     const caught = pending.catch((error: unknown) => error);
     await vi.advanceTimersByTimeAsync(20_001);
     expect(await caught).toBeInstanceOf(AiFailure);
     vi.useRealTimers();
+  });
+});
+
+describe('runModel with tools (T1, T2, T10)', () => {
+  const TOOL = {
+    type: 'function',
+    function: { name: 'search_library', description: 'd', parameters: {} },
+  } as const;
+  const inputOf = (e: Env): Record<string, unknown> =>
+    (e.AI.run as ReturnType<typeof vi.fn>).mock.calls[0]![1] as Record<string, unknown>;
+
+  it('sends tools when given them, and leaves the key out entirely when not', async () => {
+    const withTools = env(async () => ({ response: 'A' }));
+    await runModel(withTools, msgs, { tools: [TOOL] });
+    expect(inputOf(withTools)['tools']).toEqual([TOOL]);
+    const without = env(async () => ({ response: 'A' }));
+    await runModel(without, msgs);
+    expect('tools' in inputOf(without)).toBe(false);
+    const empty = env(async () => ({ response: 'A' }));
+    await runModel(empty, msgs, {});
+    expect('tools' in inputOf(empty)).toBe(false);
+  });
+
+  it('passes the gateway and skipCache with tools too (C8)', async () => {
+    const e = env(async () => ({ response: 'A' }));
+    await runModel(e, msgs, { tools: [TOOL] });
+    expect((e.AI.run as ReturnType<typeof vi.fn>).mock.calls[0]![2]).toEqual({
+      gateway: { id: 'gw', skipCache: true },
+    });
+  });
+
+  it('reads tool calls from the chat shape, and a reply of only tool calls is not blank', async () => {
+    const out = {
+      choices: [
+        {
+          message: {
+            content: null,
+            tool_calls: [
+              {
+                id: 'c1',
+                type: 'function',
+                function: { name: 'search_library', arguments: '{"query":"x"}' },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const answer = await runModel(
+      env(async () => out),
+      msgs,
+      { tools: [TOOL] },
+    );
+    expect(answer.text).toBe('');
+    expect(answer.toolCalls).toEqual([
+      { id: 'c1', name: 'search_library', arguments: '{"query":"x"}' },
+    ]);
+  });
+
+  it('reads a top-level tool_calls list, gives a call without an id one, and skips a nameless call', async () => {
+    const out = {
+      tool_calls: [{ name: 'list_books', arguments: {} }, { arguments: {} }, { name: '' }],
+    };
+    const answer = await runModel(
+      env(async () => out),
+      msgs,
+      { tools: [TOOL] },
+    );
+    expect(answer.toolCalls).toEqual([{ id: 'call_0', name: 'list_books', arguments: {} }]);
+  });
+
+  it('still fails when there is neither text nor a usable tool call', async () => {
+    await expect(
+      runModel(
+        env(async () => ({ tool_calls: [{ arguments: {} }] })),
+        msgs,
+        { tools: [TOOL] },
+      ),
+    ).rejects.toThrow(AiFailure);
   });
 });
 

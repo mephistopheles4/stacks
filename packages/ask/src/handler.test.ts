@@ -29,6 +29,28 @@ const LIBRARY = {
     },
   ],
 };
+/** A model that searches first, then answers: what the tool loop does on a real question. */
+const searchThen =
+  (query: string, final = 'I rated Co-Intelligence 5 out of 5.') =>
+  async (call: number): Promise<unknown> =>
+    call === 1
+      ? {
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  {
+                    id: 't1',
+                    type: 'function',
+                    function: { name: 'search_library', arguments: JSON.stringify({ query }) },
+                  },
+                ],
+              },
+            },
+          ],
+        }
+      : { response: final };
 const NOTE = { paragraphs: ['A teacher and a machine, working side by side.'] };
 
 interface Rig {
@@ -41,7 +63,7 @@ interface Rig {
 
 function rig(
   options: {
-    ai?: () => Promise<unknown>;
+    ai?: (call: number) => Promise<unknown>;
     turnstile?: unknown;
     rate?: () => Promise<{ success: boolean }>;
     libraryDown?: boolean;
@@ -88,7 +110,9 @@ function rig(
     AI: {
       run: vi.fn(async (_m: string, input: unknown, opts?: unknown) => {
         state.aiCalls.push({ input: input as never, options: opts });
-        return options.ai ? options.ai() : { response: 'I rated Co-Intelligence 5 out of 5.' };
+        return options.ai
+          ? options.ai(state.aiCalls.length)
+          : { response: 'I rated Co-Intelligence 5 out of 5.' };
       }),
     },
     RATE: { limit: options.rate ?? (async () => ({ success: true })) },
@@ -168,10 +192,12 @@ describe('the AI path (C1 in miniature, C3)', () => {
   });
 
   it('C3: a canary in a non-public field never reaches the model; Thoughts do', async () => {
-    const r = rig();
+    const r = rig({ ai: searchThen('Co-Intelligence Quiet') });
     await run(r, ask());
-    const sent = JSON.stringify(r.aiCalls[0]!.input);
+    expect(r.aiCalls).toHaveLength(2);
+    const sent = JSON.stringify(r.aiCalls.map((c) => c.input));
     expect(sent).not.toContain('CANARY-BODY');
+    expect(sent).not.toContain('CANARY-SECRET');
     expect(sent).not.toContain('Library/Quiet.md');
     expect(sent).toContain('A teacher and a machine');
   });
@@ -208,14 +234,16 @@ describe('the failure table (C4)', () => {
     const { status, body } = await run(rig(options), ask('Tell me about Money Unlocked'));
     expect(status).toBe(200);
     expect(body.mode).toBe('search');
-    expect(body.answer).toBe('AI answers are unavailable right now. These books match your words.');
+    expect(body.answer).toBe(
+      'The bot has worked too hard today and went to take a nap. These books match your words.',
+    );
     expect(body.books).toHaveLength(1);
   });
 
   it('search with no match says so', async () => {
     const { body } = await run(rig({ aiEnabled: 'false' }), ask('zebra'));
     expect(body.answer).toBe(
-      'AI answers are unavailable right now, and no book matches your words. Try a title, author or subject.',
+      'The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject.',
     );
   });
 
@@ -386,24 +414,21 @@ describe('Thoughts sent (C3)', () => {
     })),
   };
 
-  it('sends at most 3 sets of Thoughts, and the same ones for a broad question every time', async () => {
+  it('sends at most 3 sets of Thoughts in a result, and the same ones every time', async () => {
     const sent: string[] = [];
     for (let round = 0; round < 2; round += 1) {
-      const r = rig({ library: many });
-      const noted: string[] = [];
+      const r = rig({ library: many, ai: searchThen('thought') });
       const inner = r.fetchImpl;
       r.fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
         const url =
           typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-        if (url.includes('/notes/')) {
-          noted.push(url);
-          return Response.json({ paragraphs: ['note ' + url] });
-        }
+        if (url.includes('/notes/')) return Response.json({ paragraphs: ['note ' + url] });
         return inner(input, init);
       };
       await run(r, ask('What kind of books have you read?'));
-      expect(noted.length).toBeLessThanOrEqual(3);
-      sent.push(JSON.stringify(r.aiCalls[0]!.input));
+      const result = JSON.stringify(r.aiCalls[1]!.input);
+      expect(result.split('Your Thoughts on').length - 1).toBe(3);
+      sent.push(result);
     }
     expect(sent[0]).toBe(sent[1]);
     expect(sent[0]).toContain('note ');
@@ -527,12 +552,14 @@ describe('follow-ups (S6, C4, C15)', () => {
   });
 
   it('drops an oversized follow-up and keeps no more than 2', async () => {
-    const q = (n: number) => `- What did you think of Book ${String(n)}?`;
+    const q = (t: string) => `- What did you think of ${t}?`;
     const big = `- ${'X'.repeat(200)}?`;
-    const { body } = await answered(['A.', 'FOLLOW-UPS:', big, q(1), q(2), q(3)].join(NL));
+    const { body } = await answered(
+      ['A.', 'FOLLOW-UPS:', big, q('Co-Intelligence'), q('Money Unlocked'), q('Quiet')].join(NL),
+    );
     expect((body as { followUps?: string[] }).followUps).toEqual([
-      'What did you think of Book 1?',
-      'What did you think of Book 2?',
+      'What did you think of Co-Intelligence?',
+      'What did you think of Money Unlocked?',
     ]);
   });
 
@@ -584,7 +611,7 @@ describe('conversation memory (memory spec C21, C22, C24)', () => {
   });
 
   it('C20: sends memory in the user message only, and a follow-up draws on the remembered book', async () => {
-    const r = rig();
+    const r = rig({ ai: searchThen('Co-Intelligence', 'I liked the teacher and the machine.') });
     const { status, body } = await run(
       r,
       ask('what did you like the most about the book?', {}, earlier),
@@ -594,7 +621,11 @@ describe('conversation memory (memory spec C21, C22, C24)', () => {
     expect(user!.content).toContain('Visitor: What did you think of Co-Intelligence?');
     expect(user!.content).toContain('Question: what did you like the most about the book?');
     expect(system!.content).not.toContain('I loved it.');
-    expect(system!.content).toContain('A teacher and a machine');
+    // The Thoughts come back as a tool result, in a later message, not in the system message.
+    expect(system!.content).not.toContain('A teacher and a machine');
+    const result = r.aiCalls[1]!.input.messages.at(-1)!;
+    expect(result.role).toBe('tool');
+    expect(result.content).toContain('A teacher and a machine');
     expect(body.books).toEqual([
       { id: 'co-int', title: 'Co-Intelligence', author: 'Ethan Mollick', hasThoughts: true },
     ]);

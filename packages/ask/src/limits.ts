@@ -5,7 +5,11 @@ export const MAX_TOKEN_CHARS = 2_048;
 export const DAILY_LIMIT = 30;
 export const MODEL = '@cf/openai/gpt-oss-20b';
 export const MAX_OUTPUT_TOKENS = 1_500;
-export const AI_TIMEOUT_MS = 20_000;
+/** One deadline for the whole question, every model call in it included (T11). */
+export const AI_DEADLINE_MS = 30_000;
+/** Tool calls of either kind per question; the call after them has no tools (T2). */
+export const MAX_TOOL_CALLS = 2;
+export const MAX_QUERY_CHARS = 200;
 export const CACHE_MS = 5 * 60 * 1_000;
 export const MAX_THOUGHT_BOOKS = 3;
 export const MAX_THOUGHT_TOKENS = 1_500;

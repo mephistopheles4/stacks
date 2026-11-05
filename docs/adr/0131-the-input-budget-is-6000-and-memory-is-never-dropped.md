@@ -3,7 +3,10 @@
 **Date:** 2026-11-05
 **Status:** accepted. The owner signed off the memory spec on 2026-11-05 (D6 and D7).
 It changes `MAX_INPUT_TOKENS` from 4,000, which `docs/spec/ask-the-library.md` S4 had
-set. Nothing here is deployed yet.
+set. **Changed by [ADR-0132](./0132-the-model-searches-the-library-with-two-tools-and-the-catalogue-leaves-the-prompt.md):**
+the catalogue has left the prompt, the budget is checked before every call, and what drops is
+the Thoughts in the newest tool result; the 6,000 and memory-first rules stand. The figures
+below describe the build before that change. Nothing here is deployed yet.
 
 ## Decision
 
