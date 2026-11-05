@@ -382,6 +382,32 @@ and the rest run after it, on a day's fresh Neurons, before the site goes public
   Free's 10 ms of CPU, and the data fetches fit its 50 subrequests. **If not, the owner
   decides between Workers Paid and a smaller design.**
 
+**Results of the no-AI checks, run 2026-11-05 (S13 step 2).** A throwaway Worker,
+`stacks-spike-routes`, was deployed with the two exact routes, locked to a request
+header, no bindings and no AI, then deleted. Pages answered `/api/chat` and
+`/api/chat/health` again afterwards.
+
+- **Routes: pass.** Both exact routes reached the Worker while `/` and `/library.json`
+  still served Pages. S5 stays as written. ⚠️ **An exact route matches the bare path
+  only.** `/api/chat?x=1`, `/api/chat/`, `/api/chat/x`, `/api/chat/health?a=1` and
+  `/API/chat` all fell through to Pages and returned the home page with 200. So the
+  Worker can only be reached on the bare path, and the WAF rule (S5 step 1) must be
+  written to cover those variants too, not just the two paths. The Worker must never
+  read a query string.
+- **Zone challenge: pass.** The Worker's own `fetch` of `/library.json` returned 200,
+  `application/json`, 46,337 bytes, with no `cf-mitigated` header.
+- **CPU: pass, with a gap.** Parsing the 61-book catalogue and building a full-size
+  prompt took 1 to 5 ms of CPU over five runs (`wrangler tail`'s `cpuTime`), under
+  Workers Free's 10 ms. The subrequests for one question are 1 catalogue fetch plus
+  at most 3 notes, far under 50. This excludes the model call, which S12's after-build
+  list measures.
+- **Finding: `library.json` carries no mark for Thoughts.** S4 sends "a mark on books
+  that have Thoughts", but no field says so: only `notes/<id>.json` existing does, and
+  probing 61 notes would exceed 50 subrequests. The build adds a boolean `hasThoughts`
+  to `library.json` (see the PR), derived from the same publisher stage that writes the
+  notes. The live site publishes no notes yet; an unknown id returns the home page with
+  200, so the Worker must check the content type of a note and not its status.
+
 **After the build (S13 step 9), about 25 AI calls and 1,500 Neurons:**
 
 - A page served by that Worker, with the planned CSP, `Referrer-Policy: no-referrer` and
