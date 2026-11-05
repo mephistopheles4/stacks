@@ -93,7 +93,7 @@ bot is given. It would still not give the bot a tool. **Confirmed**
 
 ## `rules`
 
-All **Confirmed**.
+**Confirmed**, except the last three rows, which are *Proposed* until the owner has read them.
 
 | Rule | Guards against | Status | Gated by, freedom |
 |---|---|---|---|

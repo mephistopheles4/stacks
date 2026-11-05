@@ -18,7 +18,7 @@ matches over the question alone; then the existing fallback. At most 3 sets, as 
 
 Measured on the real public build (61 books, 11 sets of Thoughts) with no model call, the
 budget was already full: rules 494, catalogue 2,974, leaving 532 of 4,000, and a set of
-Thoughts is 264 to 507. At most about one set fit, whatever S4 said about 3. The approved
+Thoughts is 264 to 507. At most about one set fit, whatever S4 said about 3. The draft
 rules (799 estimated tokens) leave 227, so none fit. Memory adds up to about 600.
 
 At 6,000, rules 799, catalogue 2,974, memory 600, a typical question and the 3 largest sets

@@ -198,8 +198,8 @@ capped on every path reviewed. Availability does not:
 
 - **Rules,** sent as the system message: the text of
   `packages/ask/ask-the-library.rules.txt`, word for word, generated from contract v0.2.0
-  (`ask-the-library.contract.md`, with `ask-the-library.changelog.md`), whose every term
-  the owner confirmed on 2026-11-05. `RULES` in `prompt.ts` holds that text and a test
+  (`ask-the-library.contract.md`, with `ask-the-library.changelog.md`). **The owner has not
+  yet approved the contract or this text,** so it is a draft. `RULES` in `prompt.ts` holds that text and a test
   holds the two equal, so **the rules change through the contract and never by hand.**
   They set the first-person voice (opinions only from the Thoughts and the rating, in
   the owner's plain words and not pasted, no review language), answers of at most 2 plain
