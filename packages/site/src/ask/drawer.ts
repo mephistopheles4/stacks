@@ -180,7 +180,13 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
       const link = document.createElement('button');
       link.type = 'button';
       link.className = 'ask-book';
-      link.textContent = book.title;
+      // The whole title stays in the text, so a screen reader reads it all and
+      // the pill only clips what it draws; the tooltip shows it too.
+      link.title = book.title;
+      const label = document.createElement('span');
+      label.className = 'ask-book-title';
+      label.textContent = book.title;
+      link.append(bookIcon(), label);
       link.addEventListener('click', () => {
         requestPickUp(window, book.id);
       });
@@ -190,4 +196,30 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   }
 
   return { open: show, close: hide };
+}
+
+/** A small open book, built from nodes and never from markup. */
+function bookIcon(): SVGSVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.8');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.classList.add('ask-book-icon');
+  for (const d of [
+    'M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z',
+    'M12 6.5v13',
+  ]) {
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  return svg;
 }

@@ -242,7 +242,10 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   signal from the shelf rather than a timer. The panel can be reopened with a book
   held. With both open, Escape closes the panel and leaves the book held, wherever
   focus is.
-- **Book links:** clicking one picks that book up by id.
+- **Book links:** one pill a line, stacked with a gap, each a small open-book icon
+  and the title clipped with an ellipsis on overflow. The whole title stays in the
+  text, for a screen reader, and in the tooltip. A pill is 40px tall, 44px on a touch
+  screen. Clicking one picks that book up by id.
 - **Thread:** kept until the page reloads. Each question is sent alone (S14).
 - **Third parties:** Turnstile's script loads when the drawer first opens, so a
   visitor who never opens it makes no new third-party request.
