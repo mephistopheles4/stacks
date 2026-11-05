@@ -207,7 +207,7 @@ marks Escape. `Picker.#handleUp` in `scene.ts` passes `event.defaultPrevented` t
 and the Open button still act.
 
 A chat link to the book in hand is already built: `pickUpById` sends `announceHeld` and the
-drawer closes. The build keeps it. Which build makes the click change is O3.
+drawer closes. The build keeps it. #532's build makes the click change (O3), and `clicked` reads the same event.
 
 ## S7. Tests
 
@@ -347,7 +347,10 @@ The repo names no business driver, so the owner's stated reason decides the firs
 - Moving focus to the right-hand page may scroll `.held-layer`, which is `overflow: hidden`, and
   shift the pages off their sheets. `focus({ preventScroll: true })` would guard it. Not measured.
 
-## S13. Open questions for sign-off
+## S13. The questions raised at review
+
+**Answered on 2026-11-04: the owner took every pick below** ("Take all six"). The questions stay
+as the record.
 
 **O1. Where the Open button shows when it has focus.** No row decided this. My pick: to the
 right of the X, under the header, and wrapping under it on a long title at 375 px. The X comes
@@ -383,7 +386,7 @@ that fails on the Pixel is answered on a phone, not by arithmetic (ADR-0088).
 
 | Action | When |
 | --- | --- |
-| Sign this spec off, and answer O1 to O6 | Before the build starts |
+| Sign this spec off, and answer the accepted-risk candidates in S12 | Before the build starts |
 | Confirm a new dependency, a change to S2 or the CSP, or a change to #532's code beyond S6 and O2 | When the build meets one |
 | Read `artifacts/shelf.png` and the closed-book screenshot | As O5 says |
 | Merge the pull request | After the Test lenses |
