@@ -121,7 +121,7 @@ A request passes these in order. The first refusal ends it without calling AI.
 **A check that cannot run counts as a refusal.**
 
 1. **WAF rule:** every method to `/api/chat` and `/api/chat/health` on the site's
-   host, per IP, at most 10 requests in 60 seconds, blocked for 1 hour. Health Check
+   host, per IP, at most 10 requests in 60 seconds, blocked for 10 minutes. A longer block would also lock out everyone sharing a mobile carrier's address, and a flood still has to keep tripping the rule; Pro allows 600 seconds (the supported values up to 1 hour). Health Check
    probes stay under that rate (S12).
 2. **Request shape:** POST, JSON, the production `Origin`, body at most 8 KB,
    question at most 1,500 characters and not empty.

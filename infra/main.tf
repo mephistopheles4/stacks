@@ -47,7 +47,7 @@ locals {
 # plan for any rule it would remove before apply (README.md).
 #
 # Pro-plan fit (checked against the docs above): characteristic IP only, period
-# 60 s allowed, mitigation timeout up to 3600 s allowed, counting_expression not
+# 60 s allowed, mitigation timeout 600 s allowed (Pro takes the supported values up to 1 h), counting_expression not
 # available (so none is set), 2 rate-limit rules per zone (this uses 1).
 # Numbers are the spec's, unchanged.
 #
@@ -61,7 +61,7 @@ locals {
 resource "cloudflare_ruleset" "ask_rate_limit" {
   zone_id     = var.zone_id
   name        = "stacks-ask rate limit"
-  description = "Ask the library: /api/chat* per IP, 10 per 60 s, block 1 h"
+  description = "Ask the library: /api/chat* per IP, 10 per 60 s, block 10 min"
   kind        = "zone"
   phase       = "http_ratelimit"
 
@@ -74,7 +74,7 @@ resource "cloudflare_ruleset" "ask_rate_limit" {
       characteristics     = ["ip.src"]
       period              = 60
       requests_per_period = 10
-      mitigation_timeout  = 3600
+      mitigation_timeout  = 600
     }
   }]
 }
@@ -97,9 +97,11 @@ resource "cloudflare_ruleset" "ask_rate_limit" {
 # fails SAFE: limit 0.09, window 86400. If the unit is cents this is 0.09 cent
 # and blocks almost every call, which is loud, not a leak. The read-back after
 # apply (C16) must show $0.09 per day, sliding; fix the number then.
-# Also: the changelog says spend limits apply to Unified Billing and BYOK
-# requests with known pricing, and does not mention the Workers AI binding.
-# Whether they trip on this Worker's calls is S12's "after the build" test.
+# Measured 2026-11-05 (S12, early results): a gateway limit of 0.01 over 86400 s,
+# sliding, read back as "cost limit 0.01 per 86400s", so the unit is dollars and
+# seconds, and calls through a Worker's AI binding with the gateway option did trip
+# it with error 2045. The changelog names only Unified Billing and BYOK requests,
+# so this is one gateway on one day: C7 on the deployed Worker still decides.
 resource "cloudflare_ai_gateway" "ask" {
   account_id = var.account_id
   id         = "stacks-ask"

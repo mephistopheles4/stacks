@@ -11,7 +11,7 @@ Pinned: Terraform `1.17.1`, `cloudflare/cloudflare` provider `5.28.1`
 
 | Resource | Spec |
 | --- | --- |
-| `cloudflare_ruleset.ask_rate_limit` (zone, `http_ratelimit`) | `stacks.aymandiab.com`, path starting `/api/chat` ignoring case, any method, per IP, 10 per 60 s, block 3600 s |
+| `cloudflare_ruleset.ask_rate_limit` (zone, `http_ratelimit`) | `stacks.aymandiab.com`, path starting `/api/chat` ignoring case, any method, per IP, 10 per 60 s, block 600 s |
 | `cloudflare_ai_gateway.ask` (`stacks-ask`) | authentication on, logs off, cache off, spend limit 0.09 per day, sliding |
 | `cloudflare_healthcheck.ask` | HTTPS GET `/api/chat/health`, expects 200, every 60 s, one region |
 | `cloudflare_notification_policy.ask_health` | alerts on that check, to the sensitive `alert_recipient` variable |
@@ -77,11 +77,12 @@ touch nothing outside `infra/`. Delete the Turnstile widget by hand.
   cents and seconds. The file uses `limit = 0.09`, `window = 86400` so a wrong unit
   fails closed. After apply, read the gateway back (C16) and, if the dashboard
   does not show $0.09 per day sliding, set it by hand and correct this file.
-- **Spend limits and the Workers AI binding.** Cloudflare's changelog says spend
-  limits apply to Unified Billing and BYOK requests with known pricing and does not
-  mention Workers AI calls through a binding. S12's after-build test (a small limit
-  tripped by Worker calls) decides it; if it does not trip, the spend limit does not
-  protect this feature and the owner hears first.
+- **Spend limits and the Workers AI binding.** Cloudflare's changelog names only
+  Unified Billing and BYOK requests, but an early check on 2026-11-05 (a temporary
+  Worker, a test gateway with a $0.01 limit) saw a Worker's binding calls trip error
+  2045 about 4% over the limit, and read the unit back as dollars and seconds. That
+  was one gateway on one day: S12's after-build test on the deployed Worker still
+  decides it, and if it does not trip there the owner hears first.
 - **Gateway rate limit.** `rate_limiting_interval`/`rate_limiting_limit` are required
   by the schema and set to 0, which I read as off. Confirm in the plan or read-back.
 - **Expression functions.** The rule uses `starts_with(lower(http.request.uri.path),
