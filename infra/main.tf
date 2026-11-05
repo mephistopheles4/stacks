@@ -46,7 +46,8 @@ locals {
 # limiting rule the zone has (the root domain shares the zone). Read the first
 # plan for any rule it would remove before apply (README.md).
 #
-# Pro-plan fit (checked against the docs above): characteristic IP only, period
+# Pro-plan fit (checked against the docs above): characteristics cf.colo.id and
+# ip.src (the API requires cf.colo.id, so a count is per address per data centre), period
 # 60 s allowed, mitigation timeout 600 s allowed (Pro takes the supported values up to 1 h), counting_expression not
 # available (so none is set), 2 rate-limit rules per zone (this uses 1).
 # Numbers are the spec's, unchanged.
@@ -71,7 +72,7 @@ resource "cloudflare_ruleset" "ask_rate_limit" {
     enabled     = true
     expression  = "http.host eq \"${local.host}\" and starts_with(lower(http.request.uri.path), \"/api/chat\")"
     ratelimit = {
-      characteristics     = ["ip.src"]
+      characteristics     = ["cf.colo.id", "ip.src"]
       period              = 60
       requests_per_period = 10
       mitigation_timeout  = 600

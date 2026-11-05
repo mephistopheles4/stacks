@@ -42,6 +42,15 @@ describe('infra/ (C16, repo side)', () => {
     for (const v of versions) expect(v).toMatch(/version\s*=\s*"=\s*\d+\.\d+\.\d+"/);
   });
 
+  it('counts the rate limit by data centre and address, which the API requires (CodeRabbit)', () => {
+    const main = read('main.tf');
+    const list = /characteristics\s*=\s*\[([^\]]*)\]/.exec(main)?.[1] ?? '';
+    expect(list.split(',').map((c) => c.trim().replace(/"/g, ''))).toEqual([
+      'cf.colo.id',
+      'ip.src',
+    ]);
+  });
+
   it('takes the alert recipient from a sensitive variable with no default', () => {
     const main = read('main.tf');
     const block =
