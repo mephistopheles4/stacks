@@ -96,8 +96,8 @@ one fetch per note against Workers Free's limit of 50 per request. S4 changes th
   books matched. These are not about that subject, but they are my top-rated books. Try other
   words, or say nothing matched and offer these." (with "No other books matched." once earlier
   results exist, and T6's exclude still applying). With no book with Thoughts to offer, it is
-  the old "No books matched. Try other words, or call list_books." The rules (contract v0.4.0) send
-  a recommendation or a favourite to a search for the word "recommend", keep `list_books` for
+  the old "No books matched. Try other words, or call list_books." The rules (contract v0.4.1) send
+  a recommendation to a search for the word "recommend", keep `list_books` for
   browsing, and tell the model to say nothing matched before offering other books and never to say
   they cover the subject. At most 2 tool calls of either
   kind per question (T2).
@@ -229,13 +229,14 @@ capped on every path reviewed. Availability does not:
 ## S6. Answers
 
 - **Rules,** sent as the system message, followed by the line of counts (T7): the text of
-  `packages/ask/ask-the-library.rules.txt`, word for word, generated from contract v0.4.0
+  `packages/ask/ask-the-library.rules.txt`, word for word, generated from contract v0.4.1
   (`ask-the-library.contract.md`, with `ask-the-library.changelog.md`). **The owner approved
-  contract v0.3.0 and its text on 2026-11-05, and v0.4.0's changes (a recommendation searches for
-  "recommend"; say nothing matched before offering other books) the same day.** `RULES` in `prompt.ts` holds that text and a test
+  contract v0.3.0 and its text on 2026-11-05, and v0.4.0's and v0.4.1's changes (a recommendation searches for
+  "recommend", and only a recommendation: a favourite is no longer named; say nothing matched before
+  offering other books) the same day.** `RULES` in `prompt.ts` holds that text and a test
   holds the two equal, so **the rules change through the contract and never by hand.**
-  They send the model to search before answering (a recommendation or a favourite searches for
-  "recommend"; `list_books` is for browsing),
+  They send the model to search before answering (a recommendation searches for "recommend";
+  `list_books` is for browsing),
   set the first-person voice (opinions only from the Thoughts and the rating, in the owner's
   plain words and not pasted, no review language), answers of at most 2 plain sentences with
   exact titles and no markdown, the FOLLOW-UPS block below, and these for memory:
@@ -306,6 +307,10 @@ capped on every path reviewed. Availability does not:
   call list_books." when no book with Thoughts exists to offer (a miss otherwise offers the top-rated books,
   above; "No other books matched." with the same advice once earlier results exist). A result cut off at 6 ends with "Showing 6 of 14 matches. Search with more specific
   words to narrow this down." No BM25, examples in the rules or clearing of old results are added.
+- **One spelling pair.** The search treats "favourite" and "favorite" as one word, in the query, the
+  titles, authors, subjects and the Thoughts (owner, 2026-11-05): the Thoughts say "favorite" and a visitor
+  writes "favourite". Nothing wider: no stemming, no table of spellings ("favourites" and "colour" match
+  nothing new).
 - **Follow-ups must be about the shelf (T9).** A follow-up that names neither a catalogue
   title nor a word in a catalogue subject is dropped ("Which finance book would you
   recommend?" stays, "Have you written about The Great Gatsby?" goes). A subject match is a
@@ -889,6 +894,26 @@ included, are in the scratch folder, not the repo.
   are rated 5, so the same book leads every time, "top-rated" is shelf order among ties, and a favourite
   question is answered with an unsupported "my favourite". The misses are honest and tidy but offer five
   unrelated books.
+
+**Results of the favourite check (2026-11-05), contract v0.4.1 and the spelling pair.** "What's your
+favourite book?" twice and "What's your favorite book?" once, 3 questions, 210 Neurons by token count (70
+each), 3.7 to 14.0 s, same throwaway Worker and driver with the reasoning kept (`reasoning_content`, 418 to
+2,609 characters). No spend-limit refusal; the Unified Billing balance was not observable.
+
+- **The spelling fix was not exercised live:** the model searched "recommend" on all three, not "favourite" or
+  "favorite" (so the fallback's top-rated books answered), which is also why the rule was narrowed. The fix
+  is proved by tests only.
+- **Run 1:** "I consider “We Are as Gods: A Survival Guide for the Age of Abundance” my favourite book. It is a
+  book that inspires and feels like a reminder of our godlike potential." Run 2: "I have written thoughts on
+  "We Are as Gods: A Survival Guide for the Age of Abundance", and I found it extremely inspiring." (no
+  favourite claim). Run 3 ("favorite"): "I think my favorite is We Are as Gods: A Survival Guide for the Age of
+  Abundance. I found it incredibly inspiring, especially the way it imagines humans as godlike beings in a
+  future where we can summon food and other resources with a touch. It reminds me of how far we’ve come from
+  hunting to having technology that feels almost magical." All three pilled the book.
+- **Are the favourite claims supported?** The reasons are: "extremely inspiring" and the godlike, summon-food
+  example are in its Thoughts. **The claim that it is the favourite is not**: its Thoughts never say so (The
+  Human-Agent Orchestrator's do, "probably my favorite book about AI so far"), and ten books are rated 5, so
+  the fallback leads with shelf order. A known limit, per the owner's stop rule: no further rounds.
 
 ## S13. Build order and way back
 

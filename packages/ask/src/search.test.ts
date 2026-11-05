@@ -239,3 +239,37 @@ describe('topRated: what a miss offers (S6)', () => {
     expect((await topRated(rated, src))[0]!.thoughts).toEqual(['Note.']);
   });
 });
+
+describe('"favourite" and "favorite" are one word to the search, and nothing else is (owner, 2026-11-05)', () => {
+  const cat = [
+    b('fav', 'The Orchestrator', { thoughts: true, rating: 5 }),
+    b('other', 'Another Book', { thoughts: true, rating: 4 }),
+    b('title', 'My Favourite Things', { rating: 3 }),
+  ];
+  const notes: Record<string, string[]> = {
+    fav: ['This is probably my favorite book about AI so far.'],
+    other: ['I read it on a train.'],
+  };
+  const src: LibrarySource = {
+    catalogue: async () => cat,
+    thoughts: async (book) => notes[book.id],
+  };
+  const find = async (q: string): Promise<string[]> =>
+    (await searchLibrary(cat, src, q)).map((h) => h.book.id);
+
+  it('a search for "favourite" finds a Thoughts that say "favorite", and the other way round', async () => {
+    expect(await find('favourite')).toEqual(['title', 'fav']);
+    expect(await find('favorite')).toEqual(['title', 'fav']);
+  });
+
+  it('finds a title spelled "Favourite" by either spelling', async () => {
+    expect(await find("What's your favorite book?")).toContain('title');
+    expect(await find("What's your favourite book?")).toContain('fav');
+  });
+
+  it('does nothing wider: no stemming, no other spellings', async () => {
+    expect(await find('favourites')).toEqual([]);
+    expect(await find('favorites')).toEqual([]);
+    expect(await find('colour')).toEqual([]);
+  });
+});

@@ -16,6 +16,15 @@ export function words(text: string): string[] {
 
 const normal = (text: string): string => words(text).join(' ');
 
+/**
+ * The words the search compares: `words`, with one spelling pair made one word. The owner writes
+ * "favorite" in the Thoughts and a visitor writes "favourite", and a search for one missed the
+ * other (owner, 2026-11-05). Nothing wider: no stemming and no table of spellings.
+ */
+export function searchWords(text: string): string[] {
+  return words(text).map((w) => (w === 'favourite' ? 'favorite' : w));
+}
+
 /** A title, or the part before its colon when that is long enough to be a name. */
 export function namesTitle(title: string, text: string): boolean {
   const q = ` ${normal(text)} `;
@@ -45,7 +54,7 @@ async function readThoughts(
 
 /** The query's words that are worth searching for: what is left after the ignored list. */
 export const usableTerms = (query: string): string[] => [
-  ...new Set(words(query).filter((w) => !STOP_WORDS.has(w))),
+  ...new Set(searchWords(query).filter((w) => !STOP_WORDS.has(w))),
 ];
 
 /**
@@ -84,8 +93,10 @@ export async function rankLibrary(
     catalogue.map(async (book) => ({ book, thoughts: await readThoughts(source, book) })),
   );
   const scored = loaded.map(({ book, thoughts }, position) => {
-    const fields = new Set(words(`${book.title} ${book.author ?? ''} ${book.subjects ?? ''}`));
-    const notes = new Set(words((thoughts ?? []).join(' ')));
+    const fields = new Set(
+      searchWords(`${book.title} ${book.author ?? ''} ${book.subjects ?? ''}`),
+    );
+    const notes = new Set(searchWords((thoughts ?? []).join(' ')));
     return {
       hit: { book, thoughts },
       position,
