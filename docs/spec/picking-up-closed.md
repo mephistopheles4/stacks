@@ -4,7 +4,8 @@ The spec for [#531](https://github.com/mephistopheles4/stacks/issues/531). Tier:
 standard, one build session. It matches nothing on the sensitive list: no auth,
 crypto or data migration, no CSP change, and no new data leaves the site. Written
 on 2026-11-04 from a grilling through an eagle-eye box, whose accepted set is S2.
-**Nothing here is built, and the owner has not signed it off.**
+**Nothing here is built.** **Signed off by the owner on 2026-11-04 ("Yes, sign off and push").**
+No lens has read the fixes from the final review round.
 
 **Do not start the build until #532's shelf changes exist.** Its base is O4. This spec
 reads
@@ -407,7 +408,7 @@ accepted the late cover in S12, and accepted that the X by key leaves the drawer
 
 | Action | When |
 | --- | --- |
-| Sign this spec off | Before the build starts |
+| Sign this spec off | Done, 2026-11-04 |
 | Confirm a new dependency, a change to S2 or the CSP, or a change to #532's code beyond S6 and O2 | When the build meets one |
 | Read `artifacts/shelf.png`, `held-closed.png` and `held-closed-phone.png`, locally or attached to the pull request, never committed (G13) | Before merging, as O5 says |
 | Merge the pull request | After the Test lenses |
