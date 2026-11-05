@@ -407,6 +407,30 @@ header, no bindings and no AI, then deleted. Pages answered `/api/chat` and
   nothing is added to `library.json`. An unknown note id returns the home page with 200,
   so the Worker checks a note's content type, not its status.
 
+**Early results of two AI checks, run 2026-11-05 before the merge** (the owner said yes
+in chat). A temporary Worker, `stacks-spike-ai`, header-locked on the exact `/api/chat`
+route and using the repo's own answer code, went through a test gateway,
+`stacks-ask-test`, with logging off and a $0.01 per day sliding limit. It was deleted
+afterwards. **These do not replace C7 or the eval run at step 9 on the deployed Worker.**
+
+- **Spend limit: counts a Worker's binding calls.** 6 answer calls and then 149 small
+  calls through `env.AI.run` with the `gateway` option succeeded, and the next call
+  failed with error 2045 ("Spend limit exceeded: rule ... (cost limit 0.01 per 86400s,
+  sliding)"). The Worker's own running total at list price was about $0.0104 at the trip,
+  4% over the limit and inside C7's 10%. One earlier call in the loop failed with error
+  3043 (internal server error) and the next batch ran clean, so a gateway error is not
+  always a 2045. Gateway authentication was not varied in this run.
+- **Voice: no invented reason in 5 of 5 asks.** With S6's rules on the live public
+  `library.json` (61 books, no ratings yet, two sets of Thoughts), "Was The Coming Wave
+  any good?" and "Did you like Antifragile?" each answered, twice, that nothing is
+  written about the book. "What would you recommend?" named the two books that have
+  Thoughts, twice. One Antifragile answer began "I read Antifragile", inferred from the
+  book's status and not from a note: small, but it is a claim about the owner. The
+  rating branch could not be tried, because the live build carries no ratings. About 66
+  Neurons a question, input 2.9k tokens.
+- **Not covered:** the Turnstile token, `wrangler`-path evals, the Health Check, a full
+  request's CPU with the model call, and anything on the deployed Worker.
+
 **After the build (S13 step 9), about 25 AI calls and 1,500 Neurons:**
 
 - A page served by that Worker, with the planned CSP, `Referrer-Policy: no-referrer` and
