@@ -55,3 +55,42 @@ describe('pickLikelyBooks (S4, C3)', () => {
     expect(pickLikelyBooks([b('x', 'X')], 'anything')).toEqual([]);
   });
 });
+
+describe('pickLikelyBooks: memory (S4, memory spec)', () => {
+  const remember = (question: string, answer = ''): { question: string; answer: string }[] => [
+    { question, answer },
+  ];
+
+  it('puts books named in the question first, then books named in memory, then search matches', () => {
+    const ids = pickLikelyBooks(CAT, 'money and Echo', remember('What about Alpha?')).map(
+      (x) => x.id,
+    );
+    expect(ids).toEqual(['t5', 't1', 't3']);
+  });
+
+  it('takes a book memory names when the question names none', () => {
+    const history = remember('What did you think of Co-Intelligence?', 'I rated it 5.');
+    expect(pickLikelyBooks(CAT, 'what did you like the most about the book?', history)[0]!.id).toBe(
+      't2',
+    );
+  });
+
+  it('takes at most 2 books from memory, newest first', () => {
+    const history = [
+      { question: 'Alpha?', answer: 'Alpha was fine.' },
+      { question: 'Delta?', answer: 'Delta was fine.' },
+      { question: 'Echo?', answer: 'Echo was fine.' },
+    ];
+    expect(pickLikelyBooks(CAT, 'zzzz', history).map((x) => x.id)).toEqual(['t5', 't4']);
+  });
+
+  it('does not let memory steer the search: a new topic still finds its books', () => {
+    const history = remember('What did you think of Alpha?', 'Alpha was good.');
+    expect(pickLikelyBooks(CAT, 'money', history).map((x) => x.id)).toEqual(['t1', 't3']);
+  });
+
+  it('skips a remembered book with no Thoughts', () => {
+    const history = remember('What about Money Unlocked?', 'It is on my shelf.');
+    expect(pickLikelyBooks(CAT, 'zzzz', history).map((x) => x.id)).not.toContain('plain');
+  });
+});

@@ -9,7 +9,11 @@ export const AI_TIMEOUT_MS = 20_000;
 export const CACHE_MS = 5 * 60 * 1_000;
 export const MAX_THOUGHT_BOOKS = 3;
 export const MAX_THOUGHT_TOKENS = 1_500;
-export const MAX_INPUT_TOKENS = 4_000;
+export const MAX_INPUT_TOKENS = 6_000;
+/** Earlier exchanges the page sends with a question, and the cut on each side (memory spec D1, D4). */
+export const MAX_HISTORY = 2;
+export const MAX_HISTORY_QUESTION_CHARS = 300;
+export const MAX_HISTORY_ANSWER_CHARS = 600;
 export const MAX_SEARCH_BOOKS = 6;
 export const TURNSTILE_ACTION = 'ask';
 /** A result older than this makes the health address return 503 (S11). */

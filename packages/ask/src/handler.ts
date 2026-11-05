@@ -63,7 +63,13 @@ export async function handleChat(request: Request, env: Env, deps: Deps): Promis
   }
 
   try {
-    const answered = await answerQuestion(env, deps.source, parsed.question);
+    const answered = await answerQuestion(
+      env,
+      deps.source,
+      parsed.question,
+      undefined,
+      parsed.history,
+    );
     logOutcome(answered.outcome, answered.detail);
     return reply(200, answered.reply);
   } catch {

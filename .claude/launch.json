@@ -17,8 +17,7 @@
         "--config",
         "packages/ask/wrangler.jsonc",
         "--port",
-        "8787",
-        "--local"
+        "8787"
       ],
       "port": 8787
     },

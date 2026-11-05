@@ -153,3 +153,5 @@ Two other files hold what these deliberately do not:
 | [0127](./0127-the-ask-worker-is-the-sites-first-endpoint-and-its-first-outbound-flow.md) | The Ask the library Worker is the site's first endpoint, and carries the first outbound flow of reading content |
 | [0128](./0128-the-csp-admits-turnstile-and-nothing-else.md) | The CSP admits Turnstile's origin in two directives, and nothing else (amends 0065) |
 | [0129](./0129-terraform-holds-the-sites-cloudflare-rules.md) | Terraform holds the site's Cloudflare rules, under `infra/` |
+| [0130](./0130-the-page-remembers-two-exchanges-and-sends-them-in-the-user-message.md) | The page remembers two exchanges and sends them in the user message (reverses the Ask spec's S14 Q7) |
+| [0131](./0131-the-input-budget-is-6000-and-memory-is-never-dropped.md) | The Ask input budget is 6,000 estimated tokens, and memory is never dropped |

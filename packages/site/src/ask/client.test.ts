@@ -10,13 +10,25 @@ const via = (response: () => Response | Promise<Response>): typeof fetch =>
 describe('askLibrary (C4: the drawer text for every row)', () => {
   it('posts the question and token as JSON to /api/chat, with no credentials or referrer', async () => {
     const spy = vi.fn(async () => json({ mode: 'ai', answer: 'Hi', books: [] }));
-    await askLibrary('q?', 'tok', spy);
+    await askLibrary('q?', 'tok', [], spy);
     const call = spy.mock.calls[0] as unknown as [string, RequestInit];
     expect(call[0]).toBe('/api/chat');
     expect(call[1].method).toBe('POST');
     expect(call[1].body).toBe(JSON.stringify({ question: 'q?', token: 'tok' }));
     expect(call[1].credentials).toBe('omit');
     expect(call[1].referrerPolicy).toBe('no-referrer');
+  });
+
+  it('sends earlier exchanges as history, and omits the key when there are none', async () => {
+    const spy = vi.fn(async () => json({ mode: 'ai', answer: 'Hi', books: [] }));
+    const earlier = [{ question: 'What about Nexus?', answer: 'I liked it.' }];
+    await askLibrary('and?', 'tok', earlier, spy);
+    const call = spy.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(call[1].body as string)).toEqual({
+      question: 'and?',
+      token: 'tok',
+      history: earlier,
+    });
   });
 
   const sent = {
@@ -39,6 +51,7 @@ describe('askLibrary (C4: the drawer text for every row)', () => {
     const result = await askLibrary(
       'q',
       't',
+      [],
       via(() => response),
     );
     expect(result.mode).toBe(mode);
@@ -61,7 +74,7 @@ describe('askLibrary (C4: the drawer text for every row)', () => {
       () => new Response('{bad', { headers: { 'content-type': 'application/json' } }),
     ],
   ])('turns %s into the one unavailable message', async (_n, response) => {
-    const result = await askLibrary('q', 't', via(response));
+    const result = await askLibrary('q', 't', [], via(response));
     expect(result).toEqual({ mode: 'unavailable', answer: UNAVAILABLE, books: [], followUps: [] });
   });
 });

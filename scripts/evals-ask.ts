@@ -1,7 +1,7 @@
 /**
- * The S9 evals (docs/spec/ask-the-library.md): nine questions, each twice,
+ * The S9 evals (docs/spec/ask-the-library.md): ten questions and the memory cases, each twice,
  * through the Worker's own answer code and a test gateway. Live calls, so
- * outside CI (G21), and about 1,100 Neurons.
+ * outside CI (G21), and about 2,500 to 2,700 Neurons.
  *
  *   pnpm evals:ask --gateway <test-gateway-id> [--site <dir>]
  *
@@ -17,7 +17,13 @@ import { answerQuestion } from '../packages/ask/src/answer.ts';
 import type { Env } from '../packages/ask/src/env.ts';
 import { createLibrarySource } from '../packages/ask/src/library.ts';
 import { NOT_A_TEST_GATEWAY } from './lib/ask-deploy.ts';
-import { CASES, followUpsStandAlone, looksLikeFixture, titlesIn } from './lib/ask-evals.ts';
+import {
+  CASES,
+  MEMORY_CASES,
+  followUpsStandAlone,
+  looksLikeFixture,
+  titlesIn,
+} from './lib/ask-evals.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const MODEL = '@cf/openai/gpt-oss-20b';
@@ -118,18 +124,23 @@ let passed = 0;
 let total = 0;
 let tokensIn = 0;
 let tokensOut = 0;
-for (const c of CASES) {
+for (const c of [...CASES, ...MEMORY_CASES]) {
   for (let run = 1; run <= RUNS; run += 1) {
     total += 1;
-    const answered = await answerQuestion(env, source, c.question);
+    const answered = await answerQuestion(env, source, c.question, undefined, c.history);
     const standAlone = followUpsStandAlone(answered.reply.followUps, library);
+    const pilled =
+      c.pill === undefined || answered.reply.books.some((b) => b.title.startsWith(c.pill ?? ''));
     const ok =
-      answered.reply.mode === 'ai' && c.passes(answered.reply.answer, library) && standAlone;
+      answered.reply.mode === 'ai' &&
+      c.passes(answered.reply.answer, library) &&
+      standAlone &&
+      pilled;
     if (ok) passed += 1;
     tokensIn += answered.detail.tokensIn ?? 0;
     tokensOut += answered.detail.tokensOut ?? 0;
     console.log(
-      `${ok ? 'PASS' : 'FAIL'}  [${answered.reply.mode}] run ${String(run)}  ${c.question}` +
+      `${ok ? 'PASS' : 'FAIL'}  [${answered.reply.mode}] run ${String(run)}  ${c.history === undefined ? '' : '(after Co-Intelligence) '}${c.question}` +
         `  (${String(answered.detail.tokensIn ?? '?')} in, ${String(answered.detail.tokensOut ?? '?')} out)`,
     );
     // A failure, or a pass that needs a person to read it, shows its answer.

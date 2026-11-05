@@ -1,6 +1,7 @@
 import { onHeld, requestPickUp } from './bridge.ts';
 import { askLibrary, unavailable, type AskResult } from './client.ts';
 import { createOutsideClick, escapeTakenBy, type CloseReason } from './close.ts';
+import { createMemory } from './memory.ts';
 import { createTokenSource, loadTurnstileScript } from './turnstile.ts';
 
 /** The page's pieces, found by `Ask.astro` and handed over. */
@@ -31,6 +32,8 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   const { panel, launcher, input, thread } = ui;
   let open = false;
   let busy = false;
+  // The last two answered exchanges: a page variable, gone on reload (memory spec D2).
+  const memory = createMemory();
 
   const tokens = createTokenSource({
     siteKey: ui.siteKey,
@@ -167,8 +170,10 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
     const waiting = addEntry('waiting', WAITING);
     ui.live.textContent = WAITING;
     const token = await tokens.token();
-    const result: AskResult = token === undefined ? unavailable : await askLibrary(question, token);
+    const result: AskResult =
+      token === undefined ? unavailable : await askLibrary(question, token, memory.recent());
     waiting.remove();
+    memory.remember(question, result);
     addAnswer(result);
     // Follow-ups when the answer brought some; otherwise the quick questions again,
     // after every search fallback, limit and error too.

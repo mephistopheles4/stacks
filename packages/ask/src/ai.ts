@@ -1,3 +1,4 @@
+import { stripAsterisks } from './asterisks.ts';
 import type { Env } from './env.ts';
 import { AI_TIMEOUT_MS, MAX_OUTPUT_TOKENS, MODEL } from './limits.ts';
 
@@ -93,8 +94,7 @@ function extractText(out: unknown): string {
 
 /** Non-breaking hyphens become hyphens and `*` marks go (S6). */
 export function cleanAnswer(text: string): string {
-  return text
+  return stripAsterisks(text)
     .replace(/[‐‑‒–]/g, '-')
-    .replace(/\*+/g, '')
     .trim();
 }

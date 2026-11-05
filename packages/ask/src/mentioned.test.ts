@@ -83,3 +83,42 @@ describe('fold', () => {
     expect(fold(`It${CURLY}s`)).toBe("it's");
   });
 });
+
+describe('mentioned: case and memory (memory spec)', () => {
+  const STAFF = book('staff', 'Staff Engineer');
+  const FCK = book('fck', 'The Subtle Art of Not Giving a F*ck');
+
+  it('needs the title capitalisation in an answer', () => {
+    expect(mentioned([STAFF], 'A staff engineer feels most alive when solving things.')).toEqual(
+      [],
+    );
+    expect(ids(mentioned([STAFF], 'I read Staff Engineer last year.'))).toEqual(['staff']);
+  });
+
+  it('still reads a visitor question case-insensitively', () => {
+    const q = 'what did you think of staff engineer?';
+    expect(ids(mentioned([STAFF], 'Nothing written about it.', q))).toEqual(['staff']);
+  });
+
+  it('keeps an asterisk inside a title in the pill match', () => {
+    expect(ids(mentioned([FCK], 'I liked The Subtle Art of Not Giving a F*ck a lot.'))).toEqual([
+      'fck',
+    ]);
+  });
+
+  it('falls back to the books memory names, newest first, when answer and question name none', () => {
+    const history = [
+      { question: 'Tell me about Lantern Keeper', answer: 'It was good.' },
+      { question: 'And the other?', answer: 'Salt Harbour was good too.' },
+    ];
+    expect(ids(mentioned(CAT, 'I have not written about it.', 'which one?', history))).toEqual([
+      'other',
+      'keeper',
+    ]);
+  });
+
+  it('does not use memory when the answer names a book', () => {
+    const history = [{ question: 'Lantern Keeper?', answer: 'Good.' }];
+    expect(ids(mentioned(CAT, 'Salt Harbour is good.', 'which?', history))).toEqual(['other']);
+  });
+});

@@ -93,6 +93,15 @@ describe('splitFollowUps (S6, C4, C15)', () => {
   });
 });
 
+describe('splitFollowUps: asterisks (memory spec, C25)', () => {
+  it('keeps an asterisk inside a title in a follow-up and drops markup asterisks', () => {
+    const out = splitFollowUps(
+      lines('A.', 'FOLLOW-UPS:', '- What did you think of **The Art of Not Giving a F*ck**?'),
+    );
+    expect(out.followUps).toEqual(['What did you think of The Art of Not Giving a F*ck?']);
+  });
+});
+
 describe('acceptable', () => {
   it.each([
     ['What did you think of Nexus?', true],

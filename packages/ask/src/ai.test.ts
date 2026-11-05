@@ -96,6 +96,13 @@ describe('cleanAnswer', () => {
   it('replaces non-breaking hyphens and removes asterisks', () => {
     expect(cleanAnswer(' **Co‑Intelligence** is *good* ')).toBe('Co-Intelligence is good');
   });
+
+  it('keeps an asterisk with a letter on both sides, so a title like F*ck survives', () => {
+    expect(cleanAnswer('I liked **The Art of Not Giving a F*ck** a lot.')).toBe(
+      'I liked The Art of Not Giving a F*ck a lot.',
+    );
+    expect(cleanAnswer('* a bullet and trailing*')).toBe('a bullet and trailing');
+  });
 });
 
 describe('error codes reach the log as digits only (S11, C15)', () => {

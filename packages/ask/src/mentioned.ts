@@ -2,20 +2,31 @@ import { MAX_SEARCH_BOOKS } from './limits.ts';
 import type { CatalogueBook } from './library.ts';
 
 /**
- * Which catalogue books a text names, for the pills under an answer (S6, S7).
+ * Which catalogue books a text names, for the pills under an answer and for the
+ * Thoughts a follow-up needs (S4, S6, S7).
  *
- * Three things a model's text does that a plain substring match gets wrong:
+ * Four things a model's text does that a plain substring match gets wrong:
  * it writes a curly apostrophe where the title has a straight one (or the other
  * way round); it names a longer title that holds a shorter one ("Lantern Keeper's
  * Path" holds "Lantern Keeper"), so the shorter book shows as a second, wrong pill;
- * and it sometimes names no book at all.
+ * it sometimes names no book at all; and it uses a title's words as plain prose
+ * ("a staff engineer feels most alive"), which is not the book.
  */
 
 const APOSTROPHES = /[‘’ʼ′]/g;
 
-/** Lower case, one kind of apostrophe, so matching does not depend on typography. */
+/** One kind of apostrophe, so matching does not depend on typography. */
+const straight = (text: string): string => text.replace(APOSTROPHES, "'");
+
+/** Lower case as well: how a visitor's question is matched, because visitors type loosely. */
 export function fold(text: string): string {
-  return text.toLowerCase().replace(APOSTROPHES, "'");
+  return straight(text).toLowerCase();
+}
+
+/** The text of an exchange kept by the page: what the visitor asked, what the bot said. */
+export interface Remembered {
+  readonly question: string;
+  readonly answer: string;
 }
 
 interface Span {
@@ -28,16 +39,20 @@ const isWordChar = (ch: string | undefined): boolean =>
   ch !== undefined && /[\p{L}\p{N}]/u.test(ch);
 
 /** The names a book can be called: its whole title, and the part before a colon. */
-function namesOf(book: CatalogueBook): string[] {
-  const full = fold(book.title);
-  const head = fold(book.title.split(':')[0] ?? book.title);
+function namesOf(book: CatalogueBook, normalise: (text: string) => string): string[] {
+  const full = normalise(book.title);
+  const head = normalise(book.title.split(':')[0] ?? book.title);
   return head !== full && head.length >= 5 ? [full, head] : [full];
 }
 
-function spansIn(text: string, books: readonly CatalogueBook[]): Span[] {
+function spansIn(
+  text: string,
+  books: readonly CatalogueBook[],
+  normalise: (text: string) => string,
+): Span[] {
   const spans: Span[] = [];
   for (const book of books) {
-    for (const name of namesOf(book)) {
+    for (const name of namesOf(book, normalise)) {
       if (name === '') continue;
       for (let at = text.indexOf(name); at >= 0; at = text.indexOf(name, at + 1)) {
         const end = at + name.length;
@@ -61,8 +76,14 @@ function swallowed(span: Span, all: readonly Span[]): boolean {
   );
 }
 
-function named(text: string, catalogue: readonly CatalogueBook[]): CatalogueBook[] {
-  const spans = spansIn(fold(text), catalogue);
+/**
+ * The books a text names. `loose` ignores case (a visitor's question); otherwise the
+ * title's own capitalisation is required (a model's answer), so prose that happens to
+ * hold a title's words in lower case names no book.
+ */
+function named(text: string, catalogue: readonly CatalogueBook[], loose: boolean): CatalogueBook[] {
+  const normalise = loose ? fold : straight;
+  const spans = spansIn(normalise(text), catalogue, normalise);
   // A book stays if any occurrence of it is not swallowed by a longer title, so a
   // book named on its own as well as inside a longer one keeps its pill.
   const kept = new Set(spans.filter((s) => !swallowed(s, spans)).map((s) => s.book));
@@ -70,15 +91,38 @@ function named(text: string, catalogue: readonly CatalogueBook[]): CatalogueBook
 }
 
 /**
+ * The books the earlier exchanges name, newest exchange first and in catalogue order
+ * within one. A visitor's earlier question is matched loosely, the bot's answer exactly.
+ */
+export function namedInMemory(
+  catalogue: readonly CatalogueBook[],
+  history: readonly Remembered[],
+): CatalogueBook[] {
+  const found = new Map<string, CatalogueBook>();
+  for (const exchange of [...history].reverse()) {
+    for (const book of [
+      ...named(exchange.answer, catalogue, false),
+      ...named(exchange.question, catalogue, true),
+    ]) {
+      if (!found.has(book.id)) found.set(book.id, book);
+    }
+  }
+  return [...found.values()];
+}
+
+/**
  * The books the answer names; when it names none, the books the visitor's question
- * names, by the same matching. At most 6, in catalogue order.
+ * names; when neither does, the books earlier exchanges name, newest first. At most 6.
  */
 export function mentioned(
   catalogue: readonly CatalogueBook[],
   answer: string,
   question = '',
+  history: readonly Remembered[] = [],
 ): CatalogueBook[] {
-  const fromAnswer = named(answer, catalogue);
-  const books = fromAnswer.length > 0 ? fromAnswer : named(question, catalogue);
-  return books.slice(0, MAX_SEARCH_BOOKS);
+  const fromAnswer = named(answer, catalogue, false);
+  if (fromAnswer.length > 0) return fromAnswer.slice(0, MAX_SEARCH_BOOKS);
+  const fromQuestion = named(question, catalogue, true);
+  if (fromQuestion.length > 0) return fromQuestion.slice(0, MAX_SEARCH_BOOKS);
+  return namedInMemory(catalogue, history).slice(0, MAX_SEARCH_BOOKS);
 }

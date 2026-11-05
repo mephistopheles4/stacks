@@ -86,13 +86,15 @@ export function readReply(value: unknown): AskResult {
 export async function askLibrary(
   question: string,
   token: string,
+  history: readonly { readonly question: string; readonly answer: string }[] = [],
   fetchImpl: typeof fetch = fetch,
 ): Promise<AskResult> {
   try {
     const response = await fetchImpl('/api/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ question, token }),
+      // Earlier exchanges ride along only when there are some (memory spec D1).
+      body: JSON.stringify({ question, token, ...(history.length > 0 && { history }) }),
       credentials: 'omit',
       referrerPolicy: 'no-referrer',
     });

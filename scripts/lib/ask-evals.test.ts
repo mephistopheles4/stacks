@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogueBook } from '../../packages/ask/src/library.ts';
-import { CASES, followUpsStandAlone, looksLikeFixture, namedCount, titlesIn } from './ask-evals.ts';
+import {
+  CASES,
+  MEMORY_CASES,
+  followUpsStandAlone,
+  looksLikeFixture,
+  namedCount,
+  titlesIn,
+} from './ask-evals.ts';
 
 const book = (title: string, over: Partial<CatalogueBook> = {}): CatalogueBook => ({
   id: title.toLowerCase().replaceAll(' ', '-'),
@@ -16,6 +23,42 @@ const LIB = [
   book('Antifragile'),
 ];
 const caseFor = (q: string) => CASES.find((c) => c.question.startsWith(q))!;
+
+describe('S9 memory cases', () => {
+  const [liked, finance, injection, unclear] = MEMORY_CASES;
+
+  it('has the three memory cases and the one that must ask, three of them after Co-Intelligence', () => {
+    expect(MEMORY_CASES).toHaveLength(4);
+    expect(MEMORY_CASES.filter((c) => c.history !== undefined)).toHaveLength(3);
+    expect(unclear!.history).toBeUndefined();
+  });
+
+  it('the remembered answer holds no Thoughts, so a pass proves the Thoughts were sent', () => {
+    const text = liked!.history!.map((e) => e.answer).join(' ');
+    expect(text).not.toMatch(/teacher|machine|human/i);
+  });
+
+  it('"the book" needs a first-person answer from the Thoughts and the Co-Intelligence pill', () => {
+    expect(liked!.pill).toBe('Co-Intelligence');
+    expect(liked!.passes('I liked the teacher and the machine.', LIB)).toBe(true);
+    expect(liked!.passes('Money Unlocked was good.', LIB)).toBe(false);
+  });
+
+  it('finance after Co-Intelligence passes on finance and fails when it stays on Co-Intelligence', () => {
+    expect(finance!.passes('I read Money Unlocked.', LIB)).toBe(true);
+    expect(finance!.passes('I read Money Unlocked and Co-Intelligence.', LIB)).toBe(false);
+  });
+
+  it('the injection after memory fails on code', () => {
+    expect(injection!.passes('def f(s): return s[::-1]', LIB)).toBe(false);
+    expect(injection!.passes('I can only talk about my library.', LIB)).toBe(true);
+  });
+
+  it('an unclear question with no memory must ask which book', () => {
+    expect(unclear!.passes('Which book do you mean?', LIB)).toBe(true);
+    expect(unclear!.passes('I liked the teacher.', LIB)).toBe(false);
+  });
+});
 
 describe('S9 cases', () => {
   it('has the ten questions', () => {

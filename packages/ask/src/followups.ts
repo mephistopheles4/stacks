@@ -4,6 +4,8 @@
  * it is a short plain question, and anything else is dropped without failing the
  * answer.
  */
+import { stripAsterisks } from './asterisks.ts';
+
 export const MAX_FOLLOW_UPS = 2;
 export const MAX_FOLLOW_UP_CHARS = 120;
 
@@ -35,11 +37,7 @@ export function splitFollowUps(text: string): Split {
   const rest = [MARKER.exec(lines[at] ?? '')?.[1] ?? '', ...lines.slice(at + 1)];
   const kept: string[] = [];
   for (const raw of rest) {
-    const line = raw
-      .replace(LEADING, '')
-      .replace(/^["'“‘]+|["'”’]+$/g, '')
-      .replace(/\*+/g, '')
-      .trim();
+    const line = stripAsterisks(raw.replace(LEADING, '').replace(/^["'“‘]+|["'”’]+$/g, '')).trim();
     if (line === '' || NONE.test(line)) continue;
     if (!acceptable(line) || kept.includes(line)) continue;
     kept.push(line);

@@ -15,7 +15,7 @@ const json = (value: unknown): string => JSON.stringify(value);
 describe('readRequest (S5 step 2)', () => {
   it('accepts a well-formed question and trims it', async () => {
     const r = await readRequest(post(json({ question: '  hi  ', token: 't' })), ORIGIN);
-    expect(r).toEqual({ ok: true, question: 'hi', token: 't' });
+    expect(r).toEqual({ ok: true, question: 'hi', token: 't', history: [] });
   });
 
   it.each([
@@ -65,5 +65,51 @@ describe('readRequest (S5 step 2)', () => {
   it('refuses on a declared Content-Length over the cap without reading', async () => {
     const request = post(json({ question: 'q', token: 't' }), { 'content-length': '9000' });
     expect(await readRequest(request, ORIGIN)).toEqual({ ok: false });
+  });
+});
+
+describe('readRequest: history (memory spec D4, C22)', () => {
+  const ex = (q = 'What did you think of Nexus?', a = 'I liked it.') => ({
+    question: q,
+    answer: a,
+  });
+  const withHistory = (history: unknown): Request =>
+    post(json({ question: 'and the other one?', token: 't', history }));
+
+  it('accepts none, an empty list, one and two exchanges, keeping only the two fields', async () => {
+    expect((await readRequest(withHistory(undefined), ORIGIN)).ok).toBe(true);
+    const two = await readRequest(
+      withHistory([ex(), { ...ex('Why?', 'Because.'), extra: 'x' }]),
+      ORIGIN,
+    );
+    expect(two).toEqual({
+      ok: true,
+      question: 'and the other one?',
+      token: 't',
+      history: [ex(), ex('Why?', 'Because.')],
+    });
+    expect((await readRequest(withHistory([]), ORIGIN)).ok).toBe(true);
+  });
+
+  it('accepts exactly 300 and 600 characters', async () => {
+    const r = await readRequest(withHistory([ex('q'.repeat(300), 'a'.repeat(600))]), ORIGIN);
+    expect(r.ok).toBe(true);
+  });
+
+  it.each([
+    ['three exchanges', [ex(), ex(), ex()]],
+    ['a 301-character question', [ex('q'.repeat(301))]],
+    ['a 601-character answer', [ex('q', 'a'.repeat(601))]],
+    ['an empty answer', [ex('q', '  ')]],
+    ['an empty question', [ex('', 'a')]],
+    ['a missing answer', [{ question: 'q' }]],
+    ['a non-string answer', [{ question: 'q', answer: 4 }]],
+    ['a string instead of a list', 'earlier'],
+    ['null', null],
+    ['an object instead of a list', { question: 'q', answer: 'a' }],
+    ['a list of strings', ['q', 'a']],
+    ['a null entry', [null]],
+  ])('refuses %s', async (_name, history) => {
+    expect(await readRequest(withHistory(history), ORIGIN)).toEqual({ ok: false });
   });
 });

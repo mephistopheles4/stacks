@@ -3,7 +3,7 @@ import type { Env } from './env.ts';
 import { DataError, type CatalogueBook, type LibrarySource } from './library.ts';
 import type { Outcome, OutcomeDetail } from './outcome.ts';
 import { mentioned } from './mentioned.ts';
-import { buildMessages, type ThoughtsEntry } from './prompt.ts';
+import { buildMessages, type Exchange, type ThoughtsEntry } from './prompt.ts';
 import { search } from './search.ts';
 import { splitFollowUps } from './followups.ts';
 import { pickLikelyBooks } from './select.ts';
@@ -64,6 +64,7 @@ export async function answerQuestion(
   source: LibrarySource,
   question: string,
   clock: () => number = Date.now,
+  history: readonly Exchange[] = [],
 ): Promise<Answered> {
   const catalogue = await source.catalogue();
   if (env.ASK_AI_ENABLED !== 'true') {
@@ -76,9 +77,9 @@ export async function answerQuestion(
   }
   const started = clock();
   try {
-    const picked = pickLikelyBooks(catalogue, question);
+    const picked = pickLikelyBooks(catalogue, question, history);
     const entries = await loadThoughts(source, picked);
-    const { messages } = buildMessages(catalogue, entries, question);
+    const { messages } = buildMessages(catalogue, entries, question, history);
     const result = await runModel(env, messages);
     // The follow-ups are cut off the answer; an answer that was only a block is blank.
     const split = splitFollowUps(result.text);
@@ -87,7 +88,7 @@ export async function answerQuestion(
       reply: {
         mode: 'ai',
         answer: split.answer,
-        books: mentioned(catalogue, split.answer, question).map(summary),
+        books: mentioned(catalogue, split.answer, question, history).map(summary),
         followUps: split.followUps,
       },
       outcome: 'ai',

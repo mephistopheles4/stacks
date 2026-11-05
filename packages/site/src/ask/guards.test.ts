@@ -81,3 +81,20 @@ describe('follow-ups replace the quick questions, and they come back (S7)', () =
     expect(set).toContain('button.textContent = text');
   });
 });
+
+describe('the conversation lives in a page variable and is sent with each question (memory spec D2, C21)', () => {
+  const sources = readdirSync(DIR)
+    .filter((name) => /\.(ts|astro)$/.test(name) && !name.endsWith('.test.ts'))
+    .map((name) => [name, code(name)] as const);
+
+  it.each(sources)('%s touches no storage, cookie or history API', (_name, source) => {
+    expect(source).not.toMatch(/localStorage|sessionStorage|indexedDB|document\.cookie|caches\./);
+    expect(source).not.toMatch(/history\.(pushState|replaceState)|location\.(hash|search)\s*=/);
+  });
+
+  it('the drawer sends what memory holds and remembers each reply', () => {
+    const drawer = code('drawer.ts');
+    expect(drawer).toContain('askLibrary(question, token, memory.recent())');
+    expect(drawer).toContain('memory.remember(question, result)');
+  });
+});
