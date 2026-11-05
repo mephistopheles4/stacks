@@ -1071,7 +1071,9 @@ describe('G20 — every rule goes red', () => {
     /**
      * The directive that carries the argument. #119 decided stacks adds no
      * outbound flow carrying anything derived from the owner's reading, and
-     * this is the line that makes that decision cost something to break.
+     * this is the line that makes that decision cost something to break. (The
+     * Ask the library Worker's flow leaves from the server, which this rule
+     * cannot see: ADR-0127.)
      */
     await expectOnly('csp', async () => {
       await writeIndex(

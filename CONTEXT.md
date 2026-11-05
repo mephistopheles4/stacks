@@ -316,9 +316,30 @@ debug panel.
 **Ask the library**:
 The chat drawer on the shelf page and the Worker behind it at `/api/chat`. It
 answers in the owner's first person from public build output only, and falls back
-to word search when AI is unavailable. A visitor never talks to a model directly:
-every model call goes through one function and an AI Gateway.
+to plain results when AI is unavailable. A visitor never talks to a model directly
+(its calls are held by G69, `one-ai-call`, in [`docs/gates.md`](docs/gates.md)).
 *Avoid*: chatbot, assistant.
+
+**Drawer**:
+The Ask the library box on the shelf page: the launcher, the thread, the quick
+questions and the text box. It is a *drawer* and never a *panel*, which the glossary
+keeps for the backboard (`#ask-panel` and `createPanelMotion` are older names for it).
+*Avoid*: panel, chat window.
+
+**Pill**:
+One of the book links under an answer, a one-line button that picks that book up.
+*Avoid*: book link, chip.
+
+**Plain results**:
+What a visitor gets when AI is off or fails: the same search the model's tool uses,
+with no model. When it has nothing to search for, or a word matched nothing, it offers
+the **top-rated offer**, the owner's highest-rated books that have Thoughts, at most 5.
+*Avoid*: fallback on its own (it means two things).
+
+**Line of counts**:
+The last line of the system message, "Your library holds 61 books: 58 read, 3 reading."
+The model answers a count from it, with no search.
+*Avoid*: status line.
 
 ### Building and publishing
 

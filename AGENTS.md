@@ -58,6 +58,8 @@ packages/
   core/     # vault adapter interface + obsidian adapter, metadata fetchers, library.json builder
   cli/      # stacks CLI (commander), depends on core
   site/     # Astro site, vanilla Three.js island, reads library.json
+  ask/      # the Ask the library Worker: answers questions at /api/chat from public build output
+infra/      # Terraform: the WAF rule, the AI Gateway with its spend limit, the Health Check
 fixtures/
   vault/    # ~10 seed books: 2 missing covers, 1 malformed, 1 audiobook
 docs/
@@ -379,4 +381,4 @@ The five canonical roles, each label string equal to its name. All five exist on
 
 ### Domain docs
 
-Single-context — three packages, one vocabulary. That vocabulary is [`CONTEXT.md`](CONTEXT.md), and it holds only the terms **no gate pins down** — anything a gate already enforces is linked from there, never restated, for [ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md)'s reason. Decisions live in [`docs/adr/`](docs/adr/), one file each, carrying the original reasoning verbatim. See [`docs/agents/domain.md`](docs/agents/domain.md).
+Single-context — four packages (`core`, `cli`, `site`, `ask`), one vocabulary. That vocabulary is [`CONTEXT.md`](CONTEXT.md), and it holds only the terms **no gate pins down** — anything a gate already enforces is linked from there, never restated, for [ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md)'s reason. Decisions live in [`docs/adr/`](docs/adr/), one file each, carrying the original reasoning verbatim. See [`docs/agents/domain.md`](docs/agents/domain.md).

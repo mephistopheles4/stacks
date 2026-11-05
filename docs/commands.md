@@ -422,7 +422,7 @@ reads `packages/ask/.dev.vars` over the config's `vars`. The config names the re
 `ASK_GATEWAY_ID` to a test gateway and `ASK_AI_ENABLED=true` in `.dev.vars`, or every question
 falls back to search within milliseconds. Without `--local` the AI binding reaches Cloudflare,
 so a local answer spends real Neurons. The log says why a question fell back:
-`reason` is `budget` (with `code` 2045), `timeout`, `blank` or `error`, and `toolCalls` counts the model's tool calls, and `code` is the
+`reason` is `budget` (with `code` 2045), `timeout`, `blank` or `error`; `toolCalls` counts the model's tool calls; and `code` is the
 platform's four-digit code when its message starts with one (such as 3043); it is digits only.
 
 **`pnpm ask:status`** prints yesterday's outcome counts from Workers Logs. ⚠️ **Its

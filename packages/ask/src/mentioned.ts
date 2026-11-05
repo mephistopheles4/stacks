@@ -98,7 +98,7 @@ function named(text: string, catalogue: readonly CatalogueBook[], loose: boolean
  * The books the earlier exchanges name, newest exchange first and in catalogue order
  * within one. A visitor's earlier question is matched loosely, the bot's answer exactly.
  */
-export function namedInMemory(
+function namedInMemory(
   catalogue: readonly CatalogueBook[],
   history: readonly Exchange[],
   only?: ReadonlySet<string>,

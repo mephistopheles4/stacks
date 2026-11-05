@@ -36,7 +36,8 @@ the rules already treat as data, and it can only name books whose Thoughts are p
 ## What this costs, and what is hard to reverse
 
 The worst question goes from about 114 to about 130 Neurons (S5, S14 Q8), so abuse uses up
-the day sooner. The request shape gains a field the Worker must keep accepting for as long
+the day sooner. **Changed by [ADR-0132](./0132-the-model-searches-the-library-with-two-tools-and-the-catalogue-leaves-the-prompt.md):
+the worst question is now about 300 Neurons.** The request shape gains a field the Worker must keep accepting for as long
 as old pages are cached. Removing memory later means dropping the field and the rules that
 mention it (`ask-the-library.contract.md`), which is a small change; the part that does not
 undo itself is a visitor's habit of expecting a follow-up to work.

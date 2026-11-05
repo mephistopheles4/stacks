@@ -36,7 +36,7 @@ provider docs for each resource list the same groups):
 The Cloudflare docs name write permissions "Edit" in some tables and "Write" in
 others. If the first plan is refused for permissions, add the missing one from the
 error and note it here. Whether Zone WAF Edit alone covers the `http_ratelimit`
-entrypoint was not confirmable from the docs I could read; the first plan shows it.
+entrypoint was not confirmable from Cloudflare's documentation; the first `terraform plan` shows it.
 
 ## Run
 

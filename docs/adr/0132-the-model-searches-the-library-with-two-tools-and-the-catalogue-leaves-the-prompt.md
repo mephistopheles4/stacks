@@ -45,7 +45,7 @@ that two results and the largest memory fit within (5,053 to 5,140 on the real b
 
 The worst question is about 300 Neurons, up from about 130, so one visitor's 30 worst-case
 questions could use up a whole day of AI. A typical question is about 50, down from at least
-56. The model can no longer browse, so a loose question depends on the search, and broad
+56. The model no longer sees the catalogue unless it calls a tool, so a loose question depends on the search, and broad
 questions are the known weak spot. A third model call can add up to 30 seconds. Going back is
 a code change (put the catalogue back and restore the picker), not a data one.
 
