@@ -129,3 +129,30 @@ export function varArgs(decision: AiDecision, flags: AskFlags): string[] {
     ...(flags.gateway !== undefined ? ['--var', `ASK_GATEWAY_ID:${flags.gateway}`] : []),
   ];
 }
+
+/** Cloudflare's published Turnstile test keys: 1x, 2x and 3x, then zeros, then two letters. */
+const TURNSTILE_TEST_KEY = /^[123]x0{20}[A-Za-z]{2}$/;
+
+/**
+ * Why this Turnstile site key must not ship, or undefined when it may. An empty key makes a drawer
+ * that answers every visitor with the unavailable message, and Cloudflare's test key makes one whose
+ * token any client can earn (behaviour E7).
+ */
+export function keyProblem(key: string): string | undefined {
+  const trimmed = key.trim();
+  if (trimmed === '') {
+    return 'PUBLIC_TURNSTILE_SITE_KEY is empty, so the drawer would refuse every visitor';
+  }
+  if (TURNSTILE_TEST_KEY.test(trimmed)) {
+    return "PUBLIC_TURNSTILE_SITE_KEY is Cloudflare's Turnstile test key, which any client can pass; set the production site key";
+  }
+  return undefined;
+}
+
+/** The same, read back from the built page: what is about to be uploaded, not what was meant. */
+export function siteKeyProblem(html: string): string | undefined {
+  const found = /data-site-key="([^"]*)"/.exec(html);
+  if (found === null) return 'the built page has no Ask the library panel (no data-site-key)';
+  const problem = keyProblem(found[1] ?? '');
+  return problem === undefined ? undefined : `the built page carries a bad site key: ${problem}`;
+}

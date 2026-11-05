@@ -3,6 +3,8 @@ import {
   bundleLeaks,
   decideAi,
   invocationLogsOff,
+  keyProblem,
+  siteKeyProblem,
   liveAiValue,
   parseAskArgs,
   varArgs,
@@ -126,5 +128,34 @@ describe('varArgs', () => {
       '--var',
       'ASK_GATEWAY_ID:g1',
     ]);
+  });
+});
+
+describe('siteKeyProblem (behaviour E7)', () => {
+  const page = (key: string): string =>
+    `<section id="ask-panel" data-site-key="${key}" hidden></section>`;
+
+  it('refuses an empty key, a missing panel, and each of the test keys of Cloudflare', () => {
+    expect(siteKeyProblem(page(''))).toMatch(/empty/);
+    expect(siteKeyProblem(page('   '))).toMatch(/empty/);
+    expect(siteKeyProblem('<html></html>')).toMatch(/no Ask the library panel/);
+    for (const key of [
+      '1x00000000000000000000AA',
+      '2x00000000000000000000AB',
+      '3x00000000000000000000FF',
+    ]) {
+      expect(siteKeyProblem(page(key)), key).toMatch(/test key/);
+    }
+  });
+
+  it('refuses the same keys before a build, from the environment', () => {
+    expect(keyProblem('')).toMatch(/empty/);
+    expect(keyProblem('2x00000000000000000000AB')).toMatch(/test key/);
+    expect(keyProblem('0x4AAAAAAABkMYinukE8nzYS')).toBeUndefined();
+  });
+
+  it('accepts a production-shaped key', () => {
+    expect(siteKeyProblem(page('0x4AAAAAAABkMYinukE8nzYS'))).toBeUndefined();
+    expect(siteKeyProblem(page('1x0000000000000000000'))).toBeUndefined();
   });
 });

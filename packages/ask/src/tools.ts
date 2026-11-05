@@ -79,6 +79,12 @@ export interface ToolSession {
   readonly source: LibrarySource;
   /** Books a search has returned. `list_books` adds none, so a title can still be searched. */
   readonly returned: Set<string>;
+  /**
+   * The books a search actually matched. The top-rated books a miss or an empty query offers are
+   * in `returned` (so a second search skips them) but not here: they are an offer, not a match, and
+   * only a match may give an answer a pill from memory (behaviour E4).
+   */
+  readonly matched: Set<string>;
 }
 
 export interface ToolRun {
@@ -172,6 +178,8 @@ async function searchBooks(session: ToolSession, query: string, room: number): P
   const base = estimateTokens(lines);
   if (base > room) return NO_ROOM;
   for (const h of hits) session.returned.add(h.book.id);
+  if (!missed && usableTerms(query).length > 0)
+    for (const h of hits) session.matched.add(h.book.id);
 
   const blocks: string[] = [];
   let used = 0;

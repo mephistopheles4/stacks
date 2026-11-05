@@ -141,3 +141,46 @@ describe('onTheShelf (T9, C31)', () => {
     expect(onTheShelf('Is it about me?', cat)).toBe(false);
   });
 });
+
+describe('splitFollowUps: a sentence that starts like the marker stays in the answer (behaviour E3)', () => {
+  it.each([
+    'Follow up with Nexus, it is great.',
+    'Followup reading: Nexus is good.',
+    'Follow-up questions are welcome, and I liked Nexus.',
+    'Follow-ups can wait; I liked Nexus.',
+  ])('%s', (line) => {
+    const out = splitFollowUps(line);
+    expect(out.answer).toBe(line);
+    expect(out.followUps).toEqual([]);
+  });
+
+  it('keeps the answer above a real marker when a sentence below it opens the same way', () => {
+    const out = splitFollowUps(
+      [
+        'I liked Nexus.',
+        'Follow up with Nexus, it is great.',
+        'FOLLOW-UPS:',
+        '- What did you think of Nexus?',
+      ].join(String.fromCharCode(10)),
+    );
+    expect(out.answer).toBe(
+      'I liked Nexus.' + String.fromCharCode(10) + 'Follow up with Nexus, it is great.',
+    );
+    expect(out.followUps).toEqual(['What did you think of Nexus?']);
+  });
+
+  it('still takes the marker forms the spec names, with a dash too', () => {
+    for (const marker of [
+      'FOLLOW-UPS:',
+      '**Follow-ups:**',
+      '### Follow ups',
+      'Follow-up questions',
+      'follow-ups - What did you think of Nexus?',
+    ]) {
+      const out = splitFollowUps(
+        ['A.', marker, '- What did you think of Nexus?'].join(String.fromCharCode(10)),
+      );
+      expect(out.answer, marker).toBe('A.');
+    }
+  });
+});

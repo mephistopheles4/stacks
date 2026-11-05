@@ -145,13 +145,14 @@ describe('the tool loop (T1, T2, T7)', () => {
     expect(seen[0]!.hasTools).toBe(true);
     const second = seen[1]!.messages;
     expect(second.map((m) => m.role)).toEqual(['system', 'user', 'assistant', 'tool']);
-    expect(second[3]!.tool_call_id).toBe('abc');
+    // The id is the Worker's, never the model's (behaviour E2).
+    expect(second[3]!.tool_call_id).toBe('call_1');
     expect(second[3]!.content).toContain(
       'Your Thoughts on "Co-Intelligence: Living and Working with AI"',
     );
     expect(second[2]!.tool_calls).toEqual([
       {
-        id: 'abc',
+        id: 'call_1',
         type: 'function',
         function: { name: 'search_library', arguments: '{"query":"Co-Intelligence"}' },
       },
@@ -229,8 +230,11 @@ describe('at most 2 tool calls, then a call with no tools (T2, C26)', () => {
     const second = seen[1]!.messages;
     const assistant = second.find((m) => m.role === 'assistant')!;
     const toolIds = second.filter((m) => m.role === 'tool').map((m) => m.tool_call_id);
-    expect((assistant.tool_calls as { id: string }[]).map((c) => c.id)).toEqual(['a', 'b']);
-    expect(toolIds).toEqual(['a', 'b']);
+    expect((assistant.tool_calls as { id: string }[]).map((c) => c.id)).toEqual([
+      'call_1',
+      'call_2',
+    ]);
+    expect(toolIds).toEqual(['call_1', 'call_2']);
     // Both calls ran, so the next call has no tools left.
     expect(seen[1]!.hasTools).toBe(false);
     expect(answered.detail.searches).toBe(2);
@@ -675,5 +679,117 @@ describe('plain results when the question has nothing to search for (S6, T12)', 
     const answered = await answerQuestion(env, source, 'What would you recommend?');
     expect(answered.reply.mode).toBe('search');
     expect(answered.reply.answer).toBe(SEARCH_RATED);
+  });
+});
+
+describe('nothing the model wrote or named goes back to it, or goes uncounted (behaviour E2)', () => {
+  const CANARY = 'CANARY-WORDS-' + 'x'.repeat(3_000);
+  const LONG_NAME = 'tool_' + 'n'.repeat(3_000);
+  const LONG_ID = 'id_' + 'i'.repeat(3_000);
+  const biggest = { question: 'q'.repeat(300), answer: 'a'.repeat(600) };
+
+  it("the assistant turn has empty content, and the ids and names are the Worker's own", async () => {
+    const { env, seen } = scripted([
+      {
+        text: CANARY,
+        calls: [
+          { id: LONG_ID, name: LONG_NAME, args: {} },
+          { id: LONG_ID + '2', name: 'search_library', args: { query: 'nexus' } },
+        ],
+      },
+      { text: 'Done.' },
+    ]);
+    await answerQuestion(env, source, 'q');
+    const second = seen[1]!.messages;
+    const assistant = second.find((m) => m.role === 'assistant')!;
+    expect(assistant.content).toBe('');
+    expect(JSON.stringify(second)).not.toContain('CANARY');
+    expect(JSON.stringify(second)).not.toContain(LONG_ID);
+    expect(JSON.stringify(second)).not.toContain(LONG_NAME);
+    expect(
+      (assistant.tool_calls as { id: string; function: { name: string } }[]).map((c) => [
+        c.id,
+        c.function.name,
+      ]),
+    ).toEqual([
+      ['call_1', 'unknown_tool'],
+      ['call_2', 'search_library'],
+    ]);
+    const tools = second.filter((m) => m.role === 'tool') as unknown as {
+      tool_call_id: string;
+      name: string;
+    }[];
+    expect(tools.map((t) => [t.tool_call_id, t.name])).toEqual([
+      ['call_1', 'unknown_tool'],
+      ['call_2', 'search_library'],
+    ]);
+  });
+
+  it('long text beside a tool call cannot push the input past 6,000 with the largest memory', async () => {
+    const { env, seen } = scripted([
+      { text: CANARY.repeat(3), calls: [{ id: LONG_ID, name: 'list_books', args: {} }] },
+      {
+        text: CANARY.repeat(3),
+        calls: [{ id: LONG_ID, name: 'search_library', args: { query: 'nexus' } }],
+      },
+      { text: 'Done.' },
+    ]);
+    await answerQuestion(env, source, 'z'.repeat(1_500), Date.now, [biggest, biggest]);
+    for (const call of seen) {
+      const tokens = call.messages.reduce(
+        (n, m) =>
+          n + estimateTokens(m.content) + estimateTokens(JSON.stringify(m.tool_calls ?? [])),
+        0,
+      );
+      expect(tokens).toBeLessThanOrEqual(6_000);
+    }
+  });
+});
+
+describe("a memory pill only for a book this question's search matched (behaviour E4)", () => {
+  const earlier = [{ question: 'What did you think of Nexus?', answer: 'I wrote about Nexus.' }];
+  const ask = async (steps: Step[], question: string) => {
+    const { env } = scripted(steps);
+    return (await answerQuestion(env, source, question, Date.now, earlier)).reply.books.map(
+      (b) => b.id,
+    );
+  };
+
+  it('a search that matched the memory book keeps its pill', async () => {
+    expect(
+      await ask([{ calls: [search('Nexus')] }, { text: 'I liked the history.' }], 'why?'),
+    ).toEqual(['nexus']);
+  });
+
+  it('a search that matched other books does not bring the memory book back', async () => {
+    expect(
+      await ask([{ calls: [search('Co-Intelligence')] }, { text: 'I thought about it.' }], 'and?'),
+    ).toEqual([]);
+  });
+
+  it('"I haven\'t read about that" after a miss shows no memory pill, though the offer holds the book', async () => {
+    // zymurgy matches nothing, so the top-rated books (Nexus among them) are offered, not matched.
+    expect(
+      await ask(
+        [{ calls: [search('zymurgy')] }, { text: "I haven't read any books about zymurgy." }],
+        'zymurgy?',
+      ),
+    ).toEqual([]);
+  });
+
+  it('a refusal after only list_books shows no memory pill', async () => {
+    expect(
+      await ask(
+        [
+          { calls: [{ name: 'list_books', args: {} }] },
+          { text: "I'm sorry, I can't help with that." },
+        ],
+        'write code',
+      ),
+    ).toEqual([]);
+  });
+
+  it('naming the book in the answer still gives its pill with no search at all', async () => {
+    expect(await ask([{ text: 'Nexus was a good one.' }], 'which?')).toEqual(['nexus']);
   });
 });

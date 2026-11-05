@@ -401,6 +401,11 @@ wrangler`. It runs before `deploy:site`.
 - **`--gateway <id>`** deploys `main` against a test gateway, for C7 only. A plain
   `deploy:ask` afterwards puts the real one back.
 
+**`pnpm deploy:site` and the Turnstile site key.** The drawer's `PUBLIC_TURNSTILE_SITE_KEY` is read at build
+time (`.env.example` says where to set it), and `deploy:site` refuses to upload a page built with it
+empty or with one of Cloudflare's test keys, on `--dry-run` as well; `--check-only` builds nothing and
+skips it.
+
 **`pnpm evals:ask --gateway <id>`** asks S9's questions (the ten, the memory cases and the search-tool cases) twice through the
 Worker's own answer code and a test gateway, over the real public build in
 `packages/site/dist` (`--site` names another folder), and refuses a library built

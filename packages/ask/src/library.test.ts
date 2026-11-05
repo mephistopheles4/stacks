@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DataError, createLibrarySource, toCatalogue } from './library.ts';
+import { AI_DEADLINE_MS, DATA_TIMEOUT_MS } from './limits.ts';
 
 const BOOKS = [
   {
@@ -162,5 +163,59 @@ describe('createLibrarySource', () => {
     await expect(createLibrarySource('https://s.example', impl).catalogue()).rejects.toThrow(
       DataError,
     );
+  });
+});
+
+describe("a read that never answers ends inside the question's deadline (behaviour E1)", () => {
+  const hangs = ((_input: unknown, init?: RequestInit) =>
+    new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        reject(new Error('aborted'));
+      });
+    })) as typeof fetch;
+
+  it('passes an abort signal on both fetches', async () => {
+    const seen: (AbortSignal | null | undefined)[] = [];
+    const spy = (async (url: string, init?: RequestInit) => {
+      seen.push(init?.signal);
+      return url.endsWith('library.json')
+        ? Response.json(
+            { books: [{ id: 'a', title: 'A', thoughts: true }] },
+            { headers: { 'content-type': 'application/json' } },
+          )
+        : Response.json({ paragraphs: ['x'] }, { headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    const source = createLibrarySource('https://x.invalid', spy);
+    const [book] = await source.catalogue();
+    await source.thoughts(book!);
+    expect(seen).toHaveLength(2);
+    expect(seen.every((s) => s instanceof AbortSignal)).toBe(true);
+  });
+
+  it('a catalogue that never answers is a data failure when its time is up', async () => {
+    const source = createLibrarySource('https://x.invalid', hangs, Date.now, 20);
+    await expect(source.catalogue()).rejects.toBeInstanceOf(DataError);
+  });
+
+  it('a note that never answers is searched by its catalogue fields only, when its time is up', async () => {
+    const mixed = ((input: string, init?: RequestInit) => {
+      if (input.endsWith('library.json')) {
+        return Promise.resolve(
+          Response.json(
+            { books: [{ id: 'a', title: 'A', thoughts: true }] },
+            { headers: { 'content-type': 'application/json' } },
+          ),
+        );
+      }
+      return hangs(input, init);
+    }) as unknown as typeof fetch;
+    const source = createLibrarySource('https://x.invalid', mixed, Date.now, 20);
+    const [book] = await source.catalogue();
+    expect(await source.thoughts(book!)).toBeUndefined();
+  });
+
+  it('is 5 seconds by default, well inside the 30-second deadline', () => {
+    expect(DATA_TIMEOUT_MS).toBe(5_000);
+    expect(DATA_TIMEOUT_MS * 2).toBeLessThan(AI_DEADLINE_MS);
   });
 });

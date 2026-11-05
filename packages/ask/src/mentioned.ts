@@ -106,6 +106,7 @@ function named(text: string, catalogue: readonly CatalogueBook[], loose: boolean
 export function namedInMemory(
   catalogue: readonly CatalogueBook[],
   history: readonly Remembered[],
+  only?: ReadonlySet<string>,
 ): CatalogueBook[] {
   const found = new Map<string, CatalogueBook>();
   for (const exchange of [...history].reverse()) {
@@ -116,22 +117,25 @@ export function namedInMemory(
       if (!found.has(book.id)) found.set(book.id, book);
     }
   }
-  return [...found.values()];
+  const books = [...found.values()];
+  return only === undefined ? books : books.filter((b) => only.has(b.id));
 }
 
 /**
  * The books the answer names; when it names none, the books the visitor's question
- * names; when neither does, the books earlier exchanges name, newest first. At most 6.
+ * names; when neither does, the books earlier exchanges name, newest first, and only those in
+ * `only` when it is given (the books this question's search returned). At most 6.
  */
 export function mentioned(
   catalogue: readonly CatalogueBook[],
   answer: string,
   question = '',
   history: readonly Remembered[] = [],
+  only?: ReadonlySet<string>,
 ): CatalogueBook[] {
   const fromAnswer = named(answer, catalogue, false);
   if (fromAnswer.length > 0) return fromAnswer.slice(0, MAX_SEARCH_BOOKS);
   const fromQuestion = named(question, catalogue, true);
   if (fromQuestion.length > 0) return fromQuestion.slice(0, MAX_SEARCH_BOOKS);
-  return namedInMemory(catalogue, history).slice(0, MAX_SEARCH_BOOKS);
+  return namedInMemory(catalogue, history, only).slice(0, MAX_SEARCH_BOOKS);
 }

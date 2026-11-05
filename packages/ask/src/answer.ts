@@ -109,6 +109,8 @@ export type TraceEvent =
 /** What a question cost, kept as it goes so a failed question still reports it (T13). */
 interface Stats {
   searches: number;
+  /** The books this question's searches matched (not an offer of top-rated books, not `list_books`). */
+  matched: ReadonlySet<string>;
   tokensIn: number | undefined;
   tokensOut: number | undefined;
 }
@@ -176,7 +178,8 @@ async function converse(
     { role: 'system', content: systemMessage(catalogue) },
     { role: 'user', content: userMessage(question, history) },
   ];
-  const session: ToolSession = { catalogue, source, returned: new Set() };
+  const session: ToolSession = { catalogue, source, returned: new Set(), matched: new Set() };
+  stats.matched = session.matched;
   let modelCalls = 0;
   for (;;) {
     const left = AI_DEADLINE_MS - elapsed();
@@ -208,7 +211,10 @@ async function converse(
     for (const call of calls) {
       // The last call's line is reserved out of every result's room.
       const room = MAX_INPUT_TOKENS - spent - estimateTokens(LAST_CALL_LINE);
-      const run = await runTool(call, session, room);
+      // The id is the Worker's own (behaviour E2): a model's id is text it wrote, and it would go
+      // back to it, uncounted by the budget.
+      const id = `call_${String(stats.searches + 1)}`;
+      const run = await runTool({ ...call, id }, session, room);
       observe?.({
         kind: 'tool',
         name: call.name,
@@ -220,11 +226,14 @@ async function converse(
         error: run.error === true,
       });
       wires.push(run.wire);
-      results.push({ id: call.id, name: call.name, content: run.content });
+      // The wire's name, which is one of ours: never the raw name the model sent.
+      results.push({ id, name: run.wire.function.name, content: run.content });
       spent += estimateTokens(run.content);
       stats.searches += 1;
     }
-    messages.push({ role: 'assistant', content: out.text, tool_calls: wires });
+    // Empty content on a tool turn: the text beside a tool call is never used, and counting it
+    // would be guessing (behaviour E2).
+    messages.push({ role: 'assistant', content: '', tool_calls: wires });
     for (const r of results) {
       messages.push({ role: 'tool', tool_call_id: r.id, name: r.name, content: r.content });
     }
@@ -254,7 +263,12 @@ export async function answerQuestion(
     };
   }
   const started = clock();
-  const stats: Stats = { searches: 0, tokensIn: undefined, tokensOut: undefined };
+  const stats: Stats = {
+    searches: 0,
+    matched: new Set(),
+    tokensIn: undefined,
+    tokensOut: undefined,
+  };
   try {
     const text = await converse(
       env,
@@ -273,11 +287,10 @@ export async function answerQuestion(
       reply: {
         mode: 'ai',
         answer: split.answer,
-        // Memory names a book only for an answer that searched for this question: a refusal
-        // or a plain reply has no business showing the last book's pill.
-        books: mentioned(catalogue, split.answer, question, stats.searches > 0 ? history : []).map(
-          summary,
-        ),
+        // Memory names a book only if this question's search matched it (behaviour E4): a refusal
+        // or "I haven't read about that" has no business showing the last book's pill, and an
+        // answer that searched for that book keeps it.
+        books: mentioned(catalogue, split.answer, question, history, stats.matched).map(summary),
         followUps: split.followUps.filter((line) => onTheShelf(line, catalogue)),
       },
       outcome: 'ai',

@@ -263,7 +263,9 @@ capped on every path reviewed. Availability does not:
 
 - **Follow-ups (decided by the owner on 2026-11-05):** the model writes them in its one
   reply, with no second call. The Worker splits the reply at the last line that reads
-  FOLLOW-UPS (any case, with or without bold marks, colon or dash), keeps the text
+  FOLLOW-UPS (any case, with or without bold marks, a heading, a colon or a dash; text after the word
+  counts only behind a colon or a dash, so "Follow up with Nexus, it is great." stays in the answer,
+  behaviour E3), keeps the text
   above it as the answer, and reads the lines below as questions, stripping a leading
   bullet, number or quote. It treats them as untrusted: a line is kept only if it ends
   in a question mark, is at most 120 characters, and holds no `://`, `www.`, `<`, `>`,
@@ -297,7 +299,12 @@ capped on every path reviewed. Availability does not:
 - **The loop (T2, T6, T10, T11).** At most 2 tool calls of either tool in all; the call after
   them is made with no `tools` key, so it must answer, and a question makes at most 3 model
   calls. One 30-second deadline covers the whole question, each call getting what is left
-  (the drawer puts no timer of its own on the request, held by a test). A blank final answer,
+  (the drawer puts no timer of its own on the request, held by a test). Reads of public build output
+  have their own signal, 5 seconds each, so a stalled read ends well inside the deadline (a catalogue that
+  times out is a data failure; a note that does is searched by its catalogue fields only; behaviour E1).
+  What the model writes beside a tool call is not sent back: the assistant turn has empty content, and
+  the ids and names in the tool turn are the Worker's own (`call_1`, `search_library`, `unknown_tool`),
+  so the input budget counts everything that is sent (behaviour E2). A blank final answer,
   a spent limit, the deadline, or a tool call asked for once none are left falls back to plain
   results. **T10 is narrowed (owner, 2026-11-05):** bad tool arguments and an unknown tool no
   longer fail the question. While calls remain they get a short message naming the right input
@@ -331,9 +338,11 @@ capped on every path reviewed. Availability does not:
   straight apostrophes match, a title inside a longer matched title at the same place
   gives way to the longer one, and when the answer names no book the pills fall back to
   the question's books and then to the books earlier exchanges name, newest first, at
-  most 6. **The memory step applies only when the model made a tool call for this
-  question** (2026-11-05): a refusal after memory showed the last book's pill, which a
-  refusal should not.
+  most 6. **The memory step applies only to a book this question's search matched**
+  (2026-11-05, behaviour E4): a refusal or "I haven't read about that" after memory showed the last
+  book's pill, which neither should. The top-rated books a miss or an empty query offers are not
+  matches, and `list_books` returns none, so only a search that matched the memory book keeps its
+  pill. (A refusal that first searched that same book keeps it: an open case, S12.)
 - **Search:** whole-word, case-insensitive match over title, author and subjects,
   ranked by words matched then shelf order, at most 6 books. Common words are ignored:
   a, an, and, any, are, about, did, do, does, for, from, had, has, have, how, i, in,
@@ -426,7 +435,10 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
 - **With a held book:** picking a book up from any source closes the panel, by a
   signal from the shelf rather than a timer. The panel can be reopened with a book
   held. With both open, Escape closes the panel and leaves the book held, wherever
-  focus is.
+  focus is. **The held book's own buttons act on the closing click** (owner, 2026-11-05, behaviour E5):
+  with the panel open, clicking "Put back" closes the panel and puts the book back, and "Turn the book
+  over" closes it and acts, because the visitor aimed at the button. A click on the shelf itself leaves
+  the book held, as above.
 - **Book links:** one pill a line, stacked with a gap, each a small open-book icon
   and the title clipped with an ellipsis on overflow. The whole title stays in the
   text, for a screen reader, and in the tooltip. A pill is 40px tall, 44px on a touch

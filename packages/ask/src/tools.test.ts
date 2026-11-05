@@ -42,6 +42,7 @@ const session = (s = source(), catalogue = CAT): ToolSession => ({
   catalogue,
   source: s,
   returned: new Set(),
+  matched: new Set(),
 });
 const search = (query: unknown, id = 'c1') => ({ id, name: 'search_library', arguments: query });
 const ROOM = 100_000;
@@ -77,7 +78,7 @@ describe('list_books (T14, C33)', () => {
     const real = createLibrarySource('https://x.invalid', fetchImpl);
     const out = await runTool(
       { id: 'l', name: 'list_books', arguments: {} },
-      { catalogue: await real.catalogue(), source: real, returned: new Set() },
+      { catalogue: await real.catalogue(), source: real, returned: new Set(), matched: new Set() },
       ROOM,
     );
     expect(out.content).toBe(
@@ -266,6 +267,7 @@ describe('results that guide the model (T5, T10)', () => {
       catalogue: bare,
       source: { catalogue: async () => bare, thoughts: async () => undefined },
       returned: new Set(),
+      matched: new Set(),
     };
     const out = await runTool(search({ query: 'zymurgy' }), s, ROOM);
     expect(out.content).toBe('No books matched. Try other words, or call list_books.');
@@ -288,6 +290,7 @@ describe('results that guide the model (T5, T10)', () => {
       catalogue: many,
       source: { catalogue: async () => many, thoughts: async () => undefined },
       returned: new Set(),
+      matched: new Set(),
     };
     const out = await runTool(search({ query: 'money' }), s, ROOM);
     const lines = out.content.split(NL);
@@ -325,6 +328,7 @@ describe('a query with nothing to search for gets the top-rated books as a norma
       catalogue: many,
       source: { catalogue: async () => many, thoughts: async () => ['A note.'] },
       returned: new Set(),
+      matched: new Set(),
     };
     const out = await runTool(search({ query: 'recommend' }), s, ROOM);
     const lines = out.content.split(NL + NL)[0]!.split(NL);
@@ -373,6 +377,7 @@ describe('a search with a usable word and no match offers the top-rated books (S
       catalogue: bare,
       source: { catalogue: async () => bare, thoughts: async () => undefined },
       returned: new Set(),
+      matched: new Set(),
     };
     expect((await runTool(search({ query: 'zymurgy' }), s, ROOM)).content).toBe(NO_MATCH);
   });

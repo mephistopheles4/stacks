@@ -11,6 +11,13 @@ export const AI_DEADLINE_MS = 30_000;
 export const MAX_TOOL_CALLS = 2;
 export const MAX_QUERY_CHARS = 200;
 export const CACHE_MS = 5 * 60 * 1_000;
+/**
+ * How long one read of public build output may take (behaviour E1). The question's 30-second
+ * deadline covers the model; a read that never answered would sit outside it, so each fetch has its
+ * own signal, short enough that a stalled read ends well inside the deadline. A catalogue that
+ * times out is a data failure, and a note that does is searched by its catalogue fields only.
+ */
+export const DATA_TIMEOUT_MS = 5_000;
 export const MAX_THOUGHT_BOOKS = 3;
 export const MAX_THOUGHT_TOKENS = 1_500;
 export const MAX_INPUT_TOKENS = 6_000;

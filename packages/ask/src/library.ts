@@ -1,5 +1,5 @@
 import { compareShelfPosition } from '@stacks/core/shelf-order';
-import { CACHE_MS } from './limits.ts';
+import { CACHE_MS, DATA_TIMEOUT_MS } from './limits.ts';
 
 /** What the Worker keeps of a `library.json` book: public fields only. */
 export interface CatalogueBook {
@@ -79,6 +79,7 @@ export function createLibrarySource(
   origin: string,
   fetchImpl: typeof fetch,
   now: () => number = Date.now,
+  timeoutMs: number = DATA_TIMEOUT_MS,
 ): LibrarySource {
   let library: Cached<readonly CatalogueBook[]> | undefined;
   const notes = new Map<string, Cached<readonly string[] | undefined>>();
@@ -93,6 +94,7 @@ export function createLibrarySource(
     try {
       response = await fetchImpl(`${origin}/library.json`, {
         headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch {
       throw new DataError('library.json could not be fetched');
@@ -126,6 +128,7 @@ export function createLibrarySource(
     try {
       const response = await fetchImpl(`${origin}/notes/${id}.json`, {
         headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(timeoutMs),
       });
       // A missing note is the home page with status 200 (S12 results).
       if (!response.ok || !isJson(response)) return undefined;

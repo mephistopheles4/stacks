@@ -11,8 +11,13 @@ import { STOP_WORDS, namesTitle, words } from './search.ts';
 export const MAX_FOLLOW_UPS = 2;
 export const MAX_FOLLOW_UP_CHARS = 120;
 
-/** The marker line: FOLLOW-UPS, in any case, with bold marks, a colon or a dash around it. */
-const MARKER = /^[\s*_#>-]*follow[\s-]*ups?(?:\s+questions?)?[\s*_:.-]*(.*)$/i;
+/**
+ * The marker line: FOLLOW-UPS, in any case, with bold marks or a heading around it. What follows the
+ * word is read as the first follow-up only after a colon or a dash; anything else on the line means
+ * it is a sentence that happens to start with those words ("Follow up with Nexus, it is great."),
+ * and the line stays in the answer (behaviour E3).
+ */
+const MARKER = /^[\s*_#>-]*follow[\s-]*ups?(?:\s+questions?)?[\s*_]*(?:[:\u2013\u2014-]\s*(.*)|)$/i;
 const MARKUP = /:\/\/|www\.|[<>`[\]{}|\\]|\]\(/;
 /** What a model puts before a list item: a bullet or a number. */
 const LEADING = /^\s*(?:[-*•–—]+|\d+[.)])\s*/;
