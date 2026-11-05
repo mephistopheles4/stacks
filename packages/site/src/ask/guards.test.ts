@@ -42,3 +42,16 @@ describe('Turnstile loads on the first open and not before (C11)', () => {
     );
   });
 });
+
+describe('the text box shrinks as well as grows (S7)', () => {
+  it('measures with its transition off, or a deletion can never shrink it', () => {
+    const drawer = code('drawer.ts');
+    const fit = /function fit\(\): void \{[\s\S]*?\n {2}\}/.exec(drawer)?.[0] ?? '';
+    const off = fit.indexOf("style.transition = 'none'");
+    const measure = fit.indexOf('scrollHeight');
+    const restore = fit.indexOf("style.transition = ''");
+    expect(off).toBeGreaterThan(-1);
+    expect(off).toBeLessThan(measure);
+    expect(restore).toBeGreaterThan(measure);
+  });
+});

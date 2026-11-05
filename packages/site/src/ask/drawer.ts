@@ -104,14 +104,19 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   // The text area follows its content over 140 ms to 40% of the window.
   function fit(): void {
     const before = input.offsetHeight;
+    // Measured with the transition off. With it on, setting the height to 0 only
+    // starts a transition, the box is still its old height when scrollHeight is
+    // read, and the reading can never be smaller than that: the box grew but never
+    // shrank when the text was deleted.
+    input.style.transition = 'none';
     input.style.height = '0px';
     const wanted = input.scrollHeight;
     const cap = window.innerHeight * MAX_INPUT_SHARE;
     input.style.overflowY = wanted > cap ? 'auto' : 'hidden';
     input.style.height = `${String(before)}px`;
-    // Reading the height forces the layout the transition starts from. The CSS
-    // drops the transition under prefers-reduced-motion.
+    // Reading the height forces the layout the transition starts from.
     void input.offsetHeight;
+    input.style.transition = '';
     input.style.height = `${String(Math.min(wanted, cap))}px`;
   }
   input.addEventListener('input', fit);
