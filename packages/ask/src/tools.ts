@@ -35,7 +35,7 @@ export const LIST_TOOL: ToolDefinition = {
     name: 'list_books',
     description:
       "List every book in the owner's library by title and rating, highest rated first, " +
-      'marking the books that have Thoughts. Use it for broad questions, then search a title to read the Thoughts.',
+      'marking the books that have Thoughts. Use it to browse, then search a title to read the Thoughts.',
     parameters: { type: 'object', properties: {} },
   },
 };

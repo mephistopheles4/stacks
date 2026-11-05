@@ -96,7 +96,7 @@ one fetch per note against Workers Free's limit of 50 per request, which is why 
   books matched. These are not about that subject, but they are my top-rated books. Try other
   words, or say nothing matched and offer these." (with "No other books matched." once earlier
   results exist, and T6's exclude still applying). With no book with Thoughts to offer, it is
-  the old "No books matched. Try other words, or call list_books." The rules (contract v0.4.1) send
+  the old "No books matched. Try other words, or call list_books." The rules (contract v0.5.0) send
   a recommendation to a search for the word "recommend", keep `list_books` for
   browsing, and tell the model to say nothing matched before offering other books and never to say
   they cover the subject. At most 2 tool calls of either
@@ -229,11 +229,11 @@ capped on every path reviewed. Availability does not:
 ## S6. Answers
 
 - **Rules,** sent as the system message, followed by the line of counts (T7): the text of
-  `packages/ask/ask-the-library.rules.txt`, word for word, generated from contract v0.4.1
+  `packages/ask/ask-the-library.rules.txt`, word for word, generated from contract v0.5.0
   (`ask-the-library.contract.md`, with `ask-the-library.changelog.md`). **The owner approved
-  contract v0.3.0 and its text on 2026-11-05, and v0.4.0's and v0.4.1's changes (a recommendation searches for
-  "recommend", and only a recommendation: a favourite is no longer named; say nothing matched before
-  offering other books) the same day.** `RULES` in `prompt.ts` holds that text and a test
+  contract v0.3.0 and its text on 2026-11-05, and v0.4.0's, v0.4.1's and v0.5.0's changes (a recommendation searches for
+  "recommend", and only a recommendation; say nothing matched before offering other books; a count comes
+  from the line of counts; a favourite only if the Thoughts say so) the same day.** `RULES` in `prompt.ts` holds that text and a test
   holds the two equal, so **the rules change through the contract and never by hand.**
   They send the model to search before answering (a recommendation searches for "recommend";
   `list_books` is for browsing),

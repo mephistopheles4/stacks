@@ -1,11 +1,10 @@
 # Change log: ask-the-library
 
 | Version | Date | Change | Why, and where it came from | Parts touched | Field signal |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
+| 0.5.0 | 2026-11-05 | Added count and favourite rules, recorded three rules the text already held, merged a duplicate, said how the text is produced, and defined the marks | The owner approved the lens review's picks on 2026-11-05: "Yes, use your picks". Not yet run on the model | rules, tools | yes: a favourite claim and a count search in the final check |
 | 0.4.1 | 2026-11-05 | Removed favourites from the rule that sends recommendations to search | The owner approved this on 2026-11-05. The rule made the model call a top-rated book "my favourite", which the Thoughts did not say | rules | yes: "is my favourite book" with no Thoughts behind it |
 | 0.4.0 | 2026-11-05 | Sent recommendations to `search_library` instead of `list_books`, and added a rule for offering other books after a miss | The owner approved both on 2026-11-05, after the final check found recommendations with no reason. A search with no match now also returns top-rated books. Not yet run on the model | tools, rules | yes: the model stopped at the list |
 | 0.3.0 | 2026-11-05 | Applied the owner's hiring page answers, replaced the catalogue in the prompt and the Worker's picking with two tools, `search_library` and `list_books`, at most 2 tool calls per question, and confirmed the remaining terms on the owner's "Proceed" | The owner reviewed the terms on the page and chose the tool in chat, after a test of 7 questions on the real model, about 359 Neurons. Two rules come from false answers in that test. The final wording of the rules text has not been run | why, good, roles, tools, rules | partly: the old rules assumed the catalogue was in the prompt |
 | 0.2.0 | 2026-11-05 | Confirmed the proposed `good` and `roles` terms, changed "when it is unsure", and proposed three rules for conversation memory | The owner agreed those terms, as summarized in chat, on 2026-11-05, and has not yet reviewed the whole contract. The memory spec needs the bot to ask which book, treat memory as data, and stop denying Thoughts it has. Not yet run on the model | good, roles, rules | yes: the owner's test got "I haven't written thoughts on them yet" |
 | 0.1.0 | 2026-11-04 | First contract, written from a chat interview with the owner | The owner wanted to see exactly what terms the bot runs under, as an experiment. Tested with real `gpt-oss-20b` answers on one question, two rounds, about 1,108 Neurons by token estimate | purpose, why, good, roles, tools, rules, writing | partly: the old `RULES` said what to do, but not why, and did not define the voice |
-
-<!-- markdownlint-disable-file MD060 -->
