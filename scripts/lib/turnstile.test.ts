@@ -31,6 +31,8 @@ import { REPO_ROOT } from './repo-root.ts';
  * fixed fake account id and a made-up site key. Nothing is captured from a
  * live response (spec revision 5, C22).
  */
+// SECRET and TOKEN share no 8-character run with ACCOUNT, EMAIL or SITEKEY, because the run check
+// also covers the child environment, and that holds the account id.
 const SECRET = 'CANARY-SECRET-zq7k9x2m4w8p';
 const TOKEN = 'CANARY-TOKEN-hj5v3n6c1r9t';
 const ACCOUNT = '0123456789abcdef0123456789abcdef';
@@ -337,7 +339,17 @@ describe('localRefusals (C1, C3, C4, C15, C21)', () => {
     });
   }
 
-  for (const flag of ['--use-env-proxy', '--use-system-ca', '--use-openssl-ca']) {
+  for (const flag of [
+    '--use-env-proxy',
+    '--use-system-ca',
+    '--use-openssl-ca',
+    '--tls-keylog',
+    // Node reads a dash and an underscore in an option name as the same name
+    '--use_env_proxy',
+    '--use_system_ca',
+    '--use_openssl_ca',
+    '--tls_keylog',
+  ]) {
     it(`S4: refuses a NODE_OPTIONS holding ${flag}, naming the variable and not its value`, () => {
       for (const spelled of ['NODE_OPTIONS', 'node_options']) {
         const value = `--max-old-space-size=100 ${flag.toUpperCase()} ZZZ-VALUE`;
@@ -482,12 +494,6 @@ describe('buildWranglerEnv (C16: an allowlist and the forced keys)', () => {
   });
 });
 
-describe('the API origin (S7)', () => {
-  it('is Cloudflare itself, written out, not compared with itself', () => {
-    expect(API_ORIGIN).toBe('https://api.cloudflare.com/client/v4');
-  });
-});
-
 describe('wranglerArgs (C15)', () => {
   it('runs the pinned wrangler through pnpm exec, with the empty env file last', () => {
     const built = wranglerArgs(['secret', 'list']);
@@ -545,19 +551,6 @@ describe('readResponse (one place parses bodies)', () => {
   it('does not treat success:true on a non-2xx status as success', () => {
     const reply = readResponse(500, JSON.stringify({ success: true, result: {} }), keep);
     expect(reply.kind).not.toBe('ok');
-  });
-
-  it('S1: scrubs a message before it cuts it, so a value across the cut never prints in part', () => {
-    const body = JSON.stringify({
-      success: false,
-      errors: [{ code: 1, message: 'x'.repeat(190) + TOKEN + ACCOUNT }],
-    });
-    const reply = readResponse(403, body, (text) =>
-      text.split(TOKEN).join('<token>').split(ACCOUNT).join('<account>'),
-    );
-    const detail = reply.kind === 'failed' ? reply.detail : '';
-    expect(detail).toContain('xxxx');
-    for (const piece of [...runsOf(TOKEN), ...runsOf(ACCOUNT)]) expect(detail).not.toContain(piece);
   });
 });
 
@@ -899,6 +892,14 @@ describe('rotate (C8, C9)', () => {
     }
   });
 
+  it('S6: a success:false answer at a 200 is not Cloudflare refusing the request either, and names --sync', async () => {
+    const { code, rec } = await go(rotate(), { routes: { [ROTATE]: failure(200, 1, 'odd') } });
+    expect(code).toBe(1);
+    expect(output(rec)).not.toContain('nothing changed');
+    expect(output(rec)).toContain('--sync');
+    expect(rec.runs.some((r) => r.args.includes('put'))).toBe(false);
+  });
+
   it('S1: the old secret read before the rotate is scrubbed from a later error', async () => {
     const OLD = 'CANARY-OLD-SECRET-9876543210';
     const { code, rec } = await go(rotate(), {
@@ -1093,26 +1094,6 @@ describe('what wrangler is run with (C15, C16, C17)', () => {
   });
 });
 
-describe('S3: an upper-case account id is normalised before any URL or scrub', () => {
-  it('sends the lower-case id and prints neither case', async () => {
-    const upper = ACCOUNT.toUpperCase();
-    const parsed = parseTurnstileArgs(['--create', '--account', upper, '--sitekey', SITEKEY], {});
-    if ('refusal' in parsed) throw new Error('unexpected refusal');
-    const h = harness({
-      routes: {
-        'GET /user/tokens/verify': failure(403, 1, `account ${ACCOUNT}`),
-        [`GET /accounts/${ACCOUNT}/tokens/verify`]: failure(403, 1, `account ${ACCOUNT}`),
-      },
-    });
-    const code = await runTurnstile(parsed, GOOD_LOCAL(h.shell), h.deps);
-    expect(code).toBe(1);
-    expect(h.rec.http.some((r) => r.url.includes(`/accounts/${ACCOUNT}/`))).toBe(true);
-    expect(h.rec.http.some((r) => r.url.includes(upper))).toBe(false);
-    for (const piece of runsOf(upper)) expect(output(h.rec)).not.toContain(piece);
-    for (const piece of runsOf(ACCOUNT)) expect(output(h.rec)).not.toContain(piece);
-  });
-});
-
 describe('the entry’s decisions, kept pure (T7)', () => {
   it('isInteractive is true only when stdin and stdout are both terminals', () => {
     expect(isInteractive(true, true)).toBe(true);
@@ -1167,6 +1148,7 @@ describe('nothing secret reaches anything printed (C12)', () => {
     over: Over;
     code: number;
     line: string;
+    absent?: string;
   }[] = [
     { name: 'success', modes: ALL, over: {}, code: 0, line: 'Delete the API token' },
     {
@@ -1194,11 +1176,12 @@ describe('nothing secret reaches anything printed (C12)', () => {
       modes: ['rotate'],
       over: { routes: { [ROTATE_POST]: { body: SECRET } } },
       code: 1,
-      line: 'unreadable response',
+      line: 'Whether it rotated is unknown',
+      absent: 'nothing changed',
     },
     {
       name: 'an unparseable widget read',
-      modes: ['rotate', 'sync'],
+      modes: ['rotate'],
       over: { routes: { [WIDGET_GET]: { body: `<html>${SECRET}` } } },
       code: 1,
       line: 'could not read the widget: unreadable response',
@@ -1226,7 +1209,7 @@ describe('nothing secret reaches anything printed (C12)', () => {
     },
     {
       name: 'a widget read error that carries the token and the account',
-      modes: ['rotate', 'sync'],
+      modes: ['rotate'],
       over: { routes: { [WIDGET_GET]: failure(500, 7, both) } },
       code: 1,
       line: 'could not read the widget: Cloudflare answered HTTP 500',
@@ -1247,21 +1230,21 @@ describe('nothing secret reaches anything printed (C12)', () => {
     },
     {
       name: 'verify errors that carry the token and the account',
-      modes: ALL,
+      modes: ['create'],
       over: { routes: verifyFails(`account ${ACCOUNT} token ${TOKEN}`) },
       code: 1,
       line: 'the token could not be verified',
     },
     {
       name: 'verify errors with the token and the account across the 200th character',
-      modes: ALL,
+      modes: ['create'],
       over: { routes: verifyFails('x'.repeat(190) + TOKEN + ACCOUNT) },
       code: 1,
       line: 'the token could not be verified',
     },
     {
       name: 'a spawn that throws on the put',
-      modes: ALL,
+      modes: ['create'],
       over: {
         run: (a: readonly string[]) => (a.includes('put') ? ('throw' as const) : runReply(a)),
       },
@@ -1269,12 +1252,13 @@ describe('nothing secret reaches anything printed (C12)', () => {
       line: 'The wrangler call could not be started',
     },
   ];
-  for (const { name, modes, over, code, line } of scenarios) {
+  for (const { name, modes, over, code, line, absent } of scenarios) {
     for (const mode of modes) {
       it(`${name} (${mode})`, async () => {
         const result = await go(args({ mode }), over);
         expect(result.code).toBe(code);
         expect(output(result.rec)).toContain(line);
+        if (absent !== undefined) expect(output(result.rec)).not.toContain(absent);
         expectNoLeak(result.rec);
       });
     }

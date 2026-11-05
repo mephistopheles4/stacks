@@ -173,6 +173,7 @@ const TRANSPORT_NAMES: readonly string[] = [
   'NODE_USE_ENV_PROXY',
 ];
 const TRANSPORT_FLAGS: readonly string[] = [
+  '--tls-keylog',
   '--use-env-proxy',
   '--use-system-ca',
   '--use-openssl-ca',
@@ -199,10 +200,10 @@ function transportRefusals(shell: NodeJS.ProcessEnv): string[] {
       );
     } else if (
       upper === 'NODE_OPTIONS' &&
-      TRANSPORT_FLAGS.some((flag) => value.toLowerCase().includes(flag))
+      TRANSPORT_FLAGS.some((flag) => value.toLowerCase().replaceAll('_', '-').includes(flag))
     ) {
       found.push(
-        "the shell sets NODE_OPTIONS with a trust-store or proxy flag, which would change who the script's requests trust or go through",
+        "the shell sets NODE_OPTIONS with a trust-store, proxy or key-log flag, which would change who the script's requests trust or go through, or write its TLS keys to a file",
       );
     }
   }
@@ -782,9 +783,9 @@ async function rotateOrSync(ctx: Context, sitekey: string): Promise<number> {
       JSON.stringify({ invalidate_immediately: false }),
     );
     if (rotated.kind === 'ok') noteSecret(ctx, rotated.result);
-    // A 4xx is Cloudflare refusing the request. A 5xx, or an answer that is not Cloudflare's, says
+    // A 4xx is Cloudflare refusing the request. A 5xx, a 2xx that says success:false, or an answer that is not Cloudflare's, says
     // nothing about whether the rotation ran, so it takes the unknown-outcome message below.
-    if (rotated.kind === 'failed' && rotated.status < 500) {
+    if (rotated.kind === 'failed' && rotated.status >= 400 && rotated.status < 500) {
       return fail(
         ctx,
         `${describe(rotated)}, so nothing changed. If a rotation ran in the last 2 hours, wait for it to end.`,

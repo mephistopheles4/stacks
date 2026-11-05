@@ -463,8 +463,10 @@ pin; the shell, the repo root `.env` or `.env.local`, or the main checkout's `.e
 login, put a token on disk or move the API host; **close the shell that held the Terraform
 token first**); `NODE_TLS_REJECT_UNAUTHORIZED` in the shell unless `1`; `NODE_EXTRA_CA_CERTS`,
 `NODE_USE_SYSTEM_CA` and `NODE_USE_ENV_PROXY` in the shell, and a `NODE_OPTIONS` holding
-`--use-env-proxy`, `--use-system-ca` or `--use-openssl-ca` (each changes who the script's own
-requests trust or go through; Node reads them for its `fetch` as well as wrangler's); and an account id
+`--use-env-proxy`, `--use-system-ca`, `--use-openssl-ca` or `--tls-keylog`, in either the dash or the
+underscore spelling Node reads as the same (the first three change who the script's own requests
+trust or go through, and `--tls-keylog` writes their TLS session keys to a file; Node reads them for
+its `fetch` as well as wrangler's); and an account id
 (`CLOUDFLARE_ACCOUNT_ID` or `--account`) or site key (`PUBLIC_TURNSTILE_SITE_KEY` or
 `--sitekey`, for rotate and sync) of the wrong shape. Refusals name the place and the
 name, never a value. The account id is not a secret to Cloudflare, but `--account` and a
@@ -492,8 +494,8 @@ landed. After a rotate, the old secret works for 2 hours, so the site keeps answ
 sync; after a create the Worker refuses every question until the sync. A create that timed out
 may have made the widget: `pnpm turnstile --create` again lists by name and, if it exists,
 prints its site key for `--sync --sitekey <key>`. A second rotation inside the 2-hour overlap is
-refused by Cloudflare. A 4xx answer means nothing changed, and the script says so; a 5xx, or an
-answer it cannot read, does not say whether the rotation ran, so the script says that instead and
+refused by Cloudflare. A 4xx answer means nothing changed, and the script says so; a 5xx, a 2xx that says
+`success: false`, or an answer it cannot read, does not say whether the rotation ran, so the script says that instead and
 names `--sync`.
 
 **wrangler runs under its own rules.** Every call is `pnpm exec wrangler`, with

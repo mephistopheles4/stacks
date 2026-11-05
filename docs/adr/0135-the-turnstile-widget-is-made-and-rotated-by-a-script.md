@@ -29,7 +29,9 @@ with `wrangler secret put`, the secret on standard input and nowhere else.
 - **Transport settings are refused, not just forced.** Node reads `NODE_EXTRA_CA_CERTS`,
   `NODE_USE_SYSTEM_CA`, `NODE_USE_ENV_PROXY` and the `--use-env-proxy`, `--use-system-ca` and
   `--use-openssl-ca` options of `NODE_OPTIONS` for the script's own `fetch`, which carries the typed
-  token, so forcing wrangler's environment does not cover it. Step 1 refuses each in the shell, in any
+  token, so forcing wrangler's environment does not cover it. `--tls-keylog` is refused with them: it
+  writes TLS session keys to a file. Node reads `_` and `-` in an option name as the same, so the
+  match is made on the dash spelling after the underscores are turned into dashes. Step 1 refuses each in the shell, in any
   letter case, naming the variable and never its value, beside the refusal of
   `NODE_TLS_REJECT_UNAUTHORIZED` unless it is `1`.
 - **The token is typed.** A short-lived API token (Account > Turnstile > Edit, expiry within 24

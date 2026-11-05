@@ -511,6 +511,15 @@ describe('G67 — the release-age window is stated, at seven days or more', () =
     }
     expect(read('scripts/turnstile.ts')).toContain('pinMismatch(');
     expect(read('scripts/turnstile.ts')).not.toContain('loadEnv');
+    // The entry calls the helpers whose decisions are tested, and hides the typed token.
+    for (const call of [
+      'isInteractive(process.stdin.isTTY, process.stdout.isTTY)',
+      'envFilePaths(',
+      'envFileIsEmpty(',
+      'setRawMode(true)',
+    ]) {
+      expect(read('scripts/turnstile.ts'), call).toContain(call);
+    }
     // The site deploy calls both Turnstile key checks, which are tested on their own (integrity N1).
     expect(read('scripts/deploy.ts')).toContain('siteKeyProblem(html)');
     expect(read('scripts/deploy.ts')).toContain('keyProblem(process.env');
