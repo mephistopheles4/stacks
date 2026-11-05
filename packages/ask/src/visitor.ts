@@ -76,6 +76,7 @@ export interface CounterStorage {
   get<T>(key: string): Promise<T | undefined>;
   put(key: string, value: unknown): Promise<void>;
   deleteAll(): Promise<void>;
+  getAlarm(): Promise<number | null>;
   setAlarm(time: number): Promise<void>;
 }
 
@@ -111,7 +112,11 @@ export class VisitorCounter {
     this.count += 1;
     const allowed = this.count;
     await this.state.storage.put('count', allowed);
-    if (allowed === 1) await this.state.storage.setAlarm(nextMidnight(this.now()));
+    // Whenever none is set, not only at the first hit, so a failed write cannot
+    // leave a record that outlives its day.
+    if ((await this.state.storage.getAlarm()) === null) {
+      await this.state.storage.setAlarm(nextMidnight(this.now()));
+    }
     return Response.json({ allowed: true, count: allowed });
   }
 

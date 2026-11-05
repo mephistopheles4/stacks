@@ -11,9 +11,8 @@ const BOOKS = [
     rating: 5,
     finished: '2026-01-01',
     subjects: 'Business',
-    private: true,
-    sourcePath: 'Library/secret.md',
     body: 'CANARY-BODY',
+    notePath: 'Library/secret.md',
   },
   { id: 'b-book', title: 'B Book', status: 'read', finished: '2025-01-01' },
 ];
@@ -55,6 +54,16 @@ describe('toCatalogue (C3)', () => {
 
   it('throws on a library with no books', () => {
     expect(() => toCatalogue({})).toThrow(DataError);
+  });
+});
+
+describe('a local build is refused (invariant 2)', () => {
+  it.each([
+    ['a private flag', { id: 'x', title: 'X', private: false }],
+    ['a source path', { id: 'x', title: 'X', sourcePath: 'Library/X.md' }],
+    ['a wishlist book', { id: 'x', title: 'X', status: 'wishlist' }],
+  ])('throws on %s', (_n, book) => {
+    expect(() => toCatalogue({ books: [book] })).toThrow(DataError);
   });
 });
 

@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { answerQuestion } from '../packages/ask/src/answer.ts';
 import type { Env } from '../packages/ask/src/env.ts';
 import { createLibrarySource } from '../packages/ask/src/library.ts';
+import { NOT_A_TEST_GATEWAY } from './lib/ask-deploy.ts';
 import { CASES, looksLikeFixture, titlesIn } from './lib/ask-evals.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
@@ -32,8 +33,12 @@ const flag = (name: string): string | undefined => {
 };
 
 const gateway = flag('--gateway');
-if (gateway === undefined || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(gateway)) {
-  fail('--gateway <id> names the test gateway; the evals never run against the real one');
+if (
+  gateway === undefined ||
+  !/^[a-z0-9][a-z0-9-]{0,63}$/.test(gateway) ||
+  NOT_A_TEST_GATEWAY.has(gateway)
+) {
+  fail('--gateway <id> names a test gateway; the evals never run against default or the real one');
 }
 const account = process.env['CLOUDFLARE_ACCOUNT_ID'];
 if (account === undefined || !/^[0-9a-f]{32}$/.test(account))

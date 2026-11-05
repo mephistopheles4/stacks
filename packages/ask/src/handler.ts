@@ -38,9 +38,10 @@ export async function handleChat(request: Request, env: Env, deps: Deps): Promis
 
   const address = normaliseAddress(request.headers.get('cf-connecting-ip'));
   const rawAddress = request.headers.get('cf-connecting-ip') ?? '';
-  if (address === undefined || !env.TURNSTILE_SECRET || !env.VISITOR_KEY) {
-    return end('refused-address', refusal(403, 'error', COULDNT_CONFIRM));
+  if (!env.TURNSTILE_SECRET || !env.VISITOR_KEY) {
+    return end('refused-secret', refusal(403, 'error', COULDNT_CONFIRM));
   }
+  if (address === undefined) return end('refused-address', refusal(403, 'error', COULDNT_CONFIRM));
 
   const human = await verifyTurnstile(
     {

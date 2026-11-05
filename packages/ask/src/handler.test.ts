@@ -25,7 +25,7 @@ const LIBRARY = {
       title: 'Quiet',
       status: 'read',
       body: 'CANARY-BODY',
-      sourcePath: 'Library/Quiet.md',
+      secretField: 'CANARY-SECRET',
     },
   ],
 };
@@ -46,17 +46,26 @@ function rig(
     rate?: () => Promise<{ success: boolean }>;
     libraryDown?: boolean;
     aiEnabled?: string;
-    secrets?: boolean;
+    secrets?: boolean | 'no-turnstile' | 'no-visitor';
+    library?: unknown;
     counter?: () => Promise<Response>;
   } = {},
 ): Rig {
   const state: Rig = { aiCalls: [], turnstileCalls: 0, libraryFetches: 0 } as unknown as Rig;
-  const store = new Map<string, unknown>();
-  const storage: CounterStorage = {
-    get: async <T>(k: string) => store.get(k) as T | undefined,
-    put: async (k, v) => void store.set(k, v),
-    deleteAll: async () => store.clear(),
-    setAlarm: async () => undefined,
+  // One storage per counter, as Cloudflare keeps one per object: a test that
+  // shares one cannot tell a /64 key from a raw-address key (integrity lens).
+  const storageFor = (): CounterStorage => {
+    const store = new Map<string, unknown>();
+    let alarm: number | null = null;
+    return {
+      get: async <T>(k: string) => store.get(k) as T | undefined,
+      put: async (k, v) => void store.set(k, v),
+      deleteAll: async () => store.clear(),
+      getAlarm: async () => alarm,
+      setAlarm: async (t) => {
+        alarm = t;
+      },
+    };
   };
   const counters = new Map<string, VisitorCounter>();
   state.fetchImpl = async (input: string | URL | Request) => {
@@ -70,7 +79,7 @@ function rig(
     if (url.endsWith('/library.json')) {
       state.libraryFetches += 1;
       if (options.libraryDown) throw new Error('down');
-      return Response.json(LIBRARY);
+      return Response.json(options.library ?? LIBRARY);
     }
     if (url.endsWith('/notes/co-int.json')) return Response.json(NOTE);
     return new Response('<html>', { headers: { 'content-type': 'text/html' } });
@@ -90,7 +99,10 @@ function rig(
           if (options.counter) return options.counter();
           let c = counters.get(id as string);
           if (!c) {
-            c = new VisitorCounter({ storage, blockConcurrencyWhile: (cb) => cb() }, {});
+            c = new VisitorCounter(
+              { storage: storageFor(), blockConcurrencyWhile: (cb) => cb() },
+              {},
+            );
             counters.set(id as string, c);
           }
           return c.fetch(new Request(u, init));
@@ -104,7 +116,10 @@ function rig(
     SITE_ORIGIN: ORIGIN,
     ASK_GATEWAY_ID: 'gw',
     ASK_AI_ENABLED: options.aiEnabled ?? 'true',
-    ...(options.secrets === false ? {} : { TURNSTILE_SECRET: 's', VISITOR_KEY: 'k' }),
+    ...(options.secrets === false || options.secrets === 'no-turnstile'
+      ? {}
+      : { TURNSTILE_SECRET: 's' }),
+    ...(options.secrets === false || options.secrets === 'no-visitor' ? {} : { VISITOR_KEY: 'k' }),
   };
   return state;
 }
@@ -245,13 +260,18 @@ describe('refusals never call AI (C5)', () => {
       () =>
         new Request(`${ORIGIN}/api/chat`, {
           method: 'POST',
-          headers: { origin: ORIGIN, 'content-type': 'application/json' },
+          headers: {
+            origin: ORIGIN,
+            'content-type': 'application/json',
+            'cf-connecting-ip': CANARY_IP,
+          },
           body: JSON.stringify({ question: 'q', token: 't', pad: 'x'.repeat(9000) }),
         }),
     ],
     ['a failed Turnstile', { turnstile: { success: false } }, undefined],
     ['a missing address', {}, () => ask('q', { 'cf-connecting-ip': '' })],
-    ['a missing Turnstile secret', { secrets: false }, undefined],
+    ['a missing Turnstile secret', { secrets: 'no-turnstile' }, undefined],
+    ['a missing visitor key', { secrets: 'no-visitor' }, undefined],
     ['the per-minute limit', { rate: async () => ({ success: false }) }, undefined],
     [
       'a rate limiter that throws',
@@ -277,7 +297,18 @@ describe('refusals never call AI (C5)', () => {
   it.each(cases)('%s', async (_n, options, make) => {
     const r = rig(options);
     const { status } = await run(r, make ? make() : ask());
-    expect(status).toBeGreaterThanOrEqual(400);
+    // The refusal the row names, not just any refusal.
+    const named: Record<string, number> = {
+      'another origin': 400,
+      'a 9 KB body': 400,
+      'a failed Turnstile': 403,
+      'a missing address': 403,
+      'a missing Turnstile secret': 403,
+      'a missing visitor key': 403,
+      'the per-minute limit': 429,
+      'a library that is down': 503,
+    };
+    expect(status).toBe(named[_n] ?? 429);
     expect(r.aiCalls).toHaveLength(0);
   });
 
@@ -338,5 +369,86 @@ describe('logging (C15)', () => {
     expect(logged).toContain('"outcome"');
     expect(logged).not.toContain(CANARY_Q);
     expect(logged).not.toContain(CANARY_IP);
+  });
+});
+
+describe('Thoughts sent (C3)', () => {
+  const many = {
+    books: Array.from({ length: 6 }, (_, i) => ({
+      id: `t${String(i)}`,
+      title: `Thought Book ${String(i)}`,
+      status: 'read',
+      thoughts: true,
+      rating: 3,
+    })),
+  };
+
+  it('sends at most 3 sets of Thoughts, and the same ones for a broad question every time', async () => {
+    const sent: string[] = [];
+    for (let round = 0; round < 2; round += 1) {
+      const r = rig({ library: many });
+      const noted: string[] = [];
+      const inner = r.fetchImpl;
+      r.fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (url.includes('/notes/')) {
+          noted.push(url);
+          return Response.json({ paragraphs: ['note ' + url] });
+        }
+        return inner(input, init);
+      };
+      await run(r, ask('What kind of books have you read?'));
+      expect(noted.length).toBeLessThanOrEqual(3);
+      sent.push(JSON.stringify(r.aiCalls[0]!.input));
+    }
+    expect(sent[0]).toBe(sent[1]);
+    expect(sent[0]).toContain('note ');
+  });
+});
+
+describe('a local build is refused whole', () => {
+  it('turns a library carrying a private flag or a source path into a data failure, with no AI call', async () => {
+    const local = {
+      books: [{ id: 'x', title: 'X', status: 'read', private: true, sourcePath: 'Library/X.md' }],
+    };
+    const r = rig({ library: local });
+    const { status } = await run(r, ask());
+    expect(status).toBe(503);
+    expect(r.aiCalls).toHaveLength(0);
+  });
+
+  it('refuses a wishlist book too', async () => {
+    const r = rig({ library: { books: [{ id: 'w', title: 'W', status: 'wishlist' }] } });
+    expect((await run(r, ask())).status).toBe(503);
+  });
+});
+
+describe('outcome codes', () => {
+  it('names a missing secret apart from a missing address, and a spent budget apart from a failure', async () => {
+    const lines: string[] = [];
+    vi.spyOn(console, 'log').mockImplementation((line: unknown) => void lines.push(String(line)));
+    await run(rig({ secrets: 'no-visitor' }), ask());
+    await run(rig(), ask('q', { 'cf-connecting-ip': '' }));
+    await run(
+      rig({
+        ai: async () => {
+          throw new Error('2045 spend');
+        },
+      }),
+      ask(),
+    );
+    await run(
+      rig({
+        ai: async () => {
+          throw new Error('boom');
+        },
+      }),
+      ask(),
+    );
+    expect(lines.join('\n')).toContain('"refused-secret"');
+    expect(lines.join('\n')).toContain('"refused-address"');
+    expect(lines.join('\n')).toContain('"reason":"budget"');
+    expect(lines.join('\n')).toContain('"reason":"failed"');
   });
 });

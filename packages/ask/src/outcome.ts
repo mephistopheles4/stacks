@@ -10,6 +10,7 @@ export type Outcome =
   | 'refused-shape'
   | 'refused-turnstile'
   | 'refused-address'
+  | 'refused-secret'
   | 'refused-limit'
   | 'refused-data'
   | 'health-up'
@@ -18,6 +19,8 @@ export type Outcome =
   | 'daily-fail';
 
 export interface OutcomeDetail {
+  /** Why AI did not answer: the day's budget is spent, or it failed. */
+  readonly reason?: 'budget' | 'failed';
   readonly ms?: number;
   readonly tokensIn?: number;
   readonly tokensOut?: number;

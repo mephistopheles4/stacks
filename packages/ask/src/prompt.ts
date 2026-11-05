@@ -21,12 +21,29 @@ export const RULES =
 /** A deliberately cautious estimate: 3 characters to a token. */
 export const estimateTokens = (text: string): number => Math.ceil(text.length / 3);
 
+/**
+ * Provider text goes into the system message on every question, and a provider
+ * record can be edited by anyone (Open Library is a wiki). One line, no control
+ * characters, no quote that could close the title, and a length cap.
+ */
+export function plain(text: string, cap = 200): string {
+  let out = '';
+  for (const ch of text) {
+    const code = ch.codePointAt(0) ?? 0;
+    // Control characters and line separators become a space; quotes become ' .
+    const blank =
+      code < 0x20 || (code >= 0x7f && code <= 0x9f) || code === 0x2028 || code === 0x2029;
+    out += blank ? ' ' : ch === '"' ? "'" : ch;
+  }
+  return out.replace(/ +/g, ' ').trim().slice(0, cap);
+}
+
 export function catalogueLine(book: CatalogueBook): string {
-  const parts = [`"${book.title}"`];
-  if (book.author) parts.push(`by ${book.author}`);
+  const parts = [`"${plain(book.title)}"`];
+  if (book.author) parts.push(`by ${plain(book.author)}`);
   parts.push(book.status);
   if (book.finished) parts.push(`finished ${book.finished}`);
-  if (book.subjects) parts.push(`subjects: ${book.subjects}`);
+  if (book.subjects) parts.push(`subjects: ${plain(book.subjects)}`);
   if (book.rating !== undefined) parts.push(`rating ${String(book.rating)}/5`);
   if (book.thoughts) parts.push('has written Thoughts');
   return parts.join(' | ');

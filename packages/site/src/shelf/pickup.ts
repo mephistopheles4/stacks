@@ -876,6 +876,11 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       if (book !== undefined) state.select(book);
     },
     pickUpById: (id) => {
+      // Already in the hand: no new pickup, but the drawer still has to hear it.
+      if (state.holding()?.book.id === id) {
+        announceHeld(window, id);
+        return true;
+      }
       const book = current.books.find((placed) => placed.entry.book.id === id)?.entry.book;
       if (book === undefined) return false;
       state.select(book);

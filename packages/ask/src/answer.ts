@@ -95,7 +95,10 @@ export async function answerQuestion(
     return {
       reply: searchReply(catalogue, question),
       outcome: 'search-ai-failed',
-      detail: { ms: clock() - started },
+      detail: {
+        ms: clock() - started,
+        reason: error instanceof AiFailure && error.spent ? 'budget' : 'failed',
+      },
       ai: error instanceof AiFailure && error.spent ? 'spent' : 'failed',
     };
   }

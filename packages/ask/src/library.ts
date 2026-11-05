@@ -30,6 +30,11 @@ export function toCatalogue(raw: unknown): CatalogueBook[] {
   const out: CatalogueBook[] = [];
   for (const entry of books as unknown[]) {
     const b = (entry ?? {}) as Record<string, unknown>;
+    // A public build carries none of these. A local build does: refuse it whole,
+    // so private and wishlist books can never reach the model (invariant 2).
+    if ('sourcePath' in b || 'private' in b || b.status === 'wishlist') {
+      throw new DataError('library.json looks like a local build, not a public one');
+    }
     const id = str(b.id);
     const title = str(b.title);
     if (id === undefined || title === undefined || !ID.test(id)) continue;

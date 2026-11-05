@@ -19,6 +19,13 @@ describe('askLibrary (C4: the drawer text for every row)', () => {
     expect(call[1].referrerPolicy).toBe('no-referrer');
   });
 
+  const sent = {
+    ai: 'I read it.',
+    search: 'These match.',
+    limited: "That's the limit.",
+    error: 'Reload.',
+  } as const;
+
   it.each([
     ['an AI answer', json({ mode: 'ai', answer: 'I read it.', books: [] }), 'ai'],
     ['a search answer', json({ mode: 'search', answer: 'These match.', books: [] }), 'search'],
@@ -35,6 +42,7 @@ describe('askLibrary (C4: the drawer text for every row)', () => {
       via(() => response),
     );
     expect(result.mode).toBe(mode);
+    expect(result.answer).toBe(sent[mode as 'ai' | 'search' | 'limited' | 'error']);
     expect(result.answer).not.toBe(UNAVAILABLE);
   });
 

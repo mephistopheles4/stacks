@@ -22,8 +22,8 @@ function capture(args: readonly string[], env: NodeJS.ProcessEnv): Captured {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
-/** wrangler's own error code for a Worker that does not exist yet. */
-const NO_SUCH_WORKER = /\b10007\b|does not exist|not found/i;
+/** wrangler's own error code for a Worker that does not exist yet, and nothing looser. */
+const NO_SUCH_WORKER = /\b10007\b/;
 
 /**
  * What `ASK_AI_ENABLED` is on the live Worker, read from its latest version
@@ -39,7 +39,9 @@ export function readLiveAi(env: NodeJS.ProcessEnv): LiveAi {
     return NO_SUCH_WORKER.test(listed.stdout + listed.stderr) ? 'none' : 'unreadable';
   }
   const versionId = latestVersionId(listed.stdout);
-  if (versionId === undefined) return 'none';
+  // Only a list that parsed and held no deployment means "never deployed".
+  if (versionId === 'none') return 'none';
+  if (versionId === undefined) return 'unreadable';
   const viewed = capture(
     ['exec', 'wrangler', 'versions', 'view', versionId, '--name', ASK_WORKER, '--json'],
     env,
@@ -52,20 +54,31 @@ export function readLiveAi(env: NodeJS.ProcessEnv): LiveAi {
   }
 }
 
-/** The version id of the newest deployment in a `deployments list --json` answer. */
+/**
+ * The version id carrying the most traffic in the newest deployment of a
+ * `deployments list --json` answer; `none` for a parsed list with no deployment;
+ * undefined for anything it cannot read, which the caller treats as unreadable.
+ */
 export function latestVersionId(stdout: string): string | undefined {
+  let deployments: unknown;
   try {
-    const deployments = JSON.parse(stdout) as {
-      versions?: { version_id?: unknown }[];
-      created_on?: unknown;
-    }[];
-    if (!Array.isArray(deployments)) return undefined;
-    const last = [...deployments]
-      .sort((a, b) => String(a.created_on).localeCompare(String(b.created_on)))
-      .at(-1);
-    const id = last?.versions?.[0]?.version_id;
-    return typeof id === 'string' ? id : undefined;
+    deployments = JSON.parse(stdout);
   } catch {
     return undefined;
   }
+  if (!Array.isArray(deployments)) return undefined;
+  if (deployments.length === 0) return 'none';
+  const list = deployments as {
+    versions?: { version_id?: unknown; percentage?: unknown }[];
+    created_on?: unknown;
+  }[];
+  const newest = [...list]
+    .sort((a, b) => String(a.created_on).localeCompare(String(b.created_on)))
+    .at(-1);
+  const versions = newest?.versions;
+  if (!Array.isArray(versions) || versions.length === 0) return undefined;
+  const top = [...versions].sort(
+    (a, b) => Number(b.percentage ?? 0) - Number(a.percentage ?? 0),
+  )[0];
+  return typeof top?.version_id === 'string' ? top.version_id : undefined;
 }

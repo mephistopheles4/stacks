@@ -14,6 +14,8 @@ export interface AskFlags {
 }
 
 const GATEWAY_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+/** `default` creates itself with logging on and no limit; `stacks-ask` is the real one. */
+export const NOT_A_TEST_GATEWAY: ReadonlySet<string> = new Set(['default', 'stacks-ask']);
 
 /** The four flags and `--gateway <id>`. Anything else is a refusal, never ignored. */
 export function parseAskArgs(argv: readonly string[]): AskFlags | { readonly refusal: string } {
@@ -30,7 +32,7 @@ export function parseAskArgs(argv: readonly string[]): AskFlags | { readonly ref
     else if (arg === '--any-branch') anyBranch = true;
     else if (arg === '--gateway') {
       gateway = argv[(i += 1)];
-      if (gateway === undefined || !GATEWAY_ID.test(gateway)) {
+      if (gateway === undefined || !GATEWAY_ID.test(gateway) || NOT_A_TEST_GATEWAY.has(gateway)) {
         return {
           refusal: '--gateway needs a gateway id of lower-case letters, digits and hyphens',
         };

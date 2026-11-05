@@ -91,5 +91,8 @@ touch nothing outside `infra/`. Delete the Turnstile widget by hand.
 - **Health Check interval.** 60 s is the Pro minimum per Cloudflare docs mirrors;
   the official page was not reachable. Probes pass through the WAF rule too, at 1
   per minute per probe IP, under the limit of 10.
+- **Secrets in shell history.** Read the token and recipient without echoing them (`read -rs CLOUDFLARE_API_TOKEN`, or `Read-Host -AsSecureString`) rather than typing them on a command line.
+- **Destroy deletes the whole entrypoint.** The ruleset is the zone's one `http_ratelimit` entrypoint, root domain included: `terraform destroy` removes any rule added later by hand. Record the existing rules (S13 step 1) before the first plan.
+- **`VISITOR_KEY`** is generated with a CSPRNG, for example 32 random bytes in hex, never typed.
 - **Sensitive variable and state.** The recipient is kept out of every committed
   file, but it is stored in the local, ignored state file.

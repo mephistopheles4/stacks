@@ -61,6 +61,7 @@ function memoryState(): { state: CounterState; store: Map<string, unknown>; alar
       store.set(key, value);
     },
     deleteAll: async () => store.clear(),
+    getAlarm: async () => alarms.at(-1) ?? null,
     setAlarm: async (time) => {
       alarms.push(time);
     },

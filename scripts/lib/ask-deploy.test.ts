@@ -26,12 +26,16 @@ describe('parseAskArgs', () => {
   it('reads a gateway id', () => {
     expect(parseAskArgs(['--gateway', 'stacks-test'])).toMatchObject({ gateway: 'stacks-test' });
   });
-  it.each([['--gateway'], ['--gateway', 'Bad Id'], ['--gateway', '-x'], ['--nope']])(
-    'refuses %s',
-    (...argv) => {
-      expect(parseAskArgs(argv)).toHaveProperty('refusal');
-    },
-  );
+  it.each([
+    ['--gateway'],
+    ['--gateway', 'Bad Id'],
+    ['--gateway', '-x'],
+    ['--gateway', 'default'],
+    ['--gateway', 'stacks-ask'],
+    ['--nope'],
+  ])('refuses %s', (...argv) => {
+    expect(parseAskArgs(argv)).toHaveProperty('refusal');
+  });
   it('refuses --ai-off with --ai-on', () => {
     expect(parseAskArgs(['--ai-off', '--ai-on'])).toHaveProperty('refusal');
   });
