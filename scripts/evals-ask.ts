@@ -5,13 +5,15 @@
  *
  *   pnpm evals:ask --gateway <test-gateway-id> [--site <dir>]
  *
- * Reads the real public build from `--site` (default `packages/site/dist`) and
+ * Writes the full transcript, reasoning included, to `--out` (default: a folder in the system
+ * temp directory, never the repo). Reads the real public build from `--site` (default `packages/site/dist`) and
  * refuses a library built from the fixture vault. Uses the owner's wrangler
  * login, plus `ASK_GATEWAY_TOKEN` if the gateway needs one, and prints neither.
  * `CLOUDFLARE_ACCOUNT_ID` names the account.
  */
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { answerQuestion, type TraceEvent } from '../packages/ask/src/answer.ts';
 import type { Env } from '../packages/ask/src/env.ts';
@@ -27,6 +29,7 @@ import {
   titlesIn,
   toolMismatch,
 } from './lib/ask-evals.ts';
+import { capture, type CallCapture } from './lib/ask-reasoning.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const MODEL = '@cf/openai/gpt-oss-20b';
@@ -92,6 +95,9 @@ const bearer = /[A-Za-z0-9_.-]{20,}/.exec(token.stdout)?.[0];
 if (token.status !== 0 || bearer === undefined) fail('wrangler is not logged in (wrangler login)');
 const gatewayToken = process.env['ASK_GATEWAY_TOKEN'];
 
+/** What each model call's response carried besides its answer, in call order (S9). */
+const captures: CallCapture[] = [];
+
 /** The binding's `run`, over the gateway's REST address. */
 const env = {
   AI: {
@@ -115,7 +121,11 @@ const env = {
         throw new Error(
           `gateway ${String(response.status)} ${String(body.errors?.[0]?.code ?? '')}`,
         );
-      return body.result ?? body;
+      const out = body.result ?? body;
+      // The reasoning stays here, in the eval's own wrapper: the Worker's code is handed the same
+      // response and never reads it (S9).
+      captures.push(capture(out));
+      return out;
     },
   },
   ASK_GATEWAY_ID: gateway,
@@ -144,6 +154,7 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
   for (let run = 1; run <= RUNS; run += 1) {
     total += 1;
     const events: TraceEvent[] = [];
+    const firstCapture = captures.length;
     const answered = await answerQuestion(env, source, c.question, undefined, c.history, (event) =>
       events.push(event),
     );
@@ -175,6 +186,12 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
       `      expected tool: ${c.expects}${mismatch === undefined ? '' : `  <-- READ THIS: ${mismatch}`}`,
     );
     for (const line of trace.lines) console.log(`        ${line}`);
+    const calls = captures.slice(firstCapture);
+    for (const [i, c] of calls.entries()) {
+      console.log(
+        `        reasoning, call ${String(i + 1)}: ${c.reasoning === undefined ? 'none in the response' : `${String(c.reasoning.length)} characters (in the transcript)`}`,
+      );
+    }
     console.log(`      answer: ${answered.reply.answer}`);
     for (const f of answered.reply.followUps)
       console.log(`      follow-up: ${f}${standAlone ? '' : '  (does not stand alone)'}`);
@@ -201,6 +218,8 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
       toolMismatch: mismatch ?? null,
       neurons: trace.neurons,
       events,
+      // Per model call, in order: the reasoning the response carried, and the keys it had.
+      calls,
       answer: answered.reply.answer,
       followUps: answered.reply.followUps,
       books: answered.reply.books.map((b) => b.title),
@@ -209,7 +228,8 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
   }
 }
 
-const folder = join(REPO_ROOT, 'artifacts');
+// Outside the repo: a transcript holds the model's reasoning and visitors' words.
+const folder = flag('--out') ?? join(tmpdir(), 'stacks-ask-evals');
 mkdirSync(folder, { recursive: true });
 const file = join(folder, `ask-evals-${new Date().toISOString().replaceAll(':', '-')}.json`);
 writeFileSync(file, JSON.stringify(transcript, null, 2));

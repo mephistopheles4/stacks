@@ -518,8 +518,14 @@ is chosen yet. The run is about 15 questions and 3 memory cases, twice each, abo
 
 **What the run prints (owner, 2026-11-05).** For each question: the tools called in order with their
 arguments, tool errors (a bad call that got guidance), model calls, Neurons and the final answer;
-the full transcript, every tool result included, is written to `artifacts/ask-evals-<time>.json`
-for reading by hand. Each case carries an **expected tool**: `list_books` for a broad question, a
+the full transcript, every tool result included, is written to `ask-evals-<time>.json` in `--out`
+(default: a folder in the system temp directory, **never the repo**) for reading by hand. **It also keeps
+the model's reasoning, per model call** (owner, 2026-11-05), taken from the raw response by the evals' own AI
+wrapper (`scripts/lib/ask-reasoning.ts`: `reasoning_content` or `reasoning` on the message or at the top, or
+reasoning items in an output list), with the keys each response had, so the first live run shows where it
+appears; where a response carries none, the transcript says so. **The Worker never reads, logs, returns or
+stores reasoning:** `packages/ask/src` does not mention it (a test holds that), and a canary in a response's
+reasoning reaches no reply and no log line (C15 and C32, extended). The console prints only its length. Each case carries an **expected tool**: `list_books` for a broad question, a
 search for a named book or a subject, none for a count or a refusal. **A mismatch is printed as
 something to read and never fails a question.** Each answer is followed by a hand check, not a
 grade: its claims (sentences) in a list, with the Thoughts of every book it names beside them, or

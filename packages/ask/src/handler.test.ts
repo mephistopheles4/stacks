@@ -663,3 +663,26 @@ describe('conversation memory (memory spec C21, C22, C24)', () => {
     expect(r.aiCalls[0]!.input.messages.map((m) => m.role)).toEqual(['system', 'user']);
   });
 });
+
+describe('reasoning in a response from the model (C15, C32 extended)', () => {
+  it('a canary in the reasoning of a response reaches no reply and no log line', async () => {
+    const canary = 'CANARY-REASONING-3d8e';
+    const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) =>
+      vi.spyOn(console, m).mockImplementation(() => undefined),
+    );
+    const withReasoning = async (): Promise<unknown> => ({
+      choices: [{ message: { content: 'I rated Co-Intelligence 5.', reasoning_content: canary } }],
+      reasoning: canary,
+    });
+    const r = rig({ ai: withReasoning });
+    const { status, body } = await run(r, ask());
+    expect(status).toBe(200);
+    expect(body.mode).toBe('ai');
+    expect(JSON.stringify(body)).not.toContain(canary);
+    const logged = spies
+      .flatMap((s) => s.mock.calls.map((call) => call.map(String).join(' ')))
+      .join(String.fromCharCode(10));
+    expect(logged).toContain('"outcome"');
+    expect(logged).not.toContain(canary);
+  });
+});
