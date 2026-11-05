@@ -1136,6 +1136,18 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
+  it('csp: a repeated source standing in for a missing one (CodeRabbit)', async () => {
+    // Three sources, as many as wanted, each one wanted, and Turnstile absent: a count and a
+    // membership test alone pass it.
+    await expectOnly('csp', async () => {
+      await writeIndex(
+        indexHtml({
+          csp: cspMeta({ scriptSrc: "'self' 'self' https://static.cloudflareinsights.com" }),
+        }),
+      );
+    });
+  });
+
   it('csp: a directive quietly dropped from the policy', async () => {
     /**
      * The finding that widened this rule, and it is #127's own failure shape.

@@ -842,8 +842,12 @@ export async function inspectPublicBuild(
 
       // Hashes are the part that legitimately differs per page and per build.
       const sources = declared.filter((source) => !source.startsWith("'sha"));
+      // Every wanted source present and nothing else: a repeated source must not stand in for a
+      // missing one, so the count alone is not enough.
       const same =
-        sources.length === wanted.length && sources.every((source) => wanted.includes(source));
+        sources.length === wanted.length &&
+        sources.every((source) => wanted.includes(source)) &&
+        wanted.every((source) => sources.includes(source));
 
       if (!same) {
         fail(
