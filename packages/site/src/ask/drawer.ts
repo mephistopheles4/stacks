@@ -92,7 +92,12 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   document.addEventListener(
     'pointerup',
     (event) => {
-      if (open && outside.up(event.clientX, event.clientY, inside(event.target))) hide('outside');
+      if (open && outside.up(event.clientX, event.clientY, inside(event.target))) {
+        // The click closed the drawer and that is all it does: the shelf sees it
+        // marked, and does not put a held book back.
+        event.preventDefault();
+        hide('outside');
+      }
     },
     true,
   );

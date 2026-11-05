@@ -218,7 +218,10 @@ export async function boot(
     try {
       return mountShelf(target, books, {
         settings,
-        onSelect: (book) => {
+        onSelect: (book, prevented) => {
+          // A click the drawer closed on leaves a held book alone; with an empty
+          // hand it still picks up.
+          if (prevented && held.pickup?.held() !== undefined) return;
           held.pickup?.select(book);
         },
         onContextLost: (running) => {

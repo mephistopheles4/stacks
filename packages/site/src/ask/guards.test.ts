@@ -55,3 +55,20 @@ describe('the text box shrinks as well as grows (S7)', () => {
     expect(restore).toBeGreaterThan(measure);
   });
 });
+
+describe('an outside click closes the drawer and nothing else (S7, C9)', () => {
+  it('marks the click as taken when it closes the drawer', () => {
+    const drawer = code('drawer.ts');
+    expect(drawer).toMatch(
+      /outside\.up\([^)]*\)[^{]*\{\s*event\.preventDefault\(\);\s*hide\('outside'\);/,
+    );
+  });
+
+  it('has the shelf honour that mark only when a book is held', () => {
+    const boot = readFileSync('packages/site/src/shelf/boot.ts', 'utf8');
+    expect(boot).toMatch(/prevented && held\.pickup\?\.held\(\) !== undefined\) return;/);
+    expect(readFileSync('packages/site/src/shelf/scene.ts', 'utf8')).toContain(
+      'event.defaultPrevented',
+    );
+  });
+});

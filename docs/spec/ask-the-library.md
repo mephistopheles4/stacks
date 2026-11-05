@@ -233,7 +233,11 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
 - **Waiting:** "Looking through the shelf" while a question is out. Answers are
   announced through a live region.
 - **Closing:** the X, Escape, or a click outside the panel. A drag on the shelf
-  to look around does not close it. Focus returns to the launcher.
+  to look around does not close it. Focus returns to the launcher. **With a book
+  held, a click outside the panel closes the panel and leaves the book held**, as
+  Escape does: the click is marked as taken, and the shelf ignores a marked click
+  only while a book is in hand. With an empty hand a shelf click still closes the
+  panel and picks up as usual (decided by the owner on 2026-11-05).
 - **With a held book:** picking a book up from any source closes the panel, by a
   signal from the shelf rather than a timer. The panel can be reopened with a book
   held. With both open, Escape closes the panel and leaves the book held, wherever
@@ -337,7 +341,7 @@ choose other books.
 | C6 | The 31st question from one key in a UTC day is refused, parallel requests can't pass it, a compressed IPv6 address maps to its /64, and the record goes when the day ends | Security |
 | C7 | On a test gateway with a small limit, successful calls from the deployed Worker trip a 2045 within 10% of the limit, and the Worker is back on the real gateway after | Security |
 | C8 | A planted `AI.run` outside the one function, or one without the gateway option and `skipCache`, fails a new gate | Security |
-| C9 | Every S7 behaviour holds in a browser, closing by X, Escape, outside click and pickup, not by drag, with focus outside the panel and a book held, on desktop and phone widths, and the Privacy link reaches the line on `/attribution` | Interaction |
+| C9 | Every S7 behaviour holds in a browser, closing by X, Escape, outside click and pickup, not by drag, an outside click with a book held leaving the book held, with focus outside the panel and a book held, on desktop and phone widths, and the Privacy link reaches the line on `/attribution` | Interaction |
 | C10 | G20 fails on any CSP change beyond S8's two | Compatibility |
 | C11 | Loading the page without opening the drawer makes no new third-party request | Security |
 | C12 | `pnpm test`, `pnpm lint`, `pnpm build` and `wrangler deploy --dry-run` are green with `smoke:render`, no test makes a live call (G21), and a planted type error in `packages/ask` fails `pnpm typecheck` | Maintainability |
