@@ -300,8 +300,14 @@ const readerProblems = (source: string): string[] => [
     ? ['reads the login in another form']
     : []),
 ];
-/** A script that asks wrangler for the owner's login token, in any spelling, outside the two readers. */
-const readsLogin = (source: string): boolean => /\bwrangler\b[^\n]*\bauth token\b/.test(source);
+/**
+ * A script that asks wrangler for the owner's login token, in either spelling: the string form
+ * (`wrangler ... auth token`) and the array form (`['auth', 'token']`, which is how this module
+ * would build the call).
+ */
+const readsLogin = (source: string): boolean =>
+  /\bwrangler\b[^\n]*\bauth token\b/.test(source) ||
+  /['"`]auth['"`]\s*,\s*['"`]token['"`]/.test(source);
 /**
  * `scripts/deploy.ts` runs at import, so G67 reads its source text. An
  * allowlist, as invariant 2 is: the upload's argument list starts
@@ -876,6 +882,11 @@ describe('G67 — door 3: wrangler is an exact pin, run through pnpm exec', () =
     }
     expect(readsLogin("spawnSync('pnpm exec wrangler auth token');")).toBe(true);
     expect(readsLogin("run(['exec', 'wrangler', 'secret', 'put']);")).toBe(false);
+    // S2: the array form, written through the module's own helper, is refused too.
+    expect(readsLogin("wrangler(ctx, ['auth', 'token'], { timeoutMs: 1 });")).toBe(true);
+    expect(readsLogin('wrangler(ctx, ["auth", "token"], { timeoutMs: 1 });')).toBe(true);
+    expect(readsLogin('wrangler(ctx, [`auth`,`token`], { timeoutMs: 1 });')).toBe(true);
+    expect(readsLogin("wrangler(ctx, ['secret', 'list'], { timeoutMs: 1 });")).toBe(false);
     // ask-live.ts: a dlx call is refused (conventions F15).
     expect(
       deployProblems("run('pnpm', ['dlx', 'wrangler']);", {

@@ -26,6 +26,12 @@ with `wrangler secret put`, the secret on standard input and nowhere else.
 - **`--sync`** sets the widget's current secret without rotating. Cloudflare's widget GET returns
   `result.secret`, so a put that fails after a create or rotate loses nothing: the secret is read
   back. The list response does not carry it.
+- **Transport settings are refused, not just forced.** Node reads `NODE_EXTRA_CA_CERTS`,
+  `NODE_USE_SYSTEM_CA`, `NODE_USE_ENV_PROXY` and the `--use-env-proxy`, `--use-system-ca` and
+  `--use-openssl-ca` options of `NODE_OPTIONS` for the script's own `fetch`, which carries the typed
+  token, so forcing wrangler's environment does not cover it. Step 1 refuses each in the shell, in any
+  letter case, naming the variable and never its value, beside the refusal of
+  `NODE_TLS_REJECT_UNAUTHORIZED` unless it is `1`.
 - **The token is typed.** A short-lived API token (Account > Turnstile > Edit, expiry within 24
   hours, checked by `GET /user/tokens/verify` or its account form) is read from a no-echo prompt on
   Node's raw-mode stdin, never from an environment variable, flag or file; the script refuses when
@@ -88,7 +94,8 @@ under exactly this environment. Whether the login is found is proven by the owne
 ## Not verified
 
 Nothing here has run against Cloudflare: the account-token verify path, the error a second
-rotation gets, a site key's exact length, and wrangler's output lines. Each fails closed until the
+rotation gets, a site key's exact length, wrangler's output lines, and whether `pnpm exec` restores
+a `NODE_OPTIONS` from `.npmrc` into wrangler's environment. Each fails closed until the
 owner's first run, which records the real codes and messages (with `<account>` for the id).
 
 ## Consequences

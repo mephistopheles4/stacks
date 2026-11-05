@@ -1,21 +1,26 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   API_ORIGIN,
   EMPTY_ENV_FILE,
   WORKER_NAME,
   buildWranglerEnv,
+  envFileIsEmpty,
+  envFilePaths,
   envRefusals,
+  isInteractive,
   localRefusals,
   parseTurnstileArgs,
   readResponse,
   runTurnstile,
+  tokenProblem,
   unexpectedLine,
   wranglerArgs,
   type Deps,
   type HttpRequest,
   type Local,
+  type Mode,
   type RunReply,
   type TurnstileArgs,
 } from './turnstile.ts';
@@ -26,8 +31,8 @@ import { REPO_ROOT } from './repo-root.ts';
  * fixed fake account id and a made-up site key. Nothing is captured from a
  * live response (spec revision 5, C22).
  */
-const SECRET = 'CANARY-SECRET-0123456789abcdef';
-const TOKEN = 'CANARY-TOKEN-fedcba9876543210';
+const SECRET = 'CANARY-SECRET-zq7k9x2m4w8p';
+const TOKEN = 'CANARY-TOKEN-hj5v3n6c1r9t';
 const ACCOUNT = '0123456789abcdef0123456789abcdef';
 const SITEKEY = '0x4AAAAAAAZZZZZZZZZZZZZZZZ';
 const EMAIL = 'canary.owner@example.com';
@@ -110,9 +115,11 @@ function harness(
     run?: (args: readonly string[]) => RunReply | 'throw';
     tty?: boolean;
     token?: string;
+    tokens?: string[];
     shell?: NodeJS.ProcessEnv;
   } = {},
 ): { deps: Deps; rec: Recorded; shell: NodeJS.ProcessEnv } {
+  const typed = [...(overrides.tokens ?? [])];
   const rec: Recorded = { http: [], runs: [], lines: [], prompts: [] };
   const routes = { ...happyRoutes(), ...overrides.routes };
   const shell: NodeJS.ProcessEnv = overrides.shell ?? {
@@ -141,7 +148,7 @@ function harness(
     },
     prompt: (question) => {
       rec.prompts.push(question);
-      return Promise.resolve(overrides.token ?? TOKEN);
+      return Promise.resolve(typed.shift() ?? overrides.token ?? TOKEN);
     },
     now: () => NOW,
     print: (line) => {
@@ -195,8 +202,12 @@ function expectNoLeak(
   }
   for (const run of rec.runs) {
     for (const canary of [SECRET, TOKEN]) {
-      expect(run.args.join(' ')).not.toContain(canary);
-      for (const value of Object.values(run.env)) expect(value ?? '').not.toContain(canary);
+      for (const piece of runsOf(canary)) {
+        expect(run.args.join(' '), `an argument holds ${piece}`).not.toContain(piece);
+        for (const value of Object.values(run.env)) {
+          expect(value ?? '', `a child environment holds ${piece}`).not.toContain(piece);
+        }
+      }
     }
     expect(run.input === undefined || run.input === SECRET).toBe(true);
   }
@@ -222,6 +233,17 @@ describe('parseTurnstileArgs (modes and inputs)', () => {
       account: 'b'.repeat(32),
       sitekey: '0xENV',
     });
+  });
+
+  it('S3: lower-cases a well-formed account id once, and leaves a malformed one alone', () => {
+    const upper = ACCOUNT.toUpperCase();
+    expect(upper).not.toBe(ACCOUNT);
+    expect(parseTurnstileArgs(['--account', upper], {})).toMatchObject({ account: ACCOUNT });
+    expect(parseTurnstileArgs([], { CLOUDFLARE_ACCOUNT_ID: upper })).toMatchObject({
+      account: ACCOUNT,
+    });
+    const bad = 'NOT-HEX-NOT-HEX-NOT-HEX-NOT-HEXX';
+    expect(parseTurnstileArgs(['--account', bad], {})).toMatchObject({ account: bad });
   });
 
   it('refuses what it does not know, with no flag to clear the branch checks (C1)', () => {
@@ -296,6 +318,39 @@ describe('localRefusals (C1, C3, C4, C15, C21)', () => {
     expect(refusals(args(), { shell: shell('') })).not.toEqual([]);
     expect(refusals(args(), { shell: shell('1') })).toEqual([]);
     expect(refusals(args(), { shell: {} })).toEqual([]);
+  });
+
+  it('T5: refuses a lower-case node_tls_reject_unauthorized=0 on its own', () => {
+    const found = refusals(args(), { shell: { node_tls_reject_unauthorized: '0' } });
+    expect(found).toHaveLength(1);
+    expect(found.join(' ')).toContain('NODE_TLS_REJECT_UNAUTHORIZED');
+  });
+
+  for (const name of ['NODE_EXTRA_CA_CERTS', 'NODE_USE_SYSTEM_CA', 'NODE_USE_ENV_PROXY']) {
+    it(`S4: refuses ${name} in any letter case, naming it and never its value`, () => {
+      for (const spelled of [name, name.toLowerCase()]) {
+        const found = refusals(args(), { shell: { [spelled]: 'VALUE-THAT-MUST-NOT-PRINT' } });
+        expect(found, spelled).toHaveLength(1);
+        expect(found.join(' ')).toContain(name);
+        expect(found.join(' ')).not.toContain('VALUE-THAT-MUST-NOT-PRINT');
+      }
+    });
+  }
+
+  for (const flag of ['--use-env-proxy', '--use-system-ca', '--use-openssl-ca']) {
+    it(`S4: refuses a NODE_OPTIONS holding ${flag}, naming the variable and not its value`, () => {
+      for (const spelled of ['NODE_OPTIONS', 'node_options']) {
+        const value = `--max-old-space-size=100 ${flag.toUpperCase()} ZZZ-VALUE`;
+        const found = refusals(args(), { shell: { [spelled]: value } });
+        expect(found, spelled).toHaveLength(1);
+        expect(found.join(' ')).toContain('NODE_OPTIONS');
+        expect(found.join(' ')).not.toContain('ZZZ-VALUE');
+      }
+    });
+  }
+
+  it('S4: lets a NODE_OPTIONS without those flags through', () => {
+    expect(refusals(args(), { shell: { NODE_OPTIONS: '--max-old-space-size=100' } })).toEqual([]);
   });
 
   it('C3: folds in the credential and host refusals', () => {
@@ -414,7 +469,7 @@ describe('buildWranglerEnv (C16: an allowlist and the forced keys)', () => {
     );
     expect(env).toMatchObject({
       CLOUDFLARE_ACCOUNT_ID: ACCOUNT,
-      CLOUDFLARE_API_BASE_URL: API_ORIGIN,
+      CLOUDFLARE_API_BASE_URL: 'https://api.cloudflare.com/client/v4',
       NODE_TLS_REJECT_UNAUTHORIZED: '1',
       WRANGLER_SEND_METRICS: 'false',
       WRANGLER_SEND_ERROR_REPORTS: 'false',
@@ -424,6 +479,12 @@ describe('buildWranglerEnv (C16: an allowlist and the forced keys)', () => {
     });
     const names = Object.keys(env).map((n) => n.toUpperCase());
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe('the API origin (S7)', () => {
+  it('is Cloudflare itself, written out, not compared with itself', () => {
+    expect(API_ORIGIN).toBe('https://api.cloudflare.com/client/v4');
   });
 });
 
@@ -442,11 +503,14 @@ describe('wranglerArgs (C15)', () => {
 });
 
 describe('readResponse (one place parses bodies)', () => {
+  const keep = (text: string): string => text;
+
   it('reads a success with its result and total', () => {
     expect(
       readResponse(
         200,
         JSON.stringify({ success: true, result: [1], result_info: { total_count: 7 } }),
+        keep,
       ),
     ).toEqual({ kind: 'ok', result: [1], total: 7 });
   });
@@ -458,6 +522,7 @@ describe('readResponse (one place parses bodies)', () => {
         success: false,
         errors: [{ code: 9109, message: 'Valid user-level auth required' }],
       }),
+      keep,
     );
     expect(reply).toMatchObject({ kind: 'failed', status: 403 });
     expect(JSON.stringify(reply)).toContain('9109');
@@ -470,15 +535,29 @@ describe('readResponse (one place parses bodies)', () => {
       '[]',
       '',
     ]) {
-      const reply = readResponse(200, text);
+      const reply = readResponse(200, text, keep);
       expect(reply.kind).toBe('unreadable');
       expect(JSON.stringify(reply)).not.toContain('CANARY');
     }
-    expect(readResponse(200, '{"result":{}}').kind).toBe('unreadable');
+    expect(readResponse(200, '{"result":{}}', keep).kind).toBe('unreadable');
   });
 
   it('does not treat success:true on a non-2xx status as success', () => {
-    expect(readResponse(500, JSON.stringify({ success: true, result: {} })).kind).not.toBe('ok');
+    const reply = readResponse(500, JSON.stringify({ success: true, result: {} }), keep);
+    expect(reply.kind).not.toBe('ok');
+  });
+
+  it('S1: scrubs a message before it cuts it, so a value across the cut never prints in part', () => {
+    const body = JSON.stringify({
+      success: false,
+      errors: [{ code: 1, message: 'x'.repeat(190) + TOKEN + ACCOUNT }],
+    });
+    const reply = readResponse(403, body, (text) =>
+      text.split(TOKEN).join('<token>').split(ACCOUNT).join('<account>'),
+    );
+    const detail = reply.kind === 'failed' ? reply.detail : '';
+    expect(detail).toContain('xxxx');
+    for (const piece of [...runsOf(TOKEN), ...runsOf(ACCOUNT)]) expect(detail).not.toContain(piece);
   });
 });
 
@@ -514,16 +593,23 @@ describe('runTurnstile: before anything is asked (C1, C2, C3, C20)', () => {
     }
   });
 
-  it('an empty token answer refuses', async () => {
+  it('an empty answer twice refuses, with no request', async () => {
     const { code, rec } = await go(args(), { token: '   ' });
     expect(code).toBe(1);
+    expect(rec.prompts).toHaveLength(2);
     expect(rec.http).toEqual([]);
   });
 
-  it('the token comes only from the prompt: a token in the shell is refused, not used', async () => {
-    const { code, rec } = await go(args(), { shell: { TURNSTILE_API_TOKEN: 'from-env' } });
-    expect(code).toBe(1);
-    expect(rec.http.some((r) => r.token === 'from-env')).toBe(false);
+  it('S5: one empty Enter asks again rather than exit, so a paste has somewhere to go', async () => {
+    const { code, rec } = await go(args(), { tokens: ['', TOKEN] });
+    expect(code).toBe(0);
+    expect(rec.prompts).toHaveLength(2);
+    expect(rec.http.every((r) => r.token === TOKEN)).toBe(true);
+  });
+
+  it('S5: a first answer that is a token is never followed by a second question', async () => {
+    const { rec } = await go(args());
+    expect(rec.prompts).toHaveLength(1);
   });
 
   it('C20: --dry-run prompts for nothing, sends nothing, spawns nothing, and says <account>', async () => {
@@ -541,6 +627,20 @@ describe('runTurnstile: before anything is asked (C1, C2, C3, C20)', () => {
   it('--dry-run still refuses a bad account id', async () => {
     const { code } = await go(args({ dryRun: true, account: 'nope' }));
     expect(code).toBe(1);
+  });
+});
+
+describe('the token lifetime boundary (T6)', () => {
+  const lasting = (ms: number) => ({
+    status: 'active',
+    expires_on: new Date(NOW + ms).toISOString(),
+  });
+
+  it('accepts exactly 24 hours and refuses 24 hours and a second', () => {
+    expect(tokenProblem(lasting(24 * HOUR), NOW)).toBeUndefined();
+    expect(tokenProblem(lasting(24 * HOUR + 1000), NOW)).toBeDefined();
+    expect(tokenProblem(lasting(1000), NOW)).toBeUndefined();
+    expect(tokenProblem(lasting(0), NOW)).toBeDefined();
   });
 });
 
@@ -782,6 +882,36 @@ describe('rotate (C8, C9)', () => {
     expectNoLeak(rec);
   });
 
+  it('S6: a success:false answer at a 5xx does not say nothing changed, and names --sync', async () => {
+    for (const status of [500, 502, 503]) {
+      const { code, rec } = await go(rotate(), {
+        routes: { [ROTATE]: failure(status, 10_000, 'upstream trouble') },
+      });
+      expect(code).toBe(1);
+      expect(output(rec), String(status)).not.toContain('nothing changed');
+      expect(output(rec), String(status)).toContain('--sync');
+      expect(output(rec)).toContain(String(status));
+      expect(rec.runs.some((r) => r.args.includes('put'))).toBe(false);
+    }
+    for (const status of [400, 403, 409, 429]) {
+      const { rec } = await go(rotate(), { routes: { [ROTATE]: failure(status, 1, 'no') } });
+      expect(output(rec), String(status)).toContain('nothing changed');
+    }
+  });
+
+  it('S1: the old secret read before the rotate is scrubbed from a later error', async () => {
+    const OLD = 'CANARY-OLD-SECRET-9876543210';
+    const { code, rec } = await go(rotate(), {
+      routes: {
+        [`GET ${WIDGETS}/${SITEKEY}`]: ok(widget({ secret: OLD })),
+        [ROTATE]: failure(409, 7, `rejected ${OLD}`),
+      },
+    });
+    expect(code).toBe(1);
+    expect(output(rec)).toContain('409');
+    expectNoLeak(rec, [OLD, TOKEN, ACCOUNT]);
+  });
+
   it('a rotate that times out names --sync, since whether it rotated is unknown', async () => {
     const { code, rec } = await go(rotate(), { routes: { [ROTATE]: () => 'throw' } });
     expect(code).toBe(1);
@@ -828,21 +958,28 @@ describe('putting the secret (C11, C12, C13, C14, C19)', () => {
   });
 
   it('C13: each failure names --sync and says the secret is not on the Worker', async () => {
+    const noise = `an unknown line\n${EMAIL}\n${SECRET} ${TOKEN} /accounts/${ACCOUNT}/x\n`;
     const failures: [string, RunReply | 'throw'][] = [
-      ['non-zero exit', result(SUCCESS, 1)],
-      ['timeout', result(SUCCESS, null, true)],
-      ['no success line', result('nothing happened\n')],
+      ['non-zero exit', result(`${SUCCESS}${noise}`, 1)],
+      ['timeout', result(`${SUCCESS}${noise}`, null, true)],
+      ['no success line', result(`nothing happened\n${noise}`)],
       [
         'fallback answer',
-        result(`${SUCCESS}Using fallback value in non-interactive context: yes\n`),
+        result(`${SUCCESS}Using fallback value in non-interactive context: yes\n${noise}`),
       ],
-      ['draft worker', result(`🌀 Creating new Worker "stacks-ask"...\n${SUCCESS}`)],
+      ['draft worker', result(`🌀 Creating new Worker "stacks-ask"...\n${SUCCESS}${noise}`)],
       ['spawn failure', 'throw'],
     ];
     for (const [name, reply] of failures) {
       const { code, rec } = await go(args(), { run: put(reply) });
       expect(code, name).toBe(1);
       expect(output(rec), name).toContain('--sync');
+      if (reply !== 'throw') {
+        expect(output(rec), name).toMatch(/\d+ lines? of wrangler output withheld/);
+        expect(output(rec), name).not.toContain(EMAIL);
+        expect(output(rec), name).not.toContain('an unknown line');
+      }
+      if (name === 'timeout') expect(output(rec)).toContain('may still have landed');
       expect(
         rec.runs.some((r) => r.args.includes('list') && r.args.includes('secret')),
         name,
@@ -900,25 +1037,6 @@ describe('putting the secret (C11, C12, C13, C14, C19)', () => {
 
 describe('what wrangler is run with (C15, C16, C17)', () => {
   it('every wrangler call has the env file and a clean, forced environment', async () => {
-    const shell = {
-      PATH: 'p',
-      USERPROFILE: 'u',
-      Turnstile_Api_Token: 'not-allowed-here',
-      WRANGLER_TOKEN_URL: 'https://evil.test',
-      cloudflare_env: 'x',
-      DOTENV_KEY: 'x',
-      wrangler_output_file_path: 'C:\\out',
-      node_tls_reject_unauthorized: '0',
-    };
-    const h = harness({ shell });
-    const code = await runTurnstile(
-      args(),
-      { ...GOOD_LOCAL({ PATH: 'p', USERPROFILE: 'u' }), shell },
-      h.deps,
-    );
-    // the shell holds refused names, so the run is refused before wrangler; the same shell
-    // minus the refused names must still be built clean:
-    expect(code).toBe(1);
     const clean = {
       PATH: 'p',
       USERPROFILE: 'u',
@@ -944,8 +1062,22 @@ describe('what wrangler is run with (C15, C16, C17)', () => {
       }
       expect(run.env['CLOUDFLARE_ACCOUNT_ID']).toBe(ACCOUNT);
       expect(run.env['NODE_TLS_REJECT_UNAUTHORIZED']).toBe('1');
-      expect(run.env['CLOUDFLARE_API_BASE_URL']).toBe(API_ORIGIN);
+      expect(run.env['CLOUDFLARE_API_BASE_URL']).toBe('https://api.cloudflare.com/client/v4');
       expect(new Set(names).size).toBe(names.length);
+    }
+  });
+
+  it('T3: a root .env naming WRANGLER_TOKEN_URL reaches none of the three child environments', async () => {
+    const h = harness();
+    const local: Local = {
+      ...GOOD_LOCAL(h.shell),
+      envFiles: [{ label: 'the repo root .env', text: 'WRANGLER_TOKEN_URL=https://evil.test' }],
+    };
+    expect(await runTurnstile(args(), local, h.deps)).toBe(0);
+    expect(h.rec.runs).toHaveLength(3);
+    for (const run of h.rec.runs) {
+      expect(Object.keys(run.env).map((n) => n.toUpperCase())).not.toContain('WRANGLER_TOKEN_URL');
+      expect(JSON.stringify(run.env)).not.toContain('evil.test');
     }
   });
 
@@ -954,73 +1086,196 @@ describe('what wrangler is run with (C15, C16, C17)', () => {
       const { rec } = await go(args({ mode }));
       expect(rec.http.length).toBeGreaterThan(0);
       for (const req of rec.http) {
-        expect(req.url.startsWith(`${API_ORIGIN}/`)).toBe(true);
+        expect(req.url.startsWith('https://api.cloudflare.com/client/v4/')).toBe(true);
         expect(req.token).toBe(TOKEN);
       }
     }
   });
 });
 
+describe('S3: an upper-case account id is normalised before any URL or scrub', () => {
+  it('sends the lower-case id and prints neither case', async () => {
+    const upper = ACCOUNT.toUpperCase();
+    const parsed = parseTurnstileArgs(['--create', '--account', upper, '--sitekey', SITEKEY], {});
+    if ('refusal' in parsed) throw new Error('unexpected refusal');
+    const h = harness({
+      routes: {
+        'GET /user/tokens/verify': failure(403, 1, `account ${ACCOUNT}`),
+        [`GET /accounts/${ACCOUNT}/tokens/verify`]: failure(403, 1, `account ${ACCOUNT}`),
+      },
+    });
+    const code = await runTurnstile(parsed, GOOD_LOCAL(h.shell), h.deps);
+    expect(code).toBe(1);
+    expect(h.rec.http.some((r) => r.url.includes(`/accounts/${ACCOUNT}/`))).toBe(true);
+    expect(h.rec.http.some((r) => r.url.includes(upper))).toBe(false);
+    for (const piece of runsOf(upper)) expect(output(h.rec)).not.toContain(piece);
+    for (const piece of runsOf(ACCOUNT)) expect(output(h.rec)).not.toContain(piece);
+  });
+});
+
+describe('the entry’s decisions, kept pure (T7)', () => {
+  it('isInteractive is true only when stdin and stdout are both terminals', () => {
+    expect(isInteractive(true, true)).toBe(true);
+    for (const [i, o] of [
+      [true, false],
+      [false, true],
+      [false, false],
+      [undefined, true],
+      [true, undefined],
+      [undefined, undefined],
+    ] as const) {
+      expect(isInteractive(i, o), `${String(i)} ${String(o)}`).toBe(false);
+    }
+  });
+
+  it('envFilePaths names the root .env and .env.local and the main checkout’s .env', () => {
+    expect(envFilePaths('/repo', '/main')).toEqual([
+      { label: 'the repo root .env', path: join('/repo', '.env') },
+      { label: 'the repo root .env.local', path: join('/repo', '.env.local') },
+      { label: "the main checkout's .env", path: join('/main', '.env') },
+    ]);
+  });
+
+  it('envFilePaths leaves the main checkout out when it is the root, or unknown', () => {
+    expect(envFilePaths('/repo', undefined)).toHaveLength(2);
+    expect(envFilePaths('/repo', resolve('/repo'))).toHaveLength(2);
+    expect(envFilePaths('/repo', '/repo/../repo')).toHaveLength(2);
+  });
+
+  it('envFileIsEmpty is true only for a file that exists and holds nothing', () => {
+    expect(envFileIsEmpty('')).toBe(true);
+    expect(envFileIsEmpty(undefined)).toBe(false);
+    expect(envFileIsEmpty(' ')).toBe(false);
+    expect(envFileIsEmpty('#')).toBe(false);
+    expect(envFileIsEmpty(String.fromCharCode(10))).toBe(false);
+  });
+});
+
 describe('nothing secret reaches anything printed (C12)', () => {
-  const scenarios: [string, NonNullable<Parameters<typeof harness>[0]>][] = [
-    ['success', {}],
-    [
-      'an unparseable create body holding the secret whole',
-      { routes: { [`POST ${WIDGETS}`]: { body: `<html>${SECRET}</html>` } } },
-    ],
-    [
-      'an unparseable create body cut mid-secret',
-      {
+  type Over = NonNullable<Parameters<typeof harness>[0]>;
+  const ALL: readonly Mode[] = ['create', 'rotate', 'sync'];
+  const ROTATE_POST = `POST ${WIDGETS}/${SITEKEY}/rotate_secret`;
+  const WIDGET_GET = `GET ${WIDGETS}/${SITEKEY}`;
+  const both = `${TOKEN} ${ACCOUNT}`;
+  const verifyFails = (message: string): Routes => ({
+    'GET /user/tokens/verify': failure(403, 1, message),
+    [`GET /accounts/${ACCOUNT}/tokens/verify`]: failure(403, 1, message),
+  });
+  const scenarios: {
+    name: string;
+    modes: readonly Mode[];
+    over: Over;
+    code: number;
+    line: string;
+  }[] = [
+    { name: 'success', modes: ALL, over: {}, code: 0, line: 'Delete the API token' },
+    {
+      name: 'an unparseable create body holding the secret whole',
+      modes: ['create'],
+      over: { routes: { [`POST ${WIDGETS}`]: { body: `<html>${SECRET}</html>` } } },
+      code: 1,
+      line: 'unreadable response',
+    },
+    {
+      name: 'an unparseable create body cut mid-secret',
+      modes: ['create'],
+      over: {
         routes: {
           [`POST ${WIDGETS}`]: {
             body: `{"success":true,"result":{"secret":"${SECRET.slice(0, 14)}`,
           },
         },
       },
-    ],
-    [
-      'an unparseable rotate body',
-      { routes: { [`POST ${WIDGETS}/${SITEKEY}/rotate_secret`]: { body: SECRET } } },
-    ],
-    [
-      'a failure body that quotes the token',
-      { routes: { [`GET ${WIDGETS}`]: { status: 500, body: `oops ${TOKEN} ${SECRET}` } } },
-    ],
-    ['a network error that carries them', { routes: { [`POST ${WIDGETS}`]: () => 'throw' } }],
-    [
-      'verify errors that carry the token and the account',
-      {
-        routes: {
-          'GET /user/tokens/verify': failure(403, 1, `account ${ACCOUNT} token ${TOKEN}`),
-          [`GET /accounts/${ACCOUNT}/tokens/verify`]: failure(
-            403,
-            1,
-            `account ${ACCOUNT} token ${TOKEN}`,
-          ),
-        },
+      code: 1,
+      line: 'unreadable response',
+    },
+    {
+      name: 'an unparseable rotate body',
+      modes: ['rotate'],
+      over: { routes: { [ROTATE_POST]: { body: SECRET } } },
+      code: 1,
+      line: 'unreadable response',
+    },
+    {
+      name: 'an unparseable widget read',
+      modes: ['rotate', 'sync'],
+      over: { routes: { [WIDGET_GET]: { body: `<html>${SECRET}` } } },
+      code: 1,
+      line: 'could not read the widget: unreadable response',
+    },
+    {
+      name: 'a widget list error that carries the token and the account',
+      modes: ['create'],
+      over: { routes: { [`GET ${WIDGETS}`]: failure(500, 7, both) } },
+      code: 1,
+      line: 'could not list the widgets: Cloudflare answered HTTP 500',
+    },
+    {
+      name: 'a create error that carries the token and the account',
+      modes: ['create'],
+      over: { routes: { [`POST ${WIDGETS}`]: failure(409, 7, both) } },
+      code: 1,
+      line: 'HTTP 409',
+    },
+    {
+      name: 'a rotate error that carries the token and the account',
+      modes: ['rotate'],
+      over: { routes: { [ROTATE_POST]: failure(409, 7, both) } },
+      code: 1,
+      line: 'so nothing changed',
+    },
+    {
+      name: 'a widget read error that carries the token and the account',
+      modes: ['rotate', 'sync'],
+      over: { routes: { [WIDGET_GET]: failure(500, 7, both) } },
+      code: 1,
+      line: 'could not read the widget: Cloudflare answered HTTP 500',
+    },
+    {
+      name: 'a network error on the create POST',
+      modes: ['create'],
+      over: { routes: { [`POST ${WIDGETS}`]: () => 'throw' } },
+      code: 1,
+      line: 'pnpm turnstile --create again',
+    },
+    {
+      name: 'a network error on the rotate POST',
+      modes: ['rotate'],
+      over: { routes: { [ROTATE_POST]: () => 'throw' } },
+      code: 1,
+      line: 'Whether it rotated is unknown',
+    },
+    {
+      name: 'verify errors that carry the token and the account',
+      modes: ALL,
+      over: { routes: verifyFails(`account ${ACCOUNT} token ${TOKEN}`) },
+      code: 1,
+      line: 'the token could not be verified',
+    },
+    {
+      name: 'verify errors with the token and the account across the 200th character',
+      modes: ALL,
+      over: { routes: verifyFails('x'.repeat(190) + TOKEN + ACCOUNT) },
+      code: 1,
+      line: 'the token could not be verified',
+    },
+    {
+      name: 'a spawn that throws on the put',
+      modes: ALL,
+      over: {
+        run: (a: readonly string[]) => (a.includes('put') ? ('throw' as const) : runReply(a)),
       },
-    ],
-    [
-      'errors that carry the token and the account (the secret is unknown until a success)',
-      {
-        routes: {
-          [`POST ${WIDGETS}/${SITEKEY}/rotate_secret`]: failure(409, 7, `${TOKEN} ${ACCOUNT}`),
-          [`POST ${WIDGETS}`]: failure(409, 7, `${TOKEN} ${ACCOUNT}`),
-          [`GET ${WIDGETS}/${SITEKEY}`]: failure(500, 7, `${TOKEN} ${ACCOUNT}`),
-        },
-      },
-    ],
-    [
-      'a spawn that throws',
-      { run: (a: readonly string[]) => (a.includes('put') ? ('throw' as const) : runReply(a)) },
-    ],
+      code: 1,
+      line: 'The wrangler call could not be started',
+    },
   ];
-  for (const [name, over] of scenarios) {
-    for (const mode of ['create', 'rotate', 'sync'] as const) {
+  for (const { name, modes, over, code, line } of scenarios) {
+    for (const mode of modes) {
       it(`${name} (${mode})`, async () => {
-        const routes = { ...over.routes };
-        const { rec } = await go(args({ mode }), { ...over, routes });
-        expectNoLeak(rec);
+        const result = await go(args({ mode }), over);
+        expect(result.code).toBe(code);
+        expect(output(result.rec)).toContain(line);
+        expectNoLeak(result.rec);
       });
     }
   }

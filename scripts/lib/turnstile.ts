@@ -24,6 +24,7 @@
  * forced values, never the shell minus a denylist.
  */
 
+import { join, resolve } from 'node:path';
 import { latestVersionId } from './ask-live.ts';
 
 /** The one origin every request goes to, read from no environment. */
@@ -89,6 +90,10 @@ export function parseTurnstileArgs(
       };
     }
   }
+  // The shape check is case-blind and the scrub is an exact match, so a well-formed id is made
+  // lower-case once, here, and everything after sees the one spelling. A malformed one is left
+  // alone for `localRefusals` to refuse.
+  if (account !== undefined && ACCOUNT_ID.test(account)) account = account.toLowerCase();
   return { mode, dryRun, account, sitekey };
 }
 
@@ -161,18 +166,47 @@ export function envRefusals(shell: NodeJS.ProcessEnv, files: readonly EnvFile[])
   return found;
 }
 
-/** The shell's `NODE_TLS_REJECT_UNAUTHORIZED`, which may only be unset or `1`. */
-function tlsRefusal(shell: NodeJS.ProcessEnv): string | undefined {
+/** Settings that point the script's own fetch at another trust store or proxy, by upper-cased name. */
+const TRANSPORT_NAMES: readonly string[] = [
+  'NODE_EXTRA_CA_CERTS',
+  'NODE_USE_SYSTEM_CA',
+  'NODE_USE_ENV_PROXY',
+];
+const TRANSPORT_FLAGS: readonly string[] = [
+  '--use-env-proxy',
+  '--use-system-ca',
+  '--use-openssl-ca',
+];
+
+/**
+ * What in the shell could turn off certificate checks or send the script's
+ * requests through another trust store or proxy. Node reads these for the
+ * script's own `fetch` too, so forcing wrangler's environment is not enough.
+ * Each refusal names the variable and never prints its value.
+ */
+function transportRefusals(shell: NodeJS.ProcessEnv): string[] {
+  const found: string[] = [];
   for (const [name, value] of Object.entries(shell)) {
-    if (
-      name.toUpperCase() === 'NODE_TLS_REJECT_UNAUTHORIZED' &&
-      value !== undefined &&
-      value !== '1'
+    if (value === undefined) continue;
+    const upper = name.toUpperCase();
+    if (upper === 'NODE_TLS_REJECT_UNAUTHORIZED' && value !== '1') {
+      found.push(
+        'the shell sets NODE_TLS_REJECT_UNAUTHORIZED to something other than 1, which would turn certificate checks off',
+      );
+    } else if (TRANSPORT_NAMES.includes(upper)) {
+      found.push(
+        `the shell sets ${upper}, which would change who the script's requests trust or go through`,
+      );
+    } else if (
+      upper === 'NODE_OPTIONS' &&
+      TRANSPORT_FLAGS.some((flag) => value.toLowerCase().includes(flag))
     ) {
-      return 'the shell sets NODE_TLS_REJECT_UNAUTHORIZED to something other than 1, which would turn certificate checks off';
+      found.push(
+        "the shell sets NODE_OPTIONS with a trust-store or proxy flag, which would change who the script's requests trust or go through",
+      );
     }
   }
-  return undefined;
+  return found;
 }
 
 /* ------------------------------------------------------------------ */
@@ -284,7 +318,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * The one place a response body is parsed. It reports a failure by HTTP status,
  * Cloudflare's error code and message, and anything else by its size.
  */
-export function readResponse(status: number, text: string): Reply {
+export function readResponse(status: number, text: string, scrub: (text: string) => string): Reply {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -304,13 +338,14 @@ export function readResponse(status: number, text: string): Reply {
   const parts = errors.flatMap((entry) => {
     if (!isRecord(entry)) return [];
     const code = typeof entry['code'] === 'number' ? `code ${String(entry['code'])}` : '';
-    const message =
+    const raw =
       typeof entry['message'] === 'string'
         ? Array.from(entry['message'])
             .map((char) => (char.charCodeAt(0) < 32 ? ' ' : char))
             .join('')
-            .slice(0, 200)
         : '';
+    // Scrubbed first and cut second: a value that straddles the cut must not print in part.
+    const message = scrub(raw).slice(0, 200);
     return [[code, message].filter(Boolean).join(': ')];
   });
   return { kind: 'failed', status, detail: [`HTTP ${String(status)}`, ...parts].join(', ') };
@@ -410,8 +445,7 @@ export function localRefusals(args: TurnstileArgs, local: Local): string[] {
   }
   if (local.wranglerRefusal !== undefined) found.push(local.wranglerRefusal);
   if (!local.emptyEnvFileIsEmpty) found.push(`${EMPTY_ENV_FILE} is missing or not empty`);
-  const tls = tlsRefusal(local.shell);
-  if (tls !== undefined) found.push(tls);
+  found.push(...transportRefusals(local.shell));
   found.push(...envRefusals(local.shell, local.envFiles));
   return found;
 }
@@ -419,6 +453,36 @@ export function localRefusals(args: TurnstileArgs, local: Local): string[] {
 /* ------------------------------------------------------------------ */
 /* The run                                                             */
 /* ------------------------------------------------------------------ */
+
+/** Whether the run is at a terminal: stdin and stdout must both be one, or the prompt cannot be hidden. */
+export function isInteractive(
+  stdinIsTty: boolean | undefined,
+  stdoutIsTty: boolean | undefined,
+): boolean {
+  return stdinIsTty === true && stdoutIsTty === true;
+}
+
+/**
+ * The env files whose names step 1 reads: the repo root's `.env` and `.env.local`, and the main
+ * checkout's `.env` when that is another folder (a worktree). The entry reads whichever exist.
+ */
+export function envFilePaths(
+  root: string,
+  main: string | undefined,
+): { label: string; path: string }[] {
+  return [
+    { label: 'the repo root .env', path: join(root, '.env') },
+    { label: 'the repo root .env.local', path: join(root, '.env.local') },
+    ...(main !== undefined && resolve(main) !== resolve(root)
+      ? [{ label: "the main checkout's .env", path: join(main, '.env') }]
+      : []),
+  ];
+}
+
+/** The committed env file is right only if it exists and holds nothing at all. */
+export function envFileIsEmpty(text: string | undefined): boolean {
+  return text === '';
+}
 
 export interface HttpRequest {
   readonly method: 'GET' | 'POST';
@@ -470,7 +534,7 @@ async function request(
       token: ctx.token,
       body,
     });
-    return readResponse(res.status, res.text);
+    return readResponse(res.status, res.text, (text) => ctx.scrub.apply(text));
   } catch {
     return { kind: 'unreachable' };
   }
@@ -487,6 +551,12 @@ function wrangler(
   } catch {
     return undefined;
   }
+}
+
+/** Registers a widget's secret with the scrub the moment it is read, before any check or message. */
+function noteSecret(ctx: Context, widget: unknown): void {
+  const secret = secretOf(widget);
+  if (secret !== undefined) ctx.scrub.add(secret, '<secret>');
 }
 
 const refuse = (ctx: Context, why: string): number => {
@@ -667,6 +737,7 @@ async function create(ctx: Context): Promise<number> {
     widgets,
     JSON.stringify({ name: WIDGET_NAME, domains: [WIDGET_DOMAIN], mode: 'managed' }),
   );
+  if (created.kind === 'ok') noteSecret(ctx, created.result);
   if (created.kind !== 'ok') {
     return fail(
       ctx,
@@ -698,6 +769,7 @@ async function readWidget(ctx: Context, sitekey: string): Promise<Reply> {
 async function rotateOrSync(ctx: Context, sitekey: string): Promise<number> {
   const current = await readWidget(ctx, sitekey);
   if (current.kind !== 'ok') return fail(ctx, `could not read the widget: ${describe(current)}`);
+  noteSecret(ctx, current.result);
   const before = widgetProblem(current.result, sitekey);
   if (before !== undefined) return refuse(ctx, `${before}; nothing was changed`);
 
@@ -709,7 +781,10 @@ async function rotateOrSync(ctx: Context, sitekey: string): Promise<number> {
       `${widgetPath(ctx.account, sitekey)}/rotate_secret`,
       JSON.stringify({ invalidate_immediately: false }),
     );
-    if (rotated.kind === 'failed') {
+    if (rotated.kind === 'ok') noteSecret(ctx, rotated.result);
+    // A 4xx is Cloudflare refusing the request. A 5xx, or an answer that is not Cloudflare's, says
+    // nothing about whether the rotation ran, so it takes the unknown-outcome message below.
+    if (rotated.kind === 'failed' && rotated.status < 500) {
       return fail(
         ctx,
         `${describe(rotated)}, so nothing changed. If a rotation ran in the last 2 hours, wait for it to end.`,
@@ -747,7 +822,14 @@ async function flow(ctx: Context, local: Local): Promise<number> {
     );
   }
 
-  const typed = (await ctx.deps.prompt('Cloudflare API token (typed, not shown): ')).trim();
+  // Wait for the prompt before typing or pasting: a paste after an empty Enter would reach the shell.
+  // So one empty answer is asked again, and a second refuses.
+  let typed = (await ctx.deps.prompt('Cloudflare API token (typed, not shown): ')).trim();
+  if (typed === '') {
+    typed = (
+      await ctx.deps.prompt('Nothing was typed. Cloudflare API token (typed, not shown): ')
+    ).trim();
+  }
   if (typed === '') return refuse(ctx, 'no token was typed');
   ctx.token = typed;
   ctx.scrub.add(typed, '<token>');

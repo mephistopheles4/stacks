@@ -18,13 +18,16 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { mainCheckout } from '../packages/cli/src/env.ts';
 import { gitOutput } from './lib/git.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
 import {
   EMPTY_ENV_FILE,
+  envFileIsEmpty,
+  envFilePaths,
+  isInteractive,
   parseTurnstileArgs,
   runTurnstile,
   unexpectedLine,
@@ -78,13 +81,7 @@ function localFacts(shell: NodeJS.ProcessEnv): Local {
   const origin = gitOutput(['rev-parse', 'refs/remotes/origin/main'], REPO_ROOT);
   const status = gitOutput(['status', '--porcelain'], REPO_ROOT);
   const main = mainCheckout();
-  const files: EnvFile[] = [
-    { label: 'the repo root .env', path: join(REPO_ROOT, '.env') },
-    { label: 'the repo root .env.local', path: join(REPO_ROOT, '.env.local') },
-    ...(main !== undefined && resolve(main) !== resolve(REPO_ROOT)
-      ? [{ label: "the main checkout's .env", path: join(main, '.env') }]
-      : []),
-  ].flatMap(({ label, path }) => {
+  const files: EnvFile[] = envFilePaths(REPO_ROOT, main).flatMap(({ label, path }) => {
     const text = readIfThere(path);
     return text === undefined ? [] : [{ label, text }];
   });
@@ -98,12 +95,12 @@ function localFacts(shell: NodeJS.ProcessEnv): Local {
       versionIn(readIfThere(join(REPO_ROOT, ...INSTALLED_MANIFEST))),
       pinIn(readIfThere(join(REPO_ROOT, 'package.json'))),
     ),
-    emptyEnvFileIsEmpty: readIfThere(join(REPO_ROOT, EMPTY_ENV_FILE)) === '',
+    emptyEnvFileIsEmpty: envFileIsEmpty(readIfThere(join(REPO_ROOT, EMPTY_ENV_FILE))),
   };
 }
 
 const deps: Deps = {
-  isTty: process.stdin.isTTY && process.stdout.isTTY,
+  isTty: isInteractive(process.stdin.isTTY, process.stdout.isTTY),
   http: async (req) => {
     const res = await fetch(req.url, {
       method: req.method,
