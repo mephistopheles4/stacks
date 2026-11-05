@@ -315,8 +315,8 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   'Book Antiqua', Georgia, serif`.
 - **Launcher:** an open-book SVG and "Ask the library", 44px tall, bottom right,
   on the attribution row's line.
-- **Panel:** full height on the right, at most 25rem wide, full width on a phone.
-  Close and send are SVG icon buttons with labels for screen readers.
+- **Panel:** full height on the right, 1.25rem of padding, at most 27rem wide, full width on a
+  phone. Close and send are SVG icon buttons with labels for screen readers.
 - **Quick questions and follow-ups:** above the box, one place. At first it holds three
   quick questions: "What have you read about leadership?", "What would you recommend?"
   and "What did you think of Co-Intelligence?". After an answer that brings follow-ups,
@@ -334,8 +334,20 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   > Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs
   > when this box opens, and a hashed address is counted for a day to limit use. Please
   > don't type personal details.
-- **Waiting:** "Looking through the shelf" while a question is out. Answers are
-  announced through a live region.
+- **Waiting:** "Looking through the shelf" while a question is out, with a soft pulse.
+  Answers are announced through a live region.
+- **Spacing (owner's starting points, 2026-11-05):** 1rem between the messages of an exchange
+  and 1.75rem before the next question; answers at line height 1.6; pills one per line, 0.5rem
+  apart and 0.75rem above the group; quick questions and follow-ups 0.5rem apart under a thin
+  divider.
+- **Motion:** the panel slides in from the right over 220 ms and out over 160 ms. A new
+  question, answer or pill rises and fades in over 180 ms, pills 40 ms apart and only on the
+  newest answer (an entry is marked new until its animation ends, so reopening replays none).
+  No typing effect. **All of it is off under `prefers-reduced-motion`,** and then closing sets
+  `hidden` in the same call. Otherwise `hidden` is set when the slide out ends, and the panel is
+  inert while it plays; focus returns to the launcher at the start of the close either way. No
+  timer is involved: the slide ends on `animationend` (`motion.ts`). In a tab that is not
+  drawing frames a close finishes when frames resume.
 - **Closing:** the X, Escape, or a click outside the panel. A drag on the shelf
   to look around does not close it. Focus returns to the launcher. **With a book
   held, a click outside the panel closes the panel and leaves the book held**, as

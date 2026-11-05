@@ -108,3 +108,29 @@ describe('the drawer waits at least as long as the Worker may take (T11)', () =>
     }
   });
 });
+
+describe('motion is an addition that reduced motion removes (S7)', () => {
+  it('reads prefers-reduced-motion in the drawer, and the style turns every animation off under it', () => {
+    expect(code('drawer.ts')).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+    const astro = readFileSync(join(DIR, 'Ask.astro'), 'utf8');
+    const reduced =
+      /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n {2}\}/.exec(astro)?.[0] ?? '';
+    for (const rule of ['.is-entering', '.is-leaving', '.ask-new', '.ask-waiting']) {
+      expect(reduced, rule).toContain(rule);
+    }
+    expect(reduced).toContain('animation: none');
+  });
+
+  it('marks new entries and pills, and clears the mark when their animation ends, so reopening replays none', () => {
+    const drawer = code('drawer.ts');
+    expect(drawer).toContain('ask-${kind} ask-new');
+    expect(drawer).toContain("'ask-book ask-new'");
+    expect(drawer).toContain("thread.addEventListener('animationend'");
+    expect(drawer).toContain("classList.remove('ask-new')");
+  });
+
+  it('staggers pills by index, and sets no typing effect', () => {
+    expect(code('drawer.ts')).toContain("link.style.setProperty('--i', String(index))");
+    expect(code('drawer.ts')).not.toMatch(/typewriter|charAt|slice\(0, *i/i);
+  });
+});

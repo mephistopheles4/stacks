@@ -2,6 +2,7 @@ import { onHeld, requestPickUp } from './bridge.ts';
 import { askLibrary, unavailable, type AskResult } from './client.ts';
 import { createOutsideClick, escapeTakenBy, type CloseReason } from './close.ts';
 import { createMemory } from './memory.ts';
+import { createPanelMotion } from './motion.ts';
 import { createTokenSource, loadTurnstileScript } from './turnstile.ts';
 
 /** The page's pieces, found by `Ask.astro` and handed over. */
@@ -35,6 +36,13 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   // The last two answered exchanges: a page variable, gone on reload (memory spec D2).
   const memory = createMemory();
 
+  const reduced = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motion = createPanelMotion(panel, reduced);
+  // An entry or a pill is new until its rise ends (S7).
+  thread.addEventListener('animationend', (event) => {
+    if (event.target instanceof Element) event.target.classList.remove('ask-new');
+  });
+
   const tokens = createTokenSource({
     siteKey: ui.siteKey,
     container: ui.widget,
@@ -44,7 +52,7 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   function show(): void {
     if (open) return;
     open = true;
-    panel.hidden = false;
+    motion.enter();
     launcher.setAttribute('aria-expanded', 'true');
     // The first open starts Cloudflare's script. A visitor who never opens the
     // drawer makes no third-party request (C11).
@@ -56,7 +64,7 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
     if (!open) return;
     open = false;
     const focusWasInside = panel.contains(document.activeElement);
-    panel.hidden = true;
+    motion.leave();
     launcher.setAttribute('aria-expanded', 'false');
     // Picking a book up moves focus to the book; only take it back when it was ours.
     if (reason !== 'pickup' || focusWasInside) launcher.focus();
@@ -186,7 +194,7 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
 
   function addEntry(kind: 'question' | 'answer' | 'waiting', text: string): HTMLElement {
     const entry = document.createElement('p');
-    entry.className = `ask-${kind}`;
+    entry.className = `ask-${kind} ask-new`;
     entry.textContent = text;
     thread.append(entry);
     thread.scrollTop = thread.scrollHeight;
@@ -198,10 +206,12 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
     if (result.books.length === 0) return;
     const list = document.createElement('span');
     list.className = 'ask-books';
-    for (const book of result.books) {
+    for (const [index, book] of result.books.entries()) {
       const link = document.createElement('button');
       link.type = 'button';
-      link.className = 'ask-book';
+      link.className = 'ask-book ask-new';
+      // Each pill appears a beat after the one above it (S7); only the newest answer's are new.
+      link.style.setProperty('--i', String(index));
       // The whole title stays in the text, so a screen reader reads it all and
       // the pill only clips what it draws; the tooltip shows it too.
       link.title = book.title;
