@@ -700,7 +700,7 @@ What is not settled when the runs stop, one line each, with who decides. Details
 - **A refusal that first searches the memory book keeps its pill.** Only a refusal with no search, or after a
   search for other books, is clean. Owner.
 - **"up" is not an ignored word** ("saving up" matches four books' Thoughts). S6's list is spec text. Owner.
-- **A model line a little past the data:** "a solid read", "so I found it good", "a roadmap for the coming age",
+- **A model line a little past the data:** "my favorite leadership book", "a solid read", "so I found it good", "a roadmap for the coming age",
   "personal-finance titles" for books filed elsewhere. No check can see these; read by hand. Owner.
 - **One-word titles** such as *Effective* pill on ordinary use of the word (accepted, behaviour E6; build nothing).
 - **An unusable tool-call entry** (no name, or null) gets plain results rather than guidance: the hardening
@@ -995,6 +995,28 @@ each), 3.7 to 14.0 s, same throwaway Worker and driver with the reasoning kept (
   example are in its Thoughts. **The claim that it is the favourite is not**: its Thoughts never say so (The
   Human-Agent Orchestrator's do, "probably my favorite book about AI so far"), and ten books are rated 5, so
   the fallback leads with shelf order. A known limit, per the owner's stop rule: no further rounds.
+
+**Results of the review-fixes check (2026-11-05), contract v0.5.0 and the review's fixes.** "How many books have you
+read?" twice, "What's your favourite book?" twice, "I want to read a book about leadership" once: 5 questions,
+226 Neurons by token count (about 45 each), 3.0 to 11.4 s, all 5 passed. Same throwaway Worker and driver, the
+reasoning kept at `reasoning_content` (85 to 2,039 characters). No spend-limit refusal; the Unified Billing balance
+was not observable.
+
+- **The count, 2 of 2, with no tool:** "I have read 58 books." and "I have read 58 books in my library." (from the
+  line of counts; the rule works).
+- **The favourite now searches the word:** run 1 searched "favorite", run 2 "favourite", so the spelling pair is
+  **proved live** (the Orchestrator's Thoughts say "favorite"). Run 1: "My favorite book is The Human-Agent
+  Orchestrator: Leading and Scaling AI-Driven Organizations. I think it truly encapsulates what it takes to lead
+  an AI organization and make it work." That is in its Thoughts ("probably my favorite book about AI so far… truly
+  encapsulates what it takes to lead an AI organization"): **supported**. Run 2: "I haven't singled out one book
+  as my favourite overall, but I have strong thoughts on "The Human-Agent Orchestrator…" and "The Five
+  Dysfunctions of a Team: A Leadership Fable"." Honest, and both books have Thoughts. Pills in both.
+- **"I want to read a book about leadership":** "From my Thoughts, The Five Dysfunctions of a Team: A Leadership Fable
+  is a memorable book that shows how to make teams work well together and is my favorite leadership book. It
+  explains what synergy means and how to build it." The first half is in its Thoughts; **"my favorite leadership
+  book" is not** (a line past the data, added to the open list).
+- **The favourite limit from the favourite check is much reduced:** with "recommend" no longer named for a
+  favourite, the model searches the word and reaches the book whose Thoughts say it.
 
 ## S13. Build order and way back
 
