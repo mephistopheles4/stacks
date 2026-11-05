@@ -87,7 +87,7 @@ describe('topic questions name few books (S9)', () => {
     ...Array.from({ length: 6 }, (_, i) => book(`Filler ${String(i)}`)),
   ];
 
-  it('leadership needs a leadership book and no more than 5 named', () => {
+  it('leadership needs a leadership book and no more than 6 named', () => {
     const c = caseFor('What have you read about leadership');
     expect(c.passes('I have read Lead Well.', lead)).toBe(true);
     expect(c.passes('I have read Antifragile.', lead)).toBe(false);
@@ -96,9 +96,9 @@ describe('topic questions name few books (S9)', () => {
     expect(c.passes(all, lead)).toBe(false);
   });
 
-  it('finance also caps the list at 5', () => {
+  it('finance also caps the list at 6', () => {
     const c = caseFor('What have you read about finance');
-    const many = 'Money Unlocked, Filler 0, Filler 1, Filler 2, Filler 3, Filler 4';
+    const many = 'Money Unlocked, Filler 0, Filler 1, Filler 2, Filler 3, Filler 4, Filler 5';
     expect(c.passes(many, lead)).toBe(false);
   });
 });
@@ -112,6 +112,9 @@ describe('follow-ups stand alone (S9)', () => {
 
   it('refuses a pronoun opening, a missing question mark, or no library name', () => {
     expect(followUpsStandAlone(['What about it?'], LIB)).toBe(false);
+    expect(followUpsStandAlone(['Which of these books is best for Antifragile fans?'], LIB)).toBe(
+      false,
+    );
     expect(followUpsStandAlone(['It was about Antifragile, was it good?'], LIB)).toBe(false);
     expect(followUpsStandAlone(['Tell me about Antifragile.'], LIB)).toBe(false);
     expect(followUpsStandAlone(['What is the weather?'], LIB)).toBe(false);

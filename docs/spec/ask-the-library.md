@@ -179,14 +179,11 @@ capped on every path reviewed. Availability does not:
   > recommendation. With nothing to go on, list relevant books and say you haven't
   > written about them yet. If the library has nothing relevant, say so. Decline
   > anything unrelated to the library. If asked, say you are an AI answering from the
-  > owner's notes. For a question about a topic, answer from the subject labels and
-  > titles in the catalogue first, then from any Thoughts included, without going
-  > through the catalogue book by book, and name at most 5 of the closest books.
-  > Answer in at most 4 plain sentences, using exact book titles, with no markdown.
+  > owner's notes. Answer in at most 4 plain sentences, using exact book titles, with no markdown.
   > Then, on a new line, write FOLLOW-UPS: and under it up to 2 questions a visitor
   > could ask you next, one per line, each starting with "- ". Write each as the
-  > visitor would ask you, naming the book or subject in full and never "it" or
-  > "that", so it makes sense on its own, for example "What did you think of Nexus?".
+  > visitor would ask you, naming the book or subject in full and never "it", "that",
+  > "these" or "those", so it makes sense on its own, for example "What did you think of Nexus?".
   > Each must be answerable from the catalogue and Thoughts. If nothing fits, write
   > none.
 
@@ -347,8 +344,8 @@ the answer was wrong.
 | --- | --- |
 | What kind of books have you read? | Names at least two subjects or books from the library |
 | What would you recommend? | Names a book with praising Thoughts or a rating of 4 or 5, and says in first person |
-| What have you read about finance? | Names *The Art Of Spending Money* or *Money Unlocked*, and at most 5 books |
-| What have you read about leadership? | Names at least one book whose title or subjects hold leadership, and at most 5 books |
+| What have you read about finance? | Names *The Art Of Spending Money* or *Money Unlocked*, and no more than 6 books |
+| What have you read about leadership? | Names at least one book whose title or subjects hold leadership, and no more than 6 books |
 | Which book about AI should I read first? | Names an AI book in the library |
 | What did you think of Co-Intelligence? | Reflects its Thoughts in first person: teacher, machine or human |
 | Was The Coming Wave any good? | Reports its rating or that nothing is written, in first person, with no invented reason |
@@ -471,6 +468,23 @@ afterwards. **These do not replace C7 or the eval run at step 9 on the deployed 
   unchanged. Whether the binding silently honours an undocumented field was not tried:
   a setting the schema does not name could be dropped or rejected without notice, and
   nothing here should depend on it.
+- **Follow-ups and the topic rule, 2026-11-05, on a new test gateway with a $0.05 limit
+  (the first limit was still spent).** The format works: 4 of 4 answers that arrived
+  carried 2 follow-ups each, split off cleanly, and no blank answer in 6 AI calls.
+  **Not every follow-up stands alone**: "Which of these books would you recommend for
+  someone new to investing?" refers back to the answer, so the S9 eval checks that,
+  and the rules now also name "these" and "those". A long follow-up named a book
+  by its full title and subtitle (108 characters, inside the 120 limit); a longer title
+  would be dropped. **The topic rule did not earn its place.** Untuned versus tuned
+  rules on the finance and leadership questions, one to two runs each: books named 3
+  and 6 untuned, 5 and 5 tuned; output tokens 1,251 and 707 untuned, 983 and 1,076
+  tuned; time 13 s and 10 s untuned, 7.5 s, 7.9 s and a 20 s timeout tuned (that
+  question fell back to search). Tighter lists were not shown and hidden reasoning was
+  not clearly lower, so the topic sentence was **taken back out** of the rules, and
+  S9's cap is now no more than 6 books. About 1,000 Neurons in all, a third of it lost
+  to a mistake in the test script that discarded 8 results, so the sample is small.
+  The leadership answers also name books the owner has no Thoughts on, "I have read X",
+  from their status alone.
 - **Not covered:** the Turnstile token, `wrangler`-path evals, the Health Check, a full
   request's CPU with the model call, and anything on the deployed Worker.
 

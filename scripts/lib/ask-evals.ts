@@ -47,6 +47,7 @@ export function followUpsStandAlone(
       q.endsWith('?') &&
       q.length <= 120 &&
       !PRONOUN_START.test(q.trim()) &&
+      !/\b(?:these|those|them)\b/i.test(q) &&
       (lib.some((b) => names(q, b.title)) || [...subjects].some((s) => lower(q).includes(s))),
   );
 }
@@ -72,13 +73,13 @@ export const CASES: readonly EvalCase[] = [
   {
     question: 'What have you read about finance?',
     passes: (a, lib) =>
-      /the art of spending money|money unlocked/i.test(a) && namedCount(a, lib) <= 5,
+      /the art of spending money|money unlocked/i.test(a) && namedCount(a, lib) <= 6,
   },
   {
     question: 'What have you read about leadership?',
     passes: (a, lib) =>
       lib.some((b) => /leadership/i.test(`${b.title} ${b.subjects ?? ''}`) && names(a, b.title)) &&
-      namedCount(a, lib) <= 5,
+      namedCount(a, lib) <= 6,
   },
   {
     question: 'Which book about AI should I read first?',

@@ -1,14 +1,6 @@
 import { MAX_INPUT_TOKENS, MAX_THOUGHT_TOKENS } from './limits.ts';
 import type { CatalogueBook } from './library.ts';
 
-/**
- * For a question about a topic: labels and titles first, then Thoughts, and a short
- * list. Tuned on the finance and leadership questions (S12); a hypothesis kept only
- * if it did better than the rules without it.
- */
-export const TOPIC_RULE =
-  'For a question about a topic, answer from the subject labels and titles in the catalogue first, then from any Thoughts included, without going through the catalogue book by book, and name at most 5 of the closest books.';
-
 /** The system rules, word for word from S6. */
 export const RULES =
   "You answer visitors' questions about your own reading library, speaking in the first person as its owner. " +
@@ -24,11 +16,9 @@ export const RULES =
   'If the library has nothing relevant, say so. ' +
   'Decline anything unrelated to the library. ' +
   "If asked, say you are an AI answering from the owner's notes. " +
-  TOPIC_RULE +
-  ' ' +
   'Answer in at most 4 plain sentences, using exact book titles, with no markdown. ' +
   'Then, on a new line, write FOLLOW-UPS: and under it up to 2 questions a visitor could ask you next, one per line, each starting with "- ". ' +
-  'Write each as the visitor would ask you, naming the book or subject in full and never "it" or "that", so it makes sense on its own, for example "What did you think of Nexus?". ' +
+  'Write each as the visitor would ask you, naming the book or subject in full and never "it", "that", "these" or "those", so it makes sense on its own, for example "What did you think of Nexus?". ' +
   'Each must be answerable from the catalogue and Thoughts. If nothing fits, write none.';
 
 /** A deliberately cautious estimate: 3 characters to a token. */
