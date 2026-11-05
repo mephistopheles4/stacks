@@ -368,20 +368,29 @@ choose other books.
 ## S12. The live environment
 
 The prototype only ran on this machine, against a dev server with test keys and with
-no CSP, so none of this is proven. S13 step 2 proves it before anything else is built:
+no CSP, so none of this is proven. The owner chose on 2026-11-04 to split the probe:
+the checks that use no AI run before the build, because they could change the design,
+and the rest run after it, on a day's fresh Neurons, before the site goes public.
+
+**Before the build (S13 step 2), no AI calls:**
 
 - A throwaway Worker on `/api/chat` and `/api/chat/health` answers on both, while `/`
   and `/library.json` still serve Pages.
 - That Worker fetches `/library.json` without a zone challenge. The zone has challenged
   automated `.json` requests before.
+- Parsing the library and building a full prompt, without calling the model, fits Workers
+  Free's 10 ms of CPU, and the data fetches fit its 50 subrequests. **If not, the owner
+  decides between Workers Paid and a smaller design.**
+
+**After the build (S13 step 9), about 25 AI calls and 1,500 Neurons:**
+
 - A page served by that Worker, with the planned CSP, `Referrer-Policy: no-referrer` and
   a temporary widget for the production host, earns a real Turnstile token that
   siteverify accepts, checking hostname and action.
 - Through a test gateway with authentication on, calls succeed by binding and by the
   eval path, an unauthenticated REST call is refused, and any token needed is named.
 - Successful Worker calls add to that gateway's spend and trip a small limit.
-- A cold load, with search and the prompt build, fits Workers Free's 10 ms of CPU and
-  50 subrequests. **If not, the owner decides between Workers Paid and a smaller design.**
+- A full request, model call included, still fits Workers Free's CPU limit.
 - A Health Check reaches the health route at a rate under the WAF's, and the Terraform
   `spend_limits` block validates.
 - With the first-person rules, the "was it any good?" evals still report nothing written
@@ -392,8 +401,8 @@ no CSP, so none of this is proven. S13 step 2 proves it before anything else is 
 Each step ends with its claims passing. Steps marked **owner** wait for a yes in chat.
 
 1. **Owner:** confirm the zone plan and any existing rate-limit rules.
-2. **Owner, published:** run S12 on the live hostname under the owner's login, record
-   the results here, then delete the throwaway Worker, temporary widget and test gateway.
+2. **Owner, published:** run S12's no-AI checks on the live hostname under the owner's
+   login, record the results here, then delete the throwaway Worker.
 3. Start from `origin/main`, with none of the prototype's edits. `.gitignore` first (C17).
 4. `packages/ask`: refusals, the one AI function, data and search (C3 to C6, C8, C14, C15).
 5. The drawer, privacy line and shelf seam, against a local Worker (C9, C11).
@@ -401,8 +410,10 @@ Each step ends with its claims passing. Steps marked **owner** wait for a yes in
 7. Security pair and QA pair on the diff, then a merge the owner confirms.
 8. **Owner, hard to undo:** create the widget, `wrangler secret put` once the Worker's
    first deploy exists (step 9 sets them), read `terraform plan`, apply (C16).
-9. **Owner, published:** `pnpm deploy:ask`, set secrets, then C13. Create a test gateway
-   with logging off, run C7 with `--gateway`, redeploy plainly, delete the test gateway.
+9. **Owner, published:** `pnpm deploy:ask`, set secrets, then C13. Run S12's AI checks on
+   a day's fresh Neurons, with any fixes going through review. Create a test gateway with
+   logging off, run C7 with `--gateway`, redeploy plainly, delete the test gateway.
+   **The site does not go public until C7 passes.**
 10. **Owner, published:** `pnpm deploy:site`, then C1, C2 and C19. Delete the `stacks-spike` gateway.
 11. **Owner, hard to undo:** rehearse the way back (C18), reading the destroy plan first,
     then restore. A recreated widget has new keys, so the site key is rebuilt into the
