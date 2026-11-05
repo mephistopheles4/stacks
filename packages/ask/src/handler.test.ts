@@ -70,7 +70,7 @@ function rig(
   const counters = new Map<string, VisitorCounter>();
   state.fetchImpl = async (input: string | URL | Request) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    if (url.includes('challenges.cloudflare.com')) {
+    if (new URL(url).hostname === 'challenges.cloudflare.com') {
       state.turnstileCalls += 1;
       return Response.json(
         options.turnstile ?? { success: true, hostname: 'stacks.example', action: 'ask' },
