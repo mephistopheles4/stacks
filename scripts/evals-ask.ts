@@ -12,9 +12,10 @@
  * `CLOUDFLARE_ACCOUNT_ID` names the account.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
 import { answerQuestion, type TraceEvent } from '../packages/ask/src/answer.ts';
 import type { Env } from '../packages/ask/src/env.ts';
 import { createLibrarySource } from '../packages/ask/src/library.ts';
@@ -26,7 +27,6 @@ import {
   followUpsStandAlone,
   looksLikeFixture,
   summariseTrace,
-  titlesIn,
   toolMismatch,
 } from './lib/ask-evals.ts';
 import { capture, type CallCapture } from './lib/ask-reasoning.ts';
@@ -75,10 +75,10 @@ const library = await source
   .catalogue()
   .catch(() => fail(`${site} holds no readable library.json`));
 
-const fixtureDir = join(REPO_ROOT, 'fixtures', 'vault', 'Library');
-const fixtureTitles = titlesIn(
-  readdirSync(fixtureDir).map((name) => readFileSync(join(fixtureDir, name), 'utf8')),
-);
+// The fixture vault is read the way the build reads it, through the adapter (invariant 4).
+const fixtureTitles = (
+  await new ObsidianAdapter(join(REPO_ROOT, 'fixtures', 'vault')).listBooks()
+).map((book) => book.title);
 if (looksLikeFixture(library, fixtureTitles)) {
   fail(
     'this library was built from the fixture vault; build the real one first (pnpm stacks build --public)',

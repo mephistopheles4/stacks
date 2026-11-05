@@ -46,7 +46,7 @@ instead. The limits in S5 cap the bill. They do not guarantee availability.
 | --- | --- | --- |
 | Look | Walnut drawer | Owner, from three options |
 | Model | `@cf/openai/gpt-oss-20b` | Owner, from nine tested |
-| Workers plan | Workers Free | Owner: Cloudflare stops AI at 10,000 Neurons a day |
+| Workers plan | Workers Free at first; **Workers Paid since 2026-11-04** (owner, ADR-0133) | The owner added Paid, so Free's 10,000-Neuron stop no longer caps AI: the gateway spend limit is the only hard cap |
 | Zone plan | Paid domain plan, about $20 a month, taken as Pro | Owner's words. Confirmed in the dashboard before S13 step 2 |
 | Accuracy | Mistakes are acceptable and disclosed. The evals in S9 define good enough | Owner |
 | Voice | First person, as the owner, with the guards in S6 | Owner |
@@ -69,7 +69,7 @@ Thoughts and no ratings:
 ⚠️ **Cost grows with the Thoughts being written now.** The prototype sends all
 Thoughts on every question. At about 300 tokens each, an estimate, 60 sets would
 add about 330 Neurons a question, leaving about 25 questions a day, and would need
-one fetch per note against Workers Free's limit of 50 per request. S4 changes this.
+one fetch per note against Workers Free's limit of 50 per request, which is why S4 first picked likely books. A search now reads every note with Thoughts (S4), which Paid's limits allow (ADR-0133).
 
 ## S4. Data
 
@@ -350,7 +350,10 @@ capped on every path reviewed. Availability does not:
 
 | Failure | Status, `mode` | What the visitor sees |
 | --- | --- | --- |
-| AI error, 2045, blank, timeout, a tool call asked for after the last, switch off | 200, `search` | "The bot has worked too hard today and went to take a nap. These books match your words." With nothing in the question to search for: "The bot has worked too hard today and went to take a nap. Here are some books I rated highly." With no match: "The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject." (T12; the second is proposed to match the owner's wording) |
+| AI fails (error, 2045, blank, timeout, a tool call asked for after the last) or the switch is off, and the question has a **real match** | 200, `search` | "The bot has worked too hard today and went to take a nap. These books match your words." |
+| The same, and the question has **nothing usable in it** (every word ignored) | 200, `search` | "The bot has worked too hard today and went to take a nap. Here are some books I rated highly." with up to 5 pills |
+| The same, and a usable word **matched nothing** | 200, `search` | "The bot has worked too hard today and went to take a nap, and no book matches your words. Here are some books I rated highly." with up to 5 pills |
+| The same, and **no book with Thoughts exists** to offer | 200, `search` | "The bot has worked too hard today and went to take a nap, and no book matches your words. Try a title, author or subject." |
 | Turnstile fails or can't be checked | 403, `error` | "Couldn't confirm this request. Reload the page and ask again." |
 | Rate or daily limit | 429, `limited` | "That's the limit for now. Try again later." |
 | Bad request | 400, `error` | "That question couldn't be sent. Shorten it and try again." |
@@ -661,8 +664,8 @@ header, no bindings and no AI, then deleted. Pages answered `/api/chat` and
   `application/json`, 46,337 bytes, with no `cf-mitigated` header.
 - **CPU: pass, with a gap.** Parsing the 61-book catalogue and building a full-size
   prompt took 1 to 5 ms of CPU over five runs (`wrangler tail`'s `cpuTime`), under
-  Workers Free's 10 ms. The subrequests for one question are 1 catalogue fetch plus
-  at most 3 notes, far under 50. This excludes the model call, which S12's after-build
+  Workers Free's 10 ms (the plan then; Paid, ADR-0133, allows far more). The subrequests for that prototype's
+  question were 1 catalogue fetch plus at most 3 notes; a search now reads every note with Thoughts, 11 today. This excludes the model call, which S12's after-build
   list measures.
 - **Not a finding: the Thoughts mark already exists.** An earlier draft of this record
   said `library.json` had no mark for Thoughts. It does: each book with a published note
@@ -728,7 +731,8 @@ afterwards. **These do not replace C7 or the eval run at step 9 on the deployed 
 - Through a test gateway with authentication on, calls succeed by binding and by the
   eval path, an unauthenticated REST call is refused, and any token needed is named.
 - Successful Worker calls add to that gateway's spend and trip a small limit.
-- A full request, model call included, still fits Workers Free's CPU limit.
+- A full request, model call included, fits the Workers Paid CPU limit (ADR-0133); the measured CPU was 1 to 5 ms
+  without the model call.
 - A Health Check reaches the health route at a rate under the WAF's, and the Terraform
   `spend_limits` block validates.
 - With the first-person rules, the "was it any good?" evals still report nothing written
@@ -955,8 +959,8 @@ Each step ends with its claims passing. Steps marked **owner** wait for a yes in
 drawer shows S6's last message until the site is redeployed without it. Revert the
 CSP with the site. `terraform destroy` on `infra/`. Delete the widget by hand.
 
-**Stop and ask if:** a failed S12 item has no answer here, C7 fails, any bill goes above
-zero, or any `terraform plan`, destroy included, changes a rule outside `infra/`.
+**Stop and ask if:** a failed S12 item has no answer here, C7 fails, any charge appears beyond the Workers Paid
+plan's fixed fee and the day's AI spend limit, or any `terraform plan`, destroy included, changes a rule outside `infra/`.
 
 The prototype is reference only and gets rewritten with tests. It stays on the local
 branch `prototype/ask-the-library`, never pushed, because it holds a hard-coded account
@@ -1041,6 +1045,6 @@ provider, and the closed-book pickup, which has its own issue.
 **Follow-up, by the owner's agreement:** embeddings for picking Thoughts by meaning, once
 there are about 20 sets of Thoughts or the evals or real use show the wrong ones picked.
 
-**If the owner moves to Workers Paid:** the spend limit becomes the only cap on AI cost.
+**On Workers Paid (since 2026-11-04, ADR-0133):** the spend limit is the only cap on AI cost.
 It is an estimate, in beta, and can overshoot in a burst. Budget alerts only notify. Raise
 it to a chosen dollar figure rather than removing it.

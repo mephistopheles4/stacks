@@ -29,7 +29,8 @@
       { "name": "HEALTH", "class_name": "HealthState" }
     ]
   },
-  // SQLite-backed, because Workers Free allows no other kind.
+  // SQLite-backed: the kind Cloudflare recommends for a new Durable Object, and the only kind Workers Free
+  // allows. The account is on Workers Paid now (ADR-0133).
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VisitorCounter", "HealthState"] }],
 
   // The daily test (S11), once a day.

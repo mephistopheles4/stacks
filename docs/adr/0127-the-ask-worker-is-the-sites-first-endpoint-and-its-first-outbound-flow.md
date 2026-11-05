@@ -40,16 +40,18 @@ every other path.
 - **A third-party chat service.** It would send the questions to a company the
   owner has no account with and bill per message.
 - **Sending all Thoughts every time.** It costs about 330 Neurons a question at
-  60 sets and one fetch per note against Workers Free's 50. S4 picks likely books
-  instead.
+  60 sets and one fetch per note against Workers Free's 50. S4 first picked likely books
+  instead (since changed: a search reads every note with Thoughts, ADR-0132, ADR-0133).
 - **Workers Paid.** The free plan's 10,000-Neuron daily stop is a cap that
   belongs to the account; adding Paid for anything else removes it, so the spend
-  limit would be the only cap (S5 step 6, S16).
+  limit would be the only cap (S5 step 6, S16). **Changed by
+  [ADR-0133](./0133-the-ask-worker-runs-on-workers-paid-and-the-spend-limit-is-its-only-cap.md):
+  the owner added Paid on 2026-11-04.**
 
 ## Consequences
 
 - Availability is not guaranteed: about 5 addresses can spend a day's AI budget
-  and about 7 can reach Workers Free's request limit (S5). The bill stays capped
+  and about 7 could reach Workers Free's request limit (S5; Workers Paid has a larger allowance, ADR-0133). The bill stays capped
   on every path reviewed.
 - `packages/ask` has no `@cloudflare/workers-types`: the few binding methods the
   Worker calls are declared in `env.ts`, so the package adds no dependency.

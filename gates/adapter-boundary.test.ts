@@ -119,9 +119,9 @@ const ALLOWED = [
   // no access to the vault is checked for having none.
   'scripts/deploy-ask.ts',
   // The S9 evals: reads a built public folder (`dist/`), the same files the
-  // Worker fetches over HTTPS, and the fixture vault's note titles to refuse a
-  // library built from them. It reads each fixture note whole and keeps only
-  // the title line; the fixtures are invented, so nothing private is read.
+  // Worker fetches over HTTPS, and writes a transcript. The fixture vault's
+  // titles, which it needs to refuse a library built from them, come through
+  // `ObsidianAdapter`, like `deploy.ts`'s: it opens no note itself.
   'scripts/evals-ask.ts',
   // Reads a *built* folder — `dist/`, assembled by `astro build` — to answer
   // whether it is safe to publish. The two scripts above are its callers. It

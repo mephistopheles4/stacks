@@ -11,7 +11,6 @@ import {
   neurons,
   subjectWordsIn,
   summariseTrace,
-  titlesIn,
   toolMismatch,
 } from './ask-evals.ts';
 
@@ -151,9 +150,8 @@ describe('S9 cases', () => {
 });
 
 describe('fixture detection', () => {
-  it('reads titles from note text and spots a library built from them', () => {
-    const titles = titlesIn(['---\ntitle: "The Salt Road Ledger"\n---', 'no title here']);
-    expect(titles).toEqual(['The Salt Road Ledger']);
+  it('spots a library built from the fixture titles, ignoring case', () => {
+    const titles = ['The Salt Road Ledger'];
     expect(looksLikeFixture([book('the salt road ledger')], titles)).toBe(true);
     expect(looksLikeFixture(LIB, titles)).toBe(false);
   });

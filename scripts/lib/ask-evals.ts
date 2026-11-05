@@ -236,14 +236,6 @@ export function looksLikeFixture(
   return library.some((b) => known.has(lower(b.title)));
 }
 
-/** The `title:` of every note in a vault folder's text, for `looksLikeFixture`. */
-export function titlesIn(noteTexts: readonly string[]): string[] {
-  return noteTexts.flatMap((text) => {
-    const m = /^title:\s*["']?(.+?)["']?\s*$/m.exec(text);
-    return m?.[1] === undefined ? [] : [m[1]];
-  });
-}
-
 /** The tool names the model called, in order, as `list_books` or `search_library`. */
 export function toolMismatch(expects: Expected, called: readonly string[]): string | undefined {
   const searched = called.includes('search_library');

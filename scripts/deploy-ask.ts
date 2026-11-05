@@ -122,7 +122,9 @@ try {
     if (leaks.length > 0) fail(leaks.join('\n'));
     console.log(`checked: ${String(bundles.size)} bundle file(s) hold no vault or checkout path`);
     console.log('\n--dry-run: not uploading.');
-    console.log('to publish: pnpm exec wrangler deploy --config packages/ask/wrangler.jsonc');
+    // Not `wrangler deploy`: only this script reads the live off switch, and a bare deploy would
+    // put `ASK_AI_ENABLED: "true"` back (S5).
+    console.log('to publish: pnpm deploy:ask');
   } else {
     console.log('\ndeployed the Ask the library Worker');
   }

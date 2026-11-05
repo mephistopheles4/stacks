@@ -291,13 +291,16 @@ const pinProblems = (packageJson: string): string[] => {
  * `'exec', 'wrangler'`, the printed command starts `pnpm exec wrangler`, and
  * every other way of naming a package runner fails closed.
  */
+/** A package runner, which fetches a wrangler of its own: the form G67 refuses everywhere. */
+const runnerPattern = /\b(?:dlx|npx|pnpx|bunx)\b|--package\b/;
 const deployProblems = (
   source: string,
-  options: { file?: string; calls?: number; full?: boolean } = {},
+  options: { file?: string; calls?: number; full?: boolean; printed?: string } = {},
 ): string[] => {
   const file = options.file ?? 'deploy.ts';
   const calls = options.calls ?? 1;
   const full = options.full ?? true;
+  const printed = options.printed ?? 'to publish: pnpm exec wrangler ';
   const problems: string[] = [];
   const runner = /\b(?:dlx|npx|pnpx|bunx)\b|--package\b/.exec(source);
   if (runner !== null) problems.push(`${file} names a package runner: ${runner[0]}`);
@@ -317,8 +320,16 @@ const deployProblems = (
     for (const line of ['fail(wranglerRefusal)', 'uploadEnv(process.env, loadedEnvKeys)']) {
       if (!source.includes(line)) problems.push(`${file} no longer holds ${line}`);
     }
-    if ((source.match(/to publish: pnpm exec wrangler /g) ?? []).length !== 1) {
-      problems.push(`${file} does not print exactly one \`pnpm exec wrangler\` command`);
+    if (source.split(printed).length - 1 !== 1) {
+      problems.push(`${file} does not print exactly one \`${printed.trim()}\` command`);
+    }
+    // A script that wraps the upload in its own checks must not print the bare upload: the
+    // printed command would skip them (the Worker's switch-off read, #532).
+    if (
+      printed !== 'to publish: pnpm exec wrangler ' &&
+      /to publish: pnpm exec wrangler /.test(source)
+    ) {
+      problems.push(`${file} prints the bare wrangler upload, which skips this script's checks`);
     }
   }
   if (/\bpnpm\s+(?!exec\s+wrangler\b)[\w:-]+\s+wrangler\b/.test(source)) {
@@ -440,7 +451,12 @@ describe('G67 — the release-age window is stated, at seven days or more', () =
     expect(deployProblems(read('scripts/deploy.ts'))).toEqual([]);
     // #532: the Worker's deploy is held to the same form, and its live read (two
     // wrangler calls, both through `pnpm exec`) to the form alone.
-    expect(deployProblems(read('scripts/deploy-ask.ts'), { file: 'deploy-ask.ts' })).toEqual([]);
+    expect(
+      deployProblems(read('scripts/deploy-ask.ts'), {
+        file: 'deploy-ask.ts',
+        printed: 'to publish: pnpm deploy:ask',
+      }),
+    ).toEqual([]);
     expect(
       deployProblems(read('scripts/lib/ask-live.ts'), {
         file: 'ask-live.ts',
@@ -448,6 +464,13 @@ describe('G67 — the release-age window is stated, at seven days or more', () =
         full: false,
       }),
     ).toEqual([]);
+    // The two scripts that read the owner's wrangler login run it as one string through
+    // `pnpm exec`: neither may name a package runner or a wrangler version of its own.
+    for (const file of ['scripts/evals-ask.ts', 'scripts/ask-status.ts']) {
+      expect(read(file), file).not.toMatch(runnerPattern);
+      expect(read(file), file).not.toContain('wrangler@');
+      expect(read(file), file).toContain("'pnpm exec wrangler auth token'");
+    }
     // C3's first half: the list is these three and nothing else.
     expect(readList(read('pnpm-workspace.yaml'), TRUST_EXCLUDE).items).toEqual([
       'semver@6.3.1',
@@ -768,5 +791,41 @@ describe('G67 — door 3: wrangler is an exact pin, run through pnpm exec', () =
     ] as const) {
       expect(deployProblems(source), name).not.toEqual([]);
     }
+  });
+
+  it('holds the Worker deploy to printing its own command, and its readers to no runner (#532)', () => {
+    const wrapped = [
+      "run('pnpm', ['exec', 'wrangler']);",
+      'fail(wranglerRefusal);',
+      'uploadEnv(process.env, loadedEnvKeys);',
+      "console.log('to publish: pnpm deploy:ask');",
+    ].join(String.fromCharCode(10));
+    const options = { printed: 'to publish: pnpm deploy:ask' };
+    expect(deployProblems(wrapped, options)).toEqual([]);
+    // The bare upload skips the off-switch read: the old line, planted.
+    expect(
+      deployProblems(
+        `${wrapped}${String.fromCharCode(10)}// to publish: pnpm exec wrangler deploy`,
+        options,
+      ),
+    ).not.toEqual([]);
+    expect(
+      deployProblems(wrapped.replace('pnpm deploy:ask', 'pnpm exec wrangler deploy'), options),
+    ).not.toEqual([]);
+    // The readers of the owner's login: a package runner in either is refused.
+    for (const reader of ['pnpm dlx wrangler@4 auth token', 'npx wrangler auth token']) {
+      expect(
+        deployProblems(`spawnSync('${reader}');`, { calls: 0, full: false }),
+        reader,
+      ).not.toEqual([]);
+    }
+    // ask-live.ts: a dlx call is refused (conventions F15).
+    expect(
+      deployProblems("run('pnpm', ['dlx', 'wrangler']);", {
+        file: 'ask-live.ts',
+        calls: 2,
+        full: false,
+      }),
+    ).not.toEqual([]);
   });
 });
