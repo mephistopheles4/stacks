@@ -7,8 +7,7 @@ const input = {
   remoteIp: '203.0.113.9',
   siteOrigin: 'https://stacks.example',
 };
-const reply = (body: unknown): typeof fetch =>
-  vi.fn(async () => Response.json(body)) as unknown as typeof fetch;
+const reply = (body: unknown): typeof fetch => vi.fn(async () => Response.json(body));
 
 describe('verifyTurnstile (S5 step 3)', () => {
   const good = { success: true, hostname: 'stacks.example', action: 'ask' };

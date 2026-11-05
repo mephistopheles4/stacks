@@ -13,6 +13,7 @@
   // this gate agree about the same file.
   "include": [
     "packages/core/src/**/*.ts",
+    "packages/ask/src/**/*.ts",
     "packages/cli/src/**/*.ts",
     "packages/site/src/**/*.ts",
     "scripts/**/*.ts",
