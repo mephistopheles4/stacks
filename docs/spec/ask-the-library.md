@@ -401,12 +401,11 @@ header, no bindings and no AI, then deleted. Pages answered `/api/chat` and
   Workers Free's 10 ms. The subrequests for one question are 1 catalogue fetch plus
   at most 3 notes, far under 50. This excludes the model call, which S12's after-build
   list measures.
-- **Finding: `library.json` carries no mark for Thoughts.** S4 sends "a mark on books
-  that have Thoughts", but no field says so: only `notes/<id>.json` existing does, and
-  probing 61 notes would exceed 50 subrequests. The build adds a boolean `hasThoughts`
-  to `library.json` (see the PR), derived from the same publisher stage that writes the
-  notes. The live site publishes no notes yet; an unknown id returns the home page with
-  200, so the Worker must check the content type of a note and not its status.
+- **Not a finding: the Thoughts mark already exists.** An earlier draft of this record
+  said `library.json` had no mark for Thoughts. It does: each book with a published note
+  carries `thoughts: true`, and 2 of the 61 live books do. S4's "mark" is that field, and
+  nothing is added to `library.json`. An unknown note id returns the home page with 200,
+  so the Worker checks a note's content type, not its status.
 
 **After the build (S13 step 9), about 25 AI calls and 1,500 Neurons:**
 
