@@ -54,6 +54,47 @@ describe('runModel (C8)', () => {
     ).toEqual({ text: 'A', toolCalls: [], tokensIn: 10, tokensOut: 4 });
   });
 
+  it("reports Cloudflare's Neurons and cached tokens as numbers, and only finite ones", async () => {
+    const out = {
+      response: 'A',
+      usage: { neurons: 9.5, prompt_tokens_details: { cached_tokens: 12 } },
+    };
+    expect(
+      await runModel(
+        env(async () => out),
+        msgs,
+      ),
+    ).toEqual({
+      text: 'A',
+      toolCalls: [],
+      neurons: 9.5,
+      tokensCached: 12,
+    });
+    const odd = {
+      response: 'A',
+      usage: { neurons: '9', prompt_tokens_details: { cached_tokens: Number.NaN } },
+    };
+    expect(
+      await runModel(
+        env(async () => odd),
+        msgs,
+      ),
+    ).toEqual({ text: 'A', toolCalls: [] });
+  });
+
+  it('a blank answer carries the usage of the call that returned it', async () => {
+    const out = { response: ' ', usage: { prompt_tokens: 3, neurons: 4 } };
+    await expect(
+      runModel(
+        env(async () => out),
+        msgs,
+      ),
+    ).rejects.toMatchObject({
+      message: 'blank',
+      usage: { tokensIn: 3, neurons: 4 },
+    });
+  });
+
   it('treats a blank answer as a failure', async () => {
     await expect(
       runModel(

@@ -1,4 +1,11 @@
-import { AiFailure, runModel, type ChatMessage, type WireCall } from './ai.ts';
+import {
+  AiFailure,
+  runModel,
+  type AiAnswer,
+  type ChatMessage,
+  type Usage,
+  type WireCall,
+} from './ai.ts';
 import type { Env } from './env.ts';
 import { onTheShelf, splitFollowUps } from './followups.ts';
 import { DataError, type CatalogueBook, type LibrarySource } from './library.ts';
@@ -113,17 +120,34 @@ interface Stats {
   matched: ReadonlySet<string>;
   tokensIn: number | undefined;
   tokensOut: number | undefined;
+  /** Cloudflare's count over the calls that returned; `null` once one of them gave none. */
+  neurons: number | null | undefined;
+  tokensCached: number | null | undefined;
 }
 
 const add = (sum: number | undefined, next: number | undefined): number | undefined =>
   next === undefined ? sum : (sum ?? 0) + next;
 
+/** A sum that stays absent from the first call that gave no value: a partial sum is not a count. */
+const addAll = (sum: number | null | undefined, next: number | undefined): number | null =>
+  sum === null || next === undefined ? null : (sum ?? 0) + next;
+
+/** One returned call's cost, into the question's. */
+function charge(stats: Stats, usage: Usage): void {
+  stats.tokensIn = add(stats.tokensIn, usage.tokensIn);
+  stats.tokensOut = add(stats.tokensOut, usage.tokensOut);
+  stats.neurons = addAll(stats.neurons, usage.neurons);
+  stats.tokensCached = addAll(stats.tokensCached, usage.tokensCached);
+}
+
 const statsDetail = (
   stats: Stats,
-): Pick<OutcomeDetail, 'toolCalls' | 'tokensIn' | 'tokensOut'> => ({
+): Pick<OutcomeDetail, 'toolCalls' | 'tokensIn' | 'tokensOut' | 'neurons' | 'tokensCached'> => ({
   toolCalls: stats.toolCalls,
   ...(stats.tokensIn !== undefined && { tokensIn: stats.tokensIn }),
   ...(stats.tokensOut !== undefined && { tokensOut: stats.tokensOut }),
+  ...(typeof stats.neurons === 'number' && { neurons: stats.neurons }),
+  ...(typeof stats.tokensCached === 'number' && { tokensCached: stats.tokensCached }),
 });
 
 /**
@@ -188,12 +212,18 @@ async function converse(
     const left = AI_DEADLINE_MS - elapsed();
     if (left <= 0) throw new AiFailure('timeout');
     const offered = stats.toolCalls < MAX_TOOL_CALLS;
-    const out = await runModel(env, offered ? messages : withLastCallLine(messages), {
-      timeoutMs: left,
-      ...(offered && { tools: TOOLS }),
-    });
-    stats.tokensIn = add(stats.tokensIn, out.tokensIn);
-    stats.tokensOut = add(stats.tokensOut, out.tokensOut);
+    let out: AiAnswer;
+    try {
+      out = await runModel(env, offered ? messages : withLastCallLine(messages), {
+        timeoutMs: left,
+        ...(offered && { tools: TOOLS }),
+      });
+    } catch (error) {
+      // A blank answer returned, so what it cost is known and counted.
+      if (error instanceof AiFailure && error.usage !== undefined) charge(stats, error.usage);
+      throw error;
+    }
+    charge(stats, out);
     modelCalls += 1;
     observe?.({
       kind: 'model',
@@ -271,6 +301,8 @@ export async function answerQuestion(
     matched: new Set(),
     tokensIn: undefined,
     tokensOut: undefined,
+    neurons: undefined,
+    tokensCached: undefined,
   };
   try {
     const text = await converse(

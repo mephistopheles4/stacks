@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Env } from './env.ts';
 import { handleChat } from './handler.ts';
 import { createLibrarySource } from './library.ts';
-import { VisitorCounter, type CounterStorage } from './visitor.ts';
+import {
+  VisitorCounter,
+  normaliseAddress,
+  utcDay,
+  visitorKey,
+  type CounterStorage,
+} from './visitor.ts';
 
 const ORIGIN = 'https://stacks.example';
 const CANARY_Q = 'CANARY-QUESTION-7f3a';
@@ -71,6 +77,7 @@ function rig(
     secrets?: boolean | 'no-turnstile' | 'no-visitor';
     library?: unknown;
     counter?: () => Promise<Response>;
+    visitorKey?: string;
   } = {},
 ): Rig {
   const state: Rig = { aiCalls: [], turnstileCalls: 0, libraryFetches: 0 } as unknown as Rig;
@@ -148,7 +155,9 @@ function rig(
     ...(options.secrets === false || options.secrets === 'no-turnstile'
       ? {}
       : { TURNSTILE_SECRET: 's' }),
-    ...(options.secrets === false || options.secrets === 'no-visitor' ? {} : { VISITOR_KEY: 'k' }),
+    ...(options.secrets === false || options.secrets === 'no-visitor'
+      ? {}
+      : { VISITOR_KEY: options.visitorKey ?? 'k' }),
   };
   return state;
 }
@@ -719,5 +728,189 @@ describe('reasoning in a response from the model (C15, C32 extended)', () => {
       .join(String.fromCharCode(10));
     expect(logged).toContain('"outcome"');
     expect(logged).not.toContain(canary);
+  });
+});
+
+/** Every line `logOutcome` wrote while `body` ran, parsed. */
+async function lines(body: () => Promise<unknown>): Promise<Record<string, unknown>[]> {
+  const out: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((line: unknown) => void out.push(String(line)));
+  await body();
+  return out.map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+/** A reply carrying Cloudflare's usage block, as `ai.ts` reads it. */
+const withUsage = (reply: Record<string, unknown>, usage: Record<string, unknown>) => ({
+  ...reply,
+  usage,
+});
+
+describe("the visitor's question number (observability C1)", () => {
+  it("numbers each admitted question with the counter's count", async () => {
+    const r = rig();
+    const logged = await lines(async () => {
+      for (let i = 0; i < 3; i += 1) await run(r, ask());
+    });
+    expect(logged.map((l) => [l['outcome'], l['question']])).toEqual([
+      ['ai', 1],
+      ['ai', 2],
+      ['ai', 3],
+    ]);
+  });
+
+  it('numbers search-off, search-ai-failed and refused-data lines too', async () => {
+    const off = await lines(() => run(rig({ aiEnabled: 'false' }), ask()));
+    const failed = await lines(() =>
+      run(
+        rig({
+          ai: async () => {
+            throw new Error('3043: Internal server error');
+          },
+        }),
+        ask(),
+      ),
+    );
+    const data = await lines(() => run(rig({ libraryDown: true }), ask()));
+    expect(off).toEqual([expect.objectContaining({ outcome: 'search-off', question: 1 })]);
+    expect(failed).toEqual([expect.objectContaining({ outcome: 'search-ai-failed', question: 1 })]);
+    expect(data).toEqual([{ outcome: 'refused-data', question: 1 }]);
+  });
+
+  it('puts no number on a line refused before or at the limits', async () => {
+    const turnstile = await lines(() => run(rig({ turnstile: { success: false } }), ask()));
+    const r = rig({ aiEnabled: 'false' });
+    for (let i = 0; i < 30; i += 1) await run(r, ask());
+    const over = await lines(() => run(r, ask()));
+    expect(turnstile).toEqual([{ outcome: 'refused-turnstile' }]);
+    expect(over).toEqual([{ outcome: 'refused-limit', limit: 'day' }]);
+  });
+});
+
+describe('which limit refused, still fail-closed (observability C3)', () => {
+  const thrown = async (): Promise<never> => {
+    throw new Error('CANARY-LIMIT-ERROR');
+  };
+  const cases: [string, Parameters<typeof rig>[0], 'minute' | 'error'][] = [
+    ['the per-minute limit', { rate: async () => ({ success: false }) }, 'minute'],
+    ['a rate limiter that throws', { rate: thrown }, 'error'],
+    ['a counter that throws', { counter: thrown }, 'error'],
+    ['a counter that returns junk', { counter: async () => new Response('nope') }, 'error'],
+    [
+      'a counter that answers neither yes nor no',
+      { counter: async () => Response.json({ allowed: 'yes', count: 1 }) },
+      'error',
+    ],
+  ];
+  it.each(cases)(
+    '%s is a 429 with no model call, logged by its limit',
+    async (_n, options, limit) => {
+      const r = rig(options);
+      let status = 0;
+      const logged = await lines(async () => {
+        ({ status } = await run(r, ask()));
+      });
+      expect(status).toBe(429);
+      expect(r.aiCalls).toHaveLength(0);
+      // The fixed word and nothing else: no error text.
+      expect(logged).toEqual([{ outcome: 'refused-limit', limit }]);
+    },
+  );
+});
+
+describe('Neurons and cached tokens (observability C2)', () => {
+  const usage = (neurons: unknown, cached: unknown) => ({
+    prompt_tokens: 100,
+    completion_tokens: 10,
+    neurons,
+    prompt_tokens_details: { cached_tokens: cached },
+  });
+  const tool = (query: string) => ({
+    choices: [
+      {
+        message: {
+          content: null,
+          tool_calls: [
+            {
+              id: 't1',
+              type: 'function',
+              function: { name: 'search_library', arguments: JSON.stringify({ query }) },
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  it('sums them over every call of the question', async () => {
+    const ai = async (call: number) =>
+      call === 1
+        ? withUsage(tool('Co-Intelligence'), usage(12.5, 64))
+        : withUsage({ response: 'I rated Co-Intelligence 5 out of 5.' }, usage(7.25, 32));
+    const [line] = await lines(() => run(rig({ ai }), ask()));
+    expect(line).toMatchObject({ outcome: 'ai', neurons: 19.75, tokensCached: 96, tokensIn: 200 });
+  });
+
+  it('leaves a field out when one call did not give it as a finite number', async () => {
+    const ai = async (call: number) =>
+      call === 1
+        ? withUsage(tool('Co-Intelligence'), usage(12.5, undefined))
+        : withUsage({ response: 'I rated Co-Intelligence 5 out of 5.' }, usage(Infinity, 32));
+    const [line] = await lines(() => run(rig({ ai }), ask()));
+    expect(line).toMatchObject({ outcome: 'ai', tokensIn: 200 });
+    expect(line).not.toHaveProperty('neurons');
+    expect(line).not.toHaveProperty('tokensCached');
+  });
+
+  it('counts a blank call, which returned and spent, on the search-ai-failed line', async () => {
+    const ai = async (call: number) =>
+      call === 1
+        ? withUsage(tool('Co-Intelligence'), usage(3, 0))
+        : withUsage({ response: ' ' }, usage(4, 8));
+    const [line] = await lines(() => run(rig({ ai }), ask()));
+    expect(line).toMatchObject({
+      outcome: 'search-ai-failed',
+      reason: 'blank',
+      neurons: 7,
+      tokensCached: 8,
+    });
+  });
+
+  it('logs none on a refusal before any call', async () => {
+    const [line] = await lines(() => run(rig({ turnstile: { success: false } }), ask()));
+    expect(line).not.toHaveProperty('neurons');
+  });
+});
+
+describe('the visitor key reaches no log (observability C4)', () => {
+  it('neither the secret nor the computed key appears on any path', async () => {
+    const secret = 'CANARY-VISITOR-SECRET-5b2e9c1d4a7f'.repeat(2);
+    const key = await visitorKey(normaliseAddress(CANARY_IP) ?? '', utcDay(new Date()), secret);
+    const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) =>
+      vi.spyOn(console, m).mockImplementation(() => undefined),
+    );
+    const thrown = async (): Promise<never> => {
+      throw new Error(`${secret} ${key}`);
+    };
+    const paths: Parameters<typeof rig>[0][] = [
+      {},
+      { aiEnabled: 'false' },
+      { rate: async () => ({ success: false }) },
+      { rate: thrown },
+      { counter: thrown },
+      { counter: async () => new Response(`${secret} ${key}`) },
+      { counter: async () => Response.json({ allowed: false, count: 30 }) },
+      { libraryDown: true },
+      { ai: thrown },
+    ];
+    for (const options of paths) await run(rig({ ...options, visitorKey: secret }), ask(CANARY_Q));
+    const logged = spies
+      .flatMap((s) => s.mock.calls.map((call) => call.map(String).join(' ')))
+      .join(String.fromCharCode(10));
+    expect(logged).toContain('"outcome"');
+    expect(logged).toContain('"question"');
+    expect(logged).not.toContain(secret);
+    expect(logged).not.toContain(key);
+    expect(logged).not.toContain(CANARY_Q);
+    expect(logged).not.toContain(CANARY_IP);
   });
 });

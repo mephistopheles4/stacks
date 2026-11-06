@@ -9,9 +9,37 @@ export class AiFailure extends Error {
     readonly spent = false,
     /** The four-digit code the AI platform gave, when its message starts with one. */
     readonly code?: number,
+    /** What the call cost, when it returned before failing (a blank answer). */
+    readonly usage?: Usage,
   ) {
     super(message);
   }
+}
+
+/** What one call cost, as numbers only; a field is absent when the reply gave no finite one. */
+export interface Usage {
+  readonly tokensIn?: number;
+  readonly tokensOut?: number;
+  readonly neurons?: number;
+  readonly tokensCached?: number;
+}
+
+const finite = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+/** The reply's `usage` block, read as numbers and nothing else (C15). */
+function readUsage(out: unknown): Usage {
+  const usage = (out as { usage?: Record<string, unknown> } | null)?.usage;
+  if (usage === undefined || usage === null || typeof usage !== 'object') return {};
+  const details = usage['prompt_tokens_details'] as Record<string, unknown> | null | undefined;
+  const cached =
+    details !== null && typeof details === 'object' ? details['cached_tokens'] : undefined;
+  return {
+    ...(finite(usage['prompt_tokens']) && { tokensIn: usage['prompt_tokens'] }),
+    ...(finite(usage['completion_tokens']) && { tokensOut: usage['completion_tokens'] }),
+    ...(finite(usage['neurons']) && { neurons: usage['neurons'] }),
+    ...(finite(cached) && { tokensCached: cached }),
+  };
 }
 
 /**
@@ -41,12 +69,10 @@ export interface ToolCall {
   readonly arguments: unknown;
 }
 
-export interface AiAnswer {
+export interface AiAnswer extends Usage {
   /** The model's text; empty when it only asked for tools. */
   readonly text: string;
   readonly toolCalls: readonly ToolCall[];
-  readonly tokensIn?: number;
-  readonly tokensOut?: number;
 }
 
 /** A tool call as sent back to the model in the assistant message. */
@@ -107,16 +133,12 @@ export async function runModel(
     const out = await Promise.race([call, limit]);
     const text = cleanAnswer(extractText(out));
     const toolCalls = extractToolCalls(out);
-    if (text === '' && toolCalls.length === 0) throw new AiFailure('blank');
-    const usage = (
-      out as { usage?: { prompt_tokens?: unknown; completion_tokens?: unknown } } | null
-    )?.usage;
-    return {
-      text,
-      toolCalls,
-      ...(typeof usage?.prompt_tokens === 'number' && { tokensIn: usage.prompt_tokens }),
-      ...(typeof usage?.completion_tokens === 'number' && { tokensOut: usage.completion_tokens }),
-    };
+    // Read before the blank check: a blank answer returned, and spent.
+    const usage = readUsage(out);
+    if (text === '' && toolCalls.length === 0) {
+      throw new AiFailure('blank', false, undefined, usage);
+    }
+    return { text, toolCalls, ...usage };
   } catch (error) {
     if (error instanceof AiFailure) throw error;
     const message = error instanceof Error ? error.message : '';
