@@ -14,7 +14,7 @@ Pinned: Terraform `1.17.1`, `cloudflare/cloudflare` provider `5.28.1`
 | --- | --- |
 | `cloudflare_ruleset.ask_rate_limit` (zone, `http_ratelimit`) | `stacks.aymandiab.com`, path starting `/api/chat` ignoring case, any method, per IP and data centre (`cf.colo.id` and `ip.src`, which the API requires), 10 per 60 s, block 600 s |
 | `cloudflare_ai_gateway.ask` (`stacks-ask`) | authentication on, logs off, cache off, spend limit 0.09 per day, sliding |
-| `cloudflare_healthcheck.ask` | HTTPS GET `/api/chat/health`, expects 200, every 60 s, one region |
+| `cloudflare_healthcheck.ask` | HTTPS GET `/api/chat/health`, expects 200 and the body `stacks-ask: up` (Pages answers unknown paths with 200 HTML), every 60 s, one region |
 | `cloudflare_notification_policy.ask_health` | alerts on that check, to the sensitive `alert_recipient` variable |
 
 `infra/` holds no email address (C16). The recipient is `var.alert_recipient`:

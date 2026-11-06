@@ -710,7 +710,7 @@ choose other books.
   about 56 Neurons a day, and saves only pass or fail and the time, in a Durable Object
   separate from the per-visitor one. It saves no answer text.
 - **Health address:** `GET /api/chat/health` returns 200 or 503 from that result, with
-  no AI call, and reveals only up or down. A spent budget is 200, and so is having no
+  no AI call, and reveals only up or down, as the body `stacks-ask: up` or `stacks-ask: down`. The Health Check expects that phrase: Pages answers an unknown path with 200 HTML, so a 200 alone cannot tell the Worker from its absence. A spent budget is 200, and so is having no
   result yet. A result older than 36 hours is 503.
 - **Alert:** a Health Check on that address with its notification, both on Pro. S12
   tests that a Health Check reaches a Worker route. If it doesn't, a nightly GitHub
