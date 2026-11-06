@@ -103,13 +103,20 @@ const bearer = /[A-Za-z0-9_.-]{20,}/.exec(token.stdout)?.[0];
 if (token.status !== 0 || bearer === undefined) fail('wrangler is not logged in (wrangler login)');
 const gatewayToken = process.env['ASK_GATEWAY_TOKEN'];
 
-/** What each model call's response carried besides its answer, in call order (S9). */
-const captures: CallCapture[] = [];
+/**
+ * What each model call's response carried besides its answer, in call order (S9), tagged with the
+ * question that made the call. A call that outlives its question's deadline still lands here when it
+ * answers, so a case reads its own tag rather than a position in this list.
+ */
+const captures: { readonly question: number; readonly call: CallCapture }[] = [];
+/** The question now being asked, counted from 1. */
+let asking = 0;
 
 /** The binding's `run`, over the gateway's REST address. */
 const env = {
   AI: {
     run: async (model: string, input: unknown, options?: unknown): Promise<unknown> => {
+      const question = asking;
       const id = (options as { gateway?: { id?: string } } | undefined)?.gateway?.id ?? gateway;
       const response = await fetch(
         `https://gateway.ai.cloudflare.com/v1/${account}/${id}/workers-ai/${model}`,
@@ -132,7 +139,7 @@ const env = {
       const out = body.result ?? body;
       // The reasoning stays here, in the eval's own wrapper: the Worker's code is handed the same
       // response and never reads it (S9).
-      captures.push(capture(out));
+      captures.push({ question, call: capture(out) });
       return out;
     },
   },
@@ -162,13 +169,13 @@ for (const book of library) {
 for (const c of [...CASES, ...MEMORY_CASES]) {
   for (let run = 1; run <= RUNS; run += 1) {
     total += 1;
+    asking = total;
     const events: TraceEvent[] = [];
-    const firstCapture = captures.length;
     const answered = await answerQuestion(env, source, c.question, undefined, c.history, (event) =>
       events.push(event),
     );
     const trace = summariseTrace(events);
-    const calls = captures.slice(firstCapture);
+    const calls = captures.filter((c) => c.question === total).map((c) => c.call);
     // The response's own Neurons when every call reported them, else the published rates (M4).
     const spent = neuronsSpent(
       calls.map((call) => call.neurons),
