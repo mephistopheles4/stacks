@@ -122,6 +122,22 @@ export function invocationLogsOff(jsonc: string): boolean {
   );
 }
 
+/**
+ * Whether the config keeps every log line: `observability.head_sampling_rate` set to 1, and no
+ * rate anywhere set to anything else (observability spec S2). A sampled log makes every count
+ * `pnpm ask:status` prints wrong, and nothing would show it.
+ */
+export function fullSampling(jsonc: string): boolean {
+  // Every `//` comment, wherever it starts on a line, but never one inside a string (a URL).
+  const code = jsonc.replace(/"(?:\\.|[^"\\])*"|\/\/[^\n]*/g, (m) => (m.startsWith('"') ? m : ''));
+  const rates = [...code.matchAll(/"head_sampling_rate"\s*:\s*([-+0-9.eE]+)/g)].map((m) =>
+    Number(m[1]),
+  );
+  // Directly under `observability`: a nested block such as `logs` is stepped over whole.
+  const top = /"observability"\s*:\s*\{(?:[^{}]|\{[^{}]*\})*?"head_sampling_rate"\s*:/.test(code);
+  return top && rates.every((rate) => rate === 1);
+}
+
 /** `--var NAME:value` pairs for the deploy. Only names this script sets. */
 export function varArgs(decision: AiDecision, flags: AskFlags): string[] {
   return [

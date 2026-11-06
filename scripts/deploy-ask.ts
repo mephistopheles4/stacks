@@ -22,6 +22,7 @@ import { loadEnv } from '../packages/cli/src/env.ts';
 import {
   bundleLeaks,
   decideAi,
+  fullSampling,
   invocationLogsOff,
   parseAskArgs,
   varArgs,
@@ -79,6 +80,12 @@ if (config === undefined || !invocationLogsOff(config)) {
   fail(`${CONFIG} does not pin observability.logs.invocation_logs to false`);
 }
 console.log('checked: observability.logs.invocation_logs is false');
+
+// Every line kept, so ask:status counts the day and not a sample of it. No flag clears this.
+if (!fullSampling(config)) {
+  fail(`${CONFIG} does not pin observability.head_sampling_rate to 1`);
+}
+console.log('checked: observability.head_sampling_rate is 1');
 
 // The AI switch (S5). A dry run reads nothing live: it uploads nothing, so it
 // cannot undo anything. Every other path reads the live value first, and
