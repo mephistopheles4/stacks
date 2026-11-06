@@ -173,8 +173,10 @@ resource "cloudflare_notification_policy" "ask_health" {
   alert_type  = "health_check_status_notification"
   enabled     = true
 
+  # The alert type requires a status filter: API error 17103 without one (2026-11-06, #549).
   filters = {
     health_check_id = [cloudflare_healthcheck.ask.id]
+    status          = ["Healthy", "Unhealthy"]
   }
 
   mechanisms = {
