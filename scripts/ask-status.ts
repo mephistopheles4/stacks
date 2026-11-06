@@ -17,15 +17,11 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import {
-  QUERIES,
-  ShapeError,
-  dayTotals,
+  Refused,
   daysToRead,
-  isLinkedWorktree,
-  printDay,
+  checkoutIsLinked,
   queryBody,
-  recordName,
-  writeDecision,
+  runDays,
   type QueryName,
 } from './lib/ask-status.ts';
 import { renderAskDay } from './lib/metrics.ts';
@@ -55,10 +51,9 @@ if (record) {
       cwd: REPO_ROOT,
       encoding: 'utf8',
     }).stdout.trim();
-  const gitDir = git('--git-dir');
-  const commonDir = git('--git-common-dir');
-  if (gitDir === '' || commonDir === '') fail('git could not say which checkout this is');
-  if (isLinkedWorktree(gitDir, commonDir)) {
+  const linked = checkoutIsLinked(git);
+  if (linked === undefined) fail('git could not say which checkout this is');
+  if (linked) {
     fail(
       'this is a linked worktree, and its .trend/ goes with it. Run --record from the main checkout.',
     );
@@ -71,9 +66,16 @@ if (record) {
  * API token with that permission, as `ASK_STATUS_TOKEN` in `.env`, comes first; the login is
  * the fallback, kept for the day its scopes grow.
  */
+const TOKEN = /^[A-Za-z0-9_.-]{20,}$/;
+
 function bearerToken(): string | undefined {
   const own = process.env['ASK_STATUS_TOKEN'];
-  if (own !== undefined && own !== '') return own;
+  if (own !== undefined && own !== '') {
+    // The login's token is held to this shape below, and this one is too: a stray character
+    // would make fetch refuse the header with a message that quotes it.
+    if (!TOKEN.test(own)) fail('ASK_STATUS_TOKEN is not an API token (letters, digits, _ . -)');
+    return own;
+  }
   // wrangler's usage telemetry stays off, and .env's other keys stay out of the child (ADR-0116).
   const token = spawnSync('pnpm exec wrangler auth token', {
     cwd: REPO_ROOT,
@@ -87,53 +89,50 @@ const bearer = bearerToken();
 if (bearer === undefined) fail('no token: set ASK_STATUS_TOKEN in .env, or wrangler login');
 const usingLogin = (process.env['ASK_STATUS_TOKEN'] ?? '') === '';
 
-/** A query the API turned down, named by its status alone. */
-class Refused extends Error {}
-
 async function ask(name: QueryName, dayStart: number): Promise<unknown> {
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${account ?? ''}/workers/observability/telemetry/query`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${bearer ?? ''}` },
-      body: JSON.stringify(queryBody(name, dayStart)),
-    },
-  );
+  let response: Response;
+  try {
+    response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${account ?? ''}/workers/observability/telemetry/query`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${bearer ?? ''}` },
+        body: JSON.stringify(queryBody(name, dayStart)),
+        signal: AbortSignal.timeout(30_000),
+      },
+    );
+  } catch {
+    // A fetch error can carry the URL or a header in its message: fixed words only.
+    throw new Refused(name, 'unreachable');
+  }
   // The status only: a reply body is never printed (spec S3).
-  if (!response.ok) throw new Refused(`the ${name} query was refused (${String(response.status)})`);
-  return (await response.json()) as unknown;
+  if (!response.ok) throw new Refused(name, response.status);
+  try {
+    return (await response.json()) as unknown;
+  } catch {
+    // A JSON parse error quotes the start of the body.
+    throw new Refused(name, 'not JSON');
+  }
 }
 
 const days = daysToRead(Date.now());
 console.log(
   `Ask the library, ${String(days.length)} completed UTC day(s) still whole in Workers Logs${record ? ', recording' : ''}`,
 );
-let refused = 0;
-for (const dayStart of days) {
-  const name = recordName(dayStart);
-  const date = new Date(dayStart).toISOString().slice(0, 10);
-  try {
-    const replies = {} as Record<QueryName, unknown>;
-    for (const query of Object.keys(QUERIES) as QueryName[]) {
-      replies[query] = await ask(query, dayStart);
-    }
-    const totals = dayTotals(replies);
-    console.log(printDay(dayStart, totals).join('\n'));
-    const decision = writeDecision({ record, onDisk: existsSync(join(store, name)) });
-    if (decision === 'print') continue;
-    if (decision === 'on-disk') {
-      console.log(`  recorded already: ${name} is never rewritten`);
-      continue;
-    }
+const refused = await runDays({
+  days,
+  record,
+  reply: ask,
+  onDisk: (file) => existsSync(join(store, file)),
+  write: (file, text) => {
     mkdirSync(store, { recursive: true });
-    writeFileSync(join(store, name), renderAskDay(totals, dayStart / 1000), 'utf8');
-    console.log(`  recorded: .trend/local/${name}`);
-  } catch (error) {
-    if (!(error instanceof Refused || error instanceof ShapeError)) throw error;
-    refused += 1;
-    console.log(`${date}: nothing written, ${error.message}`);
-  }
-}
+    writeFileSync(join(store, file), text, 'utf8');
+  },
+  render: renderAskDay,
+  print: (line) => {
+    console.log(line);
+  },
+});
 if (refused > 0) {
   console.log(
     '\nA refused day is read again by the next run while its logs are kept. In the dashboard:',

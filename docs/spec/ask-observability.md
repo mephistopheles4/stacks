@@ -80,10 +80,11 @@ gets the same, after #540 merges (S10 step 6).
   questions 1 to 10;
 - the daily test's pass or fail, `refused-secret`, and health-down count.
 
-**The queries.** Workers Observability's telemetry query, `calculations` view: one
-grouped by `outcome`, `reason`, `limit` and `question`, counting and summing
-`neurons`, `tokensIn`, `tokensCached` and `ms`; one counting spending lines that
-carry `neurons`. Each sets an explicit group limit, and **a reply with as many
+**The queries.** Workers Observability's telemetry query, `calculations` view, six
+a day (built as six, where this read two): lines by `outcome`, `reason` and `limit`;
+lines and Neurons by `question`; lines carrying `neurons` and their sum; lines carrying
+`tokensIn`; the input and cached tokens on lines carrying both; and the average and
+largest `ms` on `ai` lines. Each sets an explicit group limit, and **a reply with as many
 groups as the limit is refused** as possibly cut off (owner, 2026-11-06). Turning the replies into totals
 is one pure function, tested on a fixture labelled *documented shape, not captured*,
 and it **refuses any reply whose shape differs from the fixture's**: a missing key,
@@ -104,7 +105,8 @@ reads `CLOUDFLARE_ACCOUNT_ID` through `loadEnv()`, which it does not today.
 **Measured at build, 2026-11-06:** every query answered 403 with the `wrangler login`
 token, whose OAuth scopes include no Workers Observability scope. So the script takes
 `ASK_STATUS_TOKEN` from `.env` first, an API token with Workers Observability read and
-nothing else, never passed to wrangler, and falls back to the login.
+nothing else, which reads every Worker's logs on the account; the script never hands it to
+wrangler, though wrangler reads `.env` itself (#459). It falls back to the login.
 
 **Records, only when asked.** With `--record` it also writes one OpenMetrics record
 per day to `.trend/local/<day>-ask.prom`, where `<day>` is the UTC midnight that
@@ -128,7 +130,7 @@ constant with its change date: 3 days before 2026-12-01, 7 from then. A day
 - its start is **later than** now minus the retention, so the oldest, partly aged-out
   day is skipped;
 - it has **no file** already: a day is never rewritten;
-- both its queries were accepted, and each reply passed the shape check and the
+- all six queries were accepted, and each reply passed the shape check and the
   group-limit check.
 
 So the owner runs it at least every 2 days now, and every 6 from December 1. A

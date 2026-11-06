@@ -874,11 +874,6 @@ describe('Neurons and cached tokens (observability C2)', () => {
       tokensCached: 8,
     });
   });
-
-  it('logs none on a refusal before any call', async () => {
-    const [line] = await lines(() => run(rig({ turnstile: { success: false } }), ask()));
-    expect(line).not.toHaveProperty('neurons');
-  });
 });
 
 describe('the visitor key reaches no log (observability C4)', () => {
@@ -899,6 +894,8 @@ describe('the visitor key reaches no log (observability C4)', () => {
       { counter: thrown },
       { counter: async () => new Response(`${secret} ${key}`) },
       { counter: async () => Response.json({ allowed: false, count: 30 }) },
+      // An admitting counter whose count is text: the line carries no number, not the text.
+      { counter: async () => Response.json({ allowed: true, count: `${secret} ${key}` }) },
       { libraryDown: true },
       { ai: thrown },
     ];

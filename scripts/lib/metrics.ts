@@ -1035,17 +1035,6 @@ export function renderHistory(history: History): string {
 }
 
 /**
- * The tightening clause as a series, for the trend page (#463). Written by
- * `pnpm trend:sync` on this machine only, like surface D, and never by CI.
- *
- * **Every sample's value is the moment of the sync that wrote it**, and the
- * marker carries the same value whether anything is asked or not. The page
- * keeps the asks whose value equals the newest marker's, so an ask that stopped
- * — the owner tightened it — drops off at the next sync rather than lingering,
- * since a backfilled sample is never taken back. It asks, and refuses nothing,
- * as ADR-0111 sets for the print.
- */
-/**
  * One UTC day of `pnpm ask:status --record`, every sample at the day's midnight (`at`, unix
  * seconds). Counts and sums only: no label carries an account, an endpoint or a visitor.
  */
@@ -1079,11 +1068,8 @@ export function renderAskDay(totals: DayTotals, at: number): string {
       'Lines where a call returned but no Neurons were given.',
       totals.neuronsMissing,
     ),
-    ...one(
-      'cached_share',
-      'Cached input tokens over input tokens, on lines carrying both.',
-      totals.cachedShare,
-    ),
+    ...one('tokens_in', 'Input tokens on lines carrying cached tokens too.', totals.tokensIn),
+    ...one('tokens_cached', 'Input tokens served from the prompt cache.', totals.tokensCached),
     ...one('ms_avg', 'Average milliseconds of an ai line.', totals.msAvg),
     ...one('ms_max', 'Largest milliseconds of an ai line.', totals.msMax),
     {
@@ -1116,6 +1102,17 @@ export function renderAskDay(totals: DayTotals, at: number): string {
   return `${lines.join('\n')}\n# EOF\n`;
 }
 
+/**
+ * The tightening clause as a series, for the trend page (#463). Written by
+ * `pnpm trend:sync` on this machine only, like surface D, and never by CI.
+ *
+ * **Every sample's value is the moment of the sync that wrote it**, and the
+ * marker carries the same value whether anything is asked or not. The page
+ * keeps the asks whose value equals the newest marker's, so an ask that stopped
+ * — the owner tightened it — drops off at the next sync rather than lingering,
+ * since a backfilled sample is never taken back. It asks, and refuses nothing,
+ * as ADR-0111 sets for the print.
+ */
 export function renderAsks(asks: readonly Ask[], at: number): string {
   const families: Family[] = [
     {

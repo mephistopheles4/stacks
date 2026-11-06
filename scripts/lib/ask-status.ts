@@ -8,6 +8,7 @@
  * rather than becoming a wrong day in the trend store, where a record is never corrected.
  */
 import { resolve } from 'node:path';
+import { DAILY_LIMIT } from '../../packages/ask/src/limits.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -54,10 +55,84 @@ export function writeDecision(day: {
   return day.onDisk ? 'on-disk' : 'write';
 }
 
+/**
+ * A query that could not be read: refused, unreachable, or not JSON. Its message is built
+ * here from fixed words and the status alone, so no reply text and no token can reach it.
+ */
+export class Refused extends Error {
+  constructor(name: QueryName, why: number | 'unreachable' | 'not JSON') {
+    super(
+      typeof why === 'number'
+        ? `the ${name} query was refused (${String(why)})`
+        : `the ${name} query ${why === 'unreachable' ? 'could not reach the API' : 'answered with something that is not JSON'}`,
+    );
+  }
+}
+
+/** What `runDays` needs from the outside: the network, the store and the terminal. */
+export interface RunDeps {
+  readonly days: readonly number[];
+  readonly record: boolean;
+  /** One query's parsed reply; throws `Refused` when it cannot be read. */
+  readonly reply: (name: QueryName, dayStart: number) => Promise<unknown>;
+  readonly onDisk: (file: string) => boolean;
+  readonly write: (file: string, text: string) => void;
+  readonly render: (totals: DayTotals, at: number) => string;
+  readonly print: (line: string) => void;
+}
+
+/**
+ * Every day in `days`: asked, checked, printed, and written when `--record` asks and no file
+ * holds it yet. A day whose queries or replies fail writes nothing and prints fixed words;
+ * an error of any other kind is named as one, never by its own message, which could quote a
+ * reply. Returns how many days were refused.
+ */
+export async function runDays(deps: RunDeps): Promise<number> {
+  let refused = 0;
+  for (const dayStart of deps.days) {
+    const file = recordName(dayStart);
+    const date = new Date(dayStart).toISOString().slice(0, 10);
+    let totals: DayTotals;
+    try {
+      const replies = {} as Record<QueryName, unknown>;
+      for (const query of Object.keys(QUERIES) as QueryName[]) {
+        replies[query] = await deps.reply(query, dayStart);
+      }
+      totals = dayTotals(replies);
+    } catch (error) {
+      refused += 1;
+      const why =
+        error instanceof Refused || error instanceof ShapeError
+          ? error.message
+          : 'an unexpected error, not shown since it could quote a reply';
+      deps.print(`${date}: nothing written, ${why}`);
+      continue;
+    }
+    deps.print(printDay(dayStart, totals).join('\n'));
+    const decision = writeDecision({ record: deps.record, onDisk: deps.onDisk(file) });
+    if (decision === 'on-disk') deps.print(`  recorded already: ${file} is never rewritten`);
+    if (decision !== 'write') continue;
+    deps.write(file, deps.render(totals, dayStart / 1000));
+    deps.print(`  recorded: .trend/local/${file}`);
+  }
+  return refused;
+}
+
 /** Whether `gitDir` belongs to a linked worktree rather than the checkout that owns the store. */
 export function isLinkedWorktree(gitDir: string, commonDir: string): boolean {
   const norm = (path: string) => resolve(path).replaceAll('\\', '/').toLowerCase();
   return norm(gitDir) !== norm(commonDir);
+}
+
+/**
+ * Whether this checkout is a linked worktree, asking git for both directories through
+ * `revParse` (one flag, its trimmed answer); `undefined` when git answers neither.
+ */
+export function checkoutIsLinked(revParse: (flag: string) => string): boolean | undefined {
+  const gitDir = revParse('--git-dir');
+  const commonDir = revParse('--git-common-dir');
+  if (gitDir === '' || commonDir === '') return undefined;
+  return isLinkedWorktree(gitDir, commonDir);
 }
 
 /**
@@ -158,9 +233,33 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const finite = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
-function only(record: Record<string, unknown>, allowed: ReadonlySet<string>, where: string): void {
+/**
+ * `result`'s documented members: the calculations this reads, and the run, statistics and other
+ * views' lists a calculations reply may carry beside them. Anything else is refused.
+ */
+const RESULT_KEYS = new Set([
+  'calculations',
+  'compare',
+  'run',
+  'statistics',
+  'events',
+  'invocations',
+  'traces',
+  'agents',
+]);
+
+/** Refused when `record` holds a key outside `allowed`, or lacks one of `required`. */
+function only(
+  record: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+  where: string,
+  required: readonly string[] = [],
+): void {
   if (Object.keys(record).some((key) => !allowed.has(key))) {
     throw new ShapeError(`${where} holds a key the documented shape does not`);
+  }
+  if (required.some((key) => !(key in record))) {
+    throw new ShapeError(`${where} lacks a key the documented shape has`);
   }
 }
 
@@ -168,17 +267,20 @@ function only(record: Record<string, unknown>, allowed: ReadonlySet<string>, whe
 function readReply(name: QueryName, reply: unknown): Map<string, Aggregate[]> {
   const where = `the ${name} reply`;
   if (!isRecord(reply)) throw new ShapeError(`${where} is not an object`);
-  only(reply, REPLY_KEYS, where);
+  only(reply, REPLY_KEYS, where, [...REPLY_KEYS]);
   if (reply['success'] !== true) throw new ShapeError(`${where} did not succeed`);
   const result = reply['result'];
-  if (!isRecord(result) || !Array.isArray(result['calculations'])) {
-    throw new ShapeError(`${where} has no calculations`);
-  }
+  if (!isRecord(result)) throw new ShapeError(`${where} has no result`);
+  only(result, RESULT_KEYS, where, ['calculations']);
+  if (!Array.isArray(result['calculations'])) throw new ShapeError(`${where} has no calculations`);
   const query: Query = QUERIES[name];
   const byAlias = new Map<string, Aggregate[]>();
   for (const item of result['calculations'] as unknown[]) {
     if (!isRecord(item)) throw new ShapeError(`${where} holds a calculation that is not an object`);
-    only(item, CALCULATION_KEYS, where);
+    only(item, CALCULATION_KEYS, where, ['calculation', 'alias', 'aggregates']);
+    if (typeof item['calculation'] !== 'string') {
+      throw new ShapeError(`${where} holds a calculation with no name`);
+    }
     const alias = item['alias'];
     if (typeof alias !== 'string' || !query.calculations.some((c) => c.alias === alias)) {
       throw new ShapeError(`${where} holds a calculation it did not ask for`);
@@ -243,9 +345,15 @@ export interface DayTotals {
   readonly neuronsMissing: number;
   /** Cached input tokens over input tokens, on lines carrying both. */
   readonly cachedShare: number | undefined;
+  /** The two sums behind it, which add up over days where a share does not. */
+  readonly tokensIn: number | undefined;
+  readonly tokensCached: number | undefined;
   readonly msAvg: number | undefined;
   readonly msMax: number | undefined;
-  /** Visitor-days that reached each question number: `count(question == k)`. */
+  /**
+   * Visitor-days that reached each question number: `count(question == k)`, for every k
+   * from 1 to `DAILY_LIMIT`, so a number nobody reached reads 0 rather than as a gap.
+   */
   readonly reaching: ReadonlyMap<number, number>;
   readonly neuronsByBand: Readonly<Record<Band, number>>;
 }
@@ -292,6 +400,7 @@ export function dayTotals(replies: Readonly<Record<QueryName, unknown>>): DayTot
     return map;
   };
   const reaching = byQuestion('lines');
+  for (let k = 1; k <= DAILY_LIMIT; k += 1) if (!reaching.has(k)) reaching.set(k, 0);
   const neuronsByQuestion = byQuestion('neurons');
   const neuronsByBand: Record<Band, number> = { '1-10': 0, '11-20': 0, '21-30': 0 };
   for (const [k, neurons] of neuronsByQuestion) {
@@ -312,6 +421,8 @@ export function dayTotals(replies: Readonly<Record<QueryName, unknown>>): DayTot
       tokensIn === undefined || tokensCached === undefined || tokensIn === 0
         ? undefined
         : tokensCached / tokensIn,
+    tokensIn,
+    tokensCached,
     msAvg: single(read.time.get('msAvg')),
     msMax: single(read.time.get('msMax')),
     reaching,

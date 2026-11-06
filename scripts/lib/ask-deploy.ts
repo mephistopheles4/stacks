@@ -128,14 +128,20 @@ export function invocationLogsOff(jsonc: string): boolean {
  * `pnpm ask:status` prints wrong, and nothing would show it.
  */
 export function fullSampling(jsonc: string): boolean {
-  // Every `//` comment, wherever it starts on a line, but never one inside a string (a URL).
-  const code = jsonc.replace(/"(?:\\.|[^"\\])*"|\/\/[^\n]*/g, (m) => (m.startsWith('"') ? m : ''));
-  const rates = [...code.matchAll(/"head_sampling_rate"\s*:\s*([-+0-9.eE]+)/g)].map((m) =>
-    Number(m[1]),
+  // Every `//` and `/* */` comment, wherever it starts, but never one inside a string (a URL).
+  const code = jsonc.replace(/"(?:\\.|[^"\\])*"|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m) =>
+    m.startsWith('"') ? m : '',
+  );
+  // Every time the key is written, it must be followed by a bare number: a quoted "0.1" counts
+  // as a rate that is not 1, never as no rate at all.
+  const keys = code.match(/"head_sampling_rate"\s*:/g) ?? [];
+  const rates = [...code.matchAll(/"head_sampling_rate"\s*:\s*(-?[0-9][0-9.eE+-]*)\s*[,}\n]/g)].map(
+    (m) => Number(m[1]),
   );
   // Directly under `observability`: a nested block such as `logs` is stepped over whole.
-  const top = /"observability"\s*:\s*\{(?:[^{}]|\{[^{}]*\})*?"head_sampling_rate"\s*:/.test(code);
-  return top && rates.every((rate) => rate === 1);
+  const top =
+    /"observability"\s*:\s*\{(?:[^{}]|\{[^{}]*\})*?"head_sampling_rate"\s*:\s*-?[0-9]/.test(code);
+  return top && rates.length === keys.length && rates.every((rate) => rate === 1);
 }
 
 /** `--var NAME:value` pairs for the deploy. Only names this script sets. */

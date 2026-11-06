@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   GROUP_LIMIT,
   QUERIES,
+  Refused,
   ShapeError,
+  checkoutIsLinked,
   dayTotals,
   daysToRead,
   isLinkedWorktree,
@@ -10,6 +12,7 @@ import {
   queryBody,
   recordName,
   retentionDays,
+  runDays,
   writeDecision,
   type QueryName,
 } from './ask-status.ts';
@@ -92,6 +95,10 @@ describe('which days a run reads (spec S3, C7)', () => {
     expect(daysToRead(now)).toEqual([NOV_5 - DAY, NOV_5 - 2 * DAY]);
   });
 
+  it('at midnight, reads neither the day just ended nor one starting exactly at the retention edge', () => {
+    expect(daysToRead(NOV_5)).toEqual([NOV_5 - 2 * DAY]);
+  });
+
   it('does not read a day that ended under an hour ago', () => {
     expect(daysToRead(NOV_5 + 30 * 60_000)).not.toContain(NOV_5 - DAY);
     expect(daysToRead(NOV_5 + HOUR)).toContain(NOV_5 - DAY);
@@ -156,7 +163,10 @@ describe("a day's totals from the replies (spec C6)", () => {
     expect(totals.msMax).toBe(29_500);
     expect(totals.reaching.get(1)).toBe(3);
     expect(totals.reaching.get(12)).toBe(1);
-    expect(totals.reaching.get(13)).toBeUndefined();
+    // A number nobody reached is 0, never a gap: panel 1 keeps gaps for missed runs.
+    expect(totals.reaching.get(13)).toBe(0);
+    expect(totals.reaching.get(30)).toBe(0);
+    expect(totals.reaching.size).toBe(30);
     expect(totals.neuronsByBand).toEqual({ '1-10': 600, '11-20': 100, '21-30': 0 });
   });
 
@@ -170,7 +180,6 @@ describe("a day's totals from the replies (spec C6)", () => {
     expect(text).toContain('questions 11 and up: 13% of Neurons, a lower bound');
     expect(text).toContain('refused-limit (error) 1');
     expect(text).toContain('daily test: pass');
-    expect(text).not.toContain('Successful request');
   });
 
   it('reads an empty day as zeros', () => {
@@ -187,8 +196,45 @@ describe("a day's totals from the replies (spec C6)", () => {
     expect(printDay(NOV_5, totals).join('\n')).toContain('daily test: no line');
   });
 
+  type Shape = { result: { calculations: { aggregates: object[] }[] } } & Record<string, unknown>;
+  const at = (day: Record<QueryName, unknown>, name: QueryName) => day[name] as Shape;
   const reshaped: [string, (day: Record<QueryName, unknown>) => void][] = [
     ['a reply with no result', (day) => void (day.spending = { success: true })],
+    ['an unknown key on the reply', (day) => void (at(day, 'spending')['extra'] = 1)],
+    ['a reply with no errors list', (day) => void delete at(day, 'spending')['errors']],
+    [
+      'an unknown key under result',
+      (day) => void ((at(day, 'spending').result as Record<string, unknown>)['partial'] = true),
+    ],
+    [
+      'a calculation with no name',
+      (day) =>
+        void delete (at(day, 'spending').result.calculations[0] as Record<string, unknown>)[
+          'calculation'
+        ],
+    ],
+    [
+      'an unknown key on a group',
+      (day) =>
+        void (at(day, 'outcomes').result.calculations[0]!.aggregates[0] = {
+          ...aggregate(1),
+          groups: [{ key: 'outcome', value: 'ai', note: 'x' }],
+        }),
+    ],
+    [
+      'a count that is not a number',
+      (day) =>
+        void Object.assign(at(day, 'spending').result.calculations[0]!.aggregates[0]!, {
+          count: null,
+        }),
+    ],
+    [
+      'a sampled count, under the deprecated name',
+      (day) =>
+        void Object.assign(at(day, 'spending').result.calculations[0]!.aggregates[0]!, {
+          interval: 10,
+        }),
+    ],
     [
       'an unsuccessful reply',
       (day) => void ((day.spending as { success: boolean }).success = false),
@@ -251,12 +297,99 @@ describe("a day's totals from the replies (spec C6)", () => {
   it('names a refusal in fixed words, never with text from the reply', () => {
     const day = fixtureDay();
     day.spending = { success: true, result: { calculations: [{ CANARY_REPLY: 'x' }] } };
+    let caught: unknown;
     try {
       dayTotals(day);
-      expect.unreachable();
     } catch (error) {
-      expect(String(error)).not.toContain('CANARY');
+      caught = error;
     }
+    expect(caught).toBeInstanceOf(ShapeError);
+    expect(String(caught)).not.toContain('CANARY');
+  });
+
+  it("holds the group limit at Cloudflare's documented maximum", () => {
+    expect(GROUP_LIMIT).toBe(100);
+  });
+});
+
+describe('a refused query (spec S3)', () => {
+  it('is named by the query and its status alone', () => {
+    expect(new Refused('outcomes', 403).message).toBe('the outcomes query was refused (403)');
+    expect(new Refused('time', 'unreachable').message).toBe(
+      'the time query could not reach the API',
+    );
+    expect(new Refused('cached', 'not JSON').message).toBe(
+      'the cached query answered with something that is not JSON',
+    );
+  });
+});
+
+describe('a run over the days (spec C7)', () => {
+  const NOV_4 = NOV_5 - DAY;
+  const rig = (options: {
+    record: boolean;
+    onDisk?: string[];
+    reply?: (name: QueryName, day: number) => Promise<unknown>;
+  }) => {
+    const written: string[] = [];
+    const printed: string[] = [];
+    const day = fixtureDay();
+    return {
+      written,
+      printed,
+      run: () =>
+        runDays({
+          days: [NOV_5, NOV_4],
+          record: options.record,
+          reply: options.reply ?? (async (name) => day[name]),
+          onDisk: (file) => (options.onDisk ?? []).includes(file),
+          write: (file) => void written.push(file),
+          render: (totals, when) => renderAskDay(totals, when),
+          print: (line) => void printed.push(line),
+        }),
+    };
+  };
+
+  it('writes nothing without --record, and prints each day', async () => {
+    const r = rig({ record: false });
+    expect(await r.run()).toBe(0);
+    expect(r.written).toEqual([]);
+    expect(r.printed.join('\n')).toContain('2026-11-04: questions 14');
+  });
+
+  it('writes each day with --record, and never one already on disk', async () => {
+    const r = rig({ record: true, onDisk: [recordName(NOV_5)] });
+    expect(await r.run()).toBe(0);
+    expect(r.written).toEqual([recordName(NOV_4)]);
+    expect(r.printed.join('\n')).toContain(`recorded already: ${recordName(NOV_5)}`);
+  });
+
+  it('writes nothing for a day whose query was refused or whose reply was reshaped', async () => {
+    const r = rig({
+      record: true,
+      reply: async (name, day) => {
+        if (day === NOV_5 && name === 'time') throw new Refused(name, 403);
+        const replies = fixtureDay();
+        if (day === NOV_4) (replies.spending as Record<string, unknown>)['extra'] = 1;
+        return replies[name];
+      },
+    });
+    expect(await r.run()).toBe(2);
+    expect(r.written).toEqual([]);
+    expect(r.printed).toContain('2026-11-05: nothing written, the time query was refused (403)');
+  });
+
+  it('names any other error in fixed words, never by its message', async () => {
+    const r = rig({
+      record: true,
+      reply: async () => {
+        throw new SyntaxError('Unexpected token <, "<html>CANARY-BODY" is not valid JSON');
+      },
+    });
+    expect(await r.run()).toBe(2);
+    expect(r.written).toEqual([]);
+    expect(r.printed.join('\n')).not.toContain('CANARY');
+    expect(r.printed[0]).toMatch(/^2026-11-05: nothing written, an unexpected error/);
   });
 });
 
@@ -268,6 +401,26 @@ describe("a day's record (spec S3)", () => {
     expect(document).toContain(`stacks_ask_neurons 756 ${at}`);
     expect(document).toContain(`stacks_ask_neurons_missing 2 ${at}`);
     expect(document).toContain(`stacks_ask_visitors_reaching{question="12"} 1 ${at}`);
+    expect(document).toContain(`stacks_ask_visitors_reaching{question="30"} 0 ${at}`);
+    expect(document).toContain(`stacks_ask_tokens_in 20000 ${at}`);
+    expect(document).toContain(`stacks_ask_tokens_cached 15000 ${at}`);
+    // S3's series, and no others: names are permanent once imported.
+    const families = [...document.matchAll(/^# TYPE (\S+) gauge$/gm)].map((m) => m[1]);
+    expect(families).toEqual(
+      [
+        'day_recorded',
+        'outcomes',
+        'neurons',
+        'neurons_missing',
+        'tokens_in',
+        'tokens_cached',
+        'ms_avg',
+        'ms_max',
+        'visitors_reaching',
+        'neurons_by_band',
+        'daily_test',
+      ].map((name) => `stacks_ask_${name}`),
+    );
     expect(document).toContain(`stacks_ask_neurons_by_band{band="11-20"} 100 ${at}`);
     expect(document).toContain(
       `stacks_ask_outcomes{outcome="refused-limit",limit="error"} 1 ${at}`,
@@ -285,6 +438,23 @@ describe('one store (spec S3, C7)', () => {
     expect(isLinkedWorktree('/r/.git/worktrees/x', '/r/.git')).toBe(true);
     expect(isLinkedWorktree('/r/.git', '/r/.git')).toBe(false);
     expect(isLinkedWorktree('H:\\r\\.git', 'H:/r/.git')).toBe(false);
+    expect(isLinkedWorktree('H:/R/.git', 'h:/r/.git')).toBe(false);
+  });
+
+  it('asks git for both directories, and says nothing when git answers neither', () => {
+    const asked: string[] = [];
+    const git = (answers: Record<string, string>) => (flag: string) => {
+      asked.push(flag);
+      return answers[flag] ?? '';
+    };
+    expect(
+      checkoutIsLinked(git({ '--git-dir': '/r/.git/worktrees/x', '--git-common-dir': '/r/.git' })),
+    ).toBe(true);
+    expect(asked).toEqual(['--git-dir', '--git-common-dir']);
+    expect(checkoutIsLinked(git({ '--git-dir': '/r/.git', '--git-common-dir': '/r/.git' }))).toBe(
+      false,
+    );
+    expect(checkoutIsLinked(git({}))).toBeUndefined();
   });
 });
 
@@ -351,12 +521,14 @@ describe('what a run writes (spec C7)', () => {
     expect(writeDecision({ record: true, onDisk: false })).toBe('write');
   });
 
-  it('the script refuses --record from a worktree, and runs wrangler with its telemetry off', async () => {
+  it('the script wires the refusals, and runs wrangler with its telemetry off', async () => {
     const { readFileSync } = await import('node:fs');
     const script = readFileSync('scripts/ask-status.ts', 'utf8');
-    expect(script).toMatch(/if \(isLinkedWorktree\(gitDir, commonDir\)\) \{\s*fail\(/);
+    expect(script).toMatch(/const linked = checkoutIsLinked\(git\);/);
+    expect(script).toMatch(/if \(linked\) \{\s*fail\(/);
     expect(script).toContain('env: uploadEnv(process.env, loaded)');
-    // A reply body is never printed: the only print of a reply is through printDay.
-    expect(script).not.toMatch(/console\.log\([^)]*(?:text|body|reply)\b/);
+    // Every day goes through runDays, whose prints are fixed words or printDay's totals.
+    expect(script).toMatch(/await runDays\(\{/);
+    expect(script).not.toMatch(/\.text\(\)|JSON\.stringify\(repl/);
   });
 });

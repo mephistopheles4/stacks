@@ -137,8 +137,21 @@ describe('fullSampling (observability C5)', () => {
       false,
     );
   });
-  it('is not fooled by a commented-out rate', () => {
+  it('is not fooled by a commented-out rate, in either kind of comment', () => {
     expect(fullSampling(config('// "head_sampling_rate": 1,\n'))).toBe(false);
+    expect(fullSampling(config('/* "head_sampling_rate": 1, */'))).toBe(false);
+  });
+  it('refuses a rate written as text', () => {
+    expect(fullSampling(config('"head_sampling_rate": "0.1",'))).toBe(false);
+    expect(fullSampling(config('"head_sampling_rate": 1,', '"head_sampling_rate": "0.1",'))).toBe(
+      false,
+    );
+  });
+  it('is checked by deploy:ask outside every dry-run branch, so a dry run refuses too', async () => {
+    const { readFileSync } = await import('node:fs');
+    const script = readFileSync('scripts/deploy-ask.ts', 'utf8');
+    // At the top level of the script, not inside a block a flag can skip.
+    expect(script).toMatch(/^if \(!fullSampling\(config\)\) \{\n {2}fail\(/m);
   });
   it('holds for the real wrangler.jsonc', async () => {
     const { readFileSync } = await import('node:fs');

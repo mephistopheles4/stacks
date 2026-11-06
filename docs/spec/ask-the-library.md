@@ -170,7 +170,9 @@ one fetch per note against Workers Free's limit of 50 per request, which is why 
   that removed it.
 - **Not stored:** no question or answer, and no earlier exchange sent as memory, is logged or kept by this project. AI Gateway
   logging and caching are off, read back after apply. Every AI call passes
-  `skipCache`. Worker logs carry only the outcome codes in S11. `wrangler.jsonc` pins
+  `skipCache`. Worker logs carry only the outcome codes in S11, with the numbers
+  [`ask-observability.md`](ask-observability.md) S2 adds: the visitor's question number for
+  the day, Neurons and cached tokens, and which limit refused, never text. `wrangler.jsonc` pins
   `observability` on with `logs.invocation_logs: false`, so Cloudflare's automatic
   per-request records, which may hold request details, stay off.
 - **Stored per visitor:** one daily counter in a Durable Object, keyed by
@@ -713,7 +715,10 @@ choose other books.
 - **Alert:** a Health Check on that address with its notification, both on Pro. S12
   tests that a Health Check reaches a Worker route. If it doesn't, a nightly GitHub
   Action reads the address instead, and fails.
-- **By hand:** `pnpm evals:ask`, and a status command printing yesterday's counts.
+- **By hand:** `pnpm evals:ask`, and `pnpm ask:status`, which prints each completed day still
+  in Workers Logs and, with `--record`, keeps it in the local trend store for an Ask page in
+  Grafana. Its fields, retention and page are specified in
+  [`ask-observability.md`](ask-observability.md) (#541).
 
 ## S12. The live environment
 

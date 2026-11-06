@@ -432,8 +432,9 @@ the questions, outcomes by reason and limit, Neurons, AI time, and how many visi
 reached 1, 5, 10, 20 and 30 questions ([`ask-observability.md`](spec/ask-observability.md)
 S3, [#541](https://github.com/mephistopheles4/stacks/issues/541)). It reads
 `CLOUDFLARE_ACCOUNT_ID` from `.env` (`pnpm exec wrangler whoami` prints it).
-⚠️ **It needs `ASK_STATUS_TOKEN` too**: an API token with Workers Observability read on
-the account, and nothing else. `wrangler login`'s OAuth scopes have no observability
+⚠️ **It needs `ASK_STATUS_TOKEN` too**: an API token with Workers Observability read
+and nothing else, which reads every Worker's logs on the account. `ask:status` never hands
+it to wrangler, though wrangler reads `.env` itself on every run (#459). `wrangler login`'s OAuth scopes have no observability
 scope, and every query answered 403 with its token on 2026-11-06. Without the variable
 it falls back to the login, with wrangler's usage telemetry off, and says why a 403
 came back.
