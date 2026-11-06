@@ -1,0 +1,818 @@
+{
+  "uid": "stacks-ask",
+  "title": "Ask the library",
+  "description": "Daily totals for the Ask the library Worker, from pnpm ask:status --record. Panel 1 asks whether a day was recorded at all; every other panel reads only those days. Provisioned from grafana/dashboards/ask.json in the stacks repository.",
+  "tags": ["stacks"],
+  "editable": false,
+  "graphTooltip": 1,
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "How to read this page",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Panel 1 answers *is this real*: a day with no bar there has no record, because `pnpm ask:status --record` was not run while its logs were kept. Read every other panel only for days panel 1 shows.**\n\nEvery figure is a count or a sum from the Worker's counts-only log lines ([`docs/spec/ask-observability.md`](https://github.com/mephistopheles4/stacks/blob/main/docs/spec/ask-observability.md)). Nothing here names a visitor: a *visitor-day* is one address's count for one UTC day, so a shared address reads as one heavy visitor and an IPv6 /48 spread over many /64s reads as many light ones. Provisioned from `grafana/dashboards/ask.json` in the stacks repository.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Panel 1 · Days with a record (a gap is a missed run, not a quiet day)",
+      "description": "One bar per UTC day ask:status recorded. Read the panels below only for days with a bar.",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stacks-trend"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_day_recorded[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "recorded"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 86400000,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Panel 2 · Neurons a day, against the $0.09 spend limit (8,182)",
+      "description": "Cloudflare's own Neurons, summed from the log lines, the daily test's included. ⚠️ The gateway's limit is a sliding window, so a budget refusal can come on a day whose total is under the line. A timed-out call's spend is unknown and not counted, so a day with timeouts is a lower bound. Lines with no Neurons are counted in panel 3.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stacks-trend"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_neurons[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "Neurons"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_neurons_missing[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "spending lines with no Neurons"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 86400000,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 8182
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Panel 3 · Log lines a day, by outcome",
+      "description": "Every line the Worker wrote, stacked by outcome: the questions answered, fallen back to search, and refused.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stacks-trend"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "sum by (outcome) (last_over_time(stacks_ask_outcomes[1d]))",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 86400000,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Panel 3 · AI time on answered questions, and timeouts",
+      "description": "Average and largest milliseconds of an ai line, and how many questions timed out.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stacks-trend"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_ms_avg[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "average ms"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_ms_max[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "largest ms"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time(stacks_ask_outcomes{reason=\"timeout\"}[1d]))",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "timeouts"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 86400000,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Panel 4 · Visitor-days reaching 1, 5, 10, 20 and 30 questions",
+      "description": "count(question == k): how many visitor-days asked at least k questions. A few bars at 20 or 30 beside many at 1 is a few visitors asking most of the questions.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stacks-trend"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_visitors_reaching{question=~\"1|5|10|20|30\"}[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "reached {{question}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 86400000,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Panel 4 · Share of the day's Neurons on questions 11 and up (a lower bound)",
+      "description": "Neurons on questions numbered 11 to 30 over the day's Neurons. A lower bound on what heavy visitors take: a visitor who reached 20 also spent on questions 1 to 10.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stacks-trend"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time(stacks_ask_neurons_by_band{band=~\"11-20|21-30\"}[1d])) / last_over_time(stacks_ask_neurons[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "questions 11 and up"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 86400000,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Panel 5 · Refusals: limits (error is a fault), budget, secret",
+      "description": "refused-limit by which limit refused; error means the counter or the rate binding failed, which turns every visitor away and which the Health Check cannot see. Budget refusals are the spend limit tripping; refused-secret is a missing or wrongly rotated secret.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stacks-trend"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_outcomes{outcome=\"refused-limit\"}[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "limit {{limit}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time(stacks_ask_outcomes{reason=\"budget\"}[1d]))",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "budget"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_outcomes{outcome=\"refused-secret\"}[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "refused-secret"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_outcomes{outcome=\"refused-turnstile\"}[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "refused-turnstile"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 86400000,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Panel 6 · The daily test, and health-down",
+      "description": "The daily test's result each day, and how often the health address answered down.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stacks-trend"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_daily_test[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "daily test {{result}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stacks-trend"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_ask_outcomes{outcome=\"health-down\"}[1d])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "interval": "1d",
+          "legendFormat": "health-down"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 86400000,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

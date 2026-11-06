@@ -288,6 +288,61 @@ describe('one store (spec S3, C7)', () => {
   });
 });
 
+describe('the Ask page (spec S4, C8)', () => {
+  interface Panel {
+    title: string;
+    type: string;
+    targets?: { expr: string; datasource: { uid: string } }[];
+  }
+  const load = async () => {
+    const { readFileSync } = await import('node:fs');
+    return JSON.parse(readFileSync('grafana/dashboards/ask.json', 'utf8')) as {
+      uid: string;
+      editable: boolean;
+      panels: Panel[];
+    };
+  };
+
+  it("holds S4's panels in S4's order, read-only, after a note on how to read it", async () => {
+    const page = await load();
+    expect(page.uid).toBe('stacks-ask');
+    expect(page.editable).toBe(false);
+    expect(page.panels[0]?.type).toBe('text');
+    const numbers = page.panels.slice(1).map((p) => /^Panel (\d) ·/.exec(p.title)?.[1]);
+    expect(numbers).toEqual(['1', '2', '3', '3', '4', '4', '5', '6']);
+    expect(page.panels[1]?.title).toMatch(/Days with a record/);
+    expect(page.panels[2]?.title).toMatch(/Neurons a day/);
+  });
+
+  it("reads only this page's series, from the provisioned store", async () => {
+    const page = await load();
+    const targets = page.panels.flatMap((p) => p.targets ?? []);
+    expect(targets.length).toBeGreaterThan(0);
+    for (const target of targets) {
+      expect(target.datasource.uid).toBe('stacks-trend');
+      const metrics = target.expr.match(/\bstacks_[a-z_]+/g) ?? [];
+      expect(metrics.length).toBeGreaterThan(0);
+      for (const metric of metrics) expect(metric.startsWith('stacks_ask_')).toBe(true);
+    }
+  });
+
+  it('draws only series a record carries', async () => {
+    const page = await load();
+    const document = renderAskDay(dayTotals(fixtureDay()), NOV_5 / 1000);
+    const drawn = page.panels
+      .flatMap((p) => p.targets ?? [])
+      .flatMap((t) => t.expr.match(/\bstacks_ask_[a-z_]+/g) ?? []);
+    for (const metric of new Set(drawn)) expect(document).toContain(`# TYPE ${metric} gauge`);
+  });
+
+  it('is provisioned from the directory trend:sync mounts', async () => {
+    const { readFileSync } = await import('node:fs');
+    expect(readFileSync('grafana/provisioning/dashboards/stacks.yml', 'utf8')).toMatch(
+      /allowUiUpdates: false[\s\S]*path: \/etc\/grafana\/dashboards/,
+    );
+  });
+});
+
 describe('what a run writes (spec C7)', () => {
   it('writes only with --record, and never over a day already on disk', () => {
     expect(writeDecision({ record: false, onDisk: false })).toBe('print');
