@@ -2,6 +2,7 @@
 
 | Version | Date | Change | Why, and where it came from | Parts touched | Field signal |
 | --- | --- | --- | --- | --- | --- |
+| 0.5.1 | 2026-11-06 | Changed the model the contract is built for from `gpt-oss-20b` to `deepseek-v4.1-flash-1017`; the rules are unchanged | The owner chose the switch on 2026-11-06 ("go with 1"), after five models ran the 18 evals cases, recorded in the spec's S12 and ADR-0136. The exemplar still comes from a `gpt-oss-20b` answer | tools | no |
 | 0.5.0 | 2026-11-05 | Added count and favourite rules, recorded three rules the text already held, merged a duplicate, said how the text is produced, and defined the marks | The owner approved the lens review's picks on 2026-11-05: "Yes, use your picks". Run on 5 questions, recorded in the spec's S12 | rules, tools | yes: a favourite claim and a count search in the final check |
 | 0.4.1 | 2026-11-05 | Removed favourites from the rule that sends recommendations to search | The owner approved this on 2026-11-05. The rule made the model call a top-rated book "my favourite", which the Thoughts did not say | rules | yes: "is my favourite book" with no Thoughts behind it |
 | 0.4.0 | 2026-11-05 | Sent recommendations to `search_library` instead of `list_books`, and added a rule for offering other books after a miss | The owner approved both on 2026-11-05, after the final check found recommendations with no reason. A search with no match now also returns top-rated books. Run on 10 questions, recorded in the spec's S12 | tools, rules | yes: the model stopped at the list |

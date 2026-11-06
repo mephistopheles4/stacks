@@ -26,6 +26,8 @@ owner on 2026-11-04 ("Let's file it and proceed").** The owner's decisions are i
 
 **Amended again on 2026-11-05 for the search tool, signed off by the owner ("Proceed").** The model gets two read-only tools and the catalogue leaves the prompt. The owner approved contract v0.3.0 and its rules text. The amendment touches S4 to S10, S12, S14 and S16 and is folded into them below (decisions T1 to T14, ADR-0132).
 
+**Amended on 2026-11-06 for the model, signed off by the owner ("go with 1").** The Worker switches from `@cf/openai/gpt-oss-20b` to `@cf/deepseek-ai/deepseek-v4.1-flash-1017` (issue [#540](https://github.com/mephistopheles4/stacks/issues/540), ADR-0136). The owner asked for it ("let's amend the spec and switch to DeepSeek") and took Q15's option 1. Tier: standard. Nothing matches the sensitive-work list, and nothing changes in what the Worker reads, logs or exposes. The amendment touches S3, S5, S6, S9, S10, S12 and S14 and is folded into them below (M1 to M5, C36 and C37, Q15).
+
 ## Decisions
 
 Labels cited through the spec and the code, defined once. **D1 to D7** are conversation memory's
@@ -80,7 +82,7 @@ instead. The limits in S5 cap the bill. They do not guarantee availability.
 | Decision | Choice | Source |
 | --- | --- | --- |
 | Look | Walnut drawer | Owner, from three options |
-| Model | `@cf/openai/gpt-oss-20b` | Owner, from nine tested |
+| Model | `@cf/deepseek-ai/deepseek-v4.1-flash-1017` (M1; `@cf/openai/gpt-oss-20b` until 2026-11-06) | Owner, from five tested on 2026-11-06 (before that, from nine). S12 holds the comparison and ADR-0136 the decision. Nothing else in the call changes: same messages, tools, `max_tokens` 1,500, gateway option, `skipCache` and 30-second deadline |
 | Workers plan | Workers Free at first; **Workers Paid since 2026-11-04** (owner, ADR-0133) | The owner added Paid, so Free's 10,000-Neuron stop no longer caps AI: the gateway spend limit is the only hard cap |
 | Zone plan | Paid domain plan, about $20 a month, taken as Pro | Owner's words. Confirmed in the dashboard before S13 step 2 |
 | Accuracy | Mistakes are acceptable and disclosed. The evals in S9 define good enough | Owner |
@@ -245,16 +247,28 @@ The change is committed afterwards. C18 times it.
 **What these limits cannot stop (accepted by the owner, S14, Q1).** The bill stays
 capped on every path reviewed. Availability does not:
 
-- About 5 addresses in a real browser, at 30 questions each and about 50 Neurons a question,
-  spend the day's AI budget. With the search tool a typical question measured about 50
-  Neurons (down from at least 56 for input alone) and the worst case is about 300 (up from
+- **On `deepseek-v4.1-flash-1017` (M2, since 2026-11-06),** about 3 addresses in a real browser with the
+  cache cold, or about 6 warm, at 30 questions each, spend the day's AI budget. The published rates are $0.30 a million input tokens,
+  **$0.006 cached** and $1.20 output (27,273, 545 and 109,091 Neurons), and the model **needs a paid
+  billing method**, which Workers Paid already is (ADR-0133). Cloudflare caches the shared prompt prefix
+  on its own; no setting was used. Measured per question: **36 to 52 Neurons with the cache warm**
+  (questions back to back) and **about 93 to 99 cold**, by published rates on all input. The worst case
+  is about 750: 3 model calls, 9,600 input tokens in all, and 1,500 output tokens on each of the 3.
+  At $0.09 a day (about 8,000 Neurons) that is about 85 cold typical questions or about 11 worst ones.
+  **The bill stays capped; availability is worse.** One visitor's 30 typical questions use about a
+  third of a day cold, and their 30 worst-case questions could use the whole day in about 11. Nothing
+  measured came near the worst case: the most any call wrote was 291 tokens in the first pass and 322 in
+  the second. The owner accepted this for launch (Q15, option 1) and it is revisited on the live counts.
+  Whether a visitor can force the worst case is unproven: a long question is easy, but two searches and
+  full hidden reasoning are the model's choice. One IPv6 /48 holds 65,536 /64 keys. The window slides,
+  so sustained spending keeps AI off. Search keeps working, and the bill stays capped.
+- **Before 2026-11-06, on `gpt-oss-20b`:** about 5 addresses, at 30 questions each and about 50 Neurons a
+  question, spent the day's AI budget. With the search tool a typical question measured about 50
+  Neurons (down from at least 56 for input alone) and the worst case was about 300 (up from
   about 130): 3 model calls with up to 5,650 estimated tokens on the last, about 9,600 real
   input tokens or 175 Neurons, and 1,500 output tokens on each call, 123 more. At $0.09 a day
-  that is about 160 typical questions or about 27 worst ones, and **one visitor's 30
-  worst-case questions could use up a whole day of AI**, up from about half. Whether a
-  visitor can force the worst case is unproven: a long question is easy, but two searches
-  and full hidden reasoning are the model's choice. One IPv6 /48 holds 65,536 /64 keys. The window
-  slides, so sustained spending keeps AI off. Search keeps working, and the bill stays capped.
+  that was about 160 typical questions or about 27 worst ones, and one visitor's 30
+  worst-case questions could use up a whole day of AI, up from about half.
 - About 7 addresses sending junk at the WAF's rate reach Workers Free's 100,000
   requests a day, refused ones included. The Worker then returns error 1027 until
   midnight UTC, so **AI and search both stop**. The shelf stays up. ⚠️ **Out of date since
@@ -297,18 +311,28 @@ capped on every path reviewed. Availability does not:
   ```
 
 - **Follow-ups (decided by the owner on 2026-11-05):** the model writes them in its one
-  reply, with no second call. The Worker splits the reply at the last line that reads
-  FOLLOW-UPS (any case, with or without bold marks, a heading, a colon or a dash; text after the word
-  counts only behind a colon or a dash, so "Follow up with Nexus, it is great." stays in the answer,
-  behaviour E3), keeps the text
-  above it as the answer, and reads the lines below as questions, stripping a leading
-  bullet, number or quote. It treats them as untrusted: a line is kept only if it ends
+  reply, with no second call. The Worker splits the reply at the **last line that is a marker on its
+  own**: FOLLOW-UPS in any case, with or without bold marks or a heading, then a colon or a dash, or
+  nothing. Text after the word counts only behind a colon or a dash, so "Follow up with Nexus, it is
+  great." stays in the answer (behaviour E3). **When no line is one (M3, C36), it splits at the last
+  capitalised `FOLLOW-UPS` and a colon inside a line,** the bold marks round it going with it, **but
+  only when what follows is nothing, "none" or the opening of a list item**; the text before it, in
+  that line, ends the answer. Prose that merely says "a follow-up: Homo Deus" or "the follow-up - it sat
+  unread" stays whole, and so do three in-line forms that do not start their line: a mixed-case `**Follow-ups:**`, a
+  singular `FOLLOW-UP:` and `FOLLOW-UPS` with a dash. The rules ask for none of them, none was seen, and the
+  evals' leak check does not see them either. In
+  every case the text above the cut is the answer, and the rest is the list, broken at a line end or at
+  a dash after a question mark, each item stripped of its leading bullet, number or quote. The reason
+  for the in-line rule is DeepSeek, which writes the marker at the end of an answer line ("... to our
+  advantage. FOLLOW-UPS:") and once wrote the list on that line too ("... FOLLOW-UPS: - What did you
+  think of ...? - What did you think of ...?"); the line-start split let both into the answer, twice in
+  36. It treats them as untrusted: a line is kept only if it ends
   in a question mark, is at most 120 characters, and holds no `://`, `www.`, `<`, `>`,
   backtick, bracket or other markup; at most 2 are kept, duplicates drop, and anything
   else is dropped without failing the answer. No marker, or none kept, means no
   follow-ups. A reply whose answer is empty once the block is cut counts as blank.
   Two is the number because each click is a full question from a budget of about 160
-  typical questions a day (S5).
+  typical questions a day (S5; about 85 cold since the switch to DeepSeek, M2).
 
 - **Limit:** `max_tokens` 1,500. A blank answer counts as a failure.
 - **The search (T3, T4).** One function serves the model's tool and the plain results, so
@@ -548,7 +572,8 @@ A Worker secret that is missing refuses every question.
 Live calls, so outside CI, because G21 forbids them. `pnpm evals:ask` runs each twice
 through the Worker's own rules and a test gateway; every follow-up an answer brings must also stand alone (end in a question mark, name a library book or subject in full, and not open with a pronoun), reads the real public build, refuses
 on the fixture vault, prints Neurons per question, and runs the cases listed here and below: 18 cases twice,
-36 questions at 48 to 70 Neurons each, about 1,800 to 2,500 Neurons a run (measured on 2026-11-05). It
+**36 questions at about 36 to 99 Neurons each, about 1,300 to 3,600 a run** on DeepSeek (M4, from the 2026-11-06 comparison in S12;
+before 2026-11-06, on `gpt-oss-20b`, 48 to 70 Neurons each and about 1,800 to 2,500 a run). It
 uses the owner's wrangler login, plus `ASK_GATEWAY_TOKEN` if needed, and never prints
 either. The session that runs it reads any failure and records whether the check or
 the answer was wrong.
@@ -580,6 +605,17 @@ probably from hidden reasoning using the 1,500-token limit, and more Thoughts in
 could change that either way. The size of a run is stated above. ⚠️ The 2026-11-04 run of the draft rules overstated its Neurons: its
 harness swapped the rules in after the budget check and so sent Thoughts the real code
 would have dropped. Run again after this change.
+
+**A marker left in an answer fails its case (M4, C37, 2026-11-06).** A case fails when its final answer still
+contains the follow-ups marker: a line that is one (the word in any case, then a colon, a dash or nothing), or
+a capitalised FOLLOW-UPS and a colon after other text. A sentence that only mentions one ("Follow up with
+Nexus, it is great.", "a follow-up: Homo Deus") is not one. The in-line form is looser than the Worker's
+split on purpose: an answer that still holds the capitalised word and a colon is a leak whatever follows it. This is a new check: the leaks that moved the split (S6) passed every earlier
+one. **Neurons** are read from the response's own `usage.neurons` when every model call of the question
+reported it, else estimated from the model's published rates (27,273 Neurons per million input tokens, 545 per
+million cached input and 109,091 per million output; the estimate prices all input at the full rate, as a
+cold cache would). The reading happens in the evals' own AI wrapper, like the reasoning below, and the
+Worker gains no field, log line or reading for it (C15). The run also prints the model it ran.
 
 **Search-tool cases (each run twice).** Added with the tool:
 
@@ -660,6 +696,8 @@ choose other books.
 | C33 | `list_books` returns every public book and no non-public field, highest rated first, with the Thoughts mark, shown with a canary in a non-public field | Security |
 | C34 | Not used: the number was skipped when the tool amendment was cut | |
 | C35 | A search with a usable word and no match returns the top-rated books with Thoughts, at most 5, behind "No books matched. These are not about that subject…", with Thoughts for up to 3 and T6's exclude applied; a search with nothing usable returns the same 5; plain results on a miss say "…no book matches your words. Here are some books I rated highly." with those books as pills; a library with nothing to offer returns the old messages; and on the live run the model says nothing matched before offering them and never says they cover the subject, read by hand | Functional |
+| C36 | A reply with the marker closing an answer line, or with the list on the marker's own line, splits into the answer and its follow-ups; "Follow up with Nexus, it is great." stays whole | Functional |
+| C37 | An S9 case whose answer contains the marker fails, shown by a planted answer | Functional |
 
 ## S11. Monitoring
 
@@ -711,6 +749,10 @@ What is not settled when the runs stop, one line each, with who decides. Details
   candidate under S16's cost limit; accepted, build nothing.
 - **Unified Billing:** whether free daily Neurons still apply, the Terraform field name, and the error when credits
   run out are unread (S5 step 6); the balance was never observable from a session. Owner, in the dashboard.
+- **Cold-cache cost live (2026-11-06).** Visitors arrive spaced out, so most questions may pay the cold rate, about
+  93 to 99 Neurons. Cloudflare does not publish how long the prompt-prefix cache lasts. The live counts show it. Owner.
+- **A dated model id will be retired (2026-11-06).** `deepseek-v4-flash-0731` is on the 2026-11-15 deprecation
+  list; expect this id to follow. The evals make the next switch cheap (ADR-0136). Owner.
 - **Out of credits:** the Worker treats 2045 as `spent`, and will treat the out-of-credits error the same once
   its code is known; until then that error reads as an ordinary failure and gives plain results. Owner, in the dashboard.
 - **Workers Paid's allowance and cost** (S5, the availability bullets) are unread from Cloudflare's current pricing. Owner.
@@ -1029,6 +1071,34 @@ was not observable.
 - **The favourite limit from the favourite check is much reduced:** with "recommend" no longer named for a
   favourite, the model searches the word and reaches the book whose Thoughts say it.
 
+**Results of the model comparison (2026-11-06), five models on S9's 18 cases.** Cloudflare announced it will
+deprecate 16 LLMs on 2026-11-15 (`gpt-oss-20b` is not one of them), which prompted the comparison. Every model
+ran the 18 cases (13 questions and 5 memory cases, one timed pass each, a second for DeepSeek) through `main`'s
+own answer code (`db2ca80`), on the test gateway, with only the model id swapped. The detail is in
+`docs/log/2026-11-06-model-comparison.md`.
+
+| Model | Passed | Median | Slowest | Over 30 s | Neurons per pass |
+| --- | --- | --- | --- | --- | --- |
+| **`@cf/deepseek-ai/deepseek-v4.1-flash-1017`** | **18, then 18** | **3.9 s, 4.2 s** | **9.6 s** | 0 | 943, then 650 |
+| `@cf/openai/gpt-oss-20b` (until then) | 16 | 6.4 s | 15.4 s | 0 | about 897 |
+| `@cf/google/gemma-4-26b-a4b-it` | 15 | 6.3 s | 47.7 s | 3 | about 575 |
+| `@cf/openai/gpt-oss-120b` | 14 | 4.6 s | 13.8 s | 0 | about 1,507 |
+| `@cf/zai-org/glm-4.7-flash` | 14 | 8.2 s | 38.9 s | 1 | about 468 |
+
+- **Hand check of DeepSeek's 36 answers against the Thoughts.** They named only real books and ratings and
+  claimed no Thoughts that are not there. Every book with no Thoughts got its rating and "nothing written".
+  One line went past the data: "my favourite was *The Five Dysfunctions*", where the Thoughts say "one of my
+  favorite", the same kind as the open list's "my favorite leadership book". Its largest output on any call
+  was 291 tokens in the first pass and 322 in the second, against `gpt-oss-20b`'s 1,237.
+- **What the others did wrong:** a raw internal format in the answer (`gpt-oss-120b`), a pasted Thoughts
+  section and an echoed rule (`glm-4.7-flash`), and reasoning that ran to the 1,500-token cap without an
+  answer (Gemma).
+- **The split leaked twice in 36** (M3, S6): the marker closing an answer line, and once the whole list on
+  that line. No S9 check saw either, which is why M4 adds one.
+- **Not run yet:** C7 (S13 step 9), the live check, which runs on whatever model is live. The cold-cache cost
+  live, whether free daily Neurons cover a paid-billing model, and the date this dated id is retired (it should
+  be expected to follow `deepseek-v4-flash-0731` off the 2026-11-15 list) stay open.
+
 ## S13. Build order and way back
 
 Each step ends with its claims passing. Steps marked **owner** wait for a yes in chat.
@@ -1139,6 +1209,11 @@ picks"), including the numbers in Q8. The questions stay as the record.
 - **Q14. Voice.** First person, opinions only from what was written, staying close to the
   owner's words, and clear that it's an AI. Answered yes in the same words. Whether the
   model holds to this is unmeasured, so S12 tests it.
+- **Q15. One visitor's share of the day (answered 2026-11-06: option 1).** The switch to DeepSeek roughly
+  doubles a typical question's cold cost and the worst case (S5, M2). Options: (1) **accept for launch**,
+  because the worst case was never reached and the bill stays capped, and revisit on the live counts;
+  (2) lower the per-visitor day from 30 questions to 15; (3) raise the spend limit from $0.09 a day.
+  **The owner chose 1** ("go with 1").
 
 ## S15. Trade-offs
 

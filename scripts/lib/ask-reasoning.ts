@@ -52,13 +52,29 @@ export function responseKeys(out: unknown): string[] {
   ];
 }
 
-/** One model call as the eval saw it: its reasoning, if any, and the keys of the response. */
+/**
+ * The Neurons the provider charged for one response, at `usage.neurons`, or undefined when it
+ * reports none (S9, M4). Like the reasoning, it is read here and never in the Worker, which logs
+ * token counts only.
+ */
+export function neuronsOf(out: unknown): number | undefined {
+  const o = (typeof out === 'object' && out !== null ? out : {}) as Shape;
+  const n = (o['usage'] as { neurons?: unknown } | null | undefined)?.neurons;
+  return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+/**
+ * One model call as the eval saw it: its reasoning, if any, the keys of the response, and the
+ * Neurons it reported.
+ */
 export interface CallCapture {
   readonly reasoning: string | undefined;
   readonly keys: readonly string[];
+  readonly neurons: number | undefined;
 }
 
 export const capture = (out: unknown): CallCapture => ({
   reasoning: reasoningOf(out),
   keys: responseKeys(out),
+  neurons: neuronsOf(out),
 });

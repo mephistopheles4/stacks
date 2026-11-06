@@ -7,7 +7,7 @@ export const MAX_BODY_BYTES = 8 * 1024;
 export const MAX_QUESTION_CHARS = 1_500;
 export const MAX_TOKEN_CHARS = 2_048;
 export const DAILY_LIMIT = 30;
-export const MODEL = '@cf/openai/gpt-oss-20b';
+export const MODEL = '@cf/deepseek-ai/deepseek-v4.1-flash-1017';
 export const MAX_OUTPUT_TOKENS = 1_500;
 /** One deadline for the whole question, every model call in it included (T11). */
 export const AI_DEADLINE_MS = 30_000;

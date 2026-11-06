@@ -19,13 +19,17 @@ import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.
 import { answerQuestion, type TraceEvent } from '../packages/ask/src/answer.ts';
 import type { Env } from '../packages/ask/src/env.ts';
 import { createLibrarySource } from '../packages/ask/src/library.ts';
+import { MODEL } from '../packages/ask/src/limits.ts';
 import { NOT_A_TEST_GATEWAY } from './lib/ask-deploy.ts';
 import {
   CASES,
   MEMORY_CASES,
+  answerPasses,
   claimsSheet,
   followUpsStandAlone,
+  leaksFollowUpMarker,
   looksLikeFixture,
+  neuronsSpent,
   summariseTrace,
   toolMismatch,
 } from './lib/ask-evals.ts';
@@ -99,13 +103,20 @@ const bearer = /[A-Za-z0-9_.-]{20,}/.exec(token.stdout)?.[0];
 if (token.status !== 0 || bearer === undefined) fail('wrangler is not logged in (wrangler login)');
 const gatewayToken = process.env['ASK_GATEWAY_TOKEN'];
 
-/** What each model call's response carried besides its answer, in call order (S9). */
-const captures: CallCapture[] = [];
+/**
+ * What each model call's response carried besides its answer, in call order (S9), tagged with the
+ * question that made the call. A call that outlives its question's deadline still lands here when it
+ * answers, so a case reads its own tag rather than a position in this list.
+ */
+const captures: { readonly question: number; readonly call: CallCapture }[] = [];
+/** The question now being asked, counted from 1. */
+let asking = 0;
 
 /** The binding's `run`, over the gateway's REST address. */
 const env = {
   AI: {
     run: async (model: string, input: unknown, options?: unknown): Promise<unknown> => {
+      const question = asking;
       const id = (options as { gateway?: { id?: string } } | undefined)?.gateway?.id ?? gateway;
       const response = await fetch(
         `https://gateway.ai.cloudflare.com/v1/${account}/${id}/workers-ai/${model}`,
@@ -128,7 +139,7 @@ const env = {
       const out = body.result ?? body;
       // The reasoning stays here, in the eval's own wrapper: the Worker's code is handed the same
       // response and never reads it (S9).
-      captures.push(capture(out));
+      captures.push({ question, call: capture(out) });
       return out;
     },
   },
@@ -137,6 +148,7 @@ const env = {
   SITE_ORIGIN: ORIGIN,
 } as unknown as Env;
 
+console.log(`model: ${MODEL}`);
 let passed = 0;
 let total = 0;
 let tokensIn = 0;
@@ -157,24 +169,30 @@ for (const book of library) {
 for (const c of [...CASES, ...MEMORY_CASES]) {
   for (let run = 1; run <= RUNS; run += 1) {
     total += 1;
+    asking = total;
     const events: TraceEvent[] = [];
-    const firstCapture = captures.length;
     const answered = await answerQuestion(env, source, c.question, undefined, c.history, (event) =>
       events.push(event),
     );
     const trace = summariseTrace(events);
+    const calls = captures.filter((c) => c.question === total).map((c) => c.call);
+    // The response's own Neurons when every call reported them, else the published rates (M4).
+    const spent = neuronsSpent(
+      calls.map((call) => call.neurons),
+      trace,
+    );
     const standAlone = followUpsStandAlone(answered.reply.followUps, library);
     const pilled =
       c.pill === undefined || answered.reply.books.some((b) => b.title.startsWith(c.pill ?? ''));
     const ok =
       answered.reply.mode === 'ai' &&
-      c.passes(answered.reply.answer, library) &&
+      answerPasses(c, answered.reply.answer, library) &&
       standAlone &&
       pilled;
     if (ok) passed += 1;
     tokensIn += answered.detail.tokensIn ?? 0;
     tokensOut += answered.detail.tokensOut ?? 0;
-    totalNeurons += trace.neurons;
+    totalNeurons += spent.neurons;
     // A tool mismatch is something to read, never a failure.
     const mismatch = toolMismatch(c.expects, trace.called);
     if (mismatch !== undefined) mismatches += 1;
@@ -184,13 +202,14 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
     );
     console.log(
       `      ${String(trace.modelCalls)} model calls, ${String(trace.called.length)} tool calls` +
-        ` (${trace.called.join(' > ') || 'none'}), ${String(trace.toolErrors)} tool errors, ~${trace.neurons.toFixed(1)} Neurons`,
+        ` (${trace.called.join(' > ') || 'none'}), ${String(trace.toolErrors)} tool errors, ${spent.reported ? '' : '~'}${spent.neurons.toFixed(1)} Neurons ${spent.reported ? '(reported)' : '(estimated)'}`,
     );
     console.log(
       `      expected tool: ${c.expects}${mismatch === undefined ? '' : `  <-- READ THIS: ${mismatch}`}`,
     );
     for (const line of trace.lines) console.log(`        ${line}`);
-    const calls = captures.slice(firstCapture);
+    if (leaksFollowUpMarker(answered.reply.answer))
+      console.log('      FAILED: the follow-ups marker is still in the answer');
     for (const [i, c] of calls.entries()) {
       console.log(
         `        reasoning, call ${String(i + 1)}: ${c.reasoning === undefined ? 'none in the response' : `${String(c.reasoning.length)} characters (in the transcript)`}`,
@@ -220,7 +239,8 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
       mode: answered.reply.mode,
       expectedTool: c.expects,
       toolMismatch: mismatch ?? null,
-      neurons: trace.neurons,
+      neurons: spent.neurons,
+      neuronsReported: spent.reported,
       events,
       // Per model call, in order: the reasoning the response carried, and the keys it had.
       calls,
@@ -239,7 +259,7 @@ const file = join(folder, `ask-evals-${new Date().toISOString().replaceAll(':', 
 writeFileSync(file, JSON.stringify(transcript, null, 2));
 
 console.log(
-  `\n${String(passed)} of ${String(total)} passed; ${String(tokensIn)} input and ${String(tokensOut)} output tokens in all, ~${totalNeurons.toFixed(0)} Neurons`,
+  `\n${String(passed)} of ${String(total)} passed; ${String(tokensIn)} input and ${String(tokensOut)} output tokens in all, ~${totalNeurons.toFixed(0)} Neurons (as the responses reported them where they did)`,
 );
 console.log(`${String(mismatches)} questions called a different tool than expected: read them.`);
 console.log(`Full transcript, every tool result included: ${file}`);

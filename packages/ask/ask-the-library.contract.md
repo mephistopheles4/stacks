@@ -1,6 +1,6 @@
 # Contract: ask-the-library
 
-Version: 0.5.0
+Version: 0.5.1
 Kind: agent
 Level: Standard
 
@@ -93,7 +93,7 @@ It shares the limit of 2 tool calls per question. **Decided**, by the owner in c
 so the plain results still work when the model does not. The search reads title, author,
 subjects and Thoughts. **Decided**, by the owner in chat.
 
-**Built for:** `gpt-oss-20b` on Workers AI, called by the Worker. No binding exists for
+**Built for:** `deepseek-v4.1-flash-1017` on Workers AI (before 2026-11-06, `gpt-oss-20b`), called by the Worker. No binding exists for
 this tool, so the built output is plain `RULES` text and not an agent file. **Confirmed**
 
 **Actions that spend or send:** each answer spends Neurons, on up to 3 model calls, and
