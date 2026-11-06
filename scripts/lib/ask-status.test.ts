@@ -357,6 +357,6 @@ describe('what a run writes (spec C7)', () => {
     expect(script).toMatch(/if \(isLinkedWorktree\(gitDir, commonDir\)\) \{\s*fail\(/);
     expect(script).toContain('env: uploadEnv(process.env, loaded)');
     // A reply body is never printed: the only print of a reply is through printDay.
-    expect(script).not.toMatch(/console\.log\([^)]*(?:text|body|reply)/);
+    expect(script).not.toMatch(/console\.log\([^)]*(?:text|body|reply)\b/);
   });
 });

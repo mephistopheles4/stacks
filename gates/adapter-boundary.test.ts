@@ -122,6 +122,9 @@ const ALLOWED = [
   // (the pin check), the committed empty env file, and the names (never the values) in `.env`
   // files, to refuse a credential that would replace the owner's login. It never reads a note.
   'scripts/turnstile.ts',
+  // `pnpm ask:status --record`: asks whether a day's record is already in `.trend/local/` and
+  // writes one there, counts from Workers Logs and nothing else. It never reads a note.
+  'scripts/ask-status.ts',
   // The S9 evals: reads a built public folder (`dist/`), the same files the
   // Worker fetches over HTTPS, and writes a transcript. The fixture vault's
   // titles, which it needs to refuse a library built from them, come through

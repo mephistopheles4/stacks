@@ -65,15 +65,27 @@ if (record) {
   }
 }
 
-// wrangler's usage telemetry stays off, and .env's other keys stay out of the child (ADR-0116).
-const token = spawnSync('pnpm exec wrangler auth token', {
-  cwd: REPO_ROOT,
-  shell: true,
-  encoding: 'utf8',
-  env: uploadEnv(process.env, loaded),
-});
-const bearer = /[A-Za-z0-9_.-]{20,}/.exec(token.stdout)?.[0];
-if (token.status !== 0 || bearer === undefined) fail('wrangler is not logged in (wrangler login)');
+/**
+ * The telemetry query needs Workers Observability read, which `wrangler login`'s OAuth scopes
+ * do not include: measured 2026-11-06, every query answered 403 with the login's token. So an
+ * API token with that permission, as `ASK_STATUS_TOKEN` in `.env`, comes first; the login is
+ * the fallback, kept for the day its scopes grow.
+ */
+function bearerToken(): string | undefined {
+  const own = process.env['ASK_STATUS_TOKEN'];
+  if (own !== undefined && own !== '') return own;
+  // wrangler's usage telemetry stays off, and .env's other keys stay out of the child (ADR-0116).
+  const token = spawnSync('pnpm exec wrangler auth token', {
+    cwd: REPO_ROOT,
+    shell: true,
+    encoding: 'utf8',
+    env: uploadEnv(process.env, loaded),
+  });
+  return token.status === 0 ? /[A-Za-z0-9_.-]{20,}/.exec(token.stdout)?.[0] : undefined;
+}
+const bearer = bearerToken();
+if (bearer === undefined) fail('no token: set ASK_STATUS_TOKEN in .env, or wrangler login');
+const usingLogin = (process.env['ASK_STATUS_TOKEN'] ?? '') === '';
 
 /** A query the API turned down, named by its status alone. */
 class Refused extends Error {}
@@ -127,6 +139,15 @@ if (refused > 0) {
     '\nA refused day is read again by the next run while its logs are kept. In the dashboard:',
   );
   console.log('  Workers & Pages > stacks-ask > Logs > Query Builder, group by outcome');
+  if (usingLogin) {
+    console.log('');
+    console.log(
+      'The wrangler login has no Workers Observability scope, and a 403 is what that looks like.',
+    );
+    console.log(
+      'Set ASK_STATUS_TOKEN in .env to an API token with Workers Observability read on this account.',
+    );
+  }
   process.exit(1);
 }
 if (record) console.log('\nRun pnpm trend:sync to load the records into the store.');

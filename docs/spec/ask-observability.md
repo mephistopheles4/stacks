@@ -101,6 +101,11 @@ The child runs with `uploadEnv(process.env, loadEnv())` from `scripts/lib/upload
 so `WRANGLER_SEND_METRICS` is `false` and `.env`'s other keys stay out. The script
 reads `CLOUDFLARE_ACCOUNT_ID` through `loadEnv()`, which it does not today.
 
+**Measured at build, 2026-11-06:** every query answered 403 with the `wrangler login`
+token, whose OAuth scopes include no Workers Observability scope. So the script takes
+`ASK_STATUS_TOKEN` from `.env` first, an API token with Workers Observability read and
+nothing else, never passed to wrangler, and falls back to the login.
+
 **Records, only when asked.** With `--record` it also writes one OpenMetrics record
 per day to `.trend/local/<day>-ask.prom`, where `<day>` is the UTC midnight that
 starts it, in unix seconds. `pnpm trend:sync` already imports every `.trend/local/`
