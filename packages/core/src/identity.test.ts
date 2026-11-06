@@ -6,6 +6,7 @@ import {
   normaliseIsbn,
   normaliseTitleAuthor,
   rankingScore,
+  toObsidianTag,
   titleMatchScore,
 } from './identity.ts';
 
@@ -265,5 +266,36 @@ describe('rankingScore', () => {
 
   it('scores an unrelated title at zero', () => {
     expect(rankingScore('salt road ledger', 'Compilers for the Impatient')).toBe(0);
+  });
+});
+
+describe('toObsidianTag', () => {
+  it.each([
+    ['Business & Careers', 'business-careers'],
+    ['Computer Science', 'computer-science'],
+    ['Café Society', 'cafe-society'],
+    ['  --Fiction--  ', 'fiction'],
+    ['/fiction/', 'fiction'],
+    ['sci-fi/fantasy', 'sci-fi/fantasy'],
+    ['a -/- b', 'a-/-b'],
+    ['a-/-/-/b', 'a-/-/-/b'],
+    ['-/-/x/-/-', 'x'],
+    ['snake_case', 'snake_case'],
+  ])('rewrites %j to %j', (raw, tag) => {
+    expect(toObsidianTag(raw)).toBe(tag);
+  });
+
+  it('refuses a label with nothing usable or only digits', () => {
+    expect(toObsidianTag('')).toBeUndefined();
+    expect(toObsidianTag('&&& --- ///')).toBeUndefined();
+    expect(toObsidianTag('2024')).toBeUndefined();
+  });
+
+  it('trims a long mid-string run of "-/" in linear time', () => {
+    const raw = `x${'-/'.repeat(40_000)}y`;
+    const start = performance.now();
+    const tag = toObsidianTag(raw);
+    expect(performance.now() - start).toBeLessThan(100);
+    expect(tag).toBe(`x${'-/'.repeat(40_000)}y`);
   });
 });
