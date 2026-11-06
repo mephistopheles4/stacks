@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   bundleLeaks,
   decideAi,
+  fullSampling,
   invocationLogsOff,
   keyProblem,
   siteKeyProblem,
@@ -116,6 +117,45 @@ describe('invocationLogsOff (C15)', () => {
   it('holds for the real wrangler.jsonc', async () => {
     const { readFileSync } = await import('node:fs');
     expect(invocationLogsOff(readFileSync('packages/ask/wrangler.jsonc', 'utf8'))).toBe(true);
+  });
+});
+
+describe('fullSampling (observability C5)', () => {
+  const config = (top: string, logs = ''): string =>
+    `{ // c\n "observability": { "enabled": true, ${top} "logs": { ${logs} "invocation_logs": false } } }`;
+  it('accepts a head sampling rate of exactly 1', () => {
+    expect(fullSampling(config('"head_sampling_rate": 1,'))).toBe(true);
+    expect(fullSampling(config('"head_sampling_rate": 1.0,'))).toBe(true);
+    expect(fullSampling(config('"head_sampling_rate": 1,', '"head_sampling_rate": 1,'))).toBe(true);
+  });
+  it('refuses a rate left out, below 1, or overridden under logs', () => {
+    expect(fullSampling(config(''))).toBe(false);
+    expect(fullSampling(config('"head_sampling_rate": 0.5,'))).toBe(false);
+    expect(fullSampling(config('"head_sampling_rate": 1.5,'))).toBe(false);
+    expect(fullSampling(config('"head_sampling_rate": 10,'))).toBe(false);
+    expect(fullSampling(config('"head_sampling_rate": 1,', '"head_sampling_rate": 0.1,'))).toBe(
+      false,
+    );
+  });
+  it('is not fooled by a commented-out rate, in either kind of comment', () => {
+    expect(fullSampling(config('// "head_sampling_rate": 1,\n'))).toBe(false);
+    expect(fullSampling(config('/* "head_sampling_rate": 1, */'))).toBe(false);
+  });
+  it('refuses a rate written as text', () => {
+    expect(fullSampling(config('"head_sampling_rate": "0.1",'))).toBe(false);
+    expect(fullSampling(config('"head_sampling_rate": 1,', '"head_sampling_rate": "0.1",'))).toBe(
+      false,
+    );
+  });
+  it('is checked by deploy:ask outside every dry-run branch, so a dry run refuses too', async () => {
+    const { readFileSync } = await import('node:fs');
+    const script = readFileSync('scripts/deploy-ask.ts', 'utf8');
+    // At the top level of the script, not inside a block a flag can skip.
+    expect(script).toMatch(/^if \(!fullSampling\(config\)\) \{\n {2}fail\(/m);
+  });
+  it('holds for the real wrangler.jsonc', async () => {
+    const { readFileSync } = await import('node:fs');
+    expect(fullSampling(readFileSync('packages/ask/wrangler.jsonc', 'utf8'))).toBe(true);
   });
 });
 

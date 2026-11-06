@@ -1,7 +1,7 @@
 import { answerQuestion, type Reply } from './answer.ts';
 import type { Env } from './env.ts';
 import type { LibrarySource } from './library.ts';
-import { logOutcome, type Outcome } from './outcome.ts';
+import { logOutcome, type Outcome, type OutcomeDetail } from './outcome.ts';
 import { readRequest } from './request.ts';
 import { verifyTurnstile } from './turnstile.ts';
 import { normaliseAddress, utcDay, visitorKey } from './visitor.ts';
@@ -55,12 +55,14 @@ export async function handleChat(request: Request, env: Env, deps: Deps): Promis
   if (!human) return end('refused-turnstile', refusal(403, 'error', COULDNT_CONFIRM));
 
   const within = await withinLimits(env, address, (deps.now ?? (() => new Date()))());
-  if (!within) {
+  if (!within.ok) {
     return end(
       'refused-limit',
       refusal(429, 'limited', "That's the limit for now. Try again later."),
+      { limit: within.limit },
     );
   }
+  const question = { question: within.count };
 
   try {
     const answered = await answerQuestion(
@@ -70,34 +72,49 @@ export async function handleChat(request: Request, env: Env, deps: Deps): Promis
       undefined,
       parsed.history,
     );
-    logOutcome(answered.outcome, answered.detail);
+    logOutcome(answered.outcome, { ...answered.detail, ...question });
     return reply(200, answered.reply);
   } catch {
     // A DataError, or anything unforeseen: no AI call is retried.
     return end(
       'refused-data',
       refusal(503, 'error', "The library couldn't be read just now. Try again shortly."),
+      question,
     );
   }
 }
 
-function end(outcome: Outcome, response: Response): Response {
-  logOutcome(outcome);
+function end(outcome: Outcome, response: Response, detail: OutcomeDetail = {}): Response {
+  logOutcome(outcome, detail);
   return response;
 }
 
-/** Per-minute binding first, then the daily object; either failing refuses. */
-async function withinLimits(env: Env, address: string, now: Date): Promise<boolean> {
+/**
+ * Whether the limits admit a request: with the visitor's count for the day when they do, and
+ * which one refused when they do not. Only a 2xx answer with `allowed: true` and a whole-number
+ * count admits; anything else refuses (C5).
+ */
+export type Within =
+  | { readonly ok: true; readonly count: number }
+  | { readonly ok: false; readonly limit: 'minute' | 'day' | 'error' };
+
+/** Per-minute binding first, then the daily object; either failing refuses, as `error`. */
+async function withinLimits(env: Env, address: string, now: Date): Promise<Within> {
   try {
     const key = await visitorKey(address, utcDay(now), env.VISITOR_KEY ?? '');
     const minute = await env.RATE.limit({ key });
-    if (!minute.success) return false;
+    if (!minute.success) return { ok: false, limit: 'minute' };
     const stub = env.VISITORS.get(env.VISITORS.idFromName(key));
-    const daily = (await (await stub.fetch('https://counter/hit', { method: 'POST' })).json()) as {
-      allowed?: unknown;
-    };
-    return daily.allowed === true;
+    const answer = await stub.fetch('https://counter/hit', { method: 'POST' });
+    // A counter that failed refuses, whatever its body says (owner, 2026-11-06).
+    if (!answer.ok) return { ok: false, limit: 'error' };
+    const daily = (await answer.json()) as { allowed?: unknown; count?: unknown };
+    if (daily.allowed === false) return { ok: false, limit: 'day' };
+    if (daily.allowed !== true) return { ok: false, limit: 'error' };
+    // Only a whole number admits, so the line never carries anything else the counter sent.
+    if (!Number.isInteger(daily.count)) return { ok: false, limit: 'error' };
+    return { ok: true, count: daily.count as number };
   } catch {
-    return false;
+    return { ok: false, limit: 'error' };
   }
 }

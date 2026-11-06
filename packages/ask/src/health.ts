@@ -2,7 +2,7 @@ import { answerQuestion } from './answer.ts';
 import type { Env } from './env.ts';
 import { HEALTH_MAX_AGE_MS } from './limits.ts';
 import type { LibrarySource } from './library.ts';
-import { logOutcome } from './outcome.ts';
+import { logOutcome, type OutcomeDetail } from './outcome.ts';
 
 /** The one question the daily test asks (S11). Fixed, so nothing visitors type reaches it. */
 export const DAILY_QUESTION = 'What have you read about finance?';
@@ -36,6 +36,17 @@ export class HealthState {
   }
 }
 
+/** What the daily test spent, so the day's Neurons in the logs include it (observability S2). */
+function spendOf(detail: OutcomeDetail): OutcomeDetail {
+  const { neurons, tokensCached, tokensIn, tokensOut } = detail;
+  return {
+    ...(neurons !== undefined && { neurons }),
+    ...(tokensCached !== undefined && { tokensCached }),
+    ...(tokensIn !== undefined && { tokensIn }),
+    ...(tokensOut !== undefined && { tokensOut }),
+  };
+}
+
 const stub = (env: Env) => env.HEALTH.get(env.HEALTH.idFromName('daily'));
 
 /**
@@ -49,13 +60,15 @@ export async function runDailyTest(
   now: () => number = Date.now,
 ): Promise<boolean> {
   let ok: boolean;
+  let spend: OutcomeDetail = {};
   try {
     const answered = await answerQuestion(env, source, DAILY_QUESTION);
     ok = answered.ai !== 'failed';
+    spend = spendOf(answered.detail);
   } catch {
     ok = false;
   }
-  logOutcome(ok ? 'daily-pass' : 'daily-fail');
+  logOutcome(ok ? 'daily-pass' : 'daily-fail', spend);
   await stub(env).fetch('https://health/result', {
     method: 'POST',
     body: JSON.stringify({ ok, at: now() } satisfies HealthResult),

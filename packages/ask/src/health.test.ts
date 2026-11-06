@@ -127,3 +127,38 @@ describe('the daily test and the health address (C19)', () => {
     expect(await response.text()).toBe('down');
   });
 });
+
+describe("the daily test's spend, in the log (observability C2)", () => {
+  const logged = async (ai: () => Promise<unknown>, down = false): Promise<unknown[]> => {
+    const out: unknown[] = [];
+    vi.spyOn(console, 'log').mockImplementation((line: unknown) => {
+      out.push(JSON.parse(String(line)));
+    });
+    await runDailyTest(envWith(ai).env, library(down), () => NOW);
+    return out;
+  };
+  const usage = {
+    prompt_tokens: 50,
+    completion_tokens: 5,
+    neurons: 56,
+    prompt_tokens_details: { cached_tokens: 40 },
+  };
+
+  it('a pass carries the Neurons, cached tokens and tokens it spent, and nothing else', async () => {
+    expect(await logged(async () => ({ response: 'I have read Alpha.', usage }))).toEqual([
+      { outcome: 'daily-pass', neurons: 56, tokensCached: 40, tokensIn: 50, tokensOut: 5 },
+    ]);
+  });
+
+  it('a fail after a blank call carries what that call spent', async () => {
+    expect(await logged(async () => ({ response: ' ', usage }))).toEqual([
+      { outcome: 'daily-fail', neurons: 56, tokensCached: 40, tokensIn: 50, tokensOut: 5 },
+    ]);
+  });
+
+  it('a fail before any call carries nothing', async () => {
+    expect(await logged(async () => ({ response: 'x', usage }), true)).toEqual([
+      { outcome: 'daily-fail' },
+    ]);
+  });
+});
