@@ -294,6 +294,10 @@ function readReply(name: QueryName, reply: unknown): Map<string, Aggregate[]> {
   return byAlias;
 }
 
+/**
+ * One calculation's aggregates, checked: finite numbers, unsampled, with only the groups the
+ * query asked for, and refused at the group limit. An aggregate with no events is dropped.
+ */
 function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] {
   if (!Array.isArray(raw)) throw new ShapeError(`${where} has no aggregates`);
   if (raw.length >= GROUP_LIMIT) throw new ShapeError(`${where} is at the group limit`);

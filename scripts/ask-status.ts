@@ -28,6 +28,7 @@ import { renderAskDay } from './lib/metrics.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { uploadEnv } from './lib/upload.ts';
 
+/** Ends the run with a message written here, never one quoting a reply or a token. */
 function fail(message: string): never {
   console.error(`\nFAILED: ${message}`);
   process.exit(1);
@@ -89,6 +90,10 @@ const bearer = bearerToken();
 if (bearer === undefined) fail('no token: set ASK_STATUS_TOKEN in .env, or wrangler login');
 const usingLogin = (process.env['ASK_STATUS_TOKEN'] ?? '') === '';
 
+/**
+ * One telemetry query for one day, parsed. Every way it can fail, unreachable, refused or not
+ * JSON, becomes a `Refused` in fixed words, so no reply text reaches the terminal (spec S3).
+ */
 async function ask(name: QueryName, dayStart: number): Promise<unknown> {
   let response: Response;
   try {
