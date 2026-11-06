@@ -800,6 +800,22 @@ describe('which limit refused, still fail-closed (observability C3)', () => {
       { counter: async () => Response.json({ allowed: 'yes', count: 1 }) },
       'error',
     ],
+    // Hardening the owner asked for (2026-11-06): only a 2xx with a whole-number count admits.
+    [
+      'a counter that answers 500 while saying allowed',
+      { counter: async () => Response.json({ allowed: true, count: 1 }, { status: 500 }) },
+      'error',
+    ],
+    [
+      'a counter whose count is text',
+      { counter: async () => Response.json({ allowed: true, count: 'one' }) },
+      'error',
+    ],
+    [
+      'a counter whose count is not a whole number',
+      { counter: async () => Response.json({ allowed: true, count: 1.5 }) },
+      'error',
+    ],
   ];
   it.each(cases)(
     '%s is a 429 with no model call, logged by its limit',
@@ -894,7 +910,7 @@ describe('the visitor key reaches no log (observability C4)', () => {
       { counter: thrown },
       { counter: async () => new Response(`${secret} ${key}`) },
       { counter: async () => Response.json({ allowed: false, count: 30 }) },
-      // An admitting counter whose count is text: the line carries no number, not the text.
+      // A counter whose count is text: refused, and the text reaches no line.
       { counter: async () => Response.json({ allowed: true, count: `${secret} ${key}` }) },
       { libraryDown: true },
       { ai: thrown },

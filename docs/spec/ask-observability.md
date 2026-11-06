@@ -213,7 +213,7 @@ prints it, C9 is checked by hand, then `pnpm ask:status --record` writes it,
 | --- | --- | --- |
 | C1 | Every line after the limits carries `question` equal to the counter's count, and no line before them does | suite |
 | C2 | `neurons` and `tokensCached` appear only as finite numbers summed over returned calls, a blank one included, on `ai`, `search-ai-failed`, `daily-pass` and `daily-fail`; a returned call without the value leaves the field out | suite |
-| C3 | Each of `minute`, `day` and `error` (a thrown binding, a thrown counter, a malformed counter reply) answers 429, makes no model call and logs `refused-limit` with that `limit` and no other text | suite |
+| C3 | Each of `minute`, `day` and `error` (a thrown binding, a thrown counter, a malformed counter reply, a counter answering non-2xx whatever its body says, a count that is not a whole number) answers 429, makes no model call and logs `refused-limit` with that `limit` and no other text | suite |
 | C4 | Canary values for the question, the address, the response text, a long `VISITOR_KEY` and the computed visitor key appear in no log line, on every path including the three limit paths (C15, extended) | suite |
 | C5 | `deploy:ask` refuses a config without `head_sampling_rate: 1`, on `--dry-run` too | suite |
 | C6 | The totals function turns the fixture into the printed totals and the record, and refuses each reshaped reply (a missing key, an unknown key, a non-number) and a reply at the group limit, with no file written; the wrangler child's environment has `WRANGLER_SEND_METRICS=false` | suite |
@@ -265,6 +265,27 @@ declined). #540 is now pull request #544.
   reverse decides: a field can be dropped in one deploy, and a record deleted.
 - **Hand runs against a scheduled job.** Gaps are possible; a scheduled job would
   need a secret. The gap is visible on panel 1.
+
+**Accepted after the Test round (owner, 2026-11-06, "Accept every recommendation"),** each
+a guard for a path that is not a security finding (Hardening, limit 0), recorded on #541:
+
+- `fullSampling` misses a `head_sampling_rate` key spelled with a JSON escape; reaching it
+  needs repository write.
+- `invocationLogsOff` (at base) passes a `true` followed by a trailing `// … false`
+  comment; reaching it needs repository write.
+- Group values in a telemetry reply (`outcome`, `reason`, `limit`) become record labels
+  without an allowlist of the Worker's fixed words; they are escaped, and stay on the
+  owner's machine.
+- The `git rev-parse` children of `ask:status` inherit the loaded `.env`; the data stays
+  local.
+
+Built instead, on the same answer: a daily counter answering non-2xx refuses whatever its
+body says, and a count that is not a whole number refuses (C3).
+
+**Six tests kept that back no numbered claim** (Tests added, limit 0, kept on the owner's
+answer): the record's file name, the query bodies, an empty day, a refusal in fixed words,
+the page reading only `stacks_ask_` series, and the page drawing only series a record
+carries. Each catches a break no claim's test does.
 
 ## S10. Build order
 

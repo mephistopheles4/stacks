@@ -62,7 +62,7 @@ export async function handleChat(request: Request, env: Env, deps: Deps): Promis
       { limit: within.limit },
     );
   }
-  const question = within.count === undefined ? {} : { question: within.count };
+  const question = { question: within.count };
 
   try {
     const answered = await answerQuestion(
@@ -91,10 +91,11 @@ function end(outcome: Outcome, response: Response, detail: OutcomeDetail = {}): 
 
 /**
  * Whether the limits admit a request: with the visitor's count for the day when they do, and
- * which one refused when they do not. Only `allowed: true` admits; anything else refuses (C5).
+ * which one refused when they do not. Only a 2xx answer with `allowed: true` and a whole-number
+ * count admits; anything else refuses (C5).
  */
 export type Within =
-  | { readonly ok: true; readonly count: number | undefined }
+  | { readonly ok: true; readonly count: number }
   | { readonly ok: false; readonly limit: 'minute' | 'day' | 'error' };
 
 /** Per-minute binding first, then the daily object; either failing refuses, as `error`. */
@@ -104,14 +105,15 @@ async function withinLimits(env: Env, address: string, now: Date): Promise<Withi
     const minute = await env.RATE.limit({ key });
     if (!minute.success) return { ok: false, limit: 'minute' };
     const stub = env.VISITORS.get(env.VISITORS.idFromName(key));
-    const daily = (await (await stub.fetch('https://counter/hit', { method: 'POST' })).json()) as {
-      allowed?: unknown;
-      count?: unknown;
-    };
+    const answer = await stub.fetch('https://counter/hit', { method: 'POST' });
+    // A counter that failed refuses, whatever its body says (owner, 2026-11-06).
+    if (!answer.ok) return { ok: false, limit: 'error' };
+    const daily = (await answer.json()) as { allowed?: unknown; count?: unknown };
     if (daily.allowed === false) return { ok: false, limit: 'day' };
     if (daily.allowed !== true) return { ok: false, limit: 'error' };
-    // A number, or nothing: the line never carries what the counter sent if it is not one.
-    return { ok: true, count: typeof daily.count === 'number' ? daily.count : undefined };
+    // Only a whole number admits, so the line never carries anything else the counter sent.
+    if (!Number.isInteger(daily.count)) return { ok: false, limit: 'error' };
+    return { ok: true, count: daily.count as number };
   } catch {
     return { ok: false, limit: 'error' };
   }
