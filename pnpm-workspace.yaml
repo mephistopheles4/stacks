@@ -470,29 +470,7 @@ overrides:
 #   ignoreGhsas:
 #     - GHSA-xxxx-xxxx-xxxx  # 2026-01-01, <why it cannot reach us>, fix pending
 #
-# The one live entry, and the repository's first:
-#
-# GHSA-vfj7-8cjw-p6xm, high, added 2026-10-06: `braces` up to 3.0.3 exhausts the
-# stack on deeply nested brace patterns. Path:
-# `markdownlint-cli2` > `globby` > `fast-glob` > `micromatch` > `braces`, and
-# two shorter routes through the same two packages.
-#
-# **It cannot reach this project.** Every glob that arrives at `braces` here is
-# `markdownlint-cli2`'s own, over tracked docs, written in this repository — no
-# untrusted input reaches the pattern. That bounds the blast radius; it does not
-# answer the gate, and **nothing published fixes it**: 3.0.3 is `latest` and the
-# newest version on npm. GitHub's record has the range `<= 3.0.3` and no patched
-# version; the `>=3.0.4` that `pnpm audit` prints is a range pnpm derives, not
-# one the advisory states. No override can name a version that does not exist.
-#
-# ⚠️ **Do not run `pnpm audit --ignore-unfixable`.** On 2026-10-06 it wrote
-# `auditConfig: {}` into this file and exited 0, and it did not treat braces as
-# unfixable — pnpm took its derived `>=3.0.4` as a fix.
-#
-# **Remove this when braces 3.0.4 or later is published and reachable.** The
-# guards that fail on that, and expire an entry after 30 days, are
-# [#405](https://github.com/mephistopheles4/stacks/issues/405); until it lands
-# nothing catches this entry outliving its reason.
-auditConfig:
-  ignoreGhsas:
-    - GHSA-vfj7-8cjw-p6xm # 2026-10-06, markdownlint-cli2's own globs only, fix pending
+# The first entry, GHSA-vfj7-8cjw-p6xm (`braces` <= 3.0.3, reachable only through
+# `markdownlint-cli2`'s own globs), was added on 2026-10-06 and removed on
+# 2026-11-06, when G62 expired it: GitHub withdrew the advisory on 2026-10-23, so
+# there was nothing left to ignore (#542). The block above is the template for the next one.
