@@ -30,6 +30,7 @@
  * the merge half legitimately expects five series where the nightly expects eight.
  */
 
+import type { DayTotals } from './ask-status.ts';
 import type { CognitiveCounts } from './cognitive.ts';
 import type { Counts } from './complexity.ts';
 import type { AllCounts, DuplicationCounts } from './duplication.ts';
@@ -73,6 +74,8 @@ export const METRIC_PREFIXES = {
   renovation: 'stacks_renovation_',
   ratchet: 'stacks_ratchet_',
   backfill: 'stacks_backfill_',
+  /** `pnpm ask:status --record`'s daily totals: local only, never on the branch. */
+  ask: 'stacks_ask_',
 } as const;
 
 /** The eight series, and the whole of what this record carries as a trend. */
@@ -1042,6 +1045,77 @@ export function renderHistory(history: History): string {
  * since a backfilled sample is never taken back. It asks, and refuses nothing,
  * as ADR-0111 sets for the print.
  */
+/**
+ * One UTC day of `pnpm ask:status --record`, every sample at the day's midnight (`at`, unix
+ * seconds). Counts and sums only: no label carries an account, an endpoint or a visitor.
+ */
+export function renderAskDay(totals: DayTotals, at: number): string {
+  const p = METRIC_PREFIXES.ask;
+  const one = (metric: string, help: string, value: number | undefined): Family[] =>
+    value === undefined
+      ? []
+      : [{ metric: `${p}${metric}`, help, samples: [{ labels: {}, value }] }];
+  const families: Family[] = [
+    ...one('day_recorded', 'This UTC day has a record: a missing day is a missed run.', 1),
+    {
+      metric: `${p}outcomes`,
+      help: 'Log lines by outcome, reason and limit.',
+      samples: totals.outcomes.map((o) => ({
+        labels: {
+          outcome: o.outcome,
+          ...(o.reason !== undefined && { reason: o.reason }),
+          ...(o.limit !== undefined && { limit: o.limit }),
+        },
+        value: o.count,
+      })),
+    },
+    ...one(
+      'neurons',
+      "The day's Neurons, as each response gave them, the daily test's included.",
+      totals.neurons,
+    ),
+    ...one(
+      'neurons_missing',
+      'Lines where a call returned but no Neurons were given.',
+      totals.neuronsMissing,
+    ),
+    ...one(
+      'cached_share',
+      'Cached input tokens over input tokens, on lines carrying both.',
+      totals.cachedShare,
+    ),
+    ...one('ms_avg', 'Average milliseconds of an ai line.', totals.msAvg),
+    ...one('ms_max', 'Largest milliseconds of an ai line.', totals.msMax),
+    {
+      metric: `${p}visitors_reaching`,
+      help: 'Visitor-days that reached this question number.',
+      samples: [...totals.reaching]
+        .sort(([a], [b]) => a - b)
+        .map(([question, value]) => ({ labels: { question: String(question) }, value })),
+    },
+    {
+      metric: `${p}neurons_by_band`,
+      help: 'Neurons on questions numbered in this band.',
+      samples: Object.entries(totals.neuronsByBand).map(([band, value]) => ({
+        labels: { band },
+        value,
+      })),
+    },
+    {
+      metric: `${p}daily_test`,
+      help: "The daily test's lines, by result.",
+      samples: (['pass', 'fail'] as const).map((result) => ({
+        labels: { result },
+        value: totals.outcomes
+          .filter((o) => o.outcome === `daily-${result}`)
+          .reduce((acc, o) => acc + o.count, 0),
+      })),
+    },
+  ];
+  const lines = families.filter((f) => f.samples.length > 0).flatMap((f) => render(f, at));
+  return `${lines.join('\n')}\n# EOF\n`;
+}
+
 export function renderAsks(asks: readonly Ask[], at: number): string {
   const families: Family[] = [
     {

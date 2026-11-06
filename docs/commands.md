@@ -427,8 +427,25 @@ so a local answer spends real Neurons. The log says why a question fell back:
 `reason` is `budget` (with `code` 2045), `timeout`, `blank` or `error`; `toolCalls` counts the model's tool calls; and `code` is the
 platform's four-digit code when its message starts with one (such as 3043); it is digits only.
 
-**`pnpm ask:status`** prints yesterday's outcome counts from Workers Logs. ⚠️ **Its
-query is unverified against the live API**; if refused, it names the dashboard route.
+**`pnpm ask:status`** prints, for each completed UTC day still whole in Workers Logs,
+the questions, outcomes by reason and limit, Neurons, AI time, and how many visitor-days
+reached 1, 5, 10, 20 and 30 questions ([`ask-observability.md`](spec/ask-observability.md)
+S3, [#541](https://github.com/mephistopheles4/stacks/issues/541)). It reads
+`CLOUDFLARE_ACCOUNT_ID` from `.env` (`pnpm exec wrangler whoami` prints it) and runs
+wrangler with its usage telemetry off.
+
+- **A day is read** once it ended an hour ago, and only while all of it is kept: 3 days
+  of logs, 7 for logs from 2026-12-01. Run it at least every 2 days now, every 6 from
+  December 1; a day missed is a gap on the page, never a low number.
+- **Every reply is checked against Cloudflare's documented shape** and refused on any
+  difference, a sampled count or a reply at the group limit included. A refused day
+  writes nothing, prints its status only, and is read again by the next run.
+- **`--record`** also writes each day to `.trend/local/<day>-ask.prom`, which
+  `pnpm trend:sync` imports, and the Ask page in Grafana draws. It refuses from a linked
+  worktree, since that checkout's `.trend/` goes with it, and never rewrites a day.
+  ⚠️ **Pass it only after the first live check (spec C10) has passed**: the shape is
+  documented, not yet captured. **To undo a record**, delete its file and run
+  `pnpm trend:sync --rebuild`; it can be written again only while its logs are kept.
 
 ## `pnpm turnstile` — the Ask the library Turnstile widget and its secret
 
