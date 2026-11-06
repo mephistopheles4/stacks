@@ -3,12 +3,15 @@ import type { CatalogueBook } from '../../packages/ask/src/library.ts';
 import {
   CASES,
   MEMORY_CASES,
+  answerPasses,
   claimsOf,
   claimsSheet,
   followUpsStandAlone,
+  leaksFollowUpMarker,
   looksLikeFixture,
   namedCount,
   neurons,
+  neuronsSpent,
   subjectWordsIn,
   summariseTrace,
   toolMismatch,
@@ -276,8 +279,47 @@ describe('the trace of a question (S9)', () => {
   });
 
   it('prices a call at the published rates', () => {
-    expect(neurons(1_000_000, 0)).toBeCloseTo(18_182, 0);
-    expect(neurons(0, 1_000_000)).toBeCloseTo(27_273, 0);
+    expect(neurons(1_000_000, 0)).toBeCloseTo(27_273, 0);
+    expect(neurons(0, 1_000_000)).toBeCloseTo(109_091, 0);
+  });
+
+  it('takes the Neurons the responses reported, and falls back to the estimate when any call did not', () => {
+    const t = summariseTrace(events);
+    expect(neuronsSpent([10, 20.5, 30], t)).toEqual({ neurons: 60.5, reported: true });
+    expect(neuronsSpent([10, undefined, 30], t)).toEqual({ neurons: t.neurons, reported: false });
+    // Two captures for three model calls: the counts do not match, so the estimate is what prints.
+    expect(neuronsSpent([10, 20], t)).toEqual({ neurons: t.neurons, reported: false });
+    expect(neuronsSpent([], summariseTrace([]))).toEqual({ neurons: 0, reported: false });
+  });
+});
+
+describe('a marker left in an answer fails its case (M4, C37)', () => {
+  const c = caseFor('What did you think of Co-Intelligence');
+  const clean = 'I saw a teacher and a machine in Co-Intelligence.';
+
+  it('passes the case on its own words, and fails once the marker is still in them', () => {
+    expect(c.passes(clean, LIB)).toBe(true);
+    expect(answerPasses(c, clean, LIB)).toBe(true);
+    for (const leaked of [
+      `${clean} FOLLOW-UPS:`,
+      `${clean} FOLLOW-UPS: - What did you think of Money Unlocked?`,
+      `${clean}\n**Follow-ups:**\n- What did you think of Money Unlocked?`,
+      `${clean}\n### Follow ups`,
+      `${clean}\nFollow-ups - What did you think of Money Unlocked?`,
+    ]) {
+      expect(c.passes(leaked, LIB), leaked).toBe(true);
+      expect(answerPasses(c, leaked, LIB), leaked).toBe(false);
+    }
+  });
+
+  it('does not take a sentence that merely opens like the marker for it', () => {
+    expect(leaksFollowUpMarker('Follow up with Nexus, it is great.')).toBe(false);
+    expect(leaksFollowUpMarker('I would ask a follow-up about Nexus.')).toBe(false);
+    expect(leaksFollowUpMarker('Harari wrote a follow-up: Homo Deus, which I rated 4.')).toBe(
+      false,
+    );
+    expect(leaksFollowUpMarker('I kept notes on follow-ups: what I read next.')).toBe(false);
+    expect(leaksFollowUpMarker(clean)).toBe(false);
   });
 });
 
