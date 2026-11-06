@@ -171,13 +171,19 @@ describe('splitFollowUps: the marker closing an answer line, or the list on its 
     expect(out.followUps).toEqual([NEXUS]);
   });
 
-  it('cuts at the last marker in a line, so a title holding the word earlier does not split it', () => {
+  it('cuts at the last of two qualifying markers in a line', () => {
+    const out = splitFollowUps(`A. FOLLOW-UPS: none. FOLLOW-UPS: - ${NEXUS}`);
+    expect(out.answer).toBe('A. FOLLOW-UPS: none.');
+    expect(out.followUps).toEqual([NEXUS]);
+  });
+
+  it('leaves a title holding the word whole when what follows it is not a list', () => {
     const out = splitFollowUps(`I read FOLLOW-UPS: A Memoir. FOLLOW-UPS: - ${NEXUS}`);
     expect(out.answer).toBe('I read FOLLOW-UPS: A Memoir.');
     expect(out.followUps).toEqual([NEXUS]);
   });
 
-  it('cuts in a line on FOLLOW-UPS and a colon followed by nothing, "none" or a list item, and on nothing else (B1)', () => {
+  it('cuts in a line on FOLLOW-UPS and a colon followed by nothing, "none" or a list item, and on nothing else', () => {
     expect(splitFollowUps('Done. FOLLOW-UPS: none').answer).toBe('Done.');
     expect(splitFollowUps('Done. FOLLOW-UPS:').answer).toBe('Done.');
     expect(splitFollowUps(`Done. FOLLOW-UPS: 1. ${NEXUS}`).followUps).toEqual([NEXUS]);
@@ -197,11 +203,11 @@ describe('splitFollowUps: the marker closing an answer line, or the list on its 
     'I kept notes on follow-ups: what I read next.',
     'I kept notes on follow-ups: - what I read next.',
     'A. **Follow-ups:** - What did you think of Nexus?',
-  ])('leaves prose and a mixed-case in-line form whole in the answer (B1): %s', (text) => {
+  ])('leaves prose and a mixed-case in-line form whole in the answer: %s', (text) => {
     expect(splitFollowUps(text)).toEqual({ answer: text, followUps: [] });
   });
 
-  it('prefers the last line that is a marker on its own over a marker inside a later line (B2)', () => {
+  it('prefers the last line that is a marker on its own over a marker inside a later line', () => {
     const out = splitFollowUps(
       ['Answer.', 'FOLLOW-UPS:', `- ${NEXUS}`, '- Did you read the follow-up: Homo Deus?'].join(nl),
     );
@@ -215,7 +221,7 @@ describe('splitFollowUps: the marker closing an answer line, or the list on its 
     expect(inside.followUps[0]).toBe(NEXUS);
   });
 
-  it('strips the bold marks and the dash after a marker closed on the same line (B3)', () => {
+  it('strips the bold marks and the dash after a marker closed on the same line', () => {
     for (const text of [
       `Answer. **FOLLOW-UPS:** - ${NEXUS} - Why did you like Sapiens?`,
       `**Follow-ups:** - ${NEXUS} - Why did you like Sapiens?`,

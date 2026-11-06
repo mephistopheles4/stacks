@@ -62,6 +62,7 @@ questions a visitor a day, or a higher spend limit. Revisit on the live counts.
   - the S3 Model row of `docs/spec/ask-the-library.md`;
   - the contract's **Built for** line and a row in the changelog, in `packages/ask/`;
   - the published rates in `scripts/lib/ask-evals.ts` (`NEURONS_PER_M_IN` and `NEURONS_PER_M_OUT`);
+  - S5's cost bullet and S9's rates and eval cost, in `docs/spec/ask-the-library.md`;
   - then run `pnpm evals:ask` and read the failures, because a model's habits (where it writes the
     follow-ups marker) are what the split and the evals' checks were fitted to.
 

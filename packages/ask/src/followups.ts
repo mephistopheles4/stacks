@@ -27,8 +27,8 @@ const MARKER =
  * follow-up - it sat unread": only the exact `FOLLOW-UPS` the rules ask for, in capitals, then a
  * colon, and only when what follows is nothing, "none" or the opening of a list item. The bold marks
  * right round it, and the closing ones after the colon, go with it; the last one in a line wins.
- * The evals' `MARKER_LEFT_IN` (scripts/lib/ask-evals.ts) is the same rule seen from the other side;
- * it is looser in capitals on purpose, and says why.
+ * The evals' `MARKER_LINE` and `MARKER_LEFT_IN_LINE` (scripts/lib/ask-evals.ts) are the same rule seen
+ * from the other side; the in-line one is looser in what may follow the colon on purpose, and says why.
  */
 const MARKER_IN_LINE =
   /[*_#>]{0,3}(?<![\p{L}\p{N}])FOLLOW-UPS[*_]*:[*_]*(?=\s*(?:$|(?:none|None|NONE)\b|[-*•–—]\s|\d+[.)]\s))/gu;
@@ -62,7 +62,7 @@ function inLine(line: string): Cut {
 /**
  * Cuts the answer at the last marker line and reads what follows it as questions. A line that is a
  * marker on its own wins over a marker inside a line, wherever each is; the inside form is tried
- * only when no line is one (B2).
+ * only when no line is one.
  */
 export function splitFollowUps(text: string): Split {
   const lines = text.split(/\r?\n/);

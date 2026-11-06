@@ -247,8 +247,8 @@ The change is committed afterwards. C18 times it.
 **What these limits cannot stop (accepted by the owner, S14, Q1).** The bill stays
 capped on every path reviewed. Availability does not:
 
-- **On `deepseek-v4.1-flash-1017` (M2, since 2026-11-06),** about 5 addresses in a real browser, at 30
-  questions each, spend the day's AI budget. The published rates are $0.30 a million input tokens,
+- **On `deepseek-v4.1-flash-1017` (M2, since 2026-11-06),** about 3 addresses in a real browser with the
+  cache cold, or about 6 warm, at 30 questions each, spend the day's AI budget. The published rates are $0.30 a million input tokens,
   **$0.006 cached** and $1.20 output (27,273, 545 and 109,091 Neurons), and the model **needs a paid
   billing method**, which Workers Paid already is (ADR-0133). Cloudflare caches the shared prompt prefix
   on its own; no setting was used. Measured per question: **36 to 52 Neurons with the cache warm**
@@ -318,7 +318,9 @@ capped on every path reviewed. Availability does not:
   capitalised `FOLLOW-UPS` and a colon inside a line,** the bold marks round it going with it, **but
   only when what follows is nothing, "none" or the opening of a list item**; the text before it, in
   that line, ends the answer. Prose that merely says "a follow-up: Homo Deus" or "the follow-up - it sat
-  unread" stays whole, and so does a mixed-case `**Follow-ups:**` that does not start its line. In
+  unread" stays whole, and so do three in-line forms that do not start their line: a mixed-case `**Follow-ups:**`, a
+  singular `FOLLOW-UP:` and `FOLLOW-UPS` with a dash. The rules ask for none of them, none was seen, and the
+  evals' leak check does not see them either. In
   every case the text above the cut is the answer, and the rest is the list, broken at a line end or at
   a dash after a question mark, each item stripped of its leading bullet, number or quote. The reason
   for the in-line rule is DeepSeek, which writes the marker at the end of an answer line ("... to our
@@ -570,8 +572,8 @@ A Worker secret that is missing refuses every question.
 Live calls, so outside CI, because G21 forbids them. `pnpm evals:ask` runs each twice
 through the Worker's own rules and a test gateway; every follow-up an answer brings must also stand alone (end in a question mark, name a library book or subject in full, and not open with a pronoun), reads the real public build, refuses
 on the fixture vault, prints Neurons per question, and runs the cases listed here and below: 18 cases twice,
-36 questions at 48 to 70 Neurons each, about 1,800 to 2,500 Neurons a run (measured on 2026-11-05 on `gpt-oss-20b`;
-**on DeepSeek, M4: 36 questions at about 36 to 99 Neurons each, about 1,300 to 3,600 a run**, from the 2026-11-06 comparison in S12). It
+**36 questions at about 36 to 99 Neurons each, about 1,300 to 3,600 a run** on DeepSeek (M4, from the 2026-11-06 comparison in S12;
+before 2026-11-06, on `gpt-oss-20b`, 48 to 70 Neurons each and about 1,800 to 2,500 a run). It
 uses the owner's wrangler login, plus `ASK_GATEWAY_TOKEN` if needed, and never prints
 either. The session that runs it reads any failure and records whether the check or
 the answer was wrong.
