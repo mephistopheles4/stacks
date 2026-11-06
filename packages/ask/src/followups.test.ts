@@ -142,6 +142,56 @@ describe('onTheShelf (T9, C31)', () => {
   });
 });
 
+describe('splitFollowUps: the marker closing an answer line, or the list on its own line (M3, C36)', () => {
+  const nl = String.fromCharCode(10);
+  const NEXUS = 'What did you think of Nexus?';
+  const CO = 'What did you think of Co-Intelligence?';
+
+  it('cuts at a marker that closes the answer line, and reads the lines under it', () => {
+    const out = splitFollowUps(
+      [
+        'I rated Nexus five out of five, to our advantage. FOLLOW-UPS:',
+        `- ${NEXUS}`,
+        `- ${CO}`,
+      ].join(nl),
+    );
+    expect(out.answer).toBe('I rated Nexus five out of five, to our advantage.');
+    expect(out.followUps).toEqual([NEXUS, CO]);
+  });
+
+  it('reads a list written on the marker line, broken at " - " before each question', () => {
+    const out = splitFollowUps(`Nexus is my favorite so far. FOLLOW-UPS: - ${NEXUS} - ${CO}`);
+    expect(out.answer).toBe('Nexus is my favorite so far.');
+    expect(out.followUps).toEqual([NEXUS, CO]);
+  });
+
+  it('takes the bold marks round a marker at the end of a line with the marker', () => {
+    const out = splitFollowUps(['I liked Nexus. **FOLLOW-UPS:**', `- ${NEXUS}`].join(nl));
+    expect(out.answer).toBe('I liked Nexus.');
+    expect(out.followUps).toEqual([NEXUS]);
+  });
+
+  it('cuts at the last marker in a line, so a title holding the word earlier does not split it', () => {
+    const out = splitFollowUps(`I read Follow-ups: A Memoir. Follow-ups: - ${NEXUS}`);
+    expect(out.answer).toBe('I read Follow-ups: A Memoir.');
+    expect(out.followUps).toEqual([NEXUS]);
+  });
+
+  it('keeps a title with " - " inside a question whole, and every acceptance filter still applies', () => {
+    const out = splitFollowUps(
+      `A. FOLLOW-UPS: - What did you think of Dune - Part Two? - Visit https://evil.example now? - ${NEXUS}`,
+    );
+    expect(out.followUps).toEqual(['What did you think of Dune - Part Two?', NEXUS]);
+  });
+
+  it.each([
+    'I liked Nexus. Follow up with Nexus, it is great.',
+    'Follow up with Nexus, it is great.',
+  ])('leaves the word with no colon or dash after it in the answer (behaviour E3): %s', (text) => {
+    expect(splitFollowUps(text)).toEqual({ answer: text, followUps: [] });
+  });
+});
+
 describe('splitFollowUps: a sentence that starts like the marker stays in the answer (behaviour E3)', () => {
   it.each([
     'Follow up with Nexus, it is great.',

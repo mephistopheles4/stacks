@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { capture, reasoningOf, responseKeys } from './ask-reasoning.ts';
+import { capture, neuronsOf, reasoningOf, responseKeys } from './ask-reasoning.ts';
 
 describe("reasoningOf: the model's reasoning, kept for the evals (S9)", () => {
   it("reads reasoning_content or reasoning on a chat reply's message", () => {
@@ -52,5 +52,16 @@ describe("reasoningOf: the model's reasoning, kept for the evals (S9)", () => {
     const c = capture({ response: 'A', reasoning: 'R' });
     expect(c.reasoning).toBe('R');
     expect(c.keys).toEqual(['response', 'reasoning']);
+  });
+
+  it('reads the Neurons the response reports in its usage, or says there are none (M4)', () => {
+    expect(neuronsOf({ usage: { neurons: 12.5 } })).toBe(12.5);
+    expect(neuronsOf({ usage: { neurons: 0 } })).toBe(0);
+    expect(neuronsOf({ usage: { prompt_tokens: 5 } })).toBeUndefined();
+    expect(neuronsOf({ usage: { neurons: '12' } })).toBeUndefined();
+    expect(neuronsOf({ usage: { neurons: -1 } })).toBeUndefined();
+    expect(neuronsOf({ usage: { neurons: Number.NaN } })).toBeUndefined();
+    expect(neuronsOf(null)).toBeUndefined();
+    expect(capture({ usage: { neurons: 7 } }).neurons).toBe(7);
   });
 });

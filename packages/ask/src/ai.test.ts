@@ -15,7 +15,7 @@ describe('runModel (C8)', () => {
     const e = env(async () => ({ response: 'Hello' }));
     await runModel(e, msgs);
     const call = (e.AI.run as ReturnType<typeof vi.fn>).mock.calls[0]!;
-    expect(call[0]).toBe('@cf/openai/gpt-oss-20b');
+    expect(call[0]).toBe('@cf/deepseek-ai/deepseek-v4.1-flash-1017');
     expect((call[1] as { max_tokens: number }).max_tokens).toBe(1500);
     expect(call[2]).toEqual({ gateway: { id: 'gw', skipCache: true } });
   });

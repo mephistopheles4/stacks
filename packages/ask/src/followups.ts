@@ -20,6 +20,14 @@ export const MAX_FOLLOW_UP_CHARS = 120;
  */
 const MARKER =
   /^[\s*_#>-]*follow[\s-]*ups?(?:\s+questions?)?[\s*_]*(?:[:\u2013\u2014-]\s*(.*)|[.?]?[\s*_]*)$/i;
+/**
+ * The marker anywhere in a line, as DeepSeek writes it at the end of an answer line: the word, then
+ * a colon or a dash (M3). The bold marks right round it go with it. The last one in a line wins.
+ */
+const MARKER_IN_LINE =
+  /[*_#>]{0,3}(?<![\p{L}\p{N}])follow[\s-]*ups?(?:\s+questions?)?[\s*_]*[:–—-]/giu;
+/** Items written on one line: a question mark, then a dash or bullet, then the next item. */
+const BETWEEN_ITEMS = /(?<=\?)\s+[-*•–—]\s+/;
 const MARKUP = /:\/\/|www\.|[<>`[\]{}|\\]|\]\(/;
 /** What a model puts before a list item: a bullet or a number. */
 const LEADING = /^\s*(?:[-*•–—]+|\d+[.)])\s*/;
@@ -30,29 +38,38 @@ export interface Split {
   readonly followUps: readonly string[];
 }
 
-/** Cuts the answer at the last marker line and reads the lines under it as questions. */
+/** Where a line holds the marker: what comes before it, and the text after it. */
+function cutAt(line: string): { before: string; after: string } | undefined {
+  const whole = MARKER.exec(line);
+  if (whole) return { before: '', after: whole[1] ?? '' };
+  const last = [...line.matchAll(MARKER_IN_LINE)].at(-1);
+  if (last === undefined) return undefined;
+  return { before: line.slice(0, last.index), after: line.slice(last.index + last[0].length) };
+}
+
+/** Cuts the answer at the last marker and reads what follows it as questions. */
 export function splitFollowUps(text: string): Split {
   const lines = text.split(/\r?\n/);
-  let at = -1;
   for (let i = lines.length - 1; i >= 0; i -= 1) {
-    if (MARKER.test(lines[i] ?? '')) {
-      at = i;
-      break;
-    }
+    const cut = cutAt(lines[i] ?? '');
+    if (cut === undefined) continue;
+    const answer = [...lines.slice(0, i), cut.before].join('\n').trim();
+    return { answer, followUps: readItems([cut.after, ...lines.slice(i + 1)]) };
   }
-  if (at < 0) return { answer: text.trim(), followUps: [] };
+  return { answer: text.trim(), followUps: [] };
+}
 
-  const answer = lines.slice(0, at).join('\n').trim();
-  const rest = [MARKER.exec(lines[at] ?? '')?.[1] ?? '', ...lines.slice(at + 1)];
+/** The questions kept from the text after the marker: untrusted, so each must pass the filters. */
+function readItems(rest: readonly string[]): readonly string[] {
   const kept: string[] = [];
-  for (const raw of rest) {
+  for (const raw of rest.flatMap((line) => line.split(BETWEEN_ITEMS))) {
     const line = stripAsterisks(raw.replace(LEADING, '').replace(/^["'“‘]+|["'”’]+$/g, '')).trim();
     if (line === '' || NONE.test(line)) continue;
     if (!acceptable(line) || kept.includes(line)) continue;
     kept.push(line);
     if (kept.length === MAX_FOLLOW_UPS) break;
   }
-  return { answer, followUps: kept };
+  return kept;
 }
 
 /** A plain question: ends in one, is short, holds no link or markup, no control characters. */
