@@ -104,9 +104,19 @@ reads `CLOUDFLARE_ACCOUNT_ID` through `loadEnv()`, which it does not today.
 
 **Measured at build, 2026-11-06:** every query answered 403 with the `wrangler login`
 token, whose OAuth scopes include no Workers Observability scope. So the script takes
-`ASK_STATUS_TOKEN` from `.env` first, an API token with Workers Observability read and
-nothing else, which reads every Worker's logs on the account; the script never hands it to
-wrangler, though wrangler reads `.env` itself (#459). It falls back to the login.
+`ASK_STATUS_TOKEN` from `.env` first, an API token with one permission, **Account →
+Workers → Metadata Read-only**, on the account, with a 90-day expiry. It reads every
+Worker's logs on the account; the script never hands it to wrangler, though wrangler reads
+`.env` itself (#459). It falls back to the login. **The owner approved the flow and chose
+plaintext `.env` for it on 2026-11-06**, after the Test round's data-lens raised both.
+
+**First live run (C10's first half), 2026-11-06, before any deploy:** with that token every
+query answered 200, and the replies matched the documented shape: `result` held `run`,
+`calculations` and `statistics`, and each calculation `alias`, `calculation`, `aggregates`
+and `series`. One difference: a query that matched nothing answers with one aggregate of
+zeros, its sample intervals 0 too, which the first check refused as sampled. An aggregate
+with a count of 0 now reads as no events. Grouped replies with data, `usage.neurons` and the
+comparison with the gateway's cost wait for a deployed day.
 
 **Records, only when asked.** With `--record` it also writes one OpenMetrics record
 per day to `.trend/local/<day>-ask.prom`, where `<day>` is the UTC midnight that

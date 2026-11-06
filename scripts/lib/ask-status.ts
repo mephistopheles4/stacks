@@ -297,11 +297,17 @@ function readReply(name: QueryName, reply: unknown): Map<string, Aggregate[]> {
 function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] {
   if (!Array.isArray(raw)) throw new ShapeError(`${where} has no aggregates`);
   if (raw.length >= GROUP_LIMIT) throw new ShapeError(`${where} is at the group limit`);
-  return raw.map((entry: unknown) => {
+  const read = raw.map((entry: unknown) => {
     if (!isRecord(entry)) throw new ShapeError(`${where} holds an aggregate that is not an object`);
     only(entry, AGGREGATE_KEYS, where);
     if (!finite(entry['value']) || !finite(entry['count'])) {
       throw new ShapeError(`${where} holds a value that is not a number`);
+    }
+    // Measured live on 2026-11-06: a query that matched nothing answers with one aggregate
+    // of zeros, its sample intervals 0 too. No events is not sampling, and has no average.
+    if (entry['count'] === 0) {
+      if (entry['value'] !== 0) throw new ShapeError(`${where} holds a value with no events`);
+      return undefined;
     }
     for (const key of ['sampleInterval', 'interval'] as const) {
       if (entry[key] !== undefined && entry[key] !== 1) {
@@ -326,6 +332,7 @@ function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] 
     }
     return { value: entry['value'], groups };
   });
+  return read.filter((aggregate) => aggregate !== undefined);
 }
 
 export interface OutcomeCount {

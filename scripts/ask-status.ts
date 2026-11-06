@@ -61,10 +61,10 @@ if (record) {
 }
 
 /**
- * The telemetry query needs Workers Observability read, which `wrangler login`'s OAuth scopes
- * do not include: measured 2026-11-06, every query answered 403 with the login's token. So an
- * API token with that permission, as `ASK_STATUS_TOKEN` in `.env`, comes first; the login is
- * the fallback, kept for the day its scopes grow.
+ * The telemetry query needs an observability read, which `wrangler login`'s OAuth scopes do
+ * not include: measured 2026-11-06, every query answered 403 with the login's token. So an API
+ * token with Account > Workers > Metadata Read-only, as `ASK_STATUS_TOKEN` in `.env`, comes
+ * first (measured the same day: every query 200); the login is the fallback.
  */
 const TOKEN = /^[A-Za-z0-9_.-]{20,}$/;
 
@@ -144,7 +144,7 @@ if (refused > 0) {
       'The wrangler login has no Workers Observability scope, and a 403 is what that looks like.',
     );
     console.log(
-      'Set ASK_STATUS_TOKEN in .env to an API token with Workers Observability read on this account.',
+      'Set ASK_STATUS_TOKEN in .env to an API token with Account > Workers > Metadata Read-only.',
     );
   }
   process.exit(1);

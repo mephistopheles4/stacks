@@ -198,7 +198,38 @@ describe("a day's totals from the replies (spec C6)", () => {
 
   type Shape = { result: { calculations: { aggregates: object[] }[] } } & Record<string, unknown>;
   const at = (day: Record<QueryName, unknown>, name: QueryName) => day[name] as Shape;
+  it('reads an empty day as Cloudflare answered one live, on 2026-11-06', () => {
+    // Captured in structure, not in content: a grouped query that matched nothing has no
+    // aggregates, and an ungrouped one has a single aggregate of zeros, intervals 0 included.
+    const zero = { value: 0, interval: 0, sampleInterval: 0, count: 0 };
+    const live = Object.fromEntries(
+      (Object.keys(QUERIES) as QueryName[]).map((name) => [
+        name,
+        reply(
+          ...QUERIES[name].calculations.map((c) =>
+            calc(c.alias, QUERIES[name].groupBys.length > 0 ? [] : [zero]),
+          ),
+        ),
+      ]),
+    ) as Record<QueryName, unknown>;
+    const totals = dayTotals(live);
+    expect(totals.questions).toBe(0);
+    expect(totals.neurons).toBe(0);
+    expect(totals.neuronsMissing).toBe(0);
+    expect(totals.msAvg).toBeUndefined();
+    expect(totals.msMax).toBeUndefined();
+    expect(totals.cachedShare).toBeUndefined();
+  });
+
   const reshaped: [string, (day: Record<QueryName, unknown>) => void][] = [
+    [
+      'a value with no events behind it',
+      (day) =>
+        void Object.assign(at(day, 'spending').result.calculations[0]!.aggregates[0]!, {
+          count: 0,
+          value: 5,
+        }),
+    ],
     ['a reply with no result', (day) => void (day.spending = { success: true })],
     ['an unknown key on the reply', (day) => void (at(day, 'spending')['extra'] = 1)],
     ['a reply with no errors list', (day) => void delete at(day, 'spending')['errors']],
