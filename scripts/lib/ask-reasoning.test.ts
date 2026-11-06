@@ -61,6 +61,7 @@ describe("reasoningOf: the model's reasoning, kept for the evals (S9)", () => {
     expect(neuronsOf({ usage: { neurons: '12' } })).toBeUndefined();
     expect(neuronsOf({ usage: { neurons: -1 } })).toBeUndefined();
     expect(neuronsOf({ usage: { neurons: Number.NaN } })).toBeUndefined();
+    expect(neuronsOf({ usage: { neurons: Number.POSITIVE_INFINITY } })).toBeUndefined();
     expect(neuronsOf(null)).toBeUndefined();
     expect(capture({ usage: { neurons: 7 } }).neurons).toBe(7);
   });

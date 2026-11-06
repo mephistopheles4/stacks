@@ -247,28 +247,28 @@ The change is committed afterwards. C18 times it.
 **What these limits cannot stop (accepted by the owner, S14, Q1).** The bill stays
 capped on every path reviewed. Availability does not:
 
-- About 5 addresses in a real browser, at 30 questions each and about 50 Neurons a question,
-  spend the day's AI budget. With the search tool a typical question measured about 50
-  Neurons (down from at least 56 for input alone) and the worst case is about 300 (up from
+- **On `deepseek-v4.1-flash-1017` (M2, since 2026-11-06),** about 5 addresses in a real browser, at 30
+  questions each, spend the day's AI budget. The published rates are $0.30 a million input tokens,
+  **$0.006 cached** and $1.20 output (27,273, 545 and 109,091 Neurons), and the model **needs a paid
+  billing method**, which Workers Paid already is (ADR-0133). Cloudflare caches the shared prompt prefix
+  on its own; no setting was used. Measured per question: **36 to 52 Neurons with the cache warm**
+  (questions back to back) and **about 93 to 99 cold**, by published rates on all input. The worst case
+  is about 750: 3 model calls, 9,600 input tokens in all, and 1,500 output tokens on each of the 3.
+  At $0.09 a day (about 8,000 Neurons) that is about 85 cold typical questions or about 11 worst ones.
+  **The bill stays capped; availability is worse.** One visitor's 30 typical questions use about a
+  third of a day cold, and their 30 worst-case questions could use the whole day in about 11. Nothing
+  measured came near the worst case: the most any call wrote was 291 tokens in the first pass and 322 in
+  the second. The owner accepted this for launch (Q15, option 1) and it is revisited on the live counts.
+  Whether a visitor can force the worst case is unproven: a long question is easy, but two searches and
+  full hidden reasoning are the model's choice. One IPv6 /48 holds 65,536 /64 keys. The window slides,
+  so sustained spending keeps AI off. Search keeps working, and the bill stays capped.
+- **Before 2026-11-06, on `gpt-oss-20b`:** about 5 addresses, at 30 questions each and about 50 Neurons a
+  question, spent the day's AI budget. With the search tool a typical question measured about 50
+  Neurons (down from at least 56 for input alone) and the worst case was about 300 (up from
   about 130): 3 model calls with up to 5,650 estimated tokens on the last, about 9,600 real
   input tokens or 175 Neurons, and 1,500 output tokens on each call, 123 more. At $0.09 a day
-  that is about 160 typical questions or about 27 worst ones, and **one visitor's 30
-  worst-case questions could use up a whole day of AI**, up from about half. Whether a
-  visitor can force the worst case is unproven: a long question is easy, but two searches
-  and full hidden reasoning are the model's choice. One IPv6 /48 holds 65,536 /64 keys. The window
-  slides, so sustained spending keeps AI off. Search keeps working, and the bill stays capped.
-  ⚠️ **Those figures are `gpt-oss-20b`'s. They changed with the model (M2, 2026-11-06):** the published
-  rates of `deepseek-v4.1-flash-1017` are $0.30 a million input tokens, **$0.006 cached** and $1.20
-  output (27,273, 545 and 109,091 Neurons), and it **needs a paid billing method**, which Workers Paid
-  already is (ADR-0133). Cloudflare caches the shared prompt prefix on its own; no setting was used.
-  Measured per question: **36 to 52 Neurons with the cache warm** (questions back to back) and **about
-  93 to 99 cold**, by published rates on all input. The worst case is about 750 (9,600 input tokens and
-  1,500 output tokens on each of 3 calls), up from about 300. At $0.09 a day (about 8,000 Neurons) that
-  is about 85 cold typical questions or about 11 worst ones, against about 160 and 27 on
-  `gpt-oss-20b`. **The bill stays capped; availability is worse.** One visitor's 30 typical questions
-  use about a third of a day cold, and their 30 worst-case questions could use the whole day in about
-  11. Nothing measured came near the worst case: the most any call wrote was 322 tokens. The owner
-  accepted this for launch (Q15, option 1) and it is revisited on the live counts.
+  that was about 160 typical questions or about 27 worst ones, and one visitor's 30
+  worst-case questions could use up a whole day of AI, up from about half.
 - About 7 addresses sending junk at the WAF's rate reach Workers Free's 100,000
   requests a day, refused ones included. The Worker then returns error 1027 until
   midnight UTC, so **AI and search both stop**. The shelf stays up. ⚠️ **Out of date since
@@ -311,19 +311,20 @@ capped on every path reviewed. Availability does not:
   ```
 
 - **Follow-ups (decided by the owner on 2026-11-05):** the model writes them in its one
-  reply, with no second call. The Worker splits the reply at the last line that reads
-  FOLLOW-UPS (any case, with or without bold marks, a heading, a colon or a dash; text after the word
-  counts only behind a colon or a dash, so "Follow up with Nexus, it is great." stays in the answer,
-  behaviour E3), keeps the text
-  above it as the answer, and reads the lines below as questions, stripping a leading
-  bullet, number or quote. **Since 2026-11-06 (M3, C36) the marker need not start its line:**
-  DeepSeek writes it at the end of an answer line ("... to our advantage. FOLLOW-UPS:") and once wrote
-  the list on that line too ("... FOLLOW-UPS: - What did you think of ...? - What did you think of ...?"),
-  and the line-start split let both into the answer, twice in 36. The split now also takes the **last**
-  FOLLOW-UPS followed by a colon or a dash anywhere in a line, with the bold marks right round it. The
-  text before it, in that line, ends the answer. Everything after it is the list, broken at a line end or at
-  a dash after a question mark and before the next question. E3 holds: the word with no colon or dash after it
-  stays in the answer. It treats them as untrusted: a line is kept only if it ends
+  reply, with no second call. The Worker splits the reply at the **last line that is a marker on its
+  own**: FOLLOW-UPS in any case, with or without bold marks or a heading, then a colon or a dash, or
+  nothing. Text after the word counts only behind a colon or a dash, so "Follow up with Nexus, it is
+  great." stays in the answer (behaviour E3). **When no line is one (M3, C36), it splits at the last
+  capitalised `FOLLOW-UPS` and a colon inside a line,** the bold marks round it going with it, **but
+  only when what follows is nothing, "none" or the opening of a list item**; the text before it, in
+  that line, ends the answer. Prose that merely says "a follow-up: Homo Deus" or "the follow-up - it sat
+  unread" stays whole, and so does a mixed-case `**Follow-ups:**` that does not start its line. In
+  every case the text above the cut is the answer, and the rest is the list, broken at a line end or at
+  a dash after a question mark, each item stripped of its leading bullet, number or quote. The reason
+  for the in-line rule is DeepSeek, which writes the marker at the end of an answer line ("... to our
+  advantage. FOLLOW-UPS:") and once wrote the list on that line too ("... FOLLOW-UPS: - What did you
+  think of ...? - What did you think of ...?"); the line-start split let both into the answer, twice in
+  36. It treats them as untrusted: a line is kept only if it ends
   in a question mark, is at most 120 characters, and holds no `://`, `www.`, `<`, `>`,
   backtick, bracket or other markup; at most 2 are kept, duplicates drop, and anything
   else is dropped without failing the answer. No marker, or none kept, means no
@@ -604,8 +605,10 @@ harness swapped the rules in after the budget check and so sent Thoughts the rea
 would have dropped. Run again after this change.
 
 **A marker left in an answer fails its case (M4, C37, 2026-11-06).** A case fails when its final answer still
-contains the follow-ups marker (the word followed by a colon or a dash, or alone on a line; "Follow up with
-Nexus, it is great." is not one). This is a new check: the leaks that moved the split (S6) passed every earlier
+contains the follow-ups marker: a line that is one (the word in any case, then a colon, a dash or nothing), or
+a capitalised FOLLOW-UPS and a colon after other text. A sentence that only mentions one ("Follow up with
+Nexus, it is great.", "a follow-up: Homo Deus") is not one. The in-line form is looser than the Worker's
+split on purpose: an answer that still holds the capitalised word and a colon is a leak whatever follows it. This is a new check: the leaks that moved the split (S6) passed every earlier
 one. **Neurons** are read from the response's own `usage.neurons` when every model call of the question
 reported it, else estimated from the model's published rates (27,273 Neurons per million input tokens, 545 per
 million cached input and 109,091 per million output; the estimate prices all input at the full rate, as a
@@ -1084,15 +1087,15 @@ own answer code (`db2ca80`), on the test gateway, with only the model id swapped
   claimed no Thoughts that are not there. Every book with no Thoughts got its rating and "nothing written".
   One line went past the data: "my favourite was *The Five Dysfunctions*", where the Thoughts say "one of my
   favorite", the same kind as the open list's "my favorite leadership book". Its largest output on any call
-  was 322 tokens (291 in the first pass), against `gpt-oss-20b`'s 1,237.
+  was 291 tokens in the first pass and 322 in the second, against `gpt-oss-20b`'s 1,237.
 - **What the others did wrong:** a raw internal format in the answer (`gpt-oss-120b`), a pasted Thoughts
   section and an echoed rule (`glm-4.7-flash`), and reasoning that ran to the 1,500-token cap without an
   answer (Gemma).
 - **The split leaked twice in 36** (M3, S6): the marker closing an answer line, and once the whole list on
   that line. No S9 check saw either, which is why M4 adds one.
-- **Not run:** C7 (S13 step 9) runs on the new model, as it would on any. The cold-cache cost live, whether
-  free daily Neurons cover a paid-billing model, and the date this dated id is retired (it should be expected to
-  follow `deepseek-v4-flash-0731` off the 2026-11-15 list) stay open.
+- **Not run yet:** C7 (S13 step 9), the live check, which runs on whatever model is live. The cold-cache cost
+  live, whether free daily Neurons cover a paid-billing model, and the date this dated id is retired (it should
+  be expected to follow `deepseek-v4-flash-0731` off the 2026-11-15 list) stay open.
 
 ## S13. Build order and way back
 

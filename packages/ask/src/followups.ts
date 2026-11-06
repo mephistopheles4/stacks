@@ -16,21 +16,27 @@ export const MAX_FOLLOW_UP_CHARS = 120;
  * word is read as the first follow-up only after a colon or a dash; anything else on the line means
  * it is a sentence that happens to start with those words ("Follow up with Nexus, it is great."),
  * and the line stays in the answer (behaviour E3). A single full stop or question mark with nothing
- * after it still counts as the marker (behaviour N2).
+ * after it still counts as the marker (behaviour N2). `MARKER_IN_LINE` below is the narrower rule for
+ * a marker that does not start its line.
  */
 const MARKER =
   /^[\s*_#>-]*follow[\s-]*ups?(?:\s+questions?)?[\s*_]*(?:[:\u2013\u2014-]\s*(.*)|[.?]?[\s*_]*)$/i;
 /**
- * The marker anywhere in a line, as DeepSeek writes it at the end of an answer line: the word, then
- * a colon or a dash (M3). The bold marks right round it go with it. The last one in a line wins.
+ * The marker inside a line that starts with something else, as DeepSeek writes it at the end of an
+ * answer line (M3). Narrower than `MARKER` on purpose, because prose says "follow-up:" and "the
+ * follow-up - it sat unread": only the exact `FOLLOW-UPS` the rules ask for, in capitals, then a
+ * colon, and only when what follows is nothing, "none" or the opening of a list item. The bold marks
+ * right round it, and the closing ones after the colon, go with it; the last one in a line wins.
+ * The evals' `MARKER_LEFT_IN` (scripts/lib/ask-evals.ts) is the same rule seen from the other side;
+ * it is looser in capitals on purpose, and says why.
  */
 const MARKER_IN_LINE =
-  /[*_#>]{0,3}(?<![\p{L}\p{N}])follow[\s-]*ups?(?:\s+questions?)?[\s*_]*[:–—-]/giu;
+  /[*_#>]{0,3}(?<![\p{L}\p{N}])FOLLOW-UPS[*_]*:[*_]*(?=\s*(?:$|(?:none|None|NONE)\b|[-*•–—]\s|\d+[.)]\s))/gu;
 /** Items written on one line: a question mark, then a dash or bullet, then the next item. */
 const BETWEEN_ITEMS = /(?<=\?)\s+[-*•–—]\s+/;
 const MARKUP = /:\/\/|www\.|[<>`[\]{}|\\]|\]\(/;
 /** What a model puts before a list item: a bullet or a number. */
-const LEADING = /^\s*(?:[-*•–—]+|\d+[.)])\s*/;
+const LEADING = /^\s*(?:(?:[-*•–—]+|\d+[.)])\s*)+/;
 const NONE = /^(?:none|n\/a|no follow-ups?)\.?$/i;
 
 export interface Split {
@@ -38,23 +44,35 @@ export interface Split {
   readonly followUps: readonly string[];
 }
 
-/** Where a line holds the marker: what comes before it, and the text after it. */
-function cutAt(line: string): { before: string; after: string } | undefined {
+type Cut = { before: string; after: string } | undefined;
+
+/** A line that is a marker: nothing before it, and the text after it. */
+function wholeLine(line: string): Cut {
   const whole = MARKER.exec(line);
-  if (whole) return { before: '', after: whole[1] ?? '' };
+  return whole ? { before: '', after: whole[1] ?? '' } : undefined;
+}
+
+/** A line that holds the marker after other text: that text, and the text after the marker. */
+function inLine(line: string): Cut {
   const last = [...line.matchAll(MARKER_IN_LINE)].at(-1);
   if (last === undefined) return undefined;
   return { before: line.slice(0, last.index), after: line.slice(last.index + last[0].length) };
 }
 
-/** Cuts the answer at the last marker and reads what follows it as questions. */
+/**
+ * Cuts the answer at the last marker line and reads what follows it as questions. A line that is a
+ * marker on its own wins over a marker inside a line, wherever each is; the inside form is tried
+ * only when no line is one (B2).
+ */
 export function splitFollowUps(text: string): Split {
   const lines = text.split(/\r?\n/);
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const cut = cutAt(lines[i] ?? '');
-    if (cut === undefined) continue;
-    const answer = [...lines.slice(0, i), cut.before].join('\n').trim();
-    return { answer, followUps: readItems([cut.after, ...lines.slice(i + 1)]) };
+  for (const find of [wholeLine, inLine]) {
+    for (let i = lines.length - 1; i >= 0; i -= 1) {
+      const cut = find(lines[i] ?? '');
+      if (cut === undefined) continue;
+      const answer = [...lines.slice(0, i), cut.before].join('\n').trim();
+      return { answer, followUps: readItems([cut.after, ...lines.slice(i + 1)]) };
+    }
   }
   return { answer: text.trim(), followUps: [] };
 }

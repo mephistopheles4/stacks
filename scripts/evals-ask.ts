@@ -174,7 +174,6 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
       calls.map((call) => call.neurons),
       trace,
     );
-    const reported = calls.length > 0 && calls.every((call) => call.neurons !== undefined);
     const standAlone = followUpsStandAlone(answered.reply.followUps, library);
     const pilled =
       c.pill === undefined || answered.reply.books.some((b) => b.title.startsWith(c.pill ?? ''));
@@ -186,7 +185,7 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
     if (ok) passed += 1;
     tokensIn += answered.detail.tokensIn ?? 0;
     tokensOut += answered.detail.tokensOut ?? 0;
-    totalNeurons += spent;
+    totalNeurons += spent.neurons;
     // A tool mismatch is something to read, never a failure.
     const mismatch = toolMismatch(c.expects, trace.called);
     if (mismatch !== undefined) mismatches += 1;
@@ -196,7 +195,7 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
     );
     console.log(
       `      ${String(trace.modelCalls)} model calls, ${String(trace.called.length)} tool calls` +
-        ` (${trace.called.join(' > ') || 'none'}), ${String(trace.toolErrors)} tool errors, ${reported ? '' : '~'}${spent.toFixed(1)} Neurons ${reported ? '(reported)' : '(estimated)'}`,
+        ` (${trace.called.join(' > ') || 'none'}), ${String(trace.toolErrors)} tool errors, ${spent.reported ? '' : '~'}${spent.neurons.toFixed(1)} Neurons ${spent.reported ? '(reported)' : '(estimated)'}`,
     );
     console.log(
       `      expected tool: ${c.expects}${mismatch === undefined ? '' : `  <-- READ THIS: ${mismatch}`}`,
@@ -233,8 +232,8 @@ for (const c of [...CASES, ...MEMORY_CASES]) {
       mode: answered.reply.mode,
       expectedTool: c.expects,
       toolMismatch: mismatch ?? null,
-      neurons: spent,
-      neuronsReported: reported,
+      neurons: spent.neurons,
+      neuronsReported: spent.reported,
       events,
       // Per model call, in order: the reasoning the response carried, and the keys it had.
       calls,

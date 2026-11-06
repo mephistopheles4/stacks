@@ -76,13 +76,21 @@ export function followUpsStandAlone(
 }
 
 /**
- * M4, C37: the follow-ups marker (the word, then a colon or a dash, or alone on a line) still in a
- * final answer. The Worker cuts it off, so one left behind is a leak the other checks cannot see.
- * A sentence that only opens the same way ("Follow up with Nexus, it is great.") is not one.
+ * M4, C37: the follow-ups marker still in a final answer, which the Worker cuts off, so one left
+ * behind is a leak the other checks cannot see. Two forms, read as the Worker's `MARKER` and
+ * `MARKER_IN_LINE` (packages/ask/src/followups.ts) read them: a line that is a marker, in any case
+ * (the word, then a colon or a dash, or nothing), and a capitalised FOLLOW-UPS and a colon after
+ * other text. A sentence that only mentions one ("Harari wrote a follow-up: Homo Deus", "Follow up
+ * with Nexus, it is great.") is neither. **The in-line form is looser than the Worker's on
+ * purpose:** the Worker also asks that what follows be empty, "none" or a list item, so that prose
+ * is not cut, but an answer that still holds the capitalised word and a colon after the split is a
+ * leak whatever follows it.
  */
-const MARKER_LEFT_IN =
-  /follow[\s-]*ups?(?:\s+questions?)?[\s*_]*[:–—-]|^[\s*_#>-]*follow[\s-]*ups?(?:\s+questions?)?[\s*_]*[.?]?[\s*_]*$/im;
-export const leaksFollowUpMarker = (answer: string): boolean => MARKER_LEFT_IN.test(answer);
+const MARKER_LINE =
+  /^[\s*_#>-]*follow[\s-]*ups?(?:\s+questions?)?[\s*_]*(?:[:–—-]|[.?]?[\s*_]*$)/im;
+const MARKER_LEFT_IN_LINE = /(?<![\p{L}\p{N}])FOLLOW-UPS[*_]*:/u;
+export const leaksFollowUpMarker = (answer: string): boolean =>
+  MARKER_LINE.test(answer) || MARKER_LEFT_IN_LINE.test(answer);
 
 /** A case passes on its answer's own checks and with no marker left in it. */
 export const answerPasses = (c: EvalCase, answer: string, lib: readonly CatalogueBook[]): boolean =>
@@ -300,18 +308,14 @@ export function claimsSheet(
 /**
  * Workers AI's published rates, in Neurons per million tokens, for deepseek-v4.1-flash-1017 (S5).
  * The estimate prices every input token at the full rate, as a cold cache would: the trace does not
- * say how many were cached, and a response that reports its own Neurons is preferred (`neuronsSpent`).
+ * say how many were cached (a cached one is 545), and a response that reports its own Neurons is
+ * preferred (`neuronsSpent`).
  */
 const NEURONS_PER_M_IN = 27_273;
-const NEURONS_PER_M_CACHED_IN = 545;
 const NEURONS_PER_M_OUT = 109_091;
 
-/** `cachedIn` is the part of `tokensIn` the provider read from its cache. */
-export const neurons = (tokensIn: number, tokensOut: number, cachedIn = 0): number =>
-  ((tokensIn - cachedIn) * NEURONS_PER_M_IN +
-    cachedIn * NEURONS_PER_M_CACHED_IN +
-    tokensOut * NEURONS_PER_M_OUT) /
-  1_000_000;
+export const neurons = (tokensIn: number, tokensOut: number): number =>
+  (tokensIn * NEURONS_PER_M_IN + tokensOut * NEURONS_PER_M_OUT) / 1_000_000;
 
 /** One question's trace, ready to print and to keep. */
 export interface TraceSummary {
@@ -354,16 +358,18 @@ export function summariseTrace(events: readonly TraceEvent[]): TraceSummary {
 }
 
 /**
- * A question's Neurons: what its responses reported in `usage.neurons`, one per model call, or the
- * trace's estimate from the published rates when any call reported none (M4).
+ * A question's Neurons, and whether they are the responses' own: the sum of `usage.neurons`, one
+ * per model call, when there is one for every call, else the trace's estimate from the published
+ * rates (M4). `reported` says which, so the run can print it.
  */
 export function neuronsSpent(
   reported: readonly (number | undefined)[],
   trace: TraceSummary,
-): number {
+): { readonly neurons: number; readonly reported: boolean } {
   const all = reported.filter((n): n is number => n !== undefined);
-  const complete = trace.modelCalls > 0 && all.length === reported.length;
-  return complete && reported.length === trace.modelCalls
-    ? all.reduce((sum, n) => sum + n, 0)
-    : trace.neurons;
+  const complete =
+    trace.modelCalls > 0 && all.length === reported.length && reported.length === trace.modelCalls;
+  return complete
+    ? { neurons: all.reduce((sum, n) => sum + n, 0), reported: true }
+    : { neurons: trace.neurons, reported: false };
 }

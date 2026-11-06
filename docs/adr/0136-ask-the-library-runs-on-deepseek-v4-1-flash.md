@@ -10,8 +10,8 @@ row, which the owner had chosen from nine models on 2026-11-04. Issue
 ## Decision
 
 The Ask the library Worker calls `@cf/deepseek-ai/deepseek-v4.1-flash-1017` in place of
-`@cf/openai/gpt-oss-20b`. `MODEL` in `packages/ask/src/limits.ts` is the only place the id is written,
-and the evals read it from there. Nothing else in the call changes: the same messages, tools,
+`@cf/openai/gpt-oss-20b`. `MODEL` in `packages/ask/src/limits.ts` is the only place the code reads the
+id, and the evals read it from there. Nothing else in the call changes: the same messages, tools,
 `max_tokens` of 1,500, gateway option, `skipCache` and 30-second deadline. The rules text does not
 change; the contract's **Built for** line and its changelog say so (version 0.5.1).
 
@@ -35,7 +35,7 @@ only the model id swapped:
   or reasoning that ran to the 1,500-token cap without an answer (Gemma).
 - **It is the fastest with the shortest tail.** A median near 4 s and nothing past 9.6 s, while Gemma
   and `glm-4.7-flash` each had calls of 38.9 s or more, past the 30-second deadline.
-- **It writes little.** Its largest output on any call was 322 tokens, against 1,237 for
+- **It writes little.** Its largest output on any call was 291 tokens in the first pass and 322 in the second, against 1,237 for
   `gpt-oss-20b`, so the output rate, the dearest one, is rarely paid.
 
 ## What it costs, and what was accepted (Q15, option 1)
@@ -56,13 +56,22 @@ questions a visitor a day, or a higher spend limit. Revisit on the live counts.
   Whether free daily Neurons cover a paid-billing model is unread, like the rest of Unified Billing.
 - **Dated model ids get retired.** `deepseek-v4-flash-0731`, a dated DeepSeek V4 Flash id, is on
   the 2026-11-15 deprecation list; this id should be expected to follow. The eval harness is what makes
-  the next switch cheap: change `MODEL`, run `pnpm evals:ask`, read the failures.
+  the next switch cheap. **A switch touches more than `MODEL`.** Every companion, each of which the
+  last switch had to change by hand:
+  - the model assertion in `packages/ask/src/ai.test.ts`;
+  - the S3 Model row of `docs/spec/ask-the-library.md`;
+  - the contract's **Built for** line and a row in the changelog, in `packages/ask/`;
+  - the published rates in `scripts/lib/ask-evals.ts` (`NEURONS_PER_M_IN` and `NEURONS_PER_M_OUT`);
+  - then run `pnpm evals:ask` and read the failures, because a model's habits (where it writes the
+    follow-ups marker) are what the split and the evals' checks were fitted to.
 
 ## What changed with it
 
-- **The follow-ups split** takes the last marker followed by a colon or a dash anywhere in a line, and
-  breaks a list written on one line at a dash after a question mark. DeepSeek ends an answer line with
-  the marker, and once wrote the list on the same line; both leaked, twice in 36.
+- **The follow-ups split** cuts at the last line that is a marker on its own (any case, as before).
+  Failing that it cuts at a capitalised `FOLLOW-UPS` and a colon inside a line, only when what follows
+  is nothing, "none" or the opening of a list item, so that prose saying "a follow-up: Homo Deus"
+  stays whole. A list written on one line breaks at a dash after a question mark. DeepSeek ends an
+  answer line with the marker, and once wrote the list on the same line; both leaked, twice in 36.
 - **The evals** fail a case whose answer still holds the marker, read the response's own
   `usage.neurons` when every call reports it, and price the estimate at DeepSeek's rates. The Worker
   reads, logs and returns nothing new.
