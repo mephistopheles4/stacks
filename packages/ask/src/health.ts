@@ -96,8 +96,11 @@ export async function handleHealth(
     up = false;
   }
   logOutcome(up ? 'health-up' : 'health-down');
-  return new Response(request.method === 'HEAD' ? null : up ? 'up' : 'down', {
-    status: up ? 200 : 503,
-    headers: { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' },
-  });
+  return new Response(
+    request.method === 'HEAD' ? null : up ? 'stacks-ask: up' : 'stacks-ask: down',
+    {
+      status: up ? 200 : 503,
+      headers: { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' },
+    },
+  );
 }

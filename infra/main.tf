@@ -162,6 +162,11 @@ resource "cloudflare_healthcheck" "ask" {
     path             = "/api/chat/health"
     port             = 443
     expected_codes   = ["200"]
+    # Pages answers any unknown path with the shelf's HTML and a 200, so a 200
+    # alone cannot tell a missing Worker from a working one. The Worker's health
+    # body is this phrase when up. The match is a case-insensitive substring and
+    # the shelf's HTML contains "up", so it has to be distinctive.
+    expected_body    = "stacks-ask: up"
     follow_redirects = false
     allow_insecure   = false
     header = {

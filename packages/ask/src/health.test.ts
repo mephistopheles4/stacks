@@ -97,7 +97,7 @@ describe('the daily test and the health address (C19)', () => {
     const { env, aiCalls } = envWith(async () => ({ response: 'x' }));
     const response = await handleHealth(get(), env, () => NOW);
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe('up');
+    expect(await response.text()).toBe('stacks-ask: up');
     expect(aiCalls()).toBe(0);
   });
 
@@ -124,7 +124,7 @@ describe('the daily test and the health address (C19)', () => {
     } as unknown as Env;
     const response = await handleHealth(get(), broken);
     expect(response.status).toBe(503);
-    expect(await response.text()).toBe('down');
+    expect(await response.text()).toBe('stacks-ask: down');
   });
 });
 
