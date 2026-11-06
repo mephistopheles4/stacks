@@ -35,6 +35,20 @@ export function isValidIsbn(value: string): boolean {
 }
 
 /**
+ * Strips leading and trailing `-` and `/`. A loop and not `/^[-/]+|[-/]+$/g`: the
+ * trailing alternative retries from every position in a long mid-string run of
+ * "-/", which is quadratic (CodeQL js/polynomial-redos).
+ */
+function trimSeparators(text: string): string {
+  const isSeparator = (ch: string | undefined): boolean => ch === '-' || ch === '/';
+  let start = 0;
+  let end = text.length;
+  while (start < end && isSeparator(text[start])) start += 1;
+  while (end > start && isSeparator(text[end - 1])) end -= 1;
+  return text.slice(start, end);
+}
+
+/**
  * Rewrites a label into something Obsidian accepts as a tag.
  *
  * Obsidian allows letters, digits, `_`, `-` and `/` and nothing else — no
@@ -46,13 +60,14 @@ export function isValidIsbn(value: string): boolean {
  * all-numeric one, which Obsidian also rejects.
  */
 export function toObsidianTag(raw: string): string | undefined {
-  const cleaned = raw
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9_/-]+/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/^[-/]+|[-/]+$/g, '');
+  const cleaned = trimSeparators(
+    raw
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_/-]+/g, '-')
+      .replace(/-{2,}/g, '-'),
+  );
 
   if (cleaned.length === 0) return undefined;
   // A tag of digits alone is not a valid Obsidian tag.
