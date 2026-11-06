@@ -2,8 +2,9 @@
 
 Issue [#541](https://github.com/mephistopheles4/stacks/issues/541). Standard tier.
 Extends S11 of [`ask-the-library.md`](ask-the-library.md); C15 and S14 Q10 (counts
-only) bind every line below. **Draft, revision 2 after the spec round (the
-executability, unstated and data lenses), waiting for the owner's proceed.**
+only) bind every line below. **Signed off by the owner on 2026-11-06** ("Yes, build it") on revision 2, after
+the spec round (the executability, unstated and data lenses), with the picks in S8
+and the answers recorded there.
 
 ## S1. Problem
 
@@ -82,7 +83,8 @@ gets the same, after #540 merges (S10 step 6).
 **The queries.** Workers Observability's telemetry query, `calculations` view: one
 grouped by `outcome`, `reason`, `limit` and `question`, counting and summing
 `neurons`, `tokensIn`, `tokensCached` and `ms`; one counting spending lines that
-carry `neurons`. Each sets an explicit group limit. Turning the replies into totals
+carry `neurons`. Each sets an explicit group limit, and **a reply with as many
+groups as the limit is refused** as possibly cut off (owner, 2026-11-06). Turning the replies into totals
 is one pure function, tested on a fixture labelled *documented shape, not captured*,
 and it **refuses any reply whose shape differs from the fixture's**: a missing key,
 an unknown key, or a value that is not a finite number. A refused reply writes no
@@ -121,7 +123,8 @@ constant with its change date: 3 days before 2026-12-01, 7 from then. A day
 - its start is **later than** now minus the retention, so the oldest, partly aged-out
   day is skipped;
 - it has **no file** already: a day is never rewritten;
-- both its queries were accepted, and the reply passed the shape check.
+- both its queries were accepted, and each reply passed the shape check and the
+  group-limit check.
 
 So the owner runs it at least every 2 days now, and every 6 from December 1. A
 missed day stays a visible gap (S4), never a low number.
@@ -196,7 +199,7 @@ prints it, C9 is checked by hand, then `pnpm ask:status --record` writes it,
 | C3 | Each of `minute`, `day` and `error` (a thrown binding, a thrown counter, a malformed counter reply) answers 429, makes no model call and logs `refused-limit` with that `limit` and no other text | suite |
 | C4 | Canary values for the question, the address, the response text, a long `VISITOR_KEY` and the computed visitor key appear in no log line, on every path including the three limit paths (C15, extended) | suite |
 | C5 | `deploy:ask` refuses a config without `head_sampling_rate: 1`, on `--dry-run` too | suite |
-| C6 | The totals function turns the fixture into the printed totals and the record, and refuses each reshaped reply (a missing key, an unknown key, a non-number) with no file written; the wrangler child's environment has `WRANGLER_SEND_METRICS=false` | suite |
+| C6 | The totals function turns the fixture into the printed totals and the record, and refuses each reshaped reply (a missing key, an unknown key, a non-number) and a reply at the group limit, with no file written; the wrangler child's environment has `WRANGLER_SEND_METRICS=false` | suite |
 | C7 | A run writes no file without `--record`, from a linked worktree, for today, for a day under an hour old, for the oldest day in retention (at the December 1 boundary too), for a day already on disk, or for a refused query | suite |
 | C8 | `ask.json`'s panels are S4's, in order, and the provider loads it read-only | suite (parses the file); the import is a host check |
 | C9 | The record imports through the pinned `promtool tsdb create-blocks-from` into a scratch store, never the real one | host, by the builder |
@@ -210,6 +213,12 @@ binding's response at all. **No saved response holds either field**: every Neuro
 figure this project has recorded was worked out from token counts.
 
 ## S8. Decisions for the owner
+
+**Answered on 2026-11-06: the owner took every pick below** ("Yes, build it"). Also
+answered: the security pair (`adversarial-lens`, `data-lens`) runs at Test with the
+QA pair, in place of the standards pair; the group-limit refusal is built (S3); the
+run-time check that `question` is a whole number from 1 to 30 is not (Hardening,
+declined). #540 is now pull request #544.
 
 - **Q1. Exact question number, or bands?** Exact, my pick. The alternative keeps
   every printed figure: a band per line (1–10, 11–20, 21–30) plus a marker only on
@@ -252,7 +261,8 @@ figure this project has recorded was worked out from token counts.
    `ask-the-library.md` S4 and S11.
 
 Each step ends with `athanor run`, `athanor run lint` and `athanor run build` green.
-At Test the QA pair and the standards pair run, as the tier sets.
+At Test the QA pair (`behaviour-lens`, `integrity-lens`) and the security pair
+(`adversarial-lens`, `data-lens`) run, on the owner's choice.
 
 Not touched: `limits.ts` (read for `DAILY_LIMIT` only), `followups.ts`,
 `scripts/lib/ask-evals.ts`, `scripts/evals-ask.ts` (#540's files). No new
