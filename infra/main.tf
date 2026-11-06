@@ -117,6 +117,12 @@ resource "cloudflare_ai_gateway" "ask" {
   rate_limiting_limit     = 0
   rate_limiting_technique = "sliding"
 
+  # Unified Billing (the owner, 2026-11-06): Workers AI calls through this gateway are paid from
+  # AI Gateway credits. The balance can go negative and is then charged to the card, so the
+  # spend limit below stays the cap. "unified" is the value the dashboard sets (read back from
+  # stacks-ask-test); the other value is "postpaid", billed through Workers Paid.
+  workers_ai_billing_mode = "unified"
+
   spend_limits = {
     enabled = true
     rules = [{
