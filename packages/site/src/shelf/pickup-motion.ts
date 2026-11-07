@@ -13,6 +13,7 @@ export interface Schedule {
   readonly turn: number;
   /** Where the track rests, closed and cover-on in the hand, until the visitor opens it. */
   readonly closed: number;
+  /** Always `closed`: nothing can overlap a rest, so opening begins there. */
   readonly open: number;
   readonly end: number;
 }

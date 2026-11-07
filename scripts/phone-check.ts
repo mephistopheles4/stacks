@@ -363,8 +363,9 @@ async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<Exam
     await sleep(250);
   }
   // The book rests closed in the hand (#531). Held a moment so the closed rest is
-  // seen on the phone, then opened as a visitor does: the examine control is on
-  // a page that is hidden until it is.
+  // seen on the phone, then opened through the shelf's hook (a tap on the book is
+  // G35's to cover, not this drive's): the examine control is on a page that is
+  // hidden until the book is open.
   await sleep(1500);
   await cdp.evaluate('window.__shelf.open()');
   const openedAt = Date.now();

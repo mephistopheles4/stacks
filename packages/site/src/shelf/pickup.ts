@@ -204,11 +204,15 @@ export interface SwapReading {
 const SWAPS_KEPT = 20;
 
 export interface Pickup {
-  /** The shelf's click: a book, or empty space. Picks up, or puts back; never opens. */
+  /**
+   * Picks `book` up, or puts back on `undefined`; never opens. The entry for the
+   * hooks and the chat link, which are not clicks.
+   */
   select(book: LibraryBook | undefined): void;
   /**
-   * The canvas's click: `select`, except that the book in hand is opened, and a
-   * click the Ask drawer closed on (`takenByDrawer`) leaves a held book alone.
+   * The shelf's click, which is what the canvas calls: `select`, except that the
+   * book in hand is opened, and a click the Ask drawer closed on (`takenByDrawer`)
+   * leaves a held book alone.
    */
   clicked(book: LibraryBook | undefined, takenByDrawer: boolean): void;
   /** Opens the book in hand, as the Open button or a click on it would. */
@@ -488,9 +492,10 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   };
 
   /**
-   * Focus never moves on pickup (ADR-0049's reason). When the pages that hold
-   * it hide or go, it is caught on the canvas rather than dropped to `<body>`
-   * — the put-back control, Escape, the back button and a lost context alike.
+   * Focus does not move on a shelf pickup (ADR-0049's reason; a chat link is the
+   * one exception, ADR-0137). When the pages or the header controls that hold it
+   * hide or go, it is caught on the canvas rather than dropped to `<body>` — the
+   * X, Escape, the back button and a lost context alike.
    */
   const catchFocus = (): void => {
     const at = document.activeElement;
@@ -565,8 +570,13 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     cursorOn.addEventListener('pointermove', overBook);
   };
 
-  /** Opens the book in hand: the Open button, or a click on the book. */
-  const begin = (action: () => void): void => {
+  /**
+   * Runs `action`, which may open the book (the Open button, a click on it).
+   * When it starts an opening and focus was in the header controls, a screen
+   * reader or a keyboard asked for it, so the right-hand page takes focus once
+   * the book is open; a pointer open moves none.
+   */
+  const noteFocusThen = (action: () => void): void => {
     focusPageOnOpen = controls.root.contains(document.activeElement);
     action();
     // Nothing started: a stale ask must not steal focus from a later open.
@@ -577,7 +587,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     state.putBack();
   });
   controls.open.addEventListener('click', () => {
-    begin(() => {
+    noteFocusThen(() => {
       state.open();
     });
   });
@@ -984,12 +994,12 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       state.select(book);
     },
     clicked: (book, takenByDrawer) => {
-      begin(() => {
+      noteFocusThen(() => {
         state.clicked(book, takenByDrawer);
       });
     },
     open: () => {
-      begin(() => {
+      noteFocusThen(() => {
         state.open();
       });
     },
@@ -1225,9 +1235,10 @@ function measure(entry: Lifted, stage: ShelfStage): SpreadReading {
 
 /**
  * The phone loop (spec §4): picks up `rounds` books in turn, holds each closed,
- * opens it and holds it open, puts it back, and resolves with how many reached
- * the open state. A pass has then tested a closed book, and its memory figure
- * still measures an open one (#531).
+ * opens it and holds it open, puts it back, and resolves with how many rounds
+ * reached the closed rest and how many reached open, each on its own. A pass has
+ * then tested a closed book, and its memory figure still measures an open one
+ * (#531).
  *
  * Replaces #371's `?autoplay=5`, which any link could carry to a visitor's
  * device. This is reachable only from `window.__shelf`, which is to say from a

@@ -7,7 +7,7 @@ import { PICKUP_MOTION } from './shelf-settings.ts';
 /**
  * The real GSAP, stepped by hand as the shelf steps it from its frame.
  *
- * This is the pickup's first test (#531): the track stops at closed going
+ * Written first in #531's build (spec S4): the track stops at closed going
  * forward and passes that stop going backward, which `addPause` was assumed to
  * do and nobody had run. A fake timeline could not say.
  */
@@ -189,6 +189,23 @@ describe('the track, with GSAP running it', () => {
     expect(calls).toEqual({ landed: 1, opened: 0, returned: 0 });
     expect(track.progress()).toBeCloseTo(track.closedProgress(), 10);
     expect(stages.o).toBe(0);
+  });
+
+  it('lands again when caught on the way back from a stop it reached by playing', () => {
+    // The pickup's own path: play to the rest (paused by the stop itself), put
+    // back, then catch before it is home. A jump to the rest is another path.
+    const { stages, track, calls } = rig();
+    track.play();
+    run(() => calls.landed > 0);
+    track.reverse(1.6);
+    step(0);
+    step(0.1);
+    expect(track.progress()).toBeLessThan(track.closedProgress());
+    track.play();
+    run(() => calls.landed > 1 || calls.opened > 0, 3);
+
+    expect(calls).toEqual({ landed: 2, opened: 0, returned: 0 });
+    expect(stages.o).toBeCloseTo(0, 3);
   });
 
   it('jumps without reporting anything', () => {

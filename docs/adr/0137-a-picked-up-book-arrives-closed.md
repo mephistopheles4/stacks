@@ -47,8 +47,8 @@ timeline playing backward as well, so its callback resumes a reverse. A plain
 callback overshoots on a large step, and a pause called from it fires again from
 the stop. A jump to the closed rest lands 0.1 ms past the stop for the same
 reason: a pause placed exactly on an `addPause` fires it again when played on.
-The first test of the build runs the real library through both, and a large time
-step across the stop in each direction, because the track is stepped from the
+The first test of the build runs the real library through the stop and the jump
+to the rest, and takes a large time step across the stop in each direction, because the track is stepped from the
 shelf's frame and a stalled tab jumps.
 
 ## Consequences

@@ -120,8 +120,9 @@ declare global {
       /** The id of the book under a viewport point, as a click there would pick: for the gate. */
       bookAt(x: number, y: number): string | undefined;
       /**
-       * The phone loop: picks up and puts back `rounds` books in turn, and
-       * resolves with how many it held. A function, not an address switch, so no
+       * The phone loop: picks up, opens and puts back `rounds` books in turn, and
+       * resolves with how many rounds reached the closed rest and how many reached
+       * open. A function, not an address switch, so no
        * link a visitor is sent can start it on their device (spec §4).
        */
       pickupLoop(rounds: number): Promise<LoopResult>;

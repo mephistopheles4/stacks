@@ -30,9 +30,6 @@
  */
 export const CLOSED_HINT = 'Click the book to open it';
 
-/** How far from 0° the front board may lie and the book still read as closed. */
-const CLOSED_BOARD_DEG = 0.5;
-
 /** The closed book at rest, read before anything opened it. */
 export interface ClosedRead {
   /** The front board's angle to the page block, read from the scene. */
@@ -78,16 +75,18 @@ export interface PickupRead {
   readonly hrefUnchanged: boolean;
   /** The pickup pushed its own history entry. */
   readonly historyHeld: boolean;
-  /** Focus stayed where it was: there is still no keyboard path to the shelf (spec §3.4, ADR-0049). */
+  /** Focus stayed where it was after a shelf pickup (spec §3.4, ADR-0049; a chat link moves it, ADR-0137). */
   readonly focusUnmoved: boolean;
   /**
-   * With focus on a link of the held page, Escape put the book down and focus
+   * With focus on the X and the book closed, Escape put the book down and focus
    * landed on the canvas rather than dropping to `<body>`, where the next Tab
-   * starts the page over.
+   * starts the page over. (A link on a closed book's page cannot take focus.)
    */
   readonly focusCaught: boolean;
-  /** The same from an open book, with focus on a link of the page. */
+  /** The same from an open book, with focus on a link of its page. */
   readonly focusCaughtOpen: boolean;
+  /** The put-down by that Escape from an open book: history and address as before the pickup. */
+  readonly afterEscapeOpen: PutDown;
   /**
    * Both pages inside the desktop viewport at rest, within a pixel — the
    * desktop half of the card's old overflow check, which the phone check keeps
@@ -145,7 +144,9 @@ export function pickupFailures(read: PickupRead): string[] {
   }
   if (!read.visibleAtRest) failures.push('the pages are not visible with the book open at rest');
   if (!read.focusUnmoved) {
-    failures.push('focus moved on pickup — it must stay put, with no keyboard path to the shelf');
+    failures.push(
+      'focus moved on a shelf pickup — it must stay put (ADR-0049; only a chat link moves it)',
+    );
   }
   if (!read.focusCaught) {
     failures.push(
@@ -224,6 +225,7 @@ export function pickupFailures(read: PickupRead): string[] {
   failures.push(
     ...putDownFailures(read.afterPutBack, 'the put-back control'),
     ...putDownFailures(read.afterEscape, 'Escape'),
+    ...putDownFailures(read.afterEscapeOpen, 'Escape from an open book'),
     ...putDownFailures(read.afterBack, 'the back button'),
     ...putDownFailures(read.afterBackOpen, 'the back button from an open book'),
   );
@@ -233,7 +235,7 @@ export function pickupFailures(read: PickupRead): string[] {
 /** The book before it is opened (#531, claims C1, C2 and C8). */
 function closedFailures(read: ClosedRead): string[] {
   const failures: string[] = [];
-  if (Math.abs(read.boardAngle) > CLOSED_BOARD_DEG) {
+  if (Math.abs(read.boardAngle) > CLOSED_TOLERANCE_DEG) {
     failures.push(
       `the book arrived ${Math.abs(read.boardAngle).toFixed(1)}° off closed — a picked-up book ` +
         'arrives closed and cover-on',
@@ -340,6 +342,8 @@ export interface ViewerRead {
    * the view left. Nothing when no such book was reached (S7).
    */
   readonly coverlessOpens: boolean | undefined;
+  /** …and that book arrived closed, its board at 0° ±0.5° read from the scene (C1). */
+  readonly coverlessArrivesClosed: boolean | undefined;
   /** Focus was inside the dialog while it was open (`showModal` moves it in). */
   readonly focusInside: boolean;
   /** After Escape, once at rest, focus was on the page's control. */
@@ -417,6 +421,11 @@ export function viewerFailures(read: ViewerRead | undefined): string[] {
   } else if (!read.coverlessOpens) {
     failures.push('a book with no cover did not close and leave the view when examined');
   }
+  if (read.coverlessArrivesClosed === undefined) {
+    failures.push('no book without a cover was reached, so its arrival closed was never read');
+  } else if (!read.coverlessArrivesClosed) {
+    failures.push('a book with no cover arrived off closed: the board must lie at 0° on arrival');
+  }
   if (!read.focusInside) failures.push('focus was not inside the dialog while it was open');
   if (!read.focusReturned) {
     failures.push("focus did not return to the page's control after Escape, once the page showed");
@@ -450,12 +459,14 @@ export interface ViewportControls {
   readonly xOnTopOpen: boolean;
 }
 
-/** The closed book's controls (#531, claims C4 to C9, C11 and C12), read in a browser. */
+/** The closed book's controls (#531, claims C4, C5, C7 to C9 and C12), read in a browser. */
 export interface ControlsRead {
   readonly desktop: ViewportControls;
   readonly phone: ViewportControls;
   /** The X's accessible name. */
   readonly xName: string;
+  /** Left alone for a while after landing, the book is still closed: nothing opens it by itself (C2). */
+  readonly staysClosed: boolean;
   /** The tree holds a button named "Open «Title»" while the book is closed at rest. */
   readonly buttonInTree: boolean;
   /** …and holds none the moment the opening starts. */
@@ -530,6 +541,8 @@ export function controlsFailures(read: ControlsRead | undefined): string[] {
     );
   }
   if (!read.xStayedPut) failures.push('the X moved when the Open button took focus');
+  if (!read.staysClosed)
+    failures.push('the closed book opened by itself: only the visitor opens it');
   if (!read.focusToPage) {
     failures.push('after Open was pressed, focus did not land on the right-hand page');
   }
@@ -560,11 +573,22 @@ export interface DrawerCell {
   readonly actual: string;
 }
 
-export function drawerFailures(cells: readonly DrawerCell[]): string[] {
+/**
+ * `expected` is how many cells the browser table has: a cell that drops out, on
+ * a failed set-up or a point that was not found, is a red line, and not a smaller
+ * table that passes.
+ */
+export function drawerFailures(cells: readonly DrawerCell[], expected: number): string[] {
   if (cells.length === 0) return ['no cell of the drawer tables was read'];
-  return cells
+  const failures = cells
     .filter((cell) => cell.expected !== cell.actual)
     .map((cell) => `${cell.name}: the spec says "${cell.expected}", the page did "${cell.actual}"`);
+  if (cells.length !== expected) {
+    failures.push(
+      `${String(cells.length)} of the ${String(expected)} cells of the drawer tables were read`,
+    );
+  }
+  return failures;
 }
 
 /** A context lost with a book in hand, read at the moment the hand was empty. */

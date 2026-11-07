@@ -19,8 +19,10 @@
  */
 
 /**
- * `held` is at rest in the hand, closed or open: whether it is open is a reading
- * of its own (`Holding.opened`), so every rule that reads `held` is unchanged.
+ * `held` is in the hand and past the lift: closed at rest, opening, or open.
+ * Which of the three is a reading of its own (`Holding.opened`, and `closed()`,
+ * which is true only at the closed rest), so every rule that reads `held` is
+ * unchanged. A wait that needs a book at rest reads one of those too.
  */
 export type Phase = 'lifting' | 'held' | 'returning';
 
@@ -34,9 +36,9 @@ export interface Track {
   play(): void;
   /** Backward, `speed` times faster than forward. It does not stop at closed. */
   reverse(speed: number): void;
-  /** Jump to closed in the hand, with no motion. */
+  /** Jump to the closed rest, where the track stops going forward. No motion. */
   finish(): void;
-  /** Jump to open in the hand, with no motion. */
+  /** Jump to the far end: open in the hand. No motion. */
   finishOpen(): void;
   /** Jump back to the shelf, with no motion. */
   rewind(): void;
@@ -124,8 +126,9 @@ export interface PickupState<B> {
    */
   select(book: B | undefined): void;
   /**
-   * The shelf's click. With a book in hand and the click already taken by the
-   * Ask drawer closing, nothing; on the book in hand, open it; otherwise `select`.
+   * The shelf's click, which is what the canvas calls. With a book in hand and the
+   * click already taken by the Ask drawer closing, nothing; on the book in hand,
+   * open it; otherwise `select`.
    */
   clicked(book: B | undefined, takenByDrawer: boolean): void;
   /**
@@ -328,6 +331,15 @@ export function createPickupState<B>(
         same.phase = 'lifting';
         remember(book);
         effects.announce(book);
+        // Caught before the reverse has moved a frame, it is still on the closed
+        // rest (or an opening begun there): playing on would carry it through the
+        // stop and open it, so it lands there again instead.
+        if (Math.abs(same.track.progress() - same.track.closedProgress()) < 1e-6) {
+          same.track.finish();
+          same.phase = 'held';
+          effects.landed(book);
+          return;
+        }
         same.track.play();
         return;
       }

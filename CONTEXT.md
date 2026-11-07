@@ -239,8 +239,8 @@ too), open (that is what the visitor does next), zoom, focus.
 **Held**:
 The state of the one book that has been **picked up** and is at rest, square to
 the camera, closed or open to its pages: whether it is open is a reading of its
-own (`opened`). A book on its way there or back is moving, not held, and so is
-one still opening.
+own (`opened`). A book on its way there or back is moving, not held; one still
+opening is held, and `closed()` is what says it is not yet at rest.
 *Avoid*: selected, active, open (on its own), focused.
 
 **Put back**:

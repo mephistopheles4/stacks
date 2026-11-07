@@ -52,6 +52,13 @@ const good: PickupRead = {
   focusUnmoved: true,
   focusCaught: true,
   focusCaughtOpen: true,
+  afterEscapeOpen: {
+    held: false,
+    announced: '',
+    historyHeld: false,
+    hrefUnchanged: true,
+    pages: 0,
+  },
   pagesInView: true,
   thoughtsShown: true,
   second: {
@@ -149,10 +156,53 @@ describe('pickupFailures, the closed book (#531)', () => {
     expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: -0.51 } }).length).toBe(1);
   });
 
+  it('holds Escape to account from an open book too, history included', () => {
+    const left = { ...good.afterEscapeOpen, historyHeld: true };
+    expect(pickupFailures({ ...good, afterEscapeOpen: left }).join('\n')).toMatch(
+      /Escape from an open book left the pickup's history entry/,
+    );
+  });
+
   it('holds the back button to account from an open book too', () => {
     const open = { ...good.afterBackOpen, held: true };
     expect(pickupFailures({ ...good, afterBackOpen: open }).join('\n')).toMatch(
       /back button from an open book left the book held/,
+    );
+  });
+});
+
+describe('viewerFailures, the coverless book on arrival (#531, C1)', () => {
+  it('fails when a book with no cover arrives off closed, and when none was reached', () => {
+    const base = {
+      opened: true,
+      namedForBook: true,
+      closedAngle: 0,
+      escapeClosedViewer: true,
+      heldAfterEscape: true,
+      pageVisibleAfterEscape: true,
+      held: '/h.jpg',
+      showedHeld: true,
+      withoutHeld: { showedOwn: true },
+      fellBack: true,
+      pathInPage: false,
+      turned: true,
+      keyTurned: true,
+      leftByTap: true,
+      leftByButton: true,
+      reducedCuts: true,
+      fetchedNothing: true,
+      coverlessOpens: true,
+      coverlessArrivesClosed: true,
+      focusInside: true,
+      focusReturned: true,
+      emptiedCloses: true,
+    } satisfies ViewerRead;
+    expect(viewerFailures(base)).toEqual([]);
+    expect(viewerFailures({ ...base, coverlessArrivesClosed: false }).join('\n')).toMatch(
+      /with no cover arrived off closed/,
+    );
+    expect(viewerFailures({ ...base, coverlessArrivesClosed: undefined }).join('\n')).toMatch(
+      /no book without a cover was reached/,
     );
   });
 });
@@ -179,6 +229,7 @@ describe('viewerFailures', () => {
     reducedCuts: true,
     fetchedNothing: true,
     coverlessOpens: true,
+    coverlessArrivesClosed: true,
     emptiedCloses: true,
   };
 
@@ -383,6 +434,7 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
     buttonGoneWhileOpening: true,
     longTitleOnScreen: true,
     xStayedPut: true,
+    staysClosed: true,
     focusToPage: true,
     focusToPageReduced: true,
     reducedPickupCuts: true,
@@ -414,6 +466,7 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
     ],
     ['an Open button off screen on a long title', { longTitleOnScreen: false }, /fully on screen/],
     ['an X that moved when Open took focus', { xStayedPut: false }, /X moved/],
+    ['a book that opened by itself', { staysClosed: false }, /opened by itself/],
     ['focus lost after Open', { focusToPage: false }, /focus did not land on the right-hand page/],
     [
       'focus lost after Open under reduced motion',
@@ -486,26 +539,35 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
 });
 
 describe('drawerFailures — every cell of the drawer tables (#531, C6)', () => {
+  const cell = {
+    name: 'click on the book',
+    expected: 'drawer closed; book closed',
+    actual: 'drawer closed; book closed',
+  };
+
   it('passes cells whose outcome is the spec’s', () => {
-    expect(
-      drawerFailures([
-        {
-          name: 'click on the book',
-          expected: 'drawer closed; book closed',
-          actual: 'drawer closed; book closed',
-        },
-      ]),
-    ).toEqual([]);
+    expect(drawerFailures([cell], 1)).toEqual([]);
+  });
+
+  it('fails when a cell dropped out, so a gap cannot pass as a smaller table', () => {
+    expect(drawerFailures([cell], 2).join('\n')).toMatch(/1 of the 2 cells/);
+  });
+
+  it('fails when there are more cells than the table has', () => {
+    expect(drawerFailures([cell, cell], 1).join('\n')).toMatch(/2 of the 1 cells/);
   });
 
   it('names the cell, what the spec says and what happened', () => {
-    const failures = drawerFailures([
-      {
-        name: 'the X by key',
-        expected: 'drawer open; book away',
-        actual: 'drawer closed; book away',
-      },
-    ]);
+    const failures = drawerFailures(
+      [
+        {
+          name: 'the X by key',
+          expected: 'drawer open; book away',
+          actual: 'drawer closed; book away',
+        },
+      ],
+      1,
+    );
 
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('the X by key');
@@ -514,7 +576,7 @@ describe('drawerFailures — every cell of the drawer tables (#531, C6)', () => 
   });
 
   it('fails when no cell was read at all', () => {
-    expect(drawerFailures([]).join('\n')).toMatch(/no cell/);
+    expect(drawerFailures([], 0).join('\n')).toMatch(/no cell/);
   });
 });
 

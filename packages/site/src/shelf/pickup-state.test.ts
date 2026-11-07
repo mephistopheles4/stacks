@@ -275,11 +275,31 @@ describe('putting it back', () => {
     expect(h.log).toEqual([]);
   });
 
+  it('lands a book at once when it is caught before its reverse has moved', () => {
+    // Put back from the closed rest and clicked again within a frame: it is still
+    // on the rest, so playing forward would carry it on through the stop and open it.
+    const h = harness();
+    h.state.select('a');
+    h.track('a').land();
+    h.state.putBack();
+    h.state.select('a');
+
+    expect(h.tracks).toHaveLength(1);
+    expect(h.track('a').playing).toBe('stopped');
+    expect(h.track('a').at).toBe(CLOSED);
+    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
+    expect(h.state.closed()).toBe(true);
+    expect(h.log.slice(-2)).toEqual(['announce a', 'landed a']);
+    expect(h.entries()).toEqual([null, 'a']);
+  });
+
   it('plays a book forward again when it is clicked on its way back', () => {
     const h = harness();
     h.state.select('a');
     h.track('a').land();
     h.state.putBack();
+    // A frame of the reverse: it has left the rest.
+    h.track('a').at = 0.3;
     h.state.select('a');
 
     expect(h.tracks).toHaveLength(1);
