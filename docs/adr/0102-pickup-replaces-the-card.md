@@ -4,6 +4,7 @@
 **Status:** accepted; built in [#413](https://github.com/mephistopheles4/stacks/issues/413) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#366](https://github.com/mephistopheles4/stacks/issues/366), [#369](https://github.com/mephistopheles4/stacks/issues/369), [#371](https://github.com/mephistopheles4/stacks/issues/371)
 **Supersedes in part:** [ADR-0049](0049-the-card-is-a-non-modal-bottom-sheet.md)
+**Superseded in part by:** [ADR-0137](0137-a-picked-up-book-arrives-closed.md) — "turns, and opens" and the put-back line
 
 ## Decision
 
@@ -25,6 +26,9 @@ Thoughts. The card overlay retires.
   stays**, opened from the page, showing the held copy when one exists.
 - **Focus still never moves on pickup**, for ADR-0049's reason: there is no
   keyboard path to the shelf, so there is no origin to return focus to.
+  ([ADR-0137](0137-a-picked-up-book-arrives-closed.md) reopens this for one case:
+  a chat link is a keyboard path to the shelf, and after one focus moves to
+  Open.)
 
 ## What it supersedes
 

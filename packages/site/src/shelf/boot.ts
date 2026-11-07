@@ -117,6 +117,8 @@ declare global {
       putBack(): void;
       /** §3.6's numbers for the open spread at rest, desktop only. */
       spread(): SpreadReading | undefined;
+      /** The id of the book under a viewport point, as a click there would pick: for the gate. */
+      bookAt(x: number, y: number): string | undefined;
       /**
        * The phone loop: picks up and puts back `rounds` books in turn, and
        * resolves with how many it held. A function, not an address switch, so no
@@ -544,6 +546,7 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind, pickup?: Pic
       pickup?.putBack();
     },
     spread: () => pickup?.measureSpread(),
+    bookAt: (x, y) => pickup?.bookAt(x, y),
     swaps: () => pickup?.swaps() ?? [],
     pickupLoop: (rounds) =>
       pickup === undefined

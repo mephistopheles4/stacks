@@ -461,8 +461,8 @@ async function stageCover(from: string, to: string): Promise<void> {
  * every other file in `held-covers/`. Returns the filenames it staged.
  *
  * The held tier (spec §3.3, #377, ADR-0105): the one larger cover the
- * enlarged-cover viewer shows today, and a picked-up book will load once the
- * pickup is built (spec §4, step 4). Only from the vault
+ * enlarged-cover viewer shows, and a picked-up book loads at the pickup: the
+ * cover shows closed in the hand, and the Thoughts when the visitor opens it. Only from the vault
  * file — a build never fetches a cover — and only for a cover larger than the
  * shelf's copy, since a held copy no larger than the shelf's is the same
  * picture twice.

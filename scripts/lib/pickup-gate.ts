@@ -426,6 +426,182 @@ export function viewerFailures(read: ViewerRead | undefined): string[] {
   }
   return failures;
 }
+/** Which of the three inputs did a thing: a mouse click, a touch tap, and the keyboard. */
+export interface ByInput {
+  readonly mouse: boolean;
+  readonly touch: boolean;
+  readonly keyboard: boolean;
+}
+
+/** One size of window's reading of the closed book's controls. */
+export interface ViewportControls {
+  /** Each input opened a closed book. */
+  readonly opens: ByInput;
+  /** …and each put it back, from closed and from open. */
+  readonly putsBackClosed: ByInput;
+  readonly putsBackOpen: ByInput;
+  /** The X's box, in CSS pixels. */
+  readonly xWidth: number;
+  readonly xHeight: number;
+  /** What the X overlaps: the brand, the hint, the closed book. Empty when it overlaps none. */
+  readonly xOverlaps: readonly string[];
+  /** The X is the top element at its own centre, with the book closed and with it open. */
+  readonly xOnTopClosed: boolean;
+  readonly xOnTopOpen: boolean;
+}
+
+/** The closed book's controls (#531, claims C4 to C9, C11 and C12), read in a browser. */
+export interface ControlsRead {
+  readonly desktop: ViewportControls;
+  readonly phone: ViewportControls;
+  /** The X's accessible name. */
+  readonly xName: string;
+  /** The tree holds a button named "Open «Title»" while the book is closed at rest. */
+  readonly buttonInTree: boolean;
+  /** …and holds none the moment the opening starts. */
+  readonly buttonGoneWhileOpening: boolean;
+  /** Focused, with the longest fixture title at 375×812, it is fully on screen. */
+  readonly longTitleOnScreen: boolean;
+  /** …and the X did not move when it took focus. */
+  readonly xStayedPut: boolean;
+  /** After Open is pressed, focus lands on the right-hand page. */
+  readonly focusToPage: boolean;
+  readonly focusToPageReduced: boolean;
+  /** Under reduced motion each of the three is a cut: no tween in flight at the moment. */
+  readonly reducedPickupCuts: boolean;
+  readonly reducedOpenCuts: boolean;
+  readonly reducedPutBackCuts: boolean;
+  /** What is wrong with the X's and the arrow's markup, one sentence each. */
+  readonly markup: readonly string[];
+  /** `securitypolicyviolation` events across the whole drive. */
+  readonly cspViolations: number;
+  /** The hint says a click opens it while closed, and is the template's once open. */
+  readonly hintClosed: boolean;
+  readonly hintOpen: boolean;
+  /** The cursor is a pointer over the closed book, and the canvas's own after. */
+  readonly cursorPointer: boolean;
+  readonly cursorReset: boolean;
+}
+
+/** The smallest the X may be: 2.75rem at the 16px root, as the viewer's close button is. */
+const TARGET_PX = 44;
+
+const VIEWPORT_LABEL = { desktop: '1280×800', phone: '375×812' } as const;
+
+export function controlsFailures(read: ControlsRead | undefined): string[] {
+  if (read === undefined)
+    return ['the closed book was never driven, so its controls went unchecked'];
+  const failures: string[] = [];
+  for (const where of ['desktop', 'phone'] as const) {
+    const at = VIEWPORT_LABEL[where];
+    const v = read[where];
+    for (const input of ['mouse', 'touch', 'keyboard'] as const) {
+      if (!v.opens[input]) failures.push(`at ${at} the ${input} could not open the closed book`);
+      if (!v.putsBackClosed[input]) {
+        failures.push(`at ${at} the ${input} could not put the closed book back`);
+      }
+      if (!v.putsBackOpen[input]) {
+        failures.push(`at ${at} the ${input} could not put the open book back`);
+      }
+    }
+    if (v.xWidth < TARGET_PX || v.xHeight < TARGET_PX) {
+      failures.push(
+        `at ${at} the X is ${v.xWidth.toFixed(0)}×${v.xHeight.toFixed(0)}px, under the 2.75rem target`,
+      );
+    }
+    for (const name of v.xOverlaps) failures.push(`at ${at} the X overlaps ${name}`);
+    if (!v.xOnTopClosed) {
+      failures.push(`at ${at} the X is not the top element at its centre with the book closed`);
+    }
+    if (!v.xOnTopOpen) {
+      failures.push(`at ${at} the X is not the top element at its centre with the book open`);
+    }
+  }
+  if (read.xName.length === 0) failures.push('the X has no accessible name');
+  if (!read.buttonInTree) {
+    failures.push('no Open button named for the book in the accessibility tree while it is closed');
+  }
+  if (!read.buttonGoneWhileOpening) {
+    failures.push('the Open button was still in the tree while it opens');
+  }
+  if (!read.longTitleOnScreen) {
+    failures.push(
+      'the focused Open button is not fully on screen at 375×812 with the longest title',
+    );
+  }
+  if (!read.xStayedPut) failures.push('the X moved when the Open button took focus');
+  if (!read.focusToPage) {
+    failures.push('after Open was pressed, focus did not land on the right-hand page');
+  }
+  if (!read.focusToPageReduced) {
+    failures.push('under reduced motion, focus did not land on the right-hand page after Open');
+  }
+  if (!read.reducedPickupCuts)
+    failures.push('under reduced motion the pickup did not cut to closed');
+  if (!read.reducedOpenCuts) failures.push('under reduced motion the opening did not cut to open');
+  if (!read.reducedPutBackCuts) failures.push('under reduced motion the put-back did not cut');
+  failures.push(...read.markup);
+  if (read.cspViolations > 0) {
+    failures.push(
+      `${String(read.cspViolations)} CSP violations while driving the closed book's controls`,
+    );
+  }
+  if (!read.hintClosed) failures.push('the hint does not say a click opens the closed book');
+  if (!read.hintOpen) failures.push("the hint is not the template's once the book is open");
+  if (!read.cursorPointer) failures.push('the cursor is not a pointer over the closed book');
+  if (!read.cursorReset) failures.push("the cursor is not the canvas's own once the book is open");
+  return failures;
+}
+
+/** One cell of the Ask drawer's tables: what the spec says, and what the page did. */
+export interface DrawerCell {
+  readonly name: string;
+  readonly expected: string;
+  readonly actual: string;
+}
+
+export function drawerFailures(cells: readonly DrawerCell[]): string[] {
+  if (cells.length === 0) return ['no cell of the drawer tables was read'];
+  return cells
+    .filter((cell) => cell.expected !== cell.actual)
+    .map((cell) => `${cell.name}: the spec says "${cell.expected}", the page did "${cell.actual}"`);
+}
+
+/** A context lost with a book in hand, read at the moment the hand was empty. */
+export interface LostCase {
+  /** The book was put away, with no motion. */
+  readonly away: boolean;
+  /** Both controls hidden. */
+  readonly controlsHidden: boolean;
+  /** The hint is the template's again. */
+  readonly hintRestored: boolean;
+  /** The cursor is the canvas's own. */
+  readonly cursorReset: boolean;
+  /** Focus is on the canvas, not dropped to `<body>`. */
+  readonly focusOnCanvas: boolean;
+}
+
+export function lostFailures(
+  read: { readonly closed: LostCase; readonly open: LostCase } | undefined,
+): string[] {
+  if (read === undefined) return ['no context was lost with a book held'];
+  const failures: string[] = [];
+  for (const state of ['closed', 'open'] as const) {
+    const lost = read[state];
+    if (!lost.away) failures.push(`a lost context left the ${state} book still held`);
+    if (!lost.controlsHidden) {
+      failures.push(`the controls were left showing after losing the ${state} book`);
+    }
+    if (!lost.hintRestored)
+      failures.push(`the hint was not restored after losing the ${state} book`);
+    if (!lost.cursorReset) failures.push(`the cursor was not reset after losing the ${state} book`);
+    if (!lost.focusOnCanvas) {
+      failures.push(`focus was not caught on the canvas after losing the ${state} book`);
+    }
+  }
+  return failures;
+}
+
 /** The held page at phone size, which frames the right-hand page alone. */
 export interface PhoneRead {
   /** The right-hand page lies inside the viewport, within a pixel. */

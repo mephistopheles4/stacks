@@ -158,8 +158,21 @@ export interface HeldReading {
   readonly easing: boolean;
   /** The front board's angle to the page block, in degrees: 0 with the book closed. */
   readonly boardAngle: number;
+  /**
+   * Where the book stands on screen, in CSS pixels: what a gate needs to say
+   * that the X leaves a closed book room, which no DOM element can tell it.
+   */
+  readonly screen: ScreenBox;
   /** The turn examining has put on the book, in degrees. */
   readonly turn: { readonly yaw: number; readonly pitch: number };
+}
+
+/** A rectangle on screen, in CSS pixels from the viewport's top left. */
+export interface ScreenBox {
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
 }
 
 /** §3.6, measured from the scene at rest. See `measureSpread`. */
@@ -212,6 +225,8 @@ export interface Pickup {
   held(): HeldReading | undefined;
   /** §3.6's three numbers for the open book at rest, or nothing while none is. */
   measureSpread(): SpreadReading | undefined;
+  /** The id of the book under a point of the viewport, in CSS pixels, or nothing: a click's target. */
+  bookAt(x: number, y: number): string | undefined;
   /** Every held cover's upload so far, newest last. */
   swaps(): readonly SwapReading[];
   readonly tunable: TunablePickup;
@@ -532,7 +547,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       -((event.clientY - box.top) / box.height) * 2 + 1,
     );
     caster.setFromCamera(ndc, current.camera);
-    cursorOn.style.cursor = caster.intersectObject(entry.staged.group, true).length > 0 ? 'pointer' : '';
+    cursorOn.style.cursor =
+      caster.intersectObject(entry.staged.group, true).length > 0 ? 'pointer' : '';
   };
   const setCursor = (on: boolean): void => {
     if (on && cursorOn === current.canvas) return;
@@ -1020,6 +1036,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         easing: entry?.ease !== undefined,
         cover: coverReading(entry),
         boardAngle: entry === undefined ? 0 : boardAngleOf(entry),
+        screen: entry === undefined ? EMPTY_BOX : screenBoxOf(entry, current),
         turn: {
           yaw: THREE.MathUtils.radToDeg(entry?.turn.yaw ?? 0),
           pitch: THREE.MathUtils.radToDeg(entry?.turn.pitch ?? 0),
@@ -1033,8 +1050,44 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       const entry = lifted.get(holding.book.id);
       return entry === undefined || entry.narrow ? undefined : measure(entry, current);
     },
+    bookAt: (x, y) => {
+      const box = current.canvas.getBoundingClientRect();
+      ndc.set(((x - box.left) / box.width) * 2 - 1, -((y - box.top) / box.height) * 2 + 1);
+      caster.setFromCamera(ndc, current.camera);
+      const hit = caster.intersectObjects(
+        current.books.map((placed) => placed.group),
+        true,
+      )[0];
+      return hit === undefined ? undefined : current.lookup.get(hit.object)?.id;
+    },
     swaps: () => [...swaps],
     tunable,
+  };
+}
+
+const EMPTY_BOX: ScreenBox = { left: 0, top: 0, right: 0, bottom: 0 };
+
+/** The book's bounding box, projected to the viewport: the room it takes on screen. */
+function screenBoxOf(entry: Lifted, stage: ShelfStage): ScreenBox {
+  entry.staged.group.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(entry.staged.group);
+  const rect = stage.canvas.getBoundingClientRect();
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (const x of [bounds.min.x, bounds.max.x]) {
+    for (const y of [bounds.min.y, bounds.max.y]) {
+      for (const z of [bounds.min.z, bounds.max.z]) {
+        const point = new THREE.Vector3(x, y, z).project(stage.camera);
+        xs.push(rect.left + ((point.x + 1) / 2) * rect.width);
+        ys.push(rect.top + ((1 - point.y) / 2) * rect.height);
+      }
+    }
+  }
+  return {
+    left: Math.min(...xs),
+    top: Math.min(...ys),
+    right: Math.max(...xs),
+    bottom: Math.max(...ys),
   };
 }
 

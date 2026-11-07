@@ -228,23 +228,25 @@ where the difference matters.
 ### Picking a book up
 
 **Pick up**:
-What a click on a book does: it slides out of its **row**, comes to the camera,
-turns and opens. It replaces the card for every book
-([ADR-0102](docs/adr/0102-pickup-replaces-the-card.md)). The verb names the whole
-motion, not its first stage.
+What a click on a book does: it slides out of its **row**, comes to the camera
+and turns, and stops **closed** and cover-on. The visitor opens it. It replaces
+the card for every book ([ADR-0102](docs/adr/0102-pickup-replaces-the-card.md),
+[ADR-0137](docs/adr/0137-a-picked-up-book-arrives-closed.md)). The verb names the
+motion to the closed rest, not the opening.
 *Avoid*: select (that is the raycaster's callback, which fires for empty space
-too), open (that is the last stage), zoom, focus.
+too), open (that is what the visitor does next), zoom, focus.
 
 **Held**:
 The state of the one book that has been **picked up** and is at rest, square to
-the camera, open to its pages. A book on its way there or back is moving, not
-held.
+the camera, closed or open to its pages: whether it is open is a reading of its
+own (`opened`). A book on its way there or back is moving, not held, and so is
+one still opening.
 *Avoid*: selected, active, open (on its own), focused.
 
 **Put back**:
-The return of a **held** book to its slot, on the same path reversed. Escape, a
-click on empty space, the back button and the page's put-back control all do
-it.
+The return of a **held** book to its slot, on the same path reversed, from
+closed or from open. Escape, a click on empty space, the back button and the X
+in the header all do it.
 *Avoid*: close, dismiss (those were the card's), drop.
 
 **Drop**:

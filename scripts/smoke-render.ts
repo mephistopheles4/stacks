@@ -28,11 +28,19 @@ import { join } from 'node:path';
 import puppeteer, { type Browser, type HTTPRequest, type Page } from 'puppeteer-core';
 import { lightingOf, litFailures, type Frame, type Lighting } from './lib/large-library-lit.ts';
 import {
+  CLOSED_HINT,
+  controlsFailures,
+  drawerFailures,
+  lostFailures,
   phoneFailures,
   pickupFailures,
   spreadFailures,
   viewerFailures,
+  type DrawerCell,
+  type ViewportControls,
   type ClosedRead,
+  type ControlsRead,
+  type LostCase,
   type PhoneRead,
   type PickupRead,
   type PutDown,
@@ -250,6 +258,13 @@ async function main(): Promise<void> {
       }
       const spread = await timed('open spread', () => checkSpread(browser, origin));
       const atRest = await timed('G35 held at rest', () => checkHeldAtRest(browser, origin));
+      const controls = await timed('G35 closed book controls', () =>
+        checkClosedControls(browser, origin),
+      );
+      const drawerCells = await timed('G35 drawer cells', () => checkDrawerCells(browser, origin));
+      const lost = await timed('G35 lost context, book held', () =>
+        checkLostWithBookHeld(browser, origin),
+      );
       const lit = await timed('G59 large-library-lit', () =>
         checkLargeLibraryLit(browser, origin, large.origin),
       );
@@ -279,6 +294,9 @@ async function main(): Promise<void> {
         phone,
         spread,
         atRest,
+        controls,
+        drawerCells,
+        lost,
         lit,
         fallback,
         sampling,
@@ -1706,6 +1724,837 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     await context.close();
   }
   return { lines, failures };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * G35, the closed book and its controls (#531): the claims no other read makes.
+ * C4 (a mouse, a touch and a keyboard each open it and each put it back, from
+ * closed and from open, at both sizes), C5 (the Open button in the tree, named
+ * for the book, and where focus goes), C7 (reduced motion cuts), C8 (the X's
+ * size and place), C9 (the markup, and no CSP violation) and C12 (the hint and
+ * the cursor). Judged by `lib/pickup-gate.ts`'s `controlsFailures`, every
+ * clause planted red in its spec.
+ *
+ * Writes `artifacts/held-closed.png` at 1280×800 and `artifacts/held-closed-phone.png`
+ * at 375×812: the owner reads how much empty space a closed book leaves round it.
+ */
+const DESKTOP = { width: 1280, height: 800, hasTouch: true } as const;
+const PHONE = { width: 375, height: 812, hasTouch: true } as const;
+
+interface ControlsChecked {
+  readonly lines: readonly string[];
+  readonly failures: readonly string[];
+}
+
+/** The held book, closed at rest, picked up through the shelf's hook. */
+async function holdClosed(page: Page, index: number, what: string): Promise<boolean> {
+  await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+  // The pages are put in the document by the next frame; a visitor cannot act in
+  // under one, and a control pressed before it focuses a node that is not there.
+  return until(
+    page,
+    `${HELD} && document.querySelectorAll('.held-page').length === 2`,
+    `${what} to come to rest held, closed`,
+  );
+}
+
+/** The point to aim at to click the held book: the middle of where it stands. */
+async function bookCentre(page: Page): Promise<{ x: number; y: number }> {
+  return (await page.evaluate(`(() => {
+    const s = window.__shelf.held().screen;
+    return { x: (s.left + s.right) / 2, y: (s.top + s.bottom) / 2 };
+  })()`)) as { x: number; y: number };
+}
+
+async function controlCentre(page: Page, selector: string): Promise<{ x: number; y: number }> {
+  return (await page.evaluate(`(() => {
+    const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  })()`)) as { x: number; y: number };
+}
+
+/** Tab until `selector` has focus: the keyboard's way to a control, so it must be reachable. */
+async function tabTo(page: Page, selector: string): Promise<boolean> {
+  await page.evaluate(
+    'document.activeElement instanceof HTMLElement && document.activeElement.blur()',
+  );
+  for (let press = 0; press < 6; press += 1) {
+    await page.keyboard.press('Tab');
+    const there = (await page.evaluate(
+      `document.activeElement?.matches(${JSON.stringify(selector)}) === true`,
+    )) as boolean;
+    if (there) return true;
+  }
+  return false;
+}
+
+type Input = 'mouse' | 'touch' | 'keyboard';
+
+/** Presses the Open button, or the held book, with `input`. */
+async function openWith(page: Page, input: Input): Promise<void> {
+  if (input === 'keyboard') {
+    if (await tabTo(page, '.held-open')) await page.keyboard.press('Enter');
+    return;
+  }
+  const at = await bookCentre(page);
+  if (input === 'mouse') await page.mouse.click(at.x, at.y);
+  else await page.touchscreen.tap(at.x, at.y);
+}
+
+/** Presses the X with `input`. */
+async function putBackWith(page: Page, input: Input): Promise<void> {
+  if (input === 'keyboard') {
+    if (await tabTo(page, '.held-put-back')) await page.keyboard.press('Enter');
+    return;
+  }
+  const at = await controlCentre(page, '.held-controls .held-put-back');
+  if (input === 'mouse') await page.mouse.click(at.x, at.y);
+  else await page.touchscreen.tap(at.x, at.y);
+}
+
+/** Each input opens a closed book, then puts it back from open; and from closed. */
+async function driveInputs(page: Page): Promise<
+  | {
+      opens: Record<Input, boolean>;
+      putsBackClosed: Record<Input, boolean>;
+      putsBackOpen: Record<Input, boolean>;
+    }
+  | undefined
+> {
+  const opens = { mouse: false, touch: false, keyboard: false };
+  const putsBackClosed = { ...opens };
+  const putsBackOpen = { ...opens };
+  for (const input of ['mouse', 'touch', 'keyboard'] as const) {
+    if (!(await holdClosed(page, 3, `the book for the ${input}`))) return undefined;
+    await openWith(page, input);
+    opens[input] = await searchFor(page, HELD_OPEN, 5000);
+    if (!opens[input]) {
+      await putBackAndSettle(page);
+      continue;
+    }
+    await putBackWith(page, input);
+    putsBackOpen[input] = await searchFor(page, NOTHING_HELD, 5000);
+    if (!putsBackOpen[input]) await putBackAndSettle(page);
+
+    if (!(await holdClosed(page, 3, `the book for the ${input}, to put back closed`))) {
+      return undefined;
+    }
+    await putBackWith(page, input);
+    putsBackClosed[input] = await searchFor(page, NOTHING_HELD, 5000);
+    if (!putsBackClosed[input]) await putBackAndSettle(page);
+  }
+  return { opens, putsBackClosed, putsBackOpen };
+}
+
+/** What the X overlaps with the book closed, and whether it is the top element at its centre. */
+const READ_X_PLACE = `(() => {
+  const x = document.querySelector('.held-controls .held-put-back');
+  const box = x.getBoundingClientRect();
+  const meets = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+  const overlaps = [];
+  const brand = document.querySelector('.brand');
+  const hint = document.getElementById('shelf-hint');
+  if (brand && meets(box, brand.getBoundingClientRect())) overlaps.push('the brand');
+  if (hint && meets(box, hint.getBoundingClientRect())) overlaps.push('the hint');
+  const book = window.__shelf.held().screen;
+  if (meets(box, book)) overlaps.push('the closed book');
+  const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+  return { width: box.width, height: box.height, overlaps, onTop: Boolean(top) && x.contains(top) };
+})()`;
+
+async function readViewport(page: Page, shot: string): Promise<ViewportControls | undefined> {
+  const inputs = await driveInputs(page);
+  if (inputs === undefined) return undefined;
+  if (!(await holdClosed(page, 3, 'the book for the placement read'))) return undefined;
+  const closed = (await page.evaluate(READ_X_PLACE)) as {
+    width: number;
+    height: number;
+    overlaps: string[];
+    onTop: boolean;
+  };
+  writeFileSync(join(ARTIFACTS, shot), await page.screenshot({ type: 'png' }));
+  if (!(await openBook(page, 'the book for the placement read'))) return undefined;
+  const open = (await page.evaluate(READ_X_PLACE)) as typeof closed;
+  await putBackAndSettle(page);
+  return {
+    ...inputs,
+    xWidth: closed.width,
+    xHeight: closed.height,
+    xOverlaps: closed.overlaps,
+    xOnTopClosed: closed.onTop,
+    xOnTopOpen: open.onTop,
+  };
+}
+
+const TREE_HAS_BUTTON = async (page: Page, name: string): Promise<boolean> => {
+  interface Node {
+    role?: string;
+    name?: string;
+    children?: Node[];
+  }
+  const tree = (await page.accessibility.snapshot({ interestingOnly: false })) as Node | null;
+  const walk = (node: Node | null | undefined): boolean =>
+    node != null &&
+    ((node.role === 'button' && node.name === name) || (node.children ?? []).some(walk));
+  return walk(tree);
+};
+
+/** The hint the template ships with, which the header shows when no book is closed. */
+const TEMPLATE_HINT = 'Drag to look around · click a book';
+
+async function checkClosedControls(browser: Browser, origin: string): Promise<ControlsChecked> {
+  const context = await browser.createBrowserContext();
+  const lines: string[] = [];
+  try {
+    const page = await context.newPage();
+    // Violations counted from the first script, across every step below.
+    await page.evaluateOnNewDocument(
+      `window.__csp = []; document.addEventListener('securitypolicyviolation', (event) => window.__csp.push(event.violatedDirective));`,
+    );
+    await page.setViewport(DESKTOP);
+    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+
+    const desktop = await readViewport(page, 'held-closed.png');
+
+    // C5 and C12, at desktop size: a book closed at rest.
+    if (!(await holdClosed(page, 3, 'the book for the Open button'))) return stopControls(lines);
+    const title = (await page.evaluate('window.__shelf.held().title')) as string;
+    const xName = (await page.evaluate(
+      `(document.querySelector('.held-controls .held-put-back')?.textContent ?? '').trim()`,
+    )) as string;
+    const buttonInTree = await TREE_HAS_BUTTON(page, `Open ${title}`);
+    const hintClosed = (await page.evaluate(
+      `document.getElementById('shelf-hint').textContent === ${JSON.stringify(CLOSED_HINT)}`,
+    )) as boolean;
+    const at = await bookCentre(page);
+    await page.mouse.move(at.x - 3, at.y);
+    await page.mouse.move(at.x, at.y);
+    const cursorPointer = await searchFor(
+      page,
+      `getComputedStyle(document.getElementById('shelf-canvas')).cursor === 'pointer'`,
+      3000,
+    );
+
+    // Opening: the button is gone from the tree the moment it starts.
+    const hiddenAtOnce = (await page.evaluate(`(() => {
+      window.__shelf.open();
+      return document.querySelector('.held-controls .held-open').hidden;
+    })()`)) as boolean;
+    const buttonGoneWhileOpening = hiddenAtOnce && !(await TREE_HAS_BUTTON(page, `Open ${title}`));
+    await until(page, HELD_OPEN, 'the book to finish opening');
+    const hintOpen = (await page.evaluate(
+      `document.getElementById('shelf-hint').textContent === ${JSON.stringify(TEMPLATE_HINT)}`,
+    )) as boolean;
+    const cursorReset = (await page.evaluate(
+      `getComputedStyle(document.getElementById('shelf-canvas')).cursor !== 'pointer'`,
+    )) as boolean;
+    await putBackAndSettle(page);
+
+    // C9: the markup is what the template wrote, and the CSP saw nothing.
+    const markup = (await page.evaluate(`(() => {
+      const flaws = [];
+      const marks = [
+        ['the X', document.querySelector('.held-controls .held-put-back')],
+        ['the viewer arrow', document.querySelector('.book-viewer-close')],
+      ];
+      for (const [name, button] of marks) {
+        const svg = button?.querySelector('svg');
+        if (!svg) { flaws.push(name + ' has no inline SVG'); continue; }
+        if (svg.getAttribute('aria-hidden') !== 'true') flaws.push(name + "'s SVG is not aria-hidden");
+        if (svg.getAttribute('focusable') !== 'false') flaws.push(name + "'s SVG is focusable");
+        if (button.hasAttribute('style') || [svg, ...svg.querySelectorAll('*')].some((n) => n.hasAttribute('style'))) {
+          flaws.push(name + ' has a style attribute');
+        }
+      }
+      return flaws;
+    })()`)) as string[];
+
+    // C5 at phone size: the longest title, focused, fully on screen, the X where it was.
+    await page.setViewport(PHONE);
+    await until(
+      page,
+      '(() => { const s = window.__shelf.stats(); return s.bufferWidth < s.bufferHeight * 0.9; })()',
+      'the shelf to resize to the upright viewport',
+    );
+    const library = (await page.evaluate(
+      `fetch('/library.json').then((response) => response.json())`,
+    )) as { books: LibraryBook[] };
+    const ordered = shelfOrder(library.books);
+    let longest = 0;
+    ordered.forEach((book, index) => {
+      if (book.title.length > (ordered[longest]?.title.length ?? 0)) longest = index;
+    });
+    const phone = await readViewport(page, 'held-closed-phone.png');
+    let longTitleOnScreen = false;
+    let xStayedPut = false;
+    if (await holdClosed(page, longest, 'the longest-titled book')) {
+      const before = await controlCentre(page, '.held-controls .held-put-back');
+      await page.evaluate(`document.querySelector('.held-controls .held-open').focus()`);
+      const after = await controlCentre(page, '.held-controls .held-put-back');
+      xStayedPut = Math.abs(before.x - after.x) < 0.5 && Math.abs(before.y - after.y) < 0.5;
+      longTitleOnScreen = (await page.evaluate(`(() => {
+        const r = document.querySelector('.held-controls .held-open').getBoundingClientRect();
+        return r.width > 2 && r.left >= -1 && r.right <= innerWidth + 1 && r.top >= -1 && r.bottom <= innerHeight + 1;
+      })()`)) as boolean;
+      await putBackAndSettle(page);
+    }
+
+    // Focus after Open, by the keyboard, then again under reduced motion.
+    const focusAfterOpen = async (): Promise<boolean> => {
+      if (!(await holdClosed(page, 3, 'the book for the focus after Open'))) return false;
+      const reached = await tabTo(page, '.held-open');
+      if (reached) await page.keyboard.press('Enter');
+      const opened = await searchFor(page, HELD_OPEN, 5000);
+      const onPage = (await page.evaluate(
+        `document.activeElement === document.querySelector('.held-page-right')`,
+      )) as boolean;
+      await putBackAndSettle(page);
+      return reached && opened && onPage;
+    };
+    await page.setViewport(DESKTOP);
+    await until(
+      page,
+      '(() => { const s = window.__shelf.stats(); return s.bufferWidth > s.bufferHeight; })()',
+      'the shelf to resize to the desktop viewport',
+    );
+    const focusToPage = await focusAfterOpen();
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+    const focusToPageReduced = await focusAfterOpen();
+
+    // C7: reduced motion cuts all three. Read as state at that moment, not as a wait.
+    const cuts = (await page.evaluate(`(async () => {
+      window.__shelf.pickUp(3);
+      const picked = window.__shelf.held();
+      const pickupCuts = picked?.phase === 'held' && picked.opened === false && Math.abs(picked.boardAngle) <= 0.5;
+      window.__shelf.open();
+      const openCuts = window.__shelf.held()?.opened === true;
+      window.__shelf.putBack();
+      // History steps back as a task of its own; a tween would take a good deal longer.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return { pickupCuts, openCuts, putBackCuts: window.__shelf.held() === undefined };
+    })()`)) as { pickupCuts: boolean; openCuts: boolean; putBackCuts: boolean };
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+    await until(page, NOTHING_HELD, 'the hand to empty after the reduced-motion cuts');
+
+    const cspViolations = ((await page.evaluate('window.__csp.length')) as number) ?? 0;
+
+    const read: ControlsRead | undefined =
+      desktop === undefined || phone === undefined
+        ? undefined
+        : {
+            desktop,
+            phone,
+            xName,
+            buttonInTree,
+            buttonGoneWhileOpening,
+            longTitleOnScreen,
+            xStayedPut,
+            focusToPage,
+            focusToPageReduced,
+            reducedPickupCuts: cuts.pickupCuts,
+            reducedOpenCuts: cuts.openCuts,
+            reducedPutBackCuts: cuts.putBackCuts,
+            markup,
+            cspViolations,
+            hintClosed,
+            hintOpen,
+            cursorPointer,
+            cursorReset,
+          };
+    if (read !== undefined) {
+      lines.push(
+        `inputs      desktop mouse/touch/keyboard open ${byInput(read.desktop.opens)}, ` +
+          `phone ${byInput(read.phone.opens)}`,
+        `the X       ${read.desktop.xWidth.toFixed(0)}×${read.desktop.xHeight.toFixed(0)}px, overlaps ` +
+          `${read.desktop.xOverlaps.concat(read.phone.xOverlaps).join(', ') || 'nothing'}, on top ` +
+          `${String(read.desktop.xOnTopOpen && read.phone.xOnTopOpen)} open`,
+        `the Open button  in the tree ${String(read.buttonInTree)}, gone while opening ` +
+          `${String(read.buttonGoneWhileOpening)}, focus to the page ${String(read.focusToPage)}`,
+        `screenshots artifacts/held-closed.png, artifacts/held-closed-phone.png`,
+      );
+    }
+    return { lines, failures: controlsFailures(read).map((failure) => `closed book: ${failure}`) };
+  } finally {
+    await context.close();
+  }
+}
+
+/** mouse/touch/keyboard, as true or false each, for a report line. */
+function byInput(by: ViewportControls['opens']): string {
+  return [by.mouse, by.touch, by.keyboard].map(String).join('/');
+}
+
+function stopControls(lines: string[]): ControlsChecked {
+  lines.push('STOPPED          a book never came to rest held, closed');
+  return { lines, failures: ['closed book: a book never came to rest held, closed'] };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * G35, the Ask drawer over a held book (#531, `picking-up-closed.md` S3, claims C6
+ * and the chat-link half of C11): every cell of both tables, a browser read for
+ * each. The suite is offline and a no-key build shows no chat link, so a link is
+ * reached the way the link reaches the shelf: `stacks:pick-up` on the window,
+ * with focus put where a clicked link leaves it. A real link runs only on the
+ * live site (S14).
+ *
+ * Each cell is one sentence of outcome, compared with the spec's own words by
+ * `drawerFailures`, so a cell that drifts is a red line naming the cell.
+ */
+interface DrawerChecked {
+  readonly lines: readonly string[];
+  readonly failures: readonly string[];
+}
+
+/** What the page shows about the drawer and the book, as one sentence. */
+const READ_OUTCOME = `(() => {
+  const h = window.__shelf.held();
+  const drawer = document.getElementById('ask-launcher').getAttribute('aria-expanded') === 'true' ? 'drawer open' : 'drawer closed';
+  const book = h === undefined ? 'book away' : h.opened ? 'book open' : h.phase === 'held' ? 'book closed' : 'book moving';
+  return drawer + '; ' + book;
+})()`;
+
+async function outcome(page: Page): Promise<string> {
+  return (await page.evaluate(READ_OUTCOME)) as string;
+}
+
+async function openDrawer(page: Page): Promise<void> {
+  await page.click('#ask-launcher');
+  await searchFor(
+    page,
+    `document.getElementById('ask-launcher').getAttribute('aria-expanded') === 'true'`,
+    3000,
+  );
+  // Its slide in, finished: a cell read mid-slide would find the panel not yet where it ends.
+  await searchFor(
+    page,
+    `!document.getElementById('ask-panel').classList.contains('is-entering')`,
+    3000,
+  );
+}
+
+/** A point on the canvas that no book answers for, away from the panel and the held book. */
+async function emptyPoint(page: Page): Promise<{ x: number; y: number } | undefined> {
+  return (await page.evaluate(`(() => {
+    for (let y = 30; y < innerHeight - 30; y += 40) {
+      for (let x = 30; x < innerWidth - 30; x += 40) {
+        if (window.__shelf.bookAt(x, y) !== undefined) continue;
+        if (document.elementFromPoint(x, y) !== document.getElementById('shelf-canvas')) continue;
+        return { x, y };
+      }
+    }
+    return undefined;
+  })()`)) as { x: number; y: number } | undefined;
+}
+
+/**
+ * The id of a book other than the held one. Aim cannot reach one: the held book
+ * stands in front of the shelf and its box covers the whole of it at 1280×800
+ * (measured: every answering point is the held book's), so "a click on another
+ * book" has no pointer path on this shelf. A click on another book is the same
+ * click as one on the held book as far as the drawer is concerned (the mark rides
+ * the event, not the target), and `pickup-state.test.ts` runs every target.
+ */
+async function otherBookId(page: Page): Promise<string | undefined> {
+  const mine = await heldId(page);
+  const library = (await page.evaluate(
+    `fetch('/library.json').then((response) => response.json())`,
+  )) as { books: { id: string }[] };
+  return library.books.find((book) => book.id !== mine)?.id;
+}
+
+/** The shelf's id for the held book, read from where it stands. */
+async function heldId(page: Page): Promise<string | undefined> {
+  const at = (await page.evaluate(`(() => {
+    const s = window.__shelf.held()?.screen;
+    return s ? { x: (s.left + s.right) / 2, y: (s.top + s.bottom) / 2 } : null;
+  })()`)) as { x: number; y: number } | null;
+  if (at === null) return undefined;
+  return (await page.evaluate(`window.__shelf.bookAt(${String(at.x)}, ${String(at.y)})`)) as
+    string | undefined;
+}
+
+/** The result of a chat link, which names a book by id as the drawer's link does. */
+function dispatchLink(page: Page, id: string): Promise<unknown> {
+  return page.evaluate(
+    `window.dispatchEvent(new CustomEvent('stacks:pick-up', { detail: { id: ${JSON.stringify(id)} } }))`,
+  );
+}
+
+async function checkDrawerCells(browser: Browser, origin: string): Promise<DrawerChecked> {
+  const context = await browser.createBrowserContext();
+  const cells: DrawerCell[] = [];
+  const lines: string[] = [];
+  const record = async (name: string, expected: string, actual: Promise<string> | string) => {
+    cells.push({ name, expected, actual: await actual });
+  };
+  try {
+    const page = await context.newPage();
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+
+    /** A held book, closed or open, with the drawer opened over it. */
+    const setUp = async (column: 'closed' | 'open'): Promise<boolean> => {
+      if (!(await holdClosed(page, 3, `the book for the ${column} drawer cells`))) return false;
+      if (column === 'open' && !(await openBook(page, 'the book for the open drawer cells'))) {
+        return false;
+      }
+      await openDrawer(page);
+      return true;
+    };
+    const settleAfter = async (): Promise<void> => {
+      // The cell's answer is read after a moment for a wrong put-back to register
+      // (an absence wait, K1: it can only be weakened by a slow runner).
+      await new Promise((resolve) => setTimeout(resolve, PUT_BACK_CHANCE_MS));
+    };
+    const reset = async (): Promise<void> => {
+      await page.evaluate('window.__shelf.putBack()');
+      await searchFor(page, NOTHING_HELD, 5000);
+      await page.evaluate(
+        `document.getElementById('ask-launcher').getAttribute('aria-expanded') === 'true' && document.getElementById('ask-launcher').click()`,
+      );
+    };
+
+    for (const column of ['closed', 'open'] as const) {
+      const stays = `drawer closed; book ${column}`;
+      const label = (cell: string): string => `${cell}, book ${column}`;
+
+      if (!(await setUp(column))) break;
+      const centre = await bookCentre(page);
+      await page.mouse.click(centre.x, centre.y);
+      await settleAfter();
+      await record(label('drawer open, click on the book'), stays, outcome(page));
+      await reset();
+
+      await setUp(column);
+      const empty = await emptyPoint(page);
+      if (empty === undefined) {
+        await record(label('drawer open, click on empty space'), stays, 'no empty point found');
+      } else {
+        await page.mouse.click(empty.x, empty.y);
+        await settleAfter();
+        await record(label('drawer open, click on empty space'), stays, outcome(page));
+      }
+      await reset();
+
+      await setUp(column);
+      const x = await controlCentre(page, '.held-controls .held-put-back');
+      await page.mouse.click(x.x, x.y);
+      await searchFor(page, NOTHING_HELD, 8000);
+      await record(
+        label('drawer open, the X by pointer'),
+        'drawer closed; book away',
+        outcome(page),
+      );
+      await reset();
+
+      await setUp(column);
+      await page.evaluate(`document.querySelector('.held-controls .held-put-back').focus()`);
+      await page.keyboard.press('Enter');
+      await searchFor(page, NOTHING_HELD, 8000);
+      await record(label('drawer open, the X by key'), 'drawer open; book away', outcome(page));
+      await reset();
+
+      if (column === 'closed') {
+        await setUp(column);
+        await page.evaluate(`document.querySelector('.held-controls .held-open').focus()`);
+        await page.keyboard.press('Enter');
+        await searchFor(page, HELD_OPEN, 8000);
+        await record(
+          'drawer open, the Open button by key, book closed',
+          'drawer open; book open',
+          outcome(page),
+        );
+        await reset();
+
+        await setUp(column);
+        await page.evaluate(`document.querySelector('.held-controls .held-open').focus()`);
+        const open = await controlCentre(page, '.held-controls .held-open');
+        await page.mouse.click(open.x, open.y);
+        await searchFor(page, HELD_OPEN, 8000);
+        await record(
+          'drawer open, the Open button by pointer, book closed',
+          'drawer closed; book open',
+          outcome(page),
+        );
+        await reset();
+      }
+
+      await setUp(column);
+      await page.keyboard.press('Escape');
+      await settleAfter();
+      await record(label('drawer open, Escape'), stays, outcome(page));
+      await reset();
+
+      await setUp(column);
+      await page.evaluate('history.back()');
+      await searchFor(page, NOTHING_HELD, 8000);
+      await record(label('drawer open, the back button'), 'drawer open; book away', outcome(page));
+      await reset();
+
+      // Chat links. Focus is put where a clicked link leaves it: inside the panel.
+      await setUp(column);
+      const id = await heldId(page);
+      if (id === undefined) {
+        await record(label('chat link to this book'), 'ok', 'could not name the held book');
+      } else {
+        await page.evaluate(`document.getElementById('ask-input').focus()`);
+        await dispatchLink(page, id);
+        await settleAfter();
+        const where = (await page.evaluate(
+          `document.activeElement?.classList.contains('held-open') ? 'focus on Open' : document.activeElement?.id === 'ask-launcher' ? 'focus on the launcher' : 'focus elsewhere'`,
+        )) as string;
+        await record(
+          label('chat link to this book'),
+          `drawer closed; book ${column}; ${column === 'closed' ? 'focus on Open' : 'focus on the launcher'}`,
+          `${await outcome(page)}; ${where}`,
+        );
+      }
+      await reset();
+
+      await setUp(column);
+      const away = await otherBookId(page);
+      if (away === undefined) {
+        await record(label('chat link to another book'), 'ok', 'no other book found');
+      } else {
+        await page.evaluate(`document.getElementById('ask-input').focus()`);
+        await dispatchLink(page, away);
+        // The swap: the first goes back, the second arrives closed.
+        await searchFor(
+          page,
+          `window.__shelf.held()?.phase === 'held' && window.__shelf.held()?.opened === false && document.getElementById('ask-launcher').getAttribute('aria-expanded') === 'false'`,
+          12_000,
+        );
+        const where = (await page.evaluate(
+          `document.activeElement?.classList.contains('held-open') ? 'focus on Open' : 'focus elsewhere'`,
+        )) as string;
+        await record(
+          label('chat link to another book'),
+          'drawer closed; book closed; focus on Open',
+          `${await outcome(page)}; ${where}`,
+        );
+      }
+      await reset();
+    }
+
+    // The open page's "Turn the book over" by key, with the drawer open: two Escapes.
+    if (await holdClosed(page, 3, 'the book for the examine cell')) {
+      await openBook(page, 'the book for the examine cell');
+      await openDrawer(page);
+      await page.evaluate(`document.querySelector('.held-examine').focus()`);
+      await page.keyboard.press('Enter');
+      await searchFor(page, `${DIALOG}?.open === true`, 8000);
+      const viewOpen = (await page.evaluate(`Boolean(${DIALOG}?.open)`)) as boolean;
+      const drawerStays = (await outcome(page)).startsWith('drawer open');
+      await page.keyboard.press('Escape');
+      await settleAfter();
+      const afterFirst = `${(await outcome(page)).split(';')[0]}; view ${(await page.evaluate(`Boolean(${DIALOG}?.open)`)) ? 'open' : 'closed'}`;
+      await page.keyboard.press('Escape');
+      await searchFor(page, `!${DIALOG}?.open`, 8000);
+      const afterSecond = `view ${(await page.evaluate(`Boolean(${DIALOG}?.open)`)) ? 'open' : 'closed'}; ${
+        (await page.evaluate('window.__shelf.held() === undefined')) ? 'book away' : 'book held'
+      }`;
+      await record(
+        'drawer open, "Turn the book over" by key, book open',
+        'view open; drawer open',
+        `${viewOpen ? 'view open' : 'view closed'}; ${drawerStays ? 'drawer open' : 'drawer closed'}`,
+      );
+      await record(
+        'drawer open, the first Escape in the view',
+        'drawer closed; view open',
+        afterFirst,
+      );
+      await record(
+        'drawer open, the second Escape in the view',
+        'view closed; book held',
+        afterSecond,
+      );
+      await reset();
+    }
+
+    // An empty hand: a click on a book closes the drawer and picks it up.
+    await openDrawer(page);
+    const target = (await page.evaluate(`(() => {
+      for (let i = 0; i < window.__shelf.bookCount; i += 1) {
+        const p = window.__shelf.projectBook(i);
+        if (p && window.__shelf.bookAt(p.x, p.y) !== undefined &&
+            document.elementFromPoint(p.x, p.y) === document.getElementById('shelf-canvas')) {
+          return { x: p.x, y: p.y, id: window.__shelf.bookAt(p.x, p.y) };
+        }
+      }
+      return undefined;
+    })()`)) as { x: number; y: number; id: string } | undefined;
+    if (target !== undefined) {
+      await page.mouse.click(target.x, target.y);
+      await searchFor(page, HELD, 12_000);
+      await record(
+        'drawer open, empty hand, click on a book',
+        'drawer closed; book closed',
+        outcome(page),
+      );
+      await reset();
+    }
+    await openDrawer(page);
+    const space = await emptyPoint(page);
+    if (space !== undefined) {
+      await page.mouse.click(space.x, space.y);
+      await settleAfter();
+      await record(
+        'drawer open, empty hand, click on empty space',
+        'drawer closed; book away',
+        outcome(page),
+      );
+    }
+    if (target !== undefined) {
+      await openDrawer(page);
+      await page.evaluate(`document.getElementById('ask-input').focus()`);
+      await dispatchLink(page, target.id);
+      await searchFor(page, HELD, 12_000);
+      await settleAfter();
+      const where = (await page.evaluate(
+        `document.activeElement?.classList.contains('held-open') ? 'focus on Open' : 'focus elsewhere'`,
+      )) as string;
+      await record(
+        'drawer open, empty hand, chat link',
+        'drawer closed; book closed; focus on Open',
+        `${await outcome(page)}; ${where}`,
+      );
+      await reset();
+    }
+
+    // Motion: the controls act from where the book is, and a click on the book does nothing.
+    if (await holdClosed(page, 3, 'the book for the motion cells')) {
+      await page.evaluate('window.__shelf.open()');
+      const c = await bookCentre(page);
+      await page.mouse.click(c.x, c.y);
+      await settleAfter();
+      await searchFor(page, HELD_OPEN, 8000);
+      await record(
+        'a click on the book while it opens',
+        'book open',
+        ((await page.evaluate(READ_OUTCOME)) as string).split('; ')[1] ?? '',
+      );
+      await reset();
+    }
+    for (const [name, act] of [
+      ['the X', () => page.click('.held-controls .held-put-back')],
+      ['Escape', () => page.keyboard.press('Escape')],
+      ['the back button', () => page.evaluate('history.back()')],
+    ] as const) {
+      if (!(await holdClosed(page, 3, `the book for ${name} while it opens`))) break;
+      await page.evaluate('window.__shelf.open()');
+      await act();
+      await record(
+        `${name} while the book opens`,
+        'book away',
+        searchFor(page, NOTHING_HELD, 8000).then((gone) => (gone ? 'book away' : 'book held')),
+      );
+      await reset();
+    }
+    if (await holdClosed(page, 3, 'the book for the empty-space motion cell')) {
+      await page.evaluate('window.__shelf.open()');
+      const away = await emptyPoint(page);
+      if (away !== undefined) {
+        await page.mouse.click(away.x, away.y);
+        await record(
+          'empty space while the book opens',
+          'book away',
+          searchFor(page, NOTHING_HELD, 8000).then((gone) => (gone ? 'book away' : 'book held')),
+        );
+      }
+      await reset();
+    }
+
+    // The phone: the panel covers the X, so the drawer is closed first.
+    await page.setViewport({ width: 375, height: 812, hasTouch: true });
+    await until(
+      page,
+      '(() => { const s = window.__shelf.stats(); return s.bufferWidth < s.bufferHeight * 0.9; })()',
+      'the shelf to resize to the upright viewport',
+    );
+    if (await holdClosed(page, 3, 'the book for the phone cell')) {
+      await openDrawer(page);
+      const covered = (await page.evaluate(`(() => {
+        const r = document.querySelector('.held-controls .held-put-back').getBoundingClientRect();
+        const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return Boolean(top?.closest('#ask-panel'));
+      })()`)) as boolean;
+      await record(
+        'drawer open, the X by pointer, phone',
+        'under the panel',
+        covered ? 'under the panel' : 'reachable over the panel',
+      );
+      await reset();
+    }
+
+    lines.push(`${String(cells.length)} cells read`);
+    return { lines, failures: drawerFailures(cells).map((failure) => `drawer cells: ${failure}`) };
+  } finally {
+    await context.close();
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * C15: a context lost with a book in hand, from closed and from open, puts the
+ * book back at once, hides both controls, restores the hint, resets the cursor
+ * and catches focus on the canvas. Read in a context of its own at the moment the
+ * hand is empty, because the fallback that follows may swap the canvas.
+ */
+async function checkLostWithBookHeld(browser: Browser, origin: string): Promise<string[]> {
+  const read: { closed?: LostCase; open?: LostCase } = {};
+  for (const state of ['closed', 'open'] as const) {
+    const context = await browser.createBrowserContext();
+    try {
+      const page = await context.newPage();
+      await page.setViewport(DESKTOP);
+      await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+      if (!(await holdClosed(page, 3, `the ${state} book to lose`))) continue;
+      if (state === 'open' && !(await openBook(page, 'the book to lose'))) continue;
+      // Focus on the X, and the pointer over the book, so each thing to undo is set.
+      await page.evaluate(`document.querySelector('.held-controls .held-put-back').focus()`);
+      const at = await bookCentre(page);
+      await page.mouse.move(at.x - 2, at.y);
+      await page.mouse.move(at.x, at.y);
+      // Read inside the page the moment the hand is empty: nothing runs between.
+      const lostCase = (await page.evaluate(`new Promise((resolve) => {
+        const started = performance.now();
+        const poll = () => {
+          if (window.__shelf.held() === undefined) {
+            const canvas = document.getElementById('shelf-canvas');
+            resolve({
+              away: true,
+              controlsHidden: document.querySelector('.held-controls')?.hidden === true,
+              hintRestored: document.getElementById('shelf-hint')?.textContent === ${JSON.stringify(TEMPLATE_HINT)},
+              cursorReset: getComputedStyle(canvas).cursor !== 'pointer',
+              focusOnCanvas: document.activeElement === canvas,
+            });
+          } else if (performance.now() - started > 15000) {
+            resolve({ away: false, controlsHidden: false, hintRestored: false, cursorReset: false, focusOnCanvas: false });
+          } else {
+            setTimeout(poll, 0);
+          }
+        };
+        poll();
+        ${LOSE.replace(/\n/g, ' ')}
+      })`)) as LostCase;
+      read[state] = lostCase;
+    } finally {
+      await context.close();
+    }
+  }
+  return lostFailures(
+    read.closed !== undefined && read.open !== undefined
+      ? { closed: read.closed, open: read.open }
+      : undefined,
+  ).map((failure) => `lost context: ${failure}`);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -3597,6 +4446,9 @@ function report(result: {
   phone: PhoneRead | undefined;
   spread: SpreadChecked;
   atRest: AtRestChecked;
+  controls: ControlsChecked;
+  drawerCells: DrawerChecked;
+  lost: readonly string[];
   lit: LitChecked;
   fallback: FallbackChecked;
   sampling: SamplingChecked;
@@ -3616,6 +4468,9 @@ function report(result: {
     phone,
     spread,
     atRest,
+    controls,
+    drawerCells,
+    lost,
     lit,
     fallback,
     sampling,
@@ -3720,6 +4575,13 @@ function report(result: {
   for (const line of spread.lines) console.log(`  ${line}`);
   console.log('held page at rest, long Thoughts planted (#426)');
   for (const line of atRest.lines) console.log(`  ${line}`);
+  console.log('the closed book and its controls (#531)');
+  for (const line of controls.lines) console.log(`  ${line}`);
+  console.log('the Ask drawer over a held book (#531)');
+  for (const line of drawerCells.lines) console.log(`  ${line}`);
+  console.log(
+    `  lost context, book held  ${lost.length === 0 ? 'put away, controls hidden, focus caught' : 'FAILED'}`,
+  );
   const above = (page: Lighting): string => {
     const standing = page.bookcase - page.room;
     // -0.004 is no contrast at all; `-0.0` would read as a sign.
@@ -3781,6 +4643,9 @@ function report(result: {
     ...phoneFailures(phone),
     ...spread.failures,
     ...atRest.failures,
+    ...controls.failures,
+    ...drawerCells.failures,
+    ...lost,
   );
   // Books inside their own bookcase.
   //

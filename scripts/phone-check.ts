@@ -302,7 +302,12 @@ const HELD_NOW = `(() => {
  */
 async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<ExamineReading> {
   const notes: string[] = [];
-  const read = async (): Promise<{ examining: boolean; phase: string; opened: boolean; yaw: number } | null> =>
+  const read = async (): Promise<{
+    examining: boolean;
+    phase: string;
+    opened: boolean;
+    yaw: number;
+  } | null> =>
     parse<{ examining: boolean; phase: string; opened: boolean; yaw: number } | null>(
       await cdp.evaluate(HELD_NOW),
     ) ?? null;
