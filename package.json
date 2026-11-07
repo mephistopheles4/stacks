@@ -84,8 +84,8 @@
     "@eslint/js": "10.0.1",
     "@stryker-mutator/core": "9.6.1",
     "@stryker-mutator/vitest-runner": "9.6.1",
-    "@types/node": "^26.6.5",
-    "@typescript-eslint/parser": "8.72.0",
+    "@types/node": "^26.6.6",
+    "@typescript-eslint/parser": "8.72.1",
     "@vitest/coverage-v8": "4.1.12",
     "eslint": "10.13.0",
     "eslint-plugin-sonarjs": "4.2.2",
@@ -99,7 +99,7 @@
     "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.72.0",
+    "typescript-eslint": "8.72.1",
     "vitest": "4.1.12",
     "wrangler": "4.149.0"
   }
