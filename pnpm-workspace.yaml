@@ -80,14 +80,13 @@ minimumReleaseAgeIgnoreMissingTime: false
 # ⚠️ **Never add or change an entry below without the owner's word.** Each one
 # accepts a possible package takeover on the owner's say-so, and the repository
 # has no threat model to record that acceptance in. Stop conditions, for every
-# later bump: an install that fails on any entry other than these three exact
+# later bump: an install that fails on any entry other than these exact
 # versions; a lockfile resolution that is not integrity-only (G67); a new version
 # of a package `allowBuilds` admits by name, whose install script would run with
 # no new answer.
 #
 # - semver@6.3.1 (published 2023-07-10), an old line published after later lines
 #   carried provenance. Remove when the lockfile stops holding this version.
-# - chokidar@4.0.3 (published 2024-12-18), the same shape. Remove likewise.
 # - chromium-bidi@157.0.8090-0 (published 2026-10-07): 19 of its 177 versions
 #   were trusted-published from GitHub Actions, the last being 17.0.2 on
 #   2026-07-06, and every 157.x and 158.x release since was token-published. It
@@ -106,7 +105,6 @@ minimumReleaseAgeIgnoreMissingTime: false
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - semver@6.3.1
-  - chokidar@4.0.3
   - chromium-bidi@157.0.8090-0
 
 # GHSA-2v37-7h3g-55p8, high: nanoid <3.3.18 loops indefinitely on a custom
