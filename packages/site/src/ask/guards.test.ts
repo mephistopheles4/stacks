@@ -65,8 +65,13 @@ describe('an outside click closes the drawer and nothing else (S7, C9)', () => {
   });
 
   it('has the shelf honour that mark only when a book is held', () => {
+    // #531 moved the rule into `clicked`, which pickup-state.test.ts runs: the
+    // shelf only hands the mark on, and the state ignores it with an empty hand.
     const boot = readFileSync('packages/site/src/shelf/boot.ts', 'utf8');
-    expect(boot).toMatch(/prevented && held\.pickup\?\.held\(\) !== undefined\) return;/);
+    expect(boot).toContain('held.pickup?.clicked(book, prevented)');
+    expect(readFileSync('packages/site/src/shelf/pickup-state.ts', 'utf8')).toMatch(
+      /if \(takenByDrawer && current !== undefined\) return;/,
+    );
     expect(readFileSync('packages/site/src/shelf/scene.ts', 'utf8')).toContain(
       'event.defaultPrevented',
     );

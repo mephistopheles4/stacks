@@ -32,6 +32,7 @@ import {
   pickupFailures,
   spreadFailures,
   viewerFailures,
+  type ClosedRead,
   type PhoneRead,
   type PickupRead,
   type PutDown,
@@ -505,7 +506,13 @@ type ShelfCost = Pick<ShelfStats, 'textures' | 'geometries' | 'programs' | 'call
  * own read-back rather than sleeping: a pickup takes about 1.3 s, and a put
  * back then a pickup about 2 s.
  */
+/**
+ * At rest in the hand. A picked-up book arrives **closed** (#531), so this is the
+ * closed rest; `HELD_OPEN` is the visitor having opened it. A check that reads the
+ * pages, the spread or the Thoughts waits on the second.
+ */
 const HELD = `window.__shelf.held()?.phase === 'held'`;
+const HELD_OPEN = `window.__shelf.held()?.phase === 'held' && window.__shelf.held()?.opened === true`;
 const NOTHING_HELD = `window.__shelf.held() === undefined && document.querySelectorAll('.held-page').length === 0`;
 
 /**
@@ -718,12 +725,35 @@ const PAGES_HIDDEN = `(() => {
     added.every((entry) => entry.visibility === 'hidden') &&
     !seen.some((entry) => entry.visibility === 'visible' && Number(entry.opacity) === 0);
 })()`;
+/**
+ * The closed book at rest, read before anything opens it (#531): the board lies
+ * flat to the block in the scene, the pages are hidden from sight and from the
+ * accessibility tree, the X is on screen, and the hint and the Open button say
+ * what a visitor can do.
+ */
+const READ_CLOSED = `(() => {
+  const held = window.__shelf.held();
+  const pages = [...document.querySelectorAll('.held-page')];
+  const x = document.querySelector('.held-controls .held-put-back');
+  const open = document.querySelector('.held-controls .held-open');
+  const box = x?.getBoundingClientRect();
+  return {
+    boardAngle: held?.boardAngle ?? 90,
+    opened: held?.opened ?? true,
+    pagesHidden: pages.length === 2 && pages.every((page) => page.style.visibility === 'hidden'),
+    xOnScreen: Boolean(box) && !x.closest('[hidden]') && box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1,
+    hint: document.getElementById('shelf-hint')?.textContent ?? '',
+    openName: open && !open.hidden ? (open.textContent ?? '').trim() : '',
+    title: held?.title ?? '',
+  };
+})()`;
+
 const READ_PAGE = `(() => {
   const right = document.querySelector('.held-page-right');
   const left = document.querySelector('.held-page-left');
   const pages = [...document.querySelectorAll('.held-page')];
   const links = right ? [...right.querySelectorAll('.card-links a')] : [];
-  const putBack = right?.querySelector('.held-put-back');
+  const putBack = document.querySelector('.held-controls .held-put-back');
   return {
     held: window.__shelf.held()?.title ?? '',
     pageTitle: left?.querySelector('.held-title')?.textContent ?? '',
@@ -750,7 +780,18 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   await page.evaluate(WATCH_PAGES);
   const first = await clickToPickUp(page, 'window.__shelf.held() !== undefined');
   if (first === undefined) return undefined;
-  if (!(await until(page, HELD, 'the clicked book to come to rest held'))) return undefined;
+  if (!(await until(page, HELD, 'the clicked book to come to rest held, closed'))) {
+    return undefined;
+  }
+  const closed = (await page.evaluate(READ_CLOSED)) as ClosedRead;
+  // A real click on the held book opens it: the closed book is framed at the
+  // centre of the screen. Nothing else opens it, and the address must not move.
+  const size = (await page.evaluate('({ w: innerWidth, h: innerHeight })')) as {
+    w: number;
+    h: number;
+  };
+  await page.mouse.click(size.w / 2, size.h / 2);
+  if (!(await until(page, HELD_OPEN, 'a click on the held book to open it'))) return undefined;
   const hiddenBeforeFade = (await page.evaluate(PAGES_HIDDEN)) === true;
   // The Thoughts fetch lands after the click, but only for a book that has some:
   // `library.json` says which, by the held book's title when no other book shares
@@ -765,15 +806,18 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   }
   const read = (await page.evaluate(READ_PAGE)) as Omit<
     PickupRead,
+    | 'closed'
     | 'hiddenBeforeFade'
     | 'hrefUnchanged'
     | 'focusUnmoved'
     | 'focusCaught'
+    | 'focusCaughtOpen'
     | 'thoughtsShown'
     | 'second'
     | 'afterPutBack'
     | 'afterEscape'
     | 'afterBack'
+    | 'afterBackOpen'
   >;
   const hrefUnchanged = await sameHref();
 
@@ -800,11 +844,12 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   const second = (await page.evaluate(`(() => ({
     held: window.__shelf.held()?.title ?? '',
     announced: document.getElementById('pickup-status')?.textContent ?? '',
-    putBack: Boolean(document.querySelector('.held-page-right .held-put-back')),
+    putBack: Boolean(document.querySelector('.held-controls .held-put-back')) && !document.querySelector('.held-controls')?.hidden,
     pages: document.querySelectorAll('.held-page').length,
   }))()`)) as PickupRead['second'];
 
-  await page.click('.held-page-right .held-put-back');
+  // The X, pressed with the second book closed in the hand: put back from closed.
+  await page.click('.held-controls .held-put-back');
   const afterPutBack = await putDown(page, sameHref);
 
   // The other two ways down, each on a fresh pickup through the shelf's hook.
@@ -821,12 +866,26 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   const focusUnmoved = (await page.evaluate(
     'document.activeElement === window.__focusBefore',
   )) as boolean;
-  // Then focus a link on the page, as a keyboard reader would, and leave by
-  // Escape: the page hides under it, so focus must be caught on the canvas.
-  await page.evaluate(`document.querySelector('.held-page-right .card-links a')?.focus()`);
+  // Then focus the X, as a keyboard reader would (a link on a hidden page cannot
+  // take focus), and leave by Escape: the X hides under it, so focus must be
+  // caught on the canvas.
+  await page.evaluate(`document.querySelector('.held-controls .held-put-back')?.focus()`);
   await page.keyboard.press('Escape');
   const afterEscape = await putDown(page, sameHref);
   const focusCaught = (await page.evaluate(
+    `document.activeElement === document.getElementById('shelf-canvas')`,
+  )) as boolean;
+
+  // The same from an open book, with focus on a link of its page.
+  await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
+  if (!(await until(page, HELD, 'the book to come to rest held, before the open focus read'))) {
+    return undefined;
+  }
+  if (!(await openBook(page, 'the book for the open focus read'))) return undefined;
+  await page.evaluate(`document.querySelector('.held-page-right .card-links a')?.focus()`);
+  await page.keyboard.press('Escape');
+  await putDown(page, sameHref);
+  const focusCaughtOpen = (await page.evaluate(
     `document.activeElement === document.getElementById('shelf-canvas')`,
   )) as boolean;
 
@@ -837,19 +896,31 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   await page.evaluate('history.back()');
   const afterBack = await putDown(page, sameHref);
 
+  // And the back button from an open book.
+  await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
+  if (!(await until(page, HELD, 'the book to come to rest held, before the open back button'))) {
+    return undefined;
+  }
+  if (!(await openBook(page, 'the book for the open back button'))) return undefined;
+  await page.evaluate('history.back()');
+  const afterBackOpen = await putDown(page, sameHref);
+
   const thoughtsShown = await checkThoughtsShown(page);
 
   return {
     ...read,
+    closed,
     hiddenBeforeFade,
     hrefUnchanged,
     focusUnmoved,
     focusCaught,
+    focusCaughtOpen,
     thoughtsShown,
     second,
     afterPutBack,
     afterEscape,
     afterBack,
+    afterBackOpen,
   };
 }
 
@@ -883,9 +954,15 @@ async function checkThoughtsShown(page: Page): Promise<boolean | undefined> {
     await putBackAndSettle(page);
     return undefined;
   }
+  // Opened first: a closed book's pages are hidden, and Thoughts in hidden pages
+  // are not read by anyone. The page must be visible, not only filled.
+  if (!(await openBook(page, 'the Thoughts book'))) {
+    await putBackAndSettle(page);
+    return false;
+  }
   const shown = await until(
     page,
-    `(() => { const slot = document.querySelector('.held-page-right .held-thoughts'); return Boolean(slot) && !slot.hidden && slot.querySelectorAll('p').length >= 2; })()`,
+    `(() => { const right = document.querySelector('.held-page-right'); const slot = right?.querySelector('.held-thoughts'); return right?.style.visibility === 'visible' && Boolean(slot) && !slot.hidden && slot.querySelectorAll('p').length >= 2; })()`,
     "the held page's Thoughts to show",
   );
   await putBackAndSettle(page);
@@ -900,6 +977,16 @@ async function checkThoughtsShown(page: Page): Promise<boolean | undefined> {
  */
 function shelfOrder(books: readonly LibraryBook[]): LibraryBook[] {
   return toRows(books, DEFAULT_SETTINGS.books).flatMap((row) => row.books.map((b) => b.book));
+}
+
+/**
+ * Opens the book in hand through the shelf's hook, and waits for it to be open
+ * at rest. The hook, not a click, so a check need not aim; `checkPickup` and
+ * `checkClosedControls` open by a real click, which keeps the gesture covered.
+ */
+async function openBook(page: Page, what: string): Promise<boolean> {
+  await page.evaluate('window.__shelf.open()');
+  return until(page, HELD_OPEN, `${what} to open`);
 }
 
 /** Waits for the book to be back in its slot, then reads what the page says. */
@@ -963,6 +1050,8 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
     if (covered && coverlessOpens !== undefined) break;
     await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
     if (!(await until(page, HELD, `book ${String(index)} to come to rest held`))) break;
+    // Examining closes an open book: it is opened first, as a visitor does.
+    if (!(await openBook(page, `book ${String(index)}`))) break;
     const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
     const expected = title === undefined ? undefined : coverFor.get(title);
     const hasControl = (await page.evaluate(
@@ -984,6 +1073,7 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
         fellBack = await examinesWithoutHeldCopy(page, index, title);
         await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
         await until(page, HELD, `book ${String(index)} to come to rest held, to be examined`);
+        await openBook(page, `book ${String(index)}, to be examined`);
       }
       const checked = await examineOne(page, title, expected.held, fullReading === undefined);
       fullReading ??= checked;
@@ -1340,6 +1430,7 @@ async function examinesWithoutHeldCopy(page: Page, index: number, title: string)
     await page.evaluate(
       'new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
     );
+    if (!(await openBook(page, 'the book, copy refused'))) return false;
     const opened = await opensView(page);
     // `shelf` is the material still carrying the shelf texture; a fallback that
     // blanked the cover reads `none`.
@@ -1380,18 +1471,21 @@ async function checkPhone(page: Page): Promise<PhoneRead | undefined> {
   );
   await page.evaluate('window.__shelf.pickUp(0)');
   if (!(await until(page, HELD, 'book 0 to come to rest held at phone size'))) return undefined;
+  // Closed first, for C8: the X is on screen, and the closed book leaves it room.
+  const closed = (await page.evaluate(READ_CLOSED)) as ClosedRead;
+  if (!(await openBook(page, 'book 0 at phone size'))) return undefined;
   const read = (await page.evaluate(`(() => {
     const right = document.querySelector('.held-page-right');
-    const control = right?.querySelector('.held-put-back');
+    const control = document.querySelector('.held-controls .held-put-back');
     const inView = (box) => box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
     return {
       pageInView: right ? inView(right.getBoundingClientRect()) : false,
       titleLeads: right?.firstElementChild?.classList.contains('held-title') ?? false,
       putBackInView: control ? inView(control.getBoundingClientRect()) : false,
     };
-  })()`)) as PhoneRead;
+  })()`)) as Omit<PhoneRead, 'closedXOnScreen'>;
   await putBackAndSettle(page);
-  return read;
+  return { ...read, closedXOnScreen: closed.xOnScreen };
 }
 
 /**
@@ -1425,6 +1519,18 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
         break;
       }
       const title = (await page.evaluate('window.__shelf.held().title')) as string;
+      // C1: closed, the board lies flat to the page block, on every book.
+      const closedAngle = (await page.evaluate('window.__shelf.held().boardAngle')) as number;
+      if (Math.abs(closedAngle) > CLOSED_TOLERANCE_DEG) {
+        failures.push(
+          `open spread: ${title} arrives ${closedAngle.toFixed(2)}° off closed, not within ` +
+            `${String(CLOSED_TOLERANCE_DEG)}°`,
+        );
+      }
+      if (!(await openBook(page, `book ${String(index)}, open spread`))) {
+        failures.push(`open spread: book ${String(index)} never opened`);
+        break;
+      }
       const read = (await page.evaluate('window.__shelf.spread() ?? null')) as SpreadRead | null;
       const found = spreadFailures(read ?? undefined, title);
       failures.push(...found.map((failure) => `open spread: ${failure}`));
@@ -1518,14 +1624,18 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
 
     await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
     const loops = (await page.evaluate(LOOPS_PER_FRAME)) as { frames: number; most: number };
-    const asleep = loops.frames >= AT_REST_FRAMES && loops.most === 1;
-    lines.push(
-      `GSAP ticker      ${asleep ? 'asleep' : 'AWAKE'} (most ${String(loops.most)} loops a frame ` +
-        `over ${String(loops.frames)} frames of the pickup)`,
-    );
 
     if (!(await until(page, HELD, 'the long-Thoughts book to come to rest held'))) {
       return stop('the book never came to rest held');
+    }
+    // The opening is motion too: GSAP's ticker is read across it as well as across
+    // the pickup, and the two samples are judged as one.
+    await page.evaluate('window.__shelf.open()');
+    const opening = (await page.evaluate(LOOPS_PER_FRAME)) as { frames: number; most: number };
+    loops.frames = Math.min(loops.frames, opening.frames);
+    loops.most = Math.max(loops.most, opening.most);
+    if (!(await until(page, HELD_OPEN, 'the long-Thoughts book to open'))) {
+      return stop('the book never opened');
     }
     const planted = LONG_THOUGHTS.paragraphs.length;
     if (
@@ -1575,6 +1685,11 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     lines.push(
       `long Thoughts     ${scrolls ? 'scroll at rest' : `DO NOT SCROLL (overflow ${before.overflow}, ${before.tall ? 'tall' : 'NOT TALL'})`}   ` +
         `links ${reached ? 'come into reach' : before.inReach ? 'IN REACH UNSCROLLED, the plant is too short' : 'OUT OF REACH'}`,
+    );
+    const asleep = loops.frames >= AT_REST_FRAMES && loops.most === 1;
+    lines.push(
+      `GSAP ticker      ${asleep ? 'asleep' : 'AWAKE'} (most ${String(loops.most)} loops a frame ` +
+        `over ${String(loops.frames)} frames of the pickup and its opening)`,
     );
     // Judged by `lib/pickup-gate.ts`, every clause planted red in its spec.
     const judged = atRestFailures({
@@ -2348,8 +2463,10 @@ interface SamplingPage {
    * Picks a book up and holds it before the count: the held book's new parts
    * are lit materials, and every one must compile with no shadow fetch (spec §5,
    * "held reader"). #371 measured 1 program and 2 draws a frame with a book held.
+   * A picked-up book arrives closed (#531), a different configuration from the
+   * open one: each is read.
    */
-  readonly hold?: boolean;
+  readonly hold?: 'closed' | 'open';
 }
 
 const SAMPLING_PAGES: readonly SamplingPage[] = [
@@ -2368,12 +2485,20 @@ const SAMPLING_PAGES: readonly SamplingPage[] = [
     minRows: MIN_SAMPLING_ROWS,
   },
   {
-    name: 'a book held, 50 books',
+    name: 'a book held closed, 50 books',
     url: (main) => `${main}/`,
     role: 'gate',
     library: LIBRARY,
     minRows: 0,
-    hold: true,
+    hold: 'closed',
+  },
+  {
+    name: 'a book held open, 50 books',
+    url: (main) => `${main}/`,
+    role: 'gate',
+    library: LIBRARY,
+    minRows: 0,
+    hold: 'open',
   },
   {
     // The permanent planted defect: every book reads the map again, through
@@ -2463,7 +2588,7 @@ async function checkShadowReaders(
 async function measureSampling(
   browser: Browser,
   url: string,
-  hold = false,
+  hold?: 'closed' | 'open',
 ): Promise<{ read: SamplingRead; errors: string[] }> {
   const context = await browser.createBrowserContext();
   const errors: string[] = [];
@@ -2504,10 +2629,12 @@ async function measureSampling(
     SAMPLING_BOOTS.count += 1;
     SAMPLING_BOOTS.toReady += (ready - started) / 1000;
     SAMPLING_BOOTS.toSettled += (performance.now() - ready) / 1000;
-    if (hold) {
+    if (hold !== undefined) {
       await page.evaluate('window.__shelf.pickUp(3)');
       if (!(await until(page, HELD, 'the book held for this page to come to rest'))) {
         errors.push('the book held for this page never came to rest');
+      } else if (hold === 'open' && !(await openBook(page, 'the book held for this page'))) {
+        errors.push('the book held for this page never opened');
       }
     }
     try {
@@ -3529,6 +3656,11 @@ function report(result: {
         pickup.hasObjectLine ? 'yes' : 'no'
       }`,
     );
+    console.log(
+      `arrives closed    board ${pickup.closed.boardAngle.toFixed(2)}°   pages ${
+        pickup.closed.pagesHidden ? 'hidden' : 'SHOWING'
+      }   X ${pickup.closed.xOnScreen ? 'on screen' : 'OFF SCREEN'}   hint "${pickup.closed.hint}"`,
+    );
     console.log(`page announced    ${pickup.announced || 'NOTHING'}`);
     console.log(`second book       ${pickup.second.announced || 'NOTHING'}`);
     console.log(
@@ -3579,7 +3711,9 @@ function report(result: {
         ? 'NOT CHECKED'
         : `in view ${phone.pageInView ? 'yes' : 'NO'}   title leads ${
             phone.titleLeads ? 'yes' : 'NO'
-          }   put-back on screen ${phone.putBackInView ? 'yes' : 'NO'}`
+          }   put-back on screen ${phone.putBackInView ? 'yes' : 'NO'} open, ${
+            phone.closedXOnScreen ? 'yes' : 'NO'
+          } closed`
     }`,
   );
   console.log('open spread at rest, 1280x800 (§3.6)');

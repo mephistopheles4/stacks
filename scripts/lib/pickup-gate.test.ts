@@ -1,17 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import {
   atRestFailures,
+  CLOSED_HINT,
   phoneFailures,
   pickupFailures,
   spreadFailures,
   viewerFailures,
   type AtRestRead,
+  type ClosedRead,
+  type PhoneRead,
   type PickupRead,
   type SpreadRead,
   type ViewerRead,
 } from './pickup-gate.ts';
 
+const closed: ClosedRead = {
+  boardAngle: 0.1,
+  opened: false,
+  pagesHidden: true,
+  xOnScreen: true,
+  hint: CLOSED_HINT,
+  openName: 'Open Harbour Garden',
+  title: 'Harbour Garden',
+};
+
 const good: PickupRead = {
+  closed,
   held: 'Harbour Garden',
   pageTitle: 'Harbour Garden',
   reading: 'read · finished 2024-03-02',
@@ -31,6 +45,7 @@ const good: PickupRead = {
   historyHeld: true,
   focusUnmoved: true,
   focusCaught: true,
+  focusCaughtOpen: true,
   pagesInView: true,
   thoughtsShown: true,
   second: {
@@ -42,6 +57,7 @@ const good: PickupRead = {
   afterPutBack: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
   afterEscape: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
   afterBack: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
+  afterBackOpen: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
 };
 
 describe('pickupFailures', () => {
@@ -66,6 +82,7 @@ describe('pickupFailures', () => {
     ],
     ['focus moved by the pickup', { focusUnmoved: false }, /focus moved/],
     ['focus dropped by Escape', { focusCaught: false }, /dropped focus/],
+    ['focus dropped by Escape from an open book', { focusCaughtOpen: false }, /open book/],
     ['pages off the desktop viewport', { pagesInView: false }, /run off the desktop viewport/],
     ['Thoughts missing from a flagged book', { thoughtsShown: false }, /opened without them/],
     ['no flagged book picked up', { thoughtsShown: undefined }, /no book flagged with Thoughts/],
@@ -101,6 +118,36 @@ describe('pickupFailures', () => {
     expect(
       pickupFailures({ ...good, afterPutBack: { ...good.afterPutBack, ...patch } }).join('\n'),
     ).toMatch(message);
+  });
+});
+
+describe('pickupFailures, the closed book (#531)', () => {
+  it.each<[string, Partial<ClosedRead>, RegExp]>([
+    ['a board off closed', { boardAngle: 4 }, /4\.0° off closed/],
+    ['a board hinged the other way', { boardAngle: 180 }, /off closed/],
+    ['a book that arrived open', { opened: true }, /arrived open/],
+    ['pages showing on a closed book', { pagesHidden: false }, /pages are not hidden/],
+    ['an X off screen', { xOnScreen: false }, /X is not on screen/],
+    ['a hint that does not say a click opens it', { hint: 'Drag to look around' }, /hint/],
+    ['no Open button', { openName: '' }, /Open button/],
+    ['an Open button named for another book', { openName: 'Open Paper Ledger' }, /Open button/],
+  ])('fails on %s', (_name, patch, message) => {
+    expect(pickupFailures({ ...good, closed: { ...closed, ...patch } }).join('\n')).toMatch(
+      message,
+    );
+  });
+
+  it('judges the board within the same half degree as the examined book', () => {
+    expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: 0.5 } })).toEqual([]);
+    expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: 0.51 } }).length).toBe(1);
+    expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: -0.51 } }).length).toBe(1);
+  });
+
+  it('holds the back button to account from an open book too', () => {
+    const open = { ...good.afterBackOpen, held: true };
+    expect(pickupFailures({ ...good, afterBackOpen: open }).join('\n')).toMatch(
+      /back button from an open book left the book held/,
+    );
   });
 });
 
@@ -190,19 +237,30 @@ describe('viewerFailures', () => {
   });
 });
 describe('phoneFailures', () => {
+  const phone: PhoneRead = {
+    pageInView: true,
+    titleLeads: true,
+    putBackInView: true,
+    closedXOnScreen: true,
+  };
+
+  it('fails when the X is off screen while the book is closed', () => {
+    expect(phoneFailures({ ...phone, closedXOnScreen: false }).join('\n')).toMatch(/closed/);
+  });
+
   it('passes a page that fits, leads with the title and keeps put-back on screen', () => {
-    expect(phoneFailures({ pageInView: true, titleLeads: true, putBackInView: true })).toEqual([]);
+    expect(phoneFailures({ ...phone })).toEqual([]);
   });
 
   it('fails each clause alone, and an unreached phone', () => {
     expect(
-      phoneFailures({ pageInView: false, titleLeads: true, putBackInView: true }),
+      phoneFailures({ ...phone, pageInView: false }),
     ).toHaveLength(1);
     expect(
-      phoneFailures({ pageInView: true, titleLeads: false, putBackInView: true }),
+      phoneFailures({ ...phone, titleLeads: false }),
     ).toHaveLength(1);
     expect(
-      phoneFailures({ pageInView: true, titleLeads: true, putBackInView: false }),
+      phoneFailures({ ...phone, putBackInView: false }),
     ).toHaveLength(1);
     expect(phoneFailures(undefined)).toHaveLength(1);
   });

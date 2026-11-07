@@ -6,10 +6,16 @@
  * read to these functions; each is pure, so every clause is planted red in
  * `pickup-gate.test.ts` rather than trusted.
  *
+ * **A picked-up book arrives closed** (#531, `picking-up-closed.md`): the board
+ * lies flat to the block in the scene, the pages are hidden from sight and from
+ * the accessibility tree, and the visitor opens it. Everything about the pages
+ * is read from an **open** book; `ClosedRead` is the book before it.
+ *
  * **What moved from the card** (spec §3.5): every block renders on the page;
  * `read` is not suppressed; the fallback link; link shape and accessible
  * names; the announcer, with put-back as the dismissal; the put-back control
- * where the close control was; `published` rendering and the collapse rules,
+ * where the close control was, now an X outside the pages; `published`
+ * rendering and the collapse rules,
  * which stay unit tests in `card.test.ts`; and examining the held book (#418),
  * the enlarged cover reworked, whose Escape leaves only the view. **What is
  * new**: `location.href` unchanged after a pickup, the page hidden from sight
@@ -18,8 +24,37 @@
  * `checkSheet` retired with the sheet.
  */
 
+/**
+ * The hint the header shows while a book is closed at rest. `pickup.ts` owns
+ * the string; this is the gate's own copy, so a change to either is a red build.
+ */
+export const CLOSED_HINT = 'Click the book to open it';
+
+/** How far from 0° the front board may lie and the book still read as closed. */
+const CLOSED_BOARD_DEG = 0.5;
+
+/** The closed book at rest, read before anything opened it. */
+export interface ClosedRead {
+  /** The front board's angle to the page block, read from the scene. */
+  readonly boardAngle: number;
+  /** The shelf's own reading: it must not be open. */
+  readonly opened: boolean;
+  /** Both pages hidden by `visibility`: from sight and from the accessibility tree. */
+  readonly pagesHidden: boolean;
+  /** The X is in the viewport and not hidden. */
+  readonly xOnScreen: boolean;
+  /** The header's hint line. */
+  readonly hint: string;
+  /** The Open button's words, or empty when it is hidden. */
+  readonly openName: string;
+  /** The held book's title, which the Open button is named for. */
+  readonly title: string;
+}
+
 /** What a click on a book left on the page, read at rest and across a second pickup. */
 export interface PickupRead {
+  /** The book at its closed rest, before the click that opened it. */
+  readonly closed: ClosedRead;
   /** The held book's title, from the shelf's own read-back. */
   readonly held: string;
   /** The left-hand page's title. */
@@ -51,6 +86,8 @@ export interface PickupRead {
    * starts the page over.
    */
   readonly focusCaught: boolean;
+  /** The same from an open book, with focus on a link of the page. */
+  readonly focusCaughtOpen: boolean;
   /**
    * Both pages inside the desktop viewport at rest, within a pixel — the
    * desktop half of the card's old overflow check, which the phone check keeps
@@ -59,15 +96,16 @@ export interface PickupRead {
   readonly pagesInView: boolean;
   /**
    * A book `library.json` flags with Thoughts, picked up: whether its page showed
-   * them, or `undefined` when no such book was found to pick up. Opening to the
-   * Thoughts is the point of the pickup (spec §3.4).
+   * them, or `undefined` when no such book was found to pick up. The Thoughts are
+   * the point of opening the book (spec §3.4); a closed book's pages are hidden,
+   * so the book was opened first and the page had to be visible.
    */
   readonly thoughtsShown: boolean | undefined;
   /** After a second book was picked up in its place. */
   readonly second: {
     readonly held: string;
     readonly announced: string;
-    /** The second book's page carries a put-back control of its own. */
+    /** The X is still there for the second book (it is one control, outside the pages). */
     readonly putBack: boolean;
     /** Pages in the layer: exactly the held book's two, none left from the first. */
     readonly pages: number;
@@ -77,6 +115,8 @@ export interface PickupRead {
   /** After Escape, and after the back button, each on a fresh pickup (spec §3.9). */
   readonly afterEscape: PutDown;
   readonly afterBack: PutDown;
+  /** The back button pressed on an open book, which put it back the same way. */
+  readonly afterBackOpen: PutDown;
 }
 
 /** The page after a book was put down, by whichever of the three ways. */
@@ -89,7 +129,7 @@ export interface PutDown {
 }
 
 export function pickupFailures(read: PickupRead): string[] {
-  const failures: string[] = [];
+  const failures: string[] = [...closedFailures(read.closed)];
   if (read.pageTitle !== read.held) {
     failures.push(`the held page carries "${read.pageTitle}", not the held book "${read.held}"`);
   }
@@ -103,13 +143,18 @@ export function pickupFailures(read: PickupRead): string[] {
         'through the closing cover, and a screen reader reads what is not on screen',
     );
   }
-  if (!read.visibleAtRest) failures.push('the pages are not visible with the book at rest');
+  if (!read.visibleAtRest) failures.push('the pages are not visible with the book open at rest');
   if (!read.focusUnmoved) {
     failures.push('focus moved on pickup — it must stay put, with no keyboard path to the shelf');
   }
   if (!read.focusCaught) {
     failures.push(
-      'Escape from a focused page link dropped focus instead of catching it on the canvas',
+      'Escape from the focused X on a closed book dropped focus instead of catching it on the canvas',
+    );
+  }
+  if (!read.focusCaughtOpen) {
+    failures.push(
+      'Escape from a focused page link on an open book dropped focus instead of catching it on the canvas',
     );
   }
   if (!read.pagesInView) {
@@ -121,7 +166,7 @@ export function pickupFailures(read: PickupRead): string[] {
         'notes stage or the flag dropped them',
     );
   } else if (!read.thoughtsShown) {
-    failures.push('a book flagged with Thoughts opened without them on its page');
+    failures.push('a book flagged with Thoughts opened without them on a visible page');
   }
 
   // Moved from the card: §3.5's checks 1 to 5 (every block, `read`, the
@@ -157,9 +202,10 @@ export function pickupFailures(read: PickupRead): string[] {
   }
   if (read.second.held === read.held) failures.push('the second pickup left the first book held');
 
-  // §3.5's check 7: the close control, become the put-back control.
+  // §3.5's check 7: the close control, become the put-back control: an X outside
+  // the pages, because a closed book's pages are hidden (#531).
   if (read.putBack === undefined) {
-    failures.push('the held page has no put-back control');
+    failures.push('there is no put-back control outside the pages');
   } else {
     if (read.putBack.tag !== 'BUTTON') {
       failures.push(`the put-back control is a <${read.putBack.tag.toLowerCase()}>, not a button`);
@@ -167,7 +213,7 @@ export function pickupFailures(read: PickupRead): string[] {
     if (read.putBack.name.length === 0)
       failures.push('the put-back control has no accessible name');
   }
-  if (!read.second.putBack) failures.push("the second book's page has no put-back control");
+  if (!read.second.putBack) failures.push('the X was not there for the second book');
   if (read.second.pages !== 2) {
     failures.push(
       `${String(read.second.pages)} pages in the layer with one book held — the first book's ` +
@@ -179,7 +225,36 @@ export function pickupFailures(read: PickupRead): string[] {
     ...putDownFailures(read.afterPutBack, 'the put-back control'),
     ...putDownFailures(read.afterEscape, 'Escape'),
     ...putDownFailures(read.afterBack, 'the back button'),
+    ...putDownFailures(read.afterBackOpen, 'the back button from an open book'),
   );
+  return failures;
+}
+
+/** The book before it is opened (#531, claims C1, C2 and C8). */
+function closedFailures(read: ClosedRead): string[] {
+  const failures: string[] = [];
+  if (Math.abs(read.boardAngle) > CLOSED_BOARD_DEG) {
+    failures.push(
+      `the book arrived ${Math.abs(read.boardAngle).toFixed(1)}° off closed — a picked-up book ` +
+        'arrives closed and cover-on',
+    );
+  }
+  if (read.opened) failures.push('the book arrived open: nothing but the visitor opens it');
+  if (!read.pagesHidden) {
+    failures.push(
+      'the pages are not hidden by visibility while the book is closed: a screen reader ' +
+        'reads what is not on screen',
+    );
+  }
+  if (!read.xOnScreen) failures.push('the X is not on screen while the book is closed');
+  if (read.hint !== CLOSED_HINT) {
+    failures.push(`the hint reads "${read.hint}" while the book is closed, not "${CLOSED_HINT}"`);
+  }
+  if (read.openName !== `Open ${read.title}`) {
+    failures.push(
+      `no Open button named "Open ${read.title}" while the book is closed (it reads "${read.openName}")`,
+    );
+  }
   return failures;
 }
 
@@ -357,8 +432,10 @@ export interface PhoneRead {
   readonly pageInView: boolean;
   /** Title and author lead the right-hand page on a phone (§3.4). */
   readonly titleLeads: boolean;
-  /** The put-back control is inside the viewport: no empty space to tap otherwise. */
+  /** The put-back X is inside the viewport with the book open. */
   readonly putBackInView: boolean;
+  /** …and with the book closed, which leaves empty space round it to tap. */
+  readonly closedXOnScreen: boolean;
 }
 
 export function phoneFailures(read: PhoneRead | undefined): string[] {
@@ -367,9 +444,10 @@ export function phoneFailures(read: PhoneRead | undefined): string[] {
   if (!read.pageInView) failures.push('at phone size the right-hand page does not fit the screen');
   if (!read.titleLeads) failures.push('at phone size the title does not lead the right-hand page');
   if (!read.putBackInView) {
-    failures.push(
-      'at phone size the put-back control is off screen, and there is no empty space to tap',
-    );
+    failures.push('at phone size the put-back X is off screen with the book open');
+  }
+  if (!read.closedXOnScreen) {
+    failures.push('at phone size the put-back X is off screen with the book closed');
   }
   return failures;
 }

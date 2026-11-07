@@ -6,7 +6,9 @@ import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
 import {
   createPickup,
   loopPickups,
+  type HeldControls,
   type HeldReading,
+  type LoopResult,
   type Pickup,
   type SpreadReading,
   type SwapReading,
@@ -110,6 +112,8 @@ declare global {
       held(): HeldReading | undefined;
       /** Picks up the book at this index, as a click on it would. */
       pickUp(index: number): void;
+      /** Opens the book in hand, as the Open button would: a gate need not aim at it. */
+      open(): void;
       putBack(): void;
       /** §3.6's numbers for the open spread at rest, desktop only. */
       spread(): SpreadReading | undefined;
@@ -118,7 +122,7 @@ declare global {
        * resolves with how many it held. A function, not an address switch, so no
        * link a visitor is sent can start it on their device (spec §4).
        */
-      pickupLoop(rounds: number): Promise<number>;
+      pickupLoop(rounds: number): Promise<LoopResult>;
       /** Each held cover's upload time and the texture count after it (spec §8). */
       swaps(): readonly SwapReading[];
     };
@@ -134,6 +138,8 @@ export interface PageHandles {
   readonly status: HTMLElement;
   /** The dialog that examines the held book. See `book-viewer.ts`. */
   readonly bookViewer: BookViewerElements;
+  /** The X, the Open button and the hint, outside the pages. See `pickup.ts`. */
+  readonly controls: HeldControls;
 }
 
 export async function boot(
@@ -220,9 +226,8 @@ export async function boot(
         settings,
         onSelect: (book, prevented) => {
           // A click the drawer closed on leaves a held book alone; with an empty
-          // hand it still picks up.
-          if (prevented && held.pickup?.held() !== undefined) return;
-          held.pickup?.select(book);
+          // hand it still picks up. A click on the book in hand opens it.
+          held.pickup?.clicked(book, prevented);
         },
         onContextLost: (running) => {
           // A held book goes back as a hard cut: the recovery rebuilds the
@@ -449,6 +454,7 @@ export async function boot(
     status: page.status,
     host,
     viewer: mountBookViewer(page.bookViewer, host),
+    controls: page.controls,
   });
   held.pickup = live;
   // The Ask the library drawer asks for a book by id when a visitor clicks its link.
@@ -531,13 +537,18 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind, pickup?: Pic
     pickUp: (index) => {
       pickup?.pickUp(index);
     },
+    open: () => {
+      pickup?.open();
+    },
     putBack: () => {
       pickup?.putBack();
     },
     spread: () => pickup?.measureSpread(),
     swaps: () => pickup?.swaps() ?? [],
     pickupLoop: (rounds) =>
-      pickup === undefined ? Promise.resolve(0) : loopPickups(pickup, handle.bookCount, rounds),
+      pickup === undefined
+        ? Promise.resolve({ closed: 0, open: 0 })
+        : loopPickups(pickup, handle.bookCount, rounds),
   };
 }
 

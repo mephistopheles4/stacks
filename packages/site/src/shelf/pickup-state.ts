@@ -2,12 +2,14 @@
  * Which book is in your hand, which are on their way back, and what a click,
  * Escape or the back button does next — with no `three`, no GSAP and no DOM.
  *
- * The choreography is #371's, accepted as prototyped: a click picks a book up;
- * a click on another puts the first back and then picks the second up; a book
- * caught on its way back plays forward again; a second pickup may start while
- * another book is still returning; reduced motion cuts straight to open and
- * straight back. Everything that draws is behind `PickupEffects`, so every one
- * of those rules is a unit test here, and `pickup.ts` only supplies the effects.
+ * The choreography is #371's, accepted as prototyped, with #531's change: a click
+ * picks a book up and it arrives **closed** and cover-on, and the visitor opens
+ * it; a click on another puts the first back and then picks the second up; a
+ * book caught on its way back plays forward again, to the next rest; a second
+ * pickup may start while another book is still returning; reduced motion cuts
+ * to closed, then to open, and straight back. Everything that draws is behind
+ * `PickupEffects`, so every one of those rules is a unit test here, and
+ * `pickup.ts` only supplies the effects.
  *
  * **Pickup owns one history entry** (spec §3.9). Picking up pushes it, carrying
  * the book in `history.state` and never in the address; Escape and an
@@ -16,28 +18,46 @@
  * entry's state rather than pushing a second one.
  */
 
+/**
+ * `held` is at rest in the hand, closed or open: whether it is open is a reading
+ * of its own (`Holding.opened`), so every rule that reads `held` is unchanged.
+ */
 export type Phase = 'lifting' | 'held' | 'returning';
 
-/** One book's motion, from the shelf (0) to open in the hand (1). */
+/**
+ * One book's motion, from the shelf (0) to open in the hand (1). It stops once
+ * on the way, closed and cover-on: forward it rests there until played on, and
+ * backward it passes the stop without resting.
+ */
 export interface Track {
-  /** Forward, at normal speed, from wherever it is. */
+  /** Forward, at normal speed, from wherever it is. It stops at closed. */
   play(): void;
-  /** Backward, `speed` times faster than forward. */
+  /** Backward, `speed` times faster than forward. It does not stop at closed. */
   reverse(speed: number): void;
-  /** Jump to open, with no motion. */
+  /** Jump to closed in the hand, with no motion. */
   finish(): void;
+  /** Jump to open in the hand, with no motion. */
+  finishOpen(): void;
   /** Jump back to the shelf, with no motion. */
   rewind(): void;
   /** Stop at `progress`, 0..1. The tuner's scrub. */
   seek(progress: number): void;
   progress(): number;
+  /** Where on the track the closed rest is, 0..1. */
+  closedProgress(): number;
   dispose(): void;
 }
 
-/** What a track reports back as it reaches either end of its run. */
+/** What a track reports back as it reaches a rest or either end of its run. */
 export interface TrackEvents {
-  /** It reached open, playing forward. Properties, so a track may hand them on unbound. */
+  /**
+   * It reached closed in the hand, playing forward. Never fired playing
+   * backward: a book on its way back must not read as closed at rest.
+   * Properties, so a track may hand them on unbound.
+   */
   readonly landed: () => void;
+  /** It reached open, playing forward. */
+  readonly opened: () => void;
   /** It reached the shelf, playing backward. */
   readonly returned: () => void;
 }
@@ -56,8 +76,12 @@ export interface PickupEffects<B> {
   track(book: B, events: TrackEvents): Track;
   /** It left its slot: draw the shelf without it. */
   left(book: B): void;
-  /** It came to rest open in the hand. */
+  /** It came to rest in the hand, closed and cover-on. */
   landed(book: B): void;
+  /** The visitor opened it: the opening is playing, and the book is not at rest. */
+  opening(book: B): void;
+  /** It came to rest open in the hand. */
+  opened(book: B): void;
   /** It is back in its slot: draw the shelf with it again. */
   settled(book: B): void;
   /** «Title» by «Author» on pickup, and empty when the hand is empty. */
@@ -82,6 +106,8 @@ export interface PickupEffects<B> {
 export interface Holding<B> {
   readonly book: B;
   readonly phase: Phase;
+  /** Whether the book has been opened, and is open at rest in the hand. */
+  readonly opened: boolean;
 }
 
 /** A book the pickup is moving, and the track it moves on. */
@@ -92,8 +118,23 @@ export interface Moving<B> {
 }
 
 export interface PickupState<B> {
-  /** A click on `book`, or on empty space when `undefined`. */
+  /**
+   * A click on `book`, or on empty space when `undefined`: pick it up. The book
+   * in hand is left as it is; it is `clicked` that opens it.
+   */
   select(book: B | undefined): void;
+  /**
+   * The shelf's click. With a book in hand and the click already taken by the
+   * Ask drawer closing, nothing; on the book in hand, open it; otherwise `select`.
+   */
+  clicked(book: B | undefined, takenByDrawer: boolean): void;
+  /**
+   * Open the book in your hand. Only a book closed at rest can be opened, and
+   * returns whether it was.
+   */
+  open(): boolean;
+  /** Whether the held book is closed at rest: what the Open button, the hint and the cursor read. */
+  closed(): boolean;
   /** Escape, an empty-space click or the put-back control. */
   putBack(): void;
   /** The browser moved off the pickup's history entry: put everything back. */
@@ -101,8 +142,8 @@ export interface PickupState<B> {
   /** The context was lost: everything back in its slot at once, as a hard cut. */
   drop(): void;
   /**
-   * Close the held book in your hand to turn it (#418). Only a book at rest in
-   * the hand can be examined; returns whether it was.
+   * Close the held book in your hand to turn it (#418). Only a book open at rest
+   * in the hand can be examined; returns whether it was.
    */
   examine(): boolean;
   /** Leave the examining view, one level: the book stays held. */
@@ -123,6 +164,10 @@ interface Active<B> {
   readonly book: B;
   phase: Phase;
   track: Track;
+  /** Open at rest in the hand. */
+  opened: boolean;
+  /** The opening is playing, between `open()` and the `opened` event. */
+  opening: boolean;
   /** Closed in the hand, to be turned. */
   examining: boolean;
   /** Examined at some point since the pickup: its effects may still be easing. */
@@ -158,10 +203,24 @@ export function createPickupState<B>(
         entry.phase = 'held';
         effects.landed(entry.book);
       },
+      opened: () => {
+        markOpened(entry);
+      },
       returned: () => {
         settle(entry);
       },
     });
+
+  /**
+   * The book is open at rest. Also the end of a book caught inside the opening
+   * stage, which never crossed the closed rest and so never fired `landed`.
+   */
+  const markOpened = (entry: Active<B>): void => {
+    entry.phase = 'held';
+    entry.opened = true;
+    entry.opening = false;
+    effects.opened(entry.book);
+  };
 
   const pick = (book: B): void => {
     // Out of its slot first: the track is built from the book as lifted.
@@ -170,6 +229,8 @@ export function createPickupState<B>(
       book,
       phase: 'lifting',
       track: undefined as unknown as Track,
+      opened: false,
+      opening: false,
       examining: false,
       examined: false,
     };
@@ -201,6 +262,10 @@ export function createPickupState<B>(
   const sendBack = (entry: Active<B>): void => {
     if (entry.phase === 'returning') return;
     entry.phase = 'returning';
+    // A book caught on its way back and landing closed can open again, whether
+    // the reverse began open or in the middle of the opening.
+    entry.opened = false;
+    entry.opening = false;
     entry.examining = false;
     // Whatever way the hand empties, the examining view goes with it. A closed
     // book is then not at the pose the shared track holds: reversing it would
@@ -219,7 +284,38 @@ export function createPickupState<B>(
     for (const entry of [...active]) sendBack(entry);
   };
 
+  const open = (): boolean => {
+    const entry = holding();
+    if (entry?.phase !== 'held' || entry.opened || entry.opening) return false;
+    if (effects.reduced()) {
+      entry.track.finishOpen();
+      markOpened(entry);
+      return true;
+    }
+    entry.opening = true;
+    effects.opening(entry.book);
+    entry.track.play();
+    return true;
+  };
+
   return {
+    clicked(book, takenByDrawer) {
+      const current = holding();
+      if (takenByDrawer && current !== undefined) return;
+      if (book !== undefined && current !== undefined && id(current.book) === id(book)) {
+        open();
+        return;
+      }
+      this.select(book);
+    },
+
+    open,
+
+    closed() {
+      const entry = holding();
+      return entry?.phase === 'held' && !entry.opened && !entry.opening;
+    },
+
     select(book) {
       if (book === undefined) {
         this.putBack();
@@ -281,7 +377,7 @@ export function createPickupState<B>(
 
     examine() {
       const entry = holding();
-      if (entry?.phase !== 'held' || entry.examining) return false;
+      if (entry?.phase !== 'held' || !entry.opened || entry.examining) return false;
       entry.examining = true;
       entry.examined = true;
       effects.examine(entry.book);
@@ -300,7 +396,9 @@ export function createPickupState<B>(
 
     holding() {
       const entry = holding();
-      return entry === undefined ? undefined : { book: entry.book, phase: entry.phase };
+      return entry === undefined
+        ? undefined
+        : { book: entry.book, phase: entry.phase, opened: entry.opened };
     },
 
     current() {
@@ -326,9 +424,19 @@ export function createPickupState<B>(
         const at = entry.track.progress();
         entry.track.dispose();
         entry.track = wire(entry);
-        entry.track.seek(at);
-        if (entry.phase === 'returning') entry.track.reverse(effects.returnSpeed());
-        else if (entry.phase === 'lifting') entry.track.play();
+        // A rest is kept, not its fraction of a track whose length just changed.
+        if (entry.opened) {
+          entry.track.finishOpen();
+        } else if (entry.phase === 'held' && !entry.opening) {
+          entry.track.finish();
+        } else if (entry.opening) {
+          entry.track.seek(Math.max(at, entry.track.closedProgress()));
+          entry.track.play();
+        } else {
+          entry.track.seek(at);
+          if (entry.phase === 'returning') entry.track.reverse(effects.returnSpeed());
+          else entry.track.play();
+        }
       }
     },
   };
