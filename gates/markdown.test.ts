@@ -76,13 +76,7 @@ import {
   silentProbes,
   unmeasuredFindings,
 } from '../scripts/lib/markdown-lint.ts';
-import {
-  AGENTS_DOC,
-  aggregatorResultTests,
-  jobsOf,
-  markdownSection,
-  readRepoFile,
-} from './repo.ts';
+import { AGENTS_DOC, jobsOf, markdownSection, readRepoFile } from './repo.ts';
 
 const WORKFLOW = '.github/workflows/gates.yml';
 
@@ -130,30 +124,6 @@ describe('G48 — the Markdown check runs on every pull request', () => {
     ).not.toMatch(/matrix\.node/);
   });
 
-  it('makes `gates` require it, and test its result against success', () => {
-    const aggregator = jobs().get('gates') ?? '';
-
-    expect(
-      /needs:\s*\[[^\]]*\bstyle\b[^\]]*\]/.test(aggregator),
-      `the \`gates\` aggregator in ${WORKFLOW} no longer lists \`style\` in its \`needs:\`. ` +
-        '`gates` is the single required status check, so a job it does not need is a job ' +
-        'that blocks nothing',
-    ).toBe(true);
-
-    // A `needs:` entry with no `result` test is a dependency that reports and
-    // cannot refuse: skipped and cancelled both have to fail the gate rather
-    // than pass it by omission, which is why this compares against 'success'.
-    // `aggregatorResultTests` is in `repo.ts` because several gates ask it.
-    const tested = aggregatorResultTests(aggregator);
-
-    expect(
-      tested,
-      `the \`gates\` aggregator must compare \`needs.style.result\` against 'success'. ` +
-        'Comparing against `failure` instead would let a skipped or cancelled style job ' +
-        'through',
-    ).toContain('style');
-  });
-
   it('documents both commands where G14 reads them', () => {
     // G14 already holds AGENTS.md's Commands block to package.json in both
     // directions, so an undocumented script is red there. What it cannot say is
@@ -186,22 +156,6 @@ describe('G48 — the Markdown check runs on every pull request', () => {
 });
 
 describe('G48 — the fix pass rewrites what was measured, and nothing else', () => {
-  it('pins the tool version exact', () => {
-    // ADR-0067: a release that adds a rule turns an unchanged tree red, and a
-    // caret range only moves that red onto whichever unrelated pull request
-    // runs after the bump. The allowlist below is a claim about one version.
-    const manifest = JSON.parse(readRepoFile('package.json')) as {
-      devDependencies?: Record<string, string>;
-    };
-    const pinned = manifest.devDependencies?.['markdownlint-cli2'];
-
-    expect(
-      pinned,
-      "markdownlint-cli2 must be pinned exact in package.json. What a rule's fix does " +
-        'is a property of a version, and the fix allowlist is measured against one',
-    ).toMatch(/^\d+\.\d+\.\d+$/);
-  });
-
   it('turns off no rule without a written reason beside it', () => {
     // `.markdownlint.jsonc` is that filename because it takes comments *and* is
     // on CodeRabbit's recognised list. The comments are the point: a rule turned

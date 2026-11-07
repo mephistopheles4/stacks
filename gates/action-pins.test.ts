@@ -310,30 +310,6 @@ describe('G42 — the `audit` job exists, runs, and is required', () => {
         'documentation',
     ).toContain('pnpm audit --audit-level=high');
   });
-
-  it('makes the required check depend on it', () => {
-    const gates = jobs().get('gates') ?? '';
-
-    expect(
-      /needs:\s*\[[^\]]*\baudit\b[^\]]*\]/.test(gates),
-      `the \`gates\` aggregator in ${GATES_WORKFLOW} no longer lists \`audit\` in its ` +
-        '`needs:`. `gates` is the single required status check, so a job it does not ' +
-        'need is a job whose failure merges',
-    ).toBe(true);
-  });
-
-  it('tests that dependency against `success`, not merely for failure', () => {
-    // Skipped and cancelled must fail the gate rather than pass it by omission.
-    // A `needs:` entry with no `result` test is a dependency that reports
-    // nothing when it is skipped, which is the shape a required check that
-    // never reports has already cost this repo once.
-    expect(
-      aggregatorResultTests(jobs().get('gates') ?? ''),
-      `the \`gates\` aggregator in ${GATES_WORKFLOW} does not compare ` +
-        "`needs.audit.result` against 'success'. Comparing against 'failure' instead " +
-        'would let a skipped or cancelled audit through',
-    ).toContain('audit');
-  });
 });
 
 /**

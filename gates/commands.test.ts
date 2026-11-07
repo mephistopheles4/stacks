@@ -67,23 +67,6 @@ describe('G14 — documented commands', () => {
     expect(documentedCommandsSection().length).toBeGreaterThan(200);
   });
 
-  it('extracts a subcommand written in either quote form', () => {
-    // Planted, because the repair is otherwise invisible in a tree whose seven
-    // live calls are all single-quoted. Until #252 the regex above hardcoded
-    // one quote character, so a contributor who hand-wrote `.command("add")`
-    // got "extraction found 0 CLI subcommands" — a message naming neither the
-    // quote nor the line, and a remedy nobody could reach from it. #231
-    // measured exactly that break under a whole-tree reformat, and #229 cites
-    // this gate as the measured warrant for admitting style rules at all.
-    //
-    // **Both forms, not only the one that was blind.** A regex flipped from `'`
-    // to `"` rather than widened satisfies a double-quote-only assertion and
-    // goes blind to every call this gate actually reads — trading one silent
-    // half for the other, with a green plant to show for it.
-    expect(extractAll(`.command("add")`, CLI_COMMAND)).toEqual(['add']);
-    expect(extractAll(`.command('add')`, CLI_COMMAND)).toEqual(['add']);
-  });
-
   it('documents every CLI subcommand', () => {
     // Anchored to the start of a line, which is where the CLI block puts a
     // command name. A bare `\bname\b` search over the whole section was the

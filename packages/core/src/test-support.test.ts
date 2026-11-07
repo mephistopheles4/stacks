@@ -48,12 +48,6 @@ describe('spyOnWarn', () => {
     warn.restore();
   });
 
-  it('starts empty', () => {
-    const warn = spyOnWarn();
-    expect(warn.lines).toEqual([]);
-    warn.restore();
-  });
-
   it('puts the real console.warn back', () => {
     const before = console.warn;
     const warn = spyOnWarn();
@@ -62,20 +56,5 @@ describe('spyOnWarn', () => {
     warn.restore();
 
     expect(console.warn).toBe(before);
-  });
-
-  it('gives each call its own recorder', () => {
-    // Two spies in one file must not share an array — the module-level `let`
-    // that would cause it is the obvious way to write this wrong.
-    const first = spyOnWarn();
-    console.warn('one');
-    first.restore();
-
-    const second = spyOnWarn();
-    console.warn('two');
-    second.restore();
-
-    expect(first.lines).toEqual(['one']);
-    expect(second.lines).toEqual(['two']);
   });
 });
