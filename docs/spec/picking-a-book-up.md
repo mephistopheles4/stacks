@@ -3,6 +3,12 @@
 > **Amended by [`picking-up-closed.md`](picking-up-closed.md)** ([#531](https://github.com/mephistopheles4/stacks/issues/531)):
 > a picked-up book now arrives closed and the visitor opens it, which changes §1,
 > §2, §3.1, §3.4, §3.5, §3.6 and §3.11 below. This file is kept as written.
+>
+> **Amended again by [#553](https://github.com/mephistopheles4/stacks/issues/553)**
+> ([ADR-0138](../adr/0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md)):
+> the examining dialog of §3.4 and check 9 is gone. The closed book in your hand
+> turns in place, and the open book closes back to that state from "Close the
+> book" or "Turn the book over".
 
 The output of [Map: picking a book up](https://github.com/mephistopheles4/stacks/issues/366)
 — eight closed tickets, assembled into something an implementation session can

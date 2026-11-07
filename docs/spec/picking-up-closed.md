@@ -1,5 +1,13 @@
 # A picked-up book arrives closed, and the visitor opens it
 
+> **Amended by [#553](https://github.com/mephistopheles4/stacks/issues/553)**
+> ([ADR-0138](../adr/0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md)).
+> Examining and its modal are gone, so every line below about examining, the
+> X hiding while examining, `examine()` and ADR-0109's cut is history. The
+> closed rest turns in place, the X sits at the top right, and the hint reads
+> "Drag to turn it · click to open". `phone-check.ts --examine` is now
+> `--turn`. This file is kept as written.
+
 The spec for [#531](https://github.com/mephistopheles4/stacks/issues/531). Tier:
 standard, one build session. It matches nothing on the sensitive list: no auth,
 crypto or data migration, no CSP change, and no new data leaves the site. Written
