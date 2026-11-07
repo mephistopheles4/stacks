@@ -16,12 +16,14 @@ const CLOSED = 0.6;
 interface FakeTrack extends Track {
   readonly book: string;
   readonly events: TrackEvents;
-  playing: 'forward' | 'reverse' | 'stopped';
+  playing: 'forward' | 'reverse' | 'closing' | 'stopped';
   speed: number;
   at: number;
   disposed: boolean;
   land(): void;
   openUp(): void;
+  /** The close reaches the closed rest and holds there. */
+  closeDown(): void;
   returnHome(): void;
 }
 
@@ -34,10 +36,6 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
   /** Steps back taken, and pops a browser has yet to deliver (`deferPop`). */
   let backs = 0;
   let pending = 0;
-  /** Books whose cover is closed in the hand, or still easing open again. */
-  const closed = new Set<string>();
-  /** How often the state asked the view to cut, closed or not. */
-  let cuts = 0;
 
   const effects: PickupEffects<string> = {
     track(book, events) {
@@ -55,6 +53,10 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
         reverse(speed) {
           this.playing = 'reverse';
           this.speed = speed;
+        },
+        close() {
+          this.playing = 'closing';
+          this.speed = 1;
         },
         finish() {
           // A hair past the stop, as the real track parks it (`REST_PAST_STOP`).
@@ -96,6 +98,11 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
           this.playing = 'stopped';
           events.opened();
         },
+        closeDown() {
+          this.at = CLOSED + 1e-5;
+          this.playing = 'stopped';
+          events.closed();
+        },
         returnHome() {
           this.at = 0;
           this.playing = 'stopped';
@@ -111,17 +118,7 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
     opened: (book) => log.push(`opened ${book}`),
     settled: (book) => log.push(`settled ${book}`),
     announce: (book) => log.push(`announce ${book ?? '-'}`),
-    examine: (book) => {
-      closed.add(book);
-      log.push(`examine ${book}`);
-    },
-    leave: (book) => log.push(`leave ${book}`),
-    cutExamining: (book) => {
-      cuts += 1;
-      const was = closed.delete(book);
-      if (was) log.push(`cut ${book}`);
-      return was;
-    },
+    closing: (book) => log.push(`closing ${book}`),
     reduced: () => options.reduced === true,
     returnSpeed: () => 1.6,
     history: {
@@ -185,12 +182,6 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
     pressForward,
     deliverPops,
     replaceEntry,
-    /** The easing back open finished: nothing is closed any more. */
-    finishLeave: (book: string): void => {
-      closed.delete(book);
-    },
-    closed: () => [...closed],
-    cutCalls: () => cuts,
     backs: () => backs,
     entries: () => entries.slice(0, index + 1),
   };
@@ -692,7 +683,6 @@ describe('opening the closed book (#531)', () => {
         expect(h.track('a').playing).toBe('reverse');
         expect(h.track('a').speed).toBe(1.6);
         expect(h.entries()).toEqual([null]);
-        expect(h.log).not.toContain('cut a');
       }
     });
 
@@ -707,9 +697,9 @@ describe('opening the closed book (#531)', () => {
   });
 });
 
-describe('examining the held book (#418)', () => {
-  /** A book open at rest in the hand: only that can be examined. */
-  const held = (options: { reduced?: boolean } = {}) => {
+describe('closing the open book again (#553)', () => {
+  /** A book open at rest in the hand: only that can be closed. */
+  const open = (options: { reduced?: boolean } = {}) => {
     const h = harness(options);
     h.state.select('a');
     h.track('a').land();
@@ -718,153 +708,122 @@ describe('examining the held book (#418)', () => {
     return h;
   };
 
-  it('closes the book in the hand, which stays held', () => {
-    const h = held();
-    expect(h.state.examine()).toBe(true);
+  it('runs the track back to the closed rest, where it is as a pickup lands it', () => {
+    const h = open();
+    expect(h.state.close()).toBe(true);
 
-    expect(h.log.at(-1)).toBe('examine a');
-    expect(h.state.examining()).toBe(true);
-    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: true });
-    // Its own tween: the pickup's track is not touched, so its turn stays turned.
-    expect(h.track('a').at).toBe(1);
-    expect(h.track('a').playing).toBe('stopped');
+    expect(h.log.at(-1)).toBe('closing a');
+    expect(h.track('a').playing).toBe('closing');
+    expect(h.state.closed()).toBe(false);
+    h.track('a').closeDown();
+
+    expect(h.log.at(-1)).toBe('landed a');
+    expect(h.state.closed()).toBe(true);
+    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
     expect(h.entries()).toEqual([null, 'a']);
   });
 
-  it('is accepted only while a book is open, not while it lifts, rests closed or opens', () => {
+  it('is accepted only while a book is open at rest', () => {
     const h = harness();
-    expect(h.state.examine()).toBe(false);
+    expect(h.state.close()).toBe(false);
     h.state.select('a');
-    expect(h.state.examine()).toBe(false);
+    expect(h.state.close()).toBe(false);
     h.track('a').land();
-    expect(h.state.examine()).toBe(false);
+    expect(h.state.close()).toBe(false);
     h.state.open();
-    expect(h.state.examine()).toBe(false);
-    expect(h.state.examining()).toBe(false);
-    expect(h.log).not.toContain('examine a');
+    expect(h.state.close()).toBe(false);
+    expect(h.log).not.toContain('closing a');
     h.track('a').openUp();
-    expect(h.state.examine()).toBe(true);
+    expect(h.state.close()).toBe(true);
+    expect(h.state.close()).toBe(false);
+    expect(h.log.filter((line) => line === 'closing a')).toHaveLength(1);
   });
 
-  it('is accepted once, not twice', () => {
-    const h = held();
-    h.state.examine();
-    expect(h.state.examine()).toBe(false);
-    expect(h.log.filter((line) => line === 'examine a')).toHaveLength(1);
+  it('ignores a tap on the book, or Open, until the close has finished', () => {
+    const h = open();
+    h.state.close();
+    h.state.clicked('a', false);
+
+    expect(h.state.open()).toBe(false);
+    expect(h.track('a').playing).toBe('closing');
+    // Once, from the open that came before the close: the tap opened nothing.
+    expect(h.log.filter((line) => line === 'opening a')).toHaveLength(1);
+    h.track('a').closeDown();
+    expect(h.state.open()).toBe(true);
+    expect(h.track('a').playing).toBe('forward');
   });
 
-  it('leaves one level: the book opens again at its page and is still held', () => {
-    const h = held();
-    h.state.examine();
-    expect(h.state.leave()).toBe(true);
+  it('opens again from the rest a close left it on', () => {
+    const h = open();
+    h.state.close();
+    h.track('a').closeDown();
+    h.state.clicked('a', false);
+    h.track('a').openUp();
 
-    expect(h.log.at(-1)).toBe('leave a');
-    expect(h.state.examining()).toBe(false);
     expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: true });
-    expect(h.entries()).toEqual([null, 'a']);
   });
 
-  it('ignores a leave when the book is not being examined', () => {
-    const h = held();
-    expect(h.state.leave()).toBe(false);
-    expect(h.log.at(-1)).toBe('opened a');
-  });
-
-  it('can be examined again after leaving', () => {
-    const h = held();
-    h.state.examine();
-    h.state.leave();
-    h.finishLeave('a');
-    expect(h.state.examine()).toBe(true);
-  });
-
-  it('puts the book back as a cut when the back button comes during examining', () => {
-    const h = held();
-    h.state.examine();
+  it('puts the book back with the normal return when it comes during a close', () => {
+    const h = open();
+    h.state.close();
     h.pressBack();
 
-    // Reversing the track from its end would draw the book open before it went.
-    expect(h.track('a').playing).toBe('stopped');
-    expect(h.track('a').at).toBe(0);
-    expect(h.log.slice(-3)).toEqual(['cut a', 'announce -', 'settled a']);
+    expect(h.track('a').playing).toBe('reverse');
+    expect(h.track('a').speed).toBe(1.6);
     expect(h.state.holding()).toBeUndefined();
-    expect(h.state.examining()).toBe(false);
+    h.track('a').returnHome();
+    expect(h.log.filter((line) => line === 'settled a')).toHaveLength(1);
     expect(h.entries()).toEqual([null]);
   });
 
-  it('cuts on a put-back through the control or the shelf hook, too', () => {
-    const h = held();
-    h.state.examine();
+  it('plays the normal return when put back from the rest a close left it on', () => {
+    const h = open();
+    h.state.close();
+    h.track('a').closeDown();
     h.state.putBack();
 
-    expect(h.track('a').at).toBe(0);
-    expect(h.track('a').disposed).toBe(true);
-    expect(h.closed()).toEqual([]);
-    expect(h.state.holding()).toBeUndefined();
+    expect(h.track('a').playing).toBe('reverse');
+    expect(h.track('a').disposed).toBe(false);
   });
 
-  it('cuts when the context is lost, and the book is closed no more', () => {
-    const h = held();
-    h.state.examine();
-    h.state.drop();
-
-    expect(h.log).toContain('cut a');
-    expect(h.closed()).toEqual([]);
-    expect(h.state.examining()).toBe(false);
-    expect(h.state.holding()).toBeUndefined();
-  });
-
-  it('cuts when another book is picked up while this one is closed', () => {
-    const h = held();
-    h.state.examine();
+  it('swaps for another book with the normal return during a close', () => {
+    const h = open();
+    h.state.close();
     h.state.select('b');
 
-    expect(h.log).toContain('cut a');
-    expect(h.closed()).toEqual([]);
-    expect(h.track('a').at).toBe(0);
-  });
-
-  it('cuts a put-back that comes while the book is still easing open', () => {
-    const h = held();
-    h.state.examine();
-    h.state.leave();
-    // The effects are still easing it open when the back button lands.
-    h.pressBack();
-
-    expect(h.log).toContain('cut a');
-    expect(h.track('a').playing).toBe('stopped');
-    expect(h.track('a').at).toBe(0);
-  });
-
-  it('reverses as it always did once the book is open and at rest', () => {
-    const h = held();
-    h.state.examine();
-    h.state.leave();
-    h.finishLeave('a');
-    h.state.putBack();
-
-    expect(h.log).not.toContain('cut a');
     expect(h.track('a').playing).toBe('reverse');
+    h.track('a').returnHome();
+    expect(h.log).toContain('left b');
   });
 
-  it('ignores a leave with nothing in hand', () => {
-    const h = harness();
-    expect(h.state.leave()).toBe(false);
-    expect(h.state.examining()).toBe(false);
+  it('cuts to the closed rest under reduced motion', () => {
+    const h = open({ reduced: true });
+    expect(h.state.close()).toBe(true);
+
+    expect(h.track('a').playing).toBe('stopped');
+    expect(h.track('a').atClosedRest()).toBe(true);
+    expect(h.state.closed()).toBe(true);
+    expect(h.log.slice(-2)).toEqual(['closing a', 'landed a']);
   });
 
-  it('asks nothing of the view when a book never examined is dropped or put back', () => {
-    const h = held();
+  it('lands at the closed rest when retimed partway through a close', () => {
+    const h = open();
+    h.state.close();
+    h.state.retime();
+
+    expect(h.track('a').atClosedRest()).toBe(true);
+    expect(h.track('a').playing).toBe('stopped');
+    expect(h.state.closed()).toBe(true);
+    expect(h.log.at(-1)).toBe('landed a');
+  });
+
+  it('settles at once when the context is lost partway through a close', () => {
+    const h = open();
+    h.state.close();
     h.state.drop();
-    expect(h.cutCalls()).toBe(0);
-    const again = held();
-    again.state.putBack();
-    expect(again.cutCalls()).toBe(0);
-  });
 
-  it('calls no examine effect on a book that was never closed', () => {
-    const h = held();
-    h.state.putBack();
-    expect(h.log.some((line) => line.startsWith('cut') || line.startsWith('leave'))).toBe(false);
+    expect(h.track('a').at).toBe(0);
+    expect(h.log).toContain('settled a');
+    expect(h.state.holding()).toBeUndefined();
   });
 });

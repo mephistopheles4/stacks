@@ -1,6 +1,5 @@
 import type { LibraryBook } from '@stacks/core';
 import { cardModel, linksRow } from './card.ts';
-import { EXAMINE_BUTTON_CLASS } from './book-viewer.ts';
 
 /**
  * The held book's two pages: what replaced the card (spec §3.4, ADR-0102).
@@ -11,10 +10,15 @@ import { EXAMINE_BUTTON_CLASS } from './book-viewer.ts';
  * links stay reachable for every book. The rule belongs to the Thoughts' slot, so
  * a fetch that fails or has not landed leaves no rule over nothing; a book with none shows the card's lines alone
  * (#369's C). On a phone, which frames the right-hand page alone, the title and
- * author lead that page too. Examining the book — closing it in your hand to
- * turn it (#418) — is opened from a control among the lines, for every book.
- * The page carries no put-back control: the book arrives closed with its pages
- * hidden, so the X that puts it back lives in the header (#531, `index.astro`).
+ * author lead that page too.
+ *
+ * **Two controls close the book again** to the closed rest it landed on, where
+ * it can be turned (#553): "Close the book" at the top left of the page that
+ * carries the title — the left page, or the right one on a phone, where it stays
+ * in view while the Thoughts scroll — and "Turn the book over" at the foot of the
+ * right page. The page carries no put-back control: the book arrives closed with
+ * its pages hidden, so the X that puts it back lives in the header (#531,
+ * `index.astro`).
  *
  * **What goes where is a pure function** (`leftPageBlocks`, `rightPageBlocks`),
  * tested without a DOM; `buildPages` turns it into nodes and adds nothing.
@@ -24,8 +28,14 @@ import { EXAMINE_BUTTON_CLASS } from './book-viewer.ts';
  * refuses.
  */
 
-export type LeftBlock = 'title' | 'author';
+/** The class on "Close the book", which `pickup.ts` listens for by delegation. */
+export const CLOSE_BUTTON_CLASS = 'held-close';
+/** The class on "Turn the book over", the second way to close it. */
+export const TURN_OVER_BUTTON_CLASS = 'held-turn-over';
+
+export type LeftBlock = 'close' | 'title' | 'author';
 export type RightBlock =
+  | 'close'
   | 'title'
   | 'author'
   | 'thoughts'
@@ -34,10 +44,23 @@ export type RightBlock =
   | 'object'
   | 'subjects'
   | 'links'
-  | 'examine';
+  | 'turn-over';
 
-export function leftPageBlocks(book: LibraryBook): LeftBlock[] {
-  return book.author === undefined ? ['title'] : ['title', 'author'];
+/**
+ * The left page: the close control by the title, then the title and author. On
+ * a phone the left page is off screen and carries no control, so Tab never
+ * reaches a button nobody can see.
+ */
+export function leftPageBlocks(
+  book: LibraryBook,
+  options: { readonly narrow: boolean },
+): LeftBlock[] {
+  const blocks: (LeftBlock | false)[] = [
+    !options.narrow && 'close',
+    'title',
+    book.author !== undefined && 'author',
+  ];
+  return blocks.filter((block): block is LeftBlock => block !== false);
 }
 
 export interface RightPageOptions {
@@ -50,6 +73,7 @@ export interface RightPageOptions {
 export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): RightBlock[] {
   const model = cardModel(book);
   const blocks: (RightBlock | false)[] = [
+    options.narrow && 'close',
     options.narrow && 'title',
     options.narrow && book.author !== undefined && 'author',
     options.thoughts && 'thoughts',
@@ -58,9 +82,9 @@ export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): R
     model.object !== undefined && 'object',
     model.subjects !== undefined && 'subjects',
     'links',
-    // Every book, covered or not: what is examined is the book, and a book
-    // with no cover still has its binding and its spine colour (#418, S7).
-    'examine',
+    // Every book, covered or not: what is turned is the book, and a book with
+    // no cover still has its binding and its spine colour (#418, S7).
+    'turn-over',
   ];
   return blocks.filter((block): block is RightBlock => block !== false);
 }
@@ -74,8 +98,10 @@ export const PAGE_PX = 460;
 export interface HeldPages {
   readonly left: HTMLElement;
   readonly right: HTMLElement;
-  /** The control that closes the book in the hand to turn it. */
-  readonly examine: HTMLButtonElement;
+  /** "Close the book", by the title: back to the closed rest (#553). */
+  readonly close: HTMLButtonElement;
+  /** "Turn the book over", at the foot of the right page: the same close. */
+  readonly turnOver: HTMLButtonElement;
   /**
    * Fills the Thoughts slot, when they arrive: plain text, one `<p>` each, and
    * the rule below them. `fade` for Thoughts that land once the page is
@@ -100,12 +126,15 @@ export function buildPages(
   const model = cardModel(book);
   const heightPx = (PAGE_PX * size.height) / size.width;
 
+  const close = closeButton();
   const left = page('held-page held-page-left', heightPx);
-  for (const block of leftPageBlocks(book)) {
+  for (const block of leftPageBlocks(book, options)) {
     left.append(
-      block === 'title'
-        ? text('h2', model.title, 'held-title')
-        : text('p', model.author ?? '', 'held-author'),
+      block === 'close'
+        ? close
+        : block === 'title'
+          ? text('h2', model.title, 'held-title')
+          : text('p', model.author ?? '', 'held-author'),
     );
   }
 
@@ -114,19 +143,20 @@ export function buildPages(
   // opens the book, so the Thoughts are read next.
   right.tabIndex = -1;
   const thoughts = element('div', 'held-thoughts');
-  const examine = document.createElement('button');
-  examine.type = 'button';
-  examine.className = EXAMINE_BUTTON_CLASS;
-  examine.textContent = 'Turn the book over';
+  const turnOver = document.createElement('button');
+  turnOver.type = 'button';
+  turnOver.className = TURN_OVER_BUTTON_CLASS;
+  turnOver.textContent = 'Turn the book over';
 
   for (const block of rightPageBlocks(book, options)) {
-    right.append(rightBlock(block, model, { thoughts, examine }));
+    right.append(rightBlock(block, model, { thoughts, close, turnOver }));
   }
 
   return {
     left,
     right,
-    examine,
+    close,
+    turnOver,
     showThoughts(paragraphs, fade) {
       const label = text('p', 'Thoughts', 'held-label');
       thoughts.replaceChildren(
@@ -152,7 +182,8 @@ function rightBlock(
   model: ReturnType<typeof cardModel>,
   nodes: {
     readonly thoughts: HTMLElement;
-    readonly examine: HTMLButtonElement;
+    readonly close: HTMLButtonElement;
+    readonly turnOver: HTMLButtonElement;
   },
 ): HTMLElement {
   switch (block) {
@@ -175,9 +206,42 @@ function rightBlock(
       return text('p', model.subjects ?? '', 'subjects');
     case 'links':
       return linksRow(model.links);
-    case 'examine':
-      return nodes.examine;
+    case 'close':
+      return nodes.close;
+    case 'turn-over':
+      return nodes.turnOver;
   }
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+
+/**
+ * "Close the book": a closed book's outline and the word, built as elements and
+ * never parsed from markup (rule 8), its name set through `textContent`.
+ */
+function closeButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = CLOSE_BUTTON_CLASS;
+  const icon = document.createElementNS(SVG, 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('width', '16');
+  icon.setAttribute('height', '16');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('focusable', 'false');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '2');
+  icon.setAttribute('stroke-linecap', 'round');
+  icon.setAttribute('stroke-linejoin', 'round');
+  // A book seen from the front: the board, and the spine's edge down its left.
+  for (const d of ['M6 3h12v18H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M8 3v18']) {
+    const path = document.createElementNS(SVG, 'path');
+    path.setAttribute('d', d);
+    icon.append(path);
+  }
+  button.append(icon, text('span', 'Close the book'));
+  return button;
 }
 
 function page(className: string, heightPx: number): HTMLElement {

@@ -36,6 +36,11 @@ export interface Track {
   play(): void;
   /** Backward, `speed` times faster than forward. It does not stop at closed. */
   reverse(speed: number): void;
+  /**
+   * Backward from open at normal speed, holding at the closed rest and reporting
+   * `closed` there (#553). Any other call disarms the hold.
+   */
+  close(): void;
   /** Jump to the closed rest, where the track stops going forward. No motion. */
   finish(): void;
   /** Jump to the far end: open in the hand. No motion. */
@@ -68,6 +73,8 @@ export interface TrackEvents {
   readonly landed: () => void;
   /** It reached open, playing forward. */
   readonly opened: () => void;
+  /** It came back to the closed rest by `close()`, and holds there. */
+  readonly closed: () => void;
   /** It reached the shelf, playing backward. */
   readonly returned: () => void;
 }
@@ -96,17 +103,11 @@ export interface PickupEffects<B> {
   settled(book: B): void;
   /** «Title» by «Author» on pickup, and empty when the hand is empty. */
   announce(book: B | undefined): void;
-  /** Close the book in the hand and let it be turned: the examining view opens. */
-  examine(book: B): void;
-  /** Leave the examining view: the turn eases square and the book opens again. */
-  leave(book: B): void;
   /**
-   * Stop examining at once, with no motion, whatever stage it is in: the view
-   * closes and the book is as it was open in the hand. Returns whether there
-   * was anything to stop — the book closed, or still easing open — so a put-back
-   * knows the shared track is not at the pose the page shows.
+   * The visitor closed the open book (#553): the close is playing back to the
+   * closed rest, where `landed` reports it as if it had just been picked up.
    */
-  cutExamining(book: B): boolean;
+  closing(book: B): void;
   reduced(): boolean;
   /** How much faster putting back runs than picking up. */
   returnSpeed(): number;
@@ -153,14 +154,10 @@ export interface PickupState<B> {
   /** The context was lost: everything back in its slot at once, as a hard cut. */
   drop(): void;
   /**
-   * Close the held book in your hand to turn it (#418). Only a book open at rest
-   * in the hand can be examined; returns whether it was.
+   * Close the open book back to the closed rest it landed on (#553). Only a book
+   * open at rest can be closed; returns whether it was.
    */
-  examine(): boolean;
-  /** Leave the examining view, one level: the book stays held. */
-  leave(): boolean;
-  /** Whether the held book is closed in your hand, to be turned. */
-  examining(): boolean;
+  close(): boolean;
   /** The book in your hand — lifting or held, never one going back. */
   holding(): Holding<B> | undefined;
   /** The latest book in motion, whatever its phase: what the tuner follows. */
@@ -179,10 +176,8 @@ interface Active<B> {
   opened: boolean;
   /** The opening is playing, between `open()` and the `opened` event. */
   opening: boolean;
-  /** Closed in the hand, to be turned. */
-  examining: boolean;
-  /** Examined at some point since the pickup: its effects may still be easing. */
-  examined: boolean;
+  /** The close is playing, between `close()` and the track's `closed` event. */
+  closing: boolean;
 }
 
 export function createPickupState<B>(
@@ -217,6 +212,9 @@ export function createPickupState<B>(
       opened: () => {
         markOpened(entry);
       },
+      closed: () => {
+        markClosed(entry);
+      },
       returned: () => {
         settle(entry);
       },
@@ -233,6 +231,13 @@ export function createPickupState<B>(
     effects.opened(entry.book);
   };
 
+  /** Back at the closed rest by a close: as it was when it landed. */
+  const markClosed = (entry: Active<B>): void => {
+    entry.phase = 'held';
+    entry.closing = false;
+    effects.landed(entry.book);
+  };
+
   const pick = (book: B): void => {
     // Out of its slot first: the track is built from the book as lifted.
     effects.left(book);
@@ -242,8 +247,7 @@ export function createPickupState<B>(
       track: undefined as unknown as Track,
       opened: false,
       opening: false,
-      examining: false,
-      examined: false,
+      closing: false,
     };
     entry.track = wire(entry);
     active.push(entry);
@@ -277,13 +281,10 @@ export function createPickupState<B>(
     // the reverse began open or in the middle of the opening.
     entry.opened = false;
     entry.opening = false;
-    entry.examining = false;
-    // Whatever way the hand empties, the examining view goes with it. A closed
-    // book is then not at the pose the shared track holds: reversing it would
-    // draw the book open before it went, so it is cut like reduced motion.
-    const cut = entry.examined && effects.cutExamining(entry.book);
+    // A close in flight goes home with the rest: `reverse` disarms its hold.
+    entry.closing = false;
     if (holding() === undefined) effects.announce(undefined);
-    if (cut || effects.reduced()) {
+    if (effects.reduced()) {
       entry.track.rewind();
       settle(entry);
     } else {
@@ -297,7 +298,7 @@ export function createPickupState<B>(
 
   const open = (): boolean => {
     const entry = holding();
-    if (entry?.phase !== 'held' || entry.opened || entry.opening) return false;
+    if (entry?.phase !== 'held' || entry.opened || entry.opening || entry.closing) return false;
     if (effects.reduced()) {
       entry.track.finishOpen();
       markOpened(entry);
@@ -324,7 +325,7 @@ export function createPickupState<B>(
 
     closed() {
       const entry = holding();
-      return entry?.phase === 'held' && !entry.opened && !entry.opening;
+      return entry?.phase === 'held' && !entry.opened && !entry.opening && !entry.closing;
     },
 
     select(book) {
@@ -388,7 +389,6 @@ export function createPickupState<B>(
       const lost = active;
       active = [];
       for (const entry of lost) {
-        if (entry.examined) effects.cutExamining(entry.book);
         entry.track.rewind();
         entry.track.dispose();
         effects.settled(entry.book);
@@ -401,24 +401,20 @@ export function createPickupState<B>(
       if (effects.history.held()) effects.history.back();
     },
 
-    examine() {
+    close() {
       const entry = holding();
-      if (entry?.phase !== 'held' || !entry.opened || entry.examining) return false;
-      entry.examining = true;
-      entry.examined = true;
-      effects.examine(entry.book);
+      if (entry?.phase !== 'held' || !entry.opened || entry.closing) return false;
+      entry.opened = false;
+      entry.closing = true;
+      effects.closing(entry.book);
+      if (effects.reduced()) {
+        entry.track.finish();
+        markClosed(entry);
+      } else {
+        entry.track.close();
+      }
       return true;
     },
-
-    leave() {
-      const entry = holding();
-      if (entry?.examining !== true) return false;
-      entry.examining = false;
-      effects.leave(entry.book);
-      return true;
-    },
-
-    examining: () => holding()?.examining === true,
 
     holding() {
       const entry = holding();
@@ -451,7 +447,11 @@ export function createPickupState<B>(
         entry.track.dispose();
         entry.track = wire(entry);
         // A rest is kept, not its fraction of a track whose length just changed.
-        if (entry.opened) {
+        // A close in flight lands where it was going.
+        if (entry.closing) {
+          entry.track.finish();
+          markClosed(entry);
+        } else if (entry.opened) {
           entry.track.finishOpen();
         } else if (entry.phase === 'held' && !entry.opening) {
           entry.track.finish();

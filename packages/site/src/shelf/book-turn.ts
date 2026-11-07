@@ -9,7 +9,8 @@
  * never goes upside down.
  *
  * `pickup.ts` composes the turn after the pose that squares the book to the
- * camera; `book-viewer.ts` reads the pointer and the keys and calls these.
+ * camera, and reads the pointer and the keys at the closed rest to call these
+ * (#553).
  */
 
 export interface Turn {

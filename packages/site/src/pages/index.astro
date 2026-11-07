@@ -87,15 +87,26 @@ const pageUrl = absoluteUrl('/', Astro.site);
       </div>
       <p id="shelf-hint">Drag to look around · click a book</p>
       <!--
-        The held book's controls (#531). They live here and not on the pages: a
-        book arrives closed with its pages hidden, so a control on them could be
-        neither seen nor focused. Both are real buttons. The X is hard-coded
-        markup, so nothing is built from a string and no style attribute reaches
-        the CSP; the Open button's words are set through textContent by
-        shelf/pickup.ts. `hidden` until a book is in hand.
+        The held book's controls (#531), at the top right since #553. They live
+        here and not on the pages: a book arrives closed with its pages hidden,
+        so a control on them could be neither seen nor focused. Both are real
+        buttons. The X is hard-coded markup, so nothing is built from a string
+        and no style attribute reaches the CSP; the Open button's words are set
+        through textContent by shelf/pickup.ts. `hidden` until a book is in hand.
+        The description says what the hint cannot while the book is open: that
+        a closed book turns, and how.
       -->
       <div id="held-controls" class="held-controls" hidden>
-        <button id="held-put-back" class="held-put-back" type="button">
+        <p id="held-help" class="visually-hidden">
+          Drag the closed book, or use the arrow keys, to turn it. Click it, or
+          use Open, to open it.
+        </p>
+        <button
+          id="held-put-back"
+          class="held-put-back"
+          type="button"
+          aria-describedby="held-help"
+        >
           <svg
             aria-hidden="true"
             focusable="false"
@@ -226,23 +237,29 @@ const pageUrl = absoluteUrl('/', Astro.site);
   }
 
   /*
-    The held book's X and Open button (#531), under the hint on the header's own
-    left edge. The header lets pointer events through to the canvas, so these set
-    them back. Layer 5, the same as the held pages and the Ask launcher: the
-    controls come later in the document than the pages, so they paint over an
-    open page, and earlier than the launcher and the panel (20), which paint
-    over them. The X comes first in the document, so a long Open title wraps
-    under it and the X never moves.
+    The held book's X and Open button (#531), in the viewport's top-right corner
+    since #553, where the examining view's back arrow sat: under the logo they
+    lay over the open book's left page. Fixed, out of the header's flow; the
+    header lets pointer events through to the canvas, so these set them back.
+    Layer 5, the same as the held pages and the Ask launcher: the controls come
+    later in the document than the pages, so they paint over an open page, and
+    earlier than the launcher and the panel (20), which paint over them. The X
+    comes first in the document and the row runs right to left, so a long Open
+    title wraps leftward under it and the X never moves.
   */
   .held-controls {
-    position: relative;
+    --held-inset: clamp(0.75rem, 3vw, 1.5rem);
+
+    position: fixed;
+    top: var(--held-inset);
+    right: var(--held-inset);
     z-index: 5;
     display: flex;
+    flex-direction: row-reverse;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    max-width: calc(100vw - 2 * clamp(1rem, 4vw, 2.5rem));
-    margin-top: 0.5rem;
+    max-width: calc(100vw - 2 * var(--held-inset));
     pointer-events: auto;
   }
 

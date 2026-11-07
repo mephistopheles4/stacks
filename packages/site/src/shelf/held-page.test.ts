@@ -56,6 +56,12 @@ class FakeElement {
     this.append(...nodes);
   }
 
+  readonly attributes: Record<string, string> = {};
+
+  setAttribute(name: string, value: string): void {
+    this.attributes[name] = value;
+  }
+
   animate(): void {}
 }
 
@@ -77,21 +83,28 @@ const book = (patch: Partial<LibraryBook> = {}): LibraryBook => ({
 });
 
 describe('the left-hand page', () => {
-  it('carries the title and the author, as prototyped (#371)', () => {
-    expect(leftPageBlocks(book())).toEqual(['title', 'author']);
+  it('carries the close control by the title, then the title and the author (#371, #553)', () => {
+    expect(leftPageBlocks(book(), { narrow: false })).toEqual(['close', 'title', 'author']);
   });
 
   it('drops the author line for a book with none', () => {
-    expect(leftPageBlocks(book({ author: undefined }))).toEqual(['title']);
+    expect(leftPageBlocks(book({ author: undefined }), { narrow: false })).toEqual([
+      'close',
+      'title',
+    ]);
+  });
+
+  it('carries no control on a phone, where the page is off screen and Tab must not reach it', () => {
+    expect(leftPageBlocks(book(), { narrow: true })).toEqual(['title', 'author']);
   });
 });
 
 describe('the right-hand page', () => {
-  it("is the card's lines and the examine control for a book with no Thoughts (#369's C)", () => {
+  it("is the card's lines and the turn-over control for a book with no Thoughts (#369's C)", () => {
     expect(rightPageBlocks(book(), { narrow: false, thoughts: false })).toEqual([
       'reading',
       'links',
-      'examine',
+      'turn-over',
     ]);
   });
 
@@ -102,22 +115,23 @@ describe('the right-hand page', () => {
       'thoughts',
       'reading',
       'links',
-      'examine',
+      'turn-over',
     ]);
   });
 
-  it('leads with the title and author on a phone, which frames this page alone', () => {
+  it('leads with the close control, the title and author on a phone, which frames this page alone', () => {
     expect(rightPageBlocks(book(), { narrow: true, thoughts: true })).toEqual([
+      'close',
       'title',
       'author',
       'thoughts',
       'reading',
       'links',
-      'examine',
+      'turn-over',
     ]);
   });
 
-  it('carries every optional line the card would, in the card order, and the examine control', () => {
+  it('carries every optional line the card would, in the card order, and the turn-over control', () => {
     const full = book({
       tags: ['autumn'],
       publisher: 'Fieldfare Press',
@@ -131,13 +145,13 @@ describe('the right-hand page', () => {
       'object',
       'subjects',
       'links',
-      'examine',
+      'turn-over',
     ]);
   });
 
-  it('offers the examine control to a book with no cover too: the binding is the point (#418)', () => {
+  it('offers the turn-over control to a book with no cover too: the binding is the point (#418)', () => {
     const bare = book({ cover: undefined });
-    expect(rightPageBlocks(bare, { narrow: false, thoughts: false })).toContain('examine');
+    expect(rightPageBlocks(bare, { narrow: false, thoughts: false })).toContain('turn-over');
   });
 });
 
@@ -154,6 +168,7 @@ describe('the pages as built', () => {
     markupWrites = [];
     vi.stubGlobal('document', {
       createElement: (tag: string) => new FakeElement(tag, markupWrites),
+      createElementNS: (_ns: string, tag: string) => new FakeElement(tag, markupWrites),
     });
   });
 
@@ -190,6 +205,27 @@ describe('the pages as built', () => {
 
     expect(byClass(pages.right, 'held-title').map((node) => node.textContent)).toEqual([TITLE]);
     expect(byClass(pages.right, 'held-author').map((node) => node.textContent)).toEqual([AUTHOR]);
+    expect(markupWrites).toEqual([]);
+  });
+
+  it('puts one close control on the page with the title, named in text, its icon built as elements', () => {
+    for (const [narrow, home, away] of [
+      [false, 'left', 'right'],
+      [true, 'right', 'left'],
+    ] as const) {
+      const pages = build(narrow);
+      const [close, ...more] = byClass(pages[home], 'held-close');
+      expect(more).toEqual([]);
+      expect(byClass(pages[away], 'held-close')).toEqual([]);
+      expect(close?.tagName).toBe('button');
+      expect(close?.textContent).toBe('Close the book');
+      const [icon] = close?.children ?? [];
+      expect(icon?.tagName).toBe('svg');
+      expect(icon?.attributes['aria-hidden']).toBe('true');
+      expect(byClass(pages.right, 'held-turn-over').map((node) => node.textContent)).toEqual([
+        'Turn the book over',
+      ]);
+    }
     expect(markupWrites).toEqual([]);
   });
 

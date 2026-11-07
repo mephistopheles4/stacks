@@ -37,6 +37,7 @@ import {
   type ShelfSettings,
   type ToneMappingName,
 } from './shelf-settings.ts';
+import { press, type Press } from './book-turn.ts';
 import { hashUnit } from './hash.ts';
 import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { pageStriationMap } from './page-edges.ts';
@@ -2895,7 +2896,8 @@ class Picker {
   readonly #books: THREE.Object3D[];
   readonly #lookup: BookLookup;
   readonly #onSelect: ((book: LibraryBook | undefined, prevented: boolean) => void) | undefined;
-  #downAt: { x: number; y: number } | undefined;
+  /** The press in flight, judged by the turn's own tap rule (#553). */
+  #press: Press | undefined;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -2910,19 +2912,29 @@ class Picker {
     this.#lookup = lookup;
     this.#onSelect = onSelect;
     canvas.addEventListener('pointerdown', this.#handleDown);
+    canvas.addEventListener('pointermove', this.#handleMove);
     canvas.addEventListener('pointerup', this.#handleUp);
   }
 
   #handleDown = (event: PointerEvent): void => {
-    this.#downAt = { x: event.clientX, y: event.clientY };
+    this.#press = press(event.clientX, event.clientY);
   };
 
-  /** Only a click that didn't drag counts — orbiting must not select a book. */
+  #handleMove = (event: PointerEvent): void => {
+    this.#press?.move(event.clientX, event.clientY);
+  };
+
+  /**
+   * Only a click that didn't drag counts — orbiting must not select a book, nor
+   * turning the held one. The same rule as the turn's, farthest travel, so a
+   * wobble out and back is a drag to both and never turns and opens at once.
+   */
   #handleUp = (event: PointerEvent): void => {
-    const down = this.#downAt;
-    this.#downAt = undefined;
+    const down = this.#press;
+    this.#press = undefined;
     if (down === undefined) return;
-    if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 5) return;
+    down.move(event.clientX, event.clientY);
+    if (!down.isTap()) return;
 
     const rect = this.#canvas.getBoundingClientRect();
     this.#pointer.set(
@@ -2944,6 +2956,7 @@ class Picker {
 
   dispose(): void {
     this.#canvas.removeEventListener('pointerdown', this.#handleDown);
+    this.#canvas.removeEventListener('pointermove', this.#handleMove);
     this.#canvas.removeEventListener('pointerup', this.#handleUp);
   }
 }
