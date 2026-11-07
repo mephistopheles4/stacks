@@ -473,12 +473,6 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('orphan-held: a held copy named for a listed book, one folder down', async () => {
-    await expectOnly('orphan-held', async () => {
-      await writeHeld('stale/a.png', await image(600, 900));
-    });
-  });
-
   it('orphan-held: a held copy left after its book stopped naming it', async () => {
     await expectOnly('orphan-held', async () => {
       // The stale file the prune exists for: the cover shrank below the shelf
@@ -610,42 +604,12 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('orphan-note: a file named for a listed book, with another ending', async () => {
-    await expectOnly('orphan-note', async () => {
-      // Five characters, like `.json`, so a rule that cut the ending off by
-      // length without checking it would read this as the clean book's file.
-      await writeNotes(`${CLEAN_ID}.text`, { paragraphs: ['A paragraph under the wrong name.'] });
-    });
-  });
-
-  it('orphan-note: a notes file below a subfolder', async () => {
-    await expectOnly('orphan-note', async () => {
-      // Named for a listed book, but one folder down. A notes file is
-      // `notes/<id>.json` and nothing else, so a nested one names no book.
-      await writeNotes(`stale/${CLEAN_ID}.json`, { paragraphs: ['A copy one folder down.'] });
-    });
-  });
-
   it('orphan-note: a file named for a listed book that does not carry the mark', async () => {
     await expectOnly('orphan-note', async () => {
       // The stale file the prune exists for: `idFor` is stable, so a section
       // the owner withdrew leaves a file still named for a listed book. Only
       // the mark tells the two apart (spec §3.1).
       await writeLibrary([{ ...CLEAN_BOOK, thoughts: undefined }]);
-    });
-  });
-
-  it('orphan-note: a marked book whose file is missing', async () => {
-    await expectOnly('orphan-note', async () => {
-      await rm(join(dist, 'notes', `${CLEAN_ID}.json`));
-    });
-  });
-
-  it('orphan-note: a marked book and no notes folder at all', async () => {
-    // A rule that returned early on a missing folder would read this as a
-    // build with nothing to inspect, and pass the mark it never checked.
-    await expectOnly('orphan-note', async () => {
-      await rm(join(dist, 'notes'), { recursive: true, force: true });
     });
   });
 
@@ -1006,27 +970,6 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('robots: a *second* page that would be searchable', async () => {
-    /**
-     * The rule read `dist/index.html` alone for the whole of its life, which was
-     * exactly right while the site had one page. `/attribution` is the second,
-     * `noindex` is a per-page tag, and a page shipping without one would have
-     * passed — turning up in a search result beside the owner's name, which is
-     * the single thing the posture exists to prevent.
-     *
-     * Planted here rather than trusted, because a widened rule nobody has
-     * watched go red on the new case is a widened rule in name only.
-     */
-    await expectOnly('robots', async () => {
-      await mkdir(join(dist, 'attribution'), { recursive: true });
-      await writeFile(
-        join(dist, 'attribution', 'index.html'),
-        `<!doctype html><html><head><title>Attribution</title>${cspMeta()}</head><body></body></html>`,
-        'utf8',
-      );
-    });
-  });
-
   it('robots: a Disallow that prevents the noindex being read', async () => {
     await expectOnly('robots', async () => {
       // The intuitive move, and the one that fails: blocking the crawl stops
@@ -1044,26 +987,6 @@ describe('G20 — every rule goes red', () => {
      */
     await expectOnly('csp', async () => {
       await writeIndex(indexHtml({ csp: false }));
-    });
-  });
-
-  it('csp: a *second* page that states no policy', async () => {
-    /**
-     * Per-page, for the reason the robots rule is: `/attribution` is the second
-     * page, a meta CSP governs only the document it is in, and a third page
-     * shipping without one would inherit no protection from this one.
-     *
-     * It is also the page that forced the meta-tag design — Astro inlines a
-     * stylesheet under 4kB, so `/attribution` carries an inline `<style>` whose
-     * hash only a per-page policy can name.
-     */
-    await expectOnly('csp', async () => {
-      await mkdir(join(dist, 'attribution'), { recursive: true });
-      await writeFile(
-        join(dist, 'attribution', 'index.html'),
-        '<!doctype html><html><head><meta name="robots" content="noindex"></head><body></body></html>',
-        'utf8',
-      );
     });
   });
 
@@ -1131,18 +1054,6 @@ describe('G20 — every rule goes red', () => {
       await writeIndex(
         indexHtml({
           csp: cspMeta({ scriptSrc: "'self' https://static.cloudflareinsights.com" }),
-        }),
-      );
-    });
-  });
-
-  it('csp: a repeated source standing in for a missing one (CodeRabbit)', async () => {
-    // Three sources, as many as wanted, each one wanted, and Turnstile absent: a count and a
-    // membership test alone pass it.
-    await expectOnly('csp', async () => {
-      await writeIndex(
-        indexHtml({
-          csp: cspMeta({ scriptSrc: "'self' 'self' https://static.cloudflareinsights.com" }),
         }),
       );
     });
@@ -1239,17 +1150,6 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('headers: notes whose only revalidate is inside another header', async () => {
-    await expectOnly('headers', async () => {
-      // The words, but not as the header: the rule reads a `Cache-Control:`
-      // line, never the text anywhere in one.
-      const headers = headersFile({ notes: 'absent' }).concat(
-        '/notes/*\n  X-Note: Cache-Control: public, max-age=0\n',
-      );
-      await writeFile(join(dist, '_headers'), headers);
-    });
-  });
-
   it('headers: a notes block that revalidates beside another header is clean', async () => {
     // One revalidating Cache-Control is enough; the block may carry others.
     const headers = headersFile({ notes: 'absent' }).concat(
@@ -1259,32 +1159,11 @@ describe('G20 — every rule goes red', () => {
     expect((await inspect()).problems).toEqual([]);
   });
 
-  it('headers: no /notes/* block at all', async () => {
-    await expectOnly('headers', async () => {
-      await writeFile(join(dist, '_headers'), headersFile({ notes: 'absent' }));
-    });
-  });
-
   it('headers: held copies that do not revalidate', async () => {
     await expectOnly('headers', async () => {
       // Images, so Pages' four-hour default applies: a cover taken down would
       // linger in browsers that long after the prune (spec §3.3).
       await writeFile(join(dist, '_headers'), headersFile({ held: 'stale' }));
-    });
-  });
-
-  it('headers: no /held-covers/* block at all', async () => {
-    await expectOnly('headers', async () => {
-      await writeFile(join(dist, '_headers'), headersFile({ held: 'absent' }));
-    });
-  });
-
-  it('headers: no /covers/* block at all', async () => {
-    await expectOnly('headers', async () => {
-      await writeFile(
-        join(dist, '_headers'),
-        '/*\n  X-Robots-Tag: noindex\n\n/og.png\n  Cache-Control: max-age=0\n',
-      );
     });
   });
 

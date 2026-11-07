@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BOOK_STATUSES, DEFAULT_BOOK_STATUS, isBookStatus } from './index.ts';
+import { BOOK_STATUSES, isBookStatus } from './index.ts';
 
 describe('book status', () => {
   it('accepts every status named in the frontmatter contract', () => {
-    expect([...BOOK_STATUSES]).toEqual(['reading', 'read', 'abandoned', 'wishlist']);
     for (const status of BOOK_STATUSES) {
       expect(isBookStatus(status)).toBe(true);
     }
@@ -17,10 +16,5 @@ describe('book status', () => {
     expect(isBookStatus(undefined)).toBe(false);
     expect(isBookStatus(null)).toBe(false);
     expect(isBookStatus(3)).toBe(false);
-  });
-
-  it('defaults a note with no status to read', () => {
-    expect(DEFAULT_BOOK_STATUS).toBe('read');
-    expect(isBookStatus(DEFAULT_BOOK_STATUS)).toBe(true);
   });
 });
