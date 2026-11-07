@@ -326,8 +326,11 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         // The hand emptied, by whichever way down: the pages are about to hide.
         if (book === undefined) {
           catchFocus();
-          chatPickup = undefined;
           focusPageOnOpen = false;
+        } else if (chatPickup !== undefined && chatPickup !== book.id) {
+          // Not cleared when the hand empties: a chat link to another book empties
+          // it on the way to the new one. A different book announced ends the ask.
+          chatPickup = undefined;
         }
         syncControls();
       },
