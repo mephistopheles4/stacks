@@ -160,6 +160,14 @@
       "reason": "jscpd moved to 5.4.2. Measured over the identical tree, main at 69f7bd0 under 5.4.1 against the bump at 40ec214 under 5.4.2, which differ only in package.json and the lockfile: pnpm duplication:report printed byte-identical output under both. The whole tree reads 74 clones, 783 duplicated lines, 97251 total lines and 0 ignored, and all eight declared scopes are unchanged. 5.4.2 maps more file extensions and changes --ignore-identifiers matching, but this repo's counter reads TypeScript and passes no --ignore-identifiers, so neither reached a count. Totals were compared, not the clone spans one by one as for 5.4.1. So the window is declared preserved; no code reads a duplication calibration window yet (#269).",
       "pr": 529,
       "preserves": true
+    },
+    {
+      "date": "2026-11-07",
+      "stamp": "configHash",
+      "value": "sha256:5ef1e97654e45a1f533ea35603b3f1ccb64be1b3f8851f14dae1fd626f6fa14d",
+      "reason": "The scripts scope excludes scripts/ask-status.ts and scripts/deploy-ask.ts: each spec reads its script as source text and never imports it, so an instrumented copy failed Stryker's dry run (the 2026-11-07 nightly) and no mutant can be killed there anyway. Their logic stays measured in lib/. Two files leave the mutated set, so the scripts scope's inventory moves; reasoned from the configuration diff and a scoped dry run, not a full mutation run.",
+      "pr": 557,
+      "preserves": false
     }
   ]
 }

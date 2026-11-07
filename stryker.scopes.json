@@ -263,6 +263,14 @@
         {
           "path": "scripts/capture-lookup-recall.ts",
           "mechanism": "No spec imports it — a one-off run by hand."
+        },
+        {
+          "path": "scripts/ask-status.ts",
+          "mechanism": "No spec imports it — run by `tsx` from `pnpm ask:status`. Its specs, `lib/ask-status.test.ts` and G67 (`gates/release-age.test.ts`), read it as source text, and the first regex-matches it, so an instrumented copy fails Stryker's dry run (the 2026-11-07 nightly). Its logic lives in `lib/ask-status.ts`, which is in this scope."
+        },
+        {
+          "path": "scripts/deploy-ask.ts",
+          "mechanism": "No spec imports it — run by `tsx` from `pnpm deploy:ask`. Its specs, `lib/ask-deploy.test.ts` and G67 (`gates/release-age.test.ts`), read it as source text and never import it, `scripts/ask-status.ts`'s case. Its logic lives in `lib/ask-deploy.ts`, which is in this scope."
         }
       ]
     }
