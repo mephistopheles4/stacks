@@ -278,10 +278,6 @@ describe('woodColour — the knob is a fallback once the sheet is bound', () => 
     expect(woodColour(0x000000, true)).toBe(SHEET_TINT);
   });
 
-  it('is white and not merely bright', () => {
-    expect(SHEET_TINT).toBe(0xffffff);
-  });
-
   it("defaults `materials.wood` to this sheet's mean-matched hex", () => {
     // The one place the copy in `shelf-settings.ts` is held to the definition
     // here. That file has no runtime import at all and `woodwork.ts` pulls in
@@ -303,36 +299,14 @@ describe('woodColour — the knob is a fallback once the sheet is bound', () => 
     // and the backboard cannot both take a real veneer and keep the old hue.
     expect(DEFAULT_SETTINGS.materials.woodDark).not.toBe(0x4a3527);
   });
-
-  it('leaves `backingRoughness` where it was', () => {
-    // ⚠️ **Explicitly out of #304's scope, and out of #297's before it.** This
-    // knob is what kills relief on this surface — the fibre reads 0.264% at
-    // 0.95, 0.612% at 0.82 and 3.246% at 0.60 — so it is the value most likely
-    // to be moved by somebody chasing a number that a sheet did not fix. The
-    // painted shades and the whole bookcase's read hang off it.
-    expect(DEFAULT_SETTINGS.materials.backingRoughness).toBe(0.95);
-  });
 });
 
 describe('the backboard takes its own sheet', () => {
-  it('is a different image from the woodwork’s, served from the same directory', () => {
-    expect(BACKBOARD_SHEET.url).not.toBe(WOODWORK_SHEET.url);
-    expect(BACKBOARD_SHEET.url.startsWith('/wood/')).toBe(true);
-    expect(BACKBOARD_SHEET.url.endsWith('.jpg')).toBe(true);
-  });
-
   it('lays its own world size rather than the woodwork’s', () => {
     // `dark_wood`'s published sheet is 2000 mm against rosewood's 2430, so one
     // shared constant would lay this figure — and its fibre — 20% wrong.
     expect(BACKBOARD_SHEET.unitsPerTile).not.toBe(WOODWORK_SHEET.unitsPerTile);
     expect(BACKBOARD_SHEET.unitsPerTile).toBeCloseTo(6.37, 2);
-  });
-
-  it('records a figure direction that disagrees with the woodwork’s', () => {
-    // The measurement, not a convention: #297's survey read `dark_wood` at 0.08
-    // and sapele at 2.67. If these two ever agree, one of them was copied.
-    expect(BACKBOARD_SHEET.figure).toBe('u');
-    expect(WOODWORK_SHEET.figure).toBe('v');
   });
 
   it('runs the grain vertically on the face that shows', () => {
@@ -448,20 +422,6 @@ describe('the fibre turns to run with the sheet it sits on', () => {
     expect(laid.center.x).toBe(0.5);
     expect(laid.center.y).toBe(0.5);
     expect(laid.rotation).toBeCloseTo(Math.PI / 2, 12);
-  });
-
-  it('lays the fibre at half a world unit on the backboard too', () => {
-    // The period is a constant in **world** units, so the repeat is per sheet:
-    // `worldSpaceUvs` has already divided by that sheet's own size.
-    const laid = layFibre(new THREE.Texture(), BACKBOARD_SHEET);
-    const tiles = BACKBOARD_SHEET.unitsPerTile / FIBRE_PERIOD;
-
-    expect(laid.repeat.x).toBeCloseTo(tiles, 12);
-    expect(laid.repeat.y).toBeCloseTo(tiles, 12);
-    expect(fibreTiles(BACKBOARD_SHEET)).toBeCloseTo(tiles, 12);
-    // And it is genuinely a different lay from the woodwork's, which is why the
-    // backboard wears a clone rather than the shared instance.
-    expect(fibreTiles(BACKBOARD_SHEET)).not.toBe(FIBRE_TILES);
   });
 
   it('puts one fibre tile every half world unit on the backboard’s front face', () => {

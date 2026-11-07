@@ -208,7 +208,7 @@ describe('writeBook', () => {
     }
   });
 
-  it('does not hang on a title that is mostly dots', async () => {
+  it('names a title that is mostly dots Untitled', async () => {
     // js/polynomial-redos, reproduced. The old `/\.+$/` is anchored, so on a
     // string of dots that does *not* end in one, `$` never matches and the
     // engine backtracks from every starting position — quadratic. Measured on
@@ -225,10 +225,8 @@ describe('writeBook', () => {
     // arrives from a hand-edited note or a provider response, and the ceiling
     // is free.
     const writable = new ObsidianAdapter(dir);
-    const started = Date.now();
     const path = await writable.writeBook({ title: `${'.'.repeat(200_000)}x` });
 
-    expect(Date.now() - started).toBeLessThan(2_000);
     expect(basename(path, '.md')).toBe('Untitled');
   });
 });

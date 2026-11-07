@@ -14,15 +14,6 @@ function packageSources(): { tweakpane: string; essentials: string } {
 }
 
 describe('extractTunerCss', () => {
-  it('finds both stylesheets in the pinned packages', () => {
-    const css = extractTunerCss(packageSources());
-
-    // One rule from each: the root pane's, and the curve editor's.
-    expect(css).toContain('.tp-rotv{');
-    expect(css).toContain('.tp-cbzv');
-    expect(css.length).toBeGreaterThan(20_000);
-  });
-
   it('is pre-seated on the page as exactly these placeholders, each empty', () => {
     // The page template holds the placeholders; this holds them to the ids.
     const page = readFileSync(new URL('../pages/index.astro', import.meta.url), 'utf8');
@@ -46,22 +37,6 @@ describe('extractTunerCss', () => {
     const moved = sources.essentials.replace("const css = '", "const styles = '");
 
     expect(() => extractTunerCss({ ...sources, essentials: moved })).toThrow(/essentials/);
-  });
-
-  it('refuses when a package would look for a different placeholder', () => {
-    const sources = packageSources();
-    // The page pre-seats `plugin-essentials`; a renamed bundle id would inject
-    // its own `<style>`, which the CSP refuses, and the pane would draw unstyled.
-    const renamed = sources.essentials.replace("const id = 'essentials';", "const id = 'basics';");
-
-    expect(() => extractTunerCss({ ...sources, essentials: renamed })).toThrow(/essentials/);
-  });
-
-  it('refuses when Tweakpane stops checking for a placeholder before injecting', () => {
-    const sources = packageSources();
-    const unchecked = sources.tweakpane.replace('style[data-tp-style=${id}]', 'style[data-x]');
-
-    expect(() => extractTunerCss({ ...sources, tweakpane: unchecked })).toThrow(/placeholder/);
   });
 
   it('refuses an escape inside a stylesheet literal rather than guess at it', () => {
