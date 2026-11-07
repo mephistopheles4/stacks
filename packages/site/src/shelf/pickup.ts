@@ -1135,6 +1135,8 @@ function inertTrack(): Track {
     seek: () => undefined,
     progress: () => 0,
     closedProgress: () => 0,
+    atClosedRest: () => false,
+    atEnd: () => false,
     dispose: () => undefined,
   };
 }

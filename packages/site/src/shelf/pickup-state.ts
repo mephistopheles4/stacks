@@ -47,6 +47,14 @@ export interface Track {
   progress(): number;
   /** Where on the track the closed rest is, 0..1. */
   closedProgress(): number;
+  /**
+   * Whether the track is on the closed rest, which includes where `finish()` parks
+   * it: a hair past the stop, so that playing on does not fire the stop again.
+   * The one place that offset is known.
+   */
+  atClosedRest(): boolean;
+  /** Whether the track is at its far end, open in the hand. */
+  atEnd(): boolean;
   dispose(): void;
 }
 
@@ -331,13 +339,19 @@ export function createPickupState<B>(
         same.phase = 'lifting';
         remember(book);
         effects.announce(book);
-        // Caught before the reverse has moved a frame, it is still on the closed
-        // rest (or an opening begun there): playing on would carry it through the
-        // stop and open it, so it lands there again instead.
-        if (Math.abs(same.track.progress() - same.track.closedProgress()) < 1e-6) {
+        // Caught before the reverse has moved a frame, it is still where it was put
+        // back from. On the closed rest, playing on would carry it through the stop
+        // and open it, so it lands there again. At the far end, playing forward
+        // fires nothing and the book would never settle, so it is open again.
+        if (same.track.atClosedRest()) {
           same.track.finish();
           same.phase = 'held';
           effects.landed(book);
+          return;
+        }
+        if (same.track.atEnd()) {
+          same.track.finishOpen();
+          markOpened(same);
           return;
         }
         same.track.play();

@@ -127,6 +127,12 @@ function trackOf(tl: Timeline, closed: number): Track {
     },
     progress: () => tl.progress(),
     closedProgress: stop,
+    atClosedRest: () => {
+      const length = tl.duration();
+      // The stop itself, and the hair past it that `finish()` parks on.
+      return length > 0 && Math.abs(tl.progress() - stop()) <= (2 * REST_PAST_STOP) / length;
+    },
+    atEnd: () => tl.progress() >= 1,
     dispose: () => {
       tl.kill();
     },

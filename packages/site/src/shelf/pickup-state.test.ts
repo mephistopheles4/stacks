@@ -57,8 +57,15 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
           this.speed = speed;
         },
         finish() {
-          this.at = CLOSED;
+          // A hair past the stop, as the real track parks it (`REST_PAST_STOP`).
+          this.at = CLOSED + 1e-5;
           this.playing = 'stopped';
+        },
+        atClosedRest() {
+          return Math.abs(this.at - CLOSED) <= 1e-4;
+        },
+        atEnd() {
+          return this.at >= 1;
         },
         finishOpen() {
           this.at = 1;
@@ -222,7 +229,7 @@ describe('picking a book up', () => {
     const h = harness({ reduced: true });
     h.state.select('a');
 
-    expect(h.track('a').at).toBe(CLOSED);
+    expect(h.track('a').at).toBeCloseTo(CLOSED, 3);
     expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
     expect(h.log).toEqual(['left a', 'announce a', 'landed a']);
 
@@ -286,10 +293,45 @@ describe('putting it back', () => {
 
     expect(h.tracks).toHaveLength(1);
     expect(h.track('a').playing).toBe('stopped');
-    expect(h.track('a').at).toBe(CLOSED);
+    expect(h.track('a').at).toBeCloseTo(CLOSED, 3);
     expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
     expect(h.state.closed()).toBe(true);
     expect(h.log.slice(-2)).toEqual(['announce a', 'landed a']);
+    expect(h.entries()).toEqual([null, 'a']);
+  });
+
+  it('lands it again on a second catch, from the rest the first catch parked it on', () => {
+    // The jump parks a hair past the stop, so a second put-back and catch inside a
+    // frame must still read it as on the rest, and not play it on through the stop.
+    const h = harness();
+    h.state.select('a');
+    h.track('a').land();
+    h.state.putBack();
+    h.state.select('a');
+    h.state.putBack();
+    h.state.select('a');
+
+    expect(h.track('a').playing).toBe('stopped');
+    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
+    expect(h.state.closed()).toBe(true);
+    expect(h.log.filter((line) => line === 'landed a')).toHaveLength(3);
+  });
+
+  it('is open again when an open book is caught before its reverse has moved', () => {
+    // Playing forward from the far end fires nothing, so the book would stay in
+    // the lift for ever, with no Open button, until put back again.
+    const h = harness();
+    h.state.select('a');
+    h.track('a').land();
+    h.state.open();
+    h.track('a').openUp();
+    h.state.putBack();
+    h.state.select('a');
+
+    expect(h.track('a').playing).toBe('stopped');
+    expect(h.track('a').at).toBe(1);
+    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: true });
+    expect(h.log.at(-1)).toBe('opened a');
     expect(h.entries()).toEqual([null, 'a']);
   });
 
@@ -595,7 +637,8 @@ describe('opening the closed book (#531)', () => {
       h.state.open();
       h.track('a').openUp();
       h.state.putBack();
-      // Past the closed rest on the way back, then clicked: forward again.
+      // Reversed past the closed rest by a few frames, then clicked: forward again.
+      h.track('a').at = 0.4;
       h.state.select('a');
       expect(h.track('a').playing).toBe('forward');
       h.track('a').land();
@@ -625,6 +668,8 @@ describe('opening the closed book (#531)', () => {
       h.state.open();
       h.track('a').openUp();
       h.state.putBack();
+      // A few frames of the reverse: back inside the opening stage, short of the rest.
+      h.track('a').at = 0.8;
       h.state.select('a');
       h.track('a').openUp();
 

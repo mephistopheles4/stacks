@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { schedule } from './pickup-motion.ts';
 import { buildTrack, engine, type Stages } from './pickup-track.ts';
-import type { Track } from './pickup-state.ts';
+import { createPickupState, type PickupState, type Track } from './pickup-state.ts';
 import { PICKUP_MOTION } from './shelf-settings.ts';
 
 /**
@@ -231,5 +231,125 @@ describe('the track, with GSAP running it', () => {
 
     expect(calls).toEqual({ landed: 0, opened: 1, returned: 0 });
     expect(stages.o).toBe(1);
+  });
+});
+
+describe('where the track reads itself to be', () => {
+  it('is on the closed rest on the stop, and on the hair past it that a jump parks on', () => {
+    const { track } = rig();
+    track.finish();
+    expect(track.atClosedRest()).toBe(true);
+    track.reverse(1.6);
+    // Put back and caught before a frame ran: it has not moved.
+    expect(track.atClosedRest()).toBe(true);
+    step(0);
+    step(0.1);
+    expect(track.atClosedRest()).toBe(false);
+  });
+
+  it('is on the closed rest where it stopped by playing, and off it elsewhere', () => {
+    const { track, calls } = rig();
+    expect(track.atClosedRest()).toBe(false);
+    track.play();
+    run(() => calls.landed > 0);
+    expect(track.atClosedRest()).toBe(true);
+    track.finishOpen();
+    expect(track.atClosedRest()).toBe(false);
+  });
+
+  it('is at the end only at the far end', () => {
+    const { track } = rig();
+    expect(track.atEnd()).toBe(false);
+    track.finish();
+    expect(track.atEnd()).toBe(false);
+    track.finishOpen();
+    expect(track.atEnd()).toBe(true);
+    track.reverse(1.6);
+    expect(track.atEnd()).toBe(true);
+    step(0);
+    step(0.1);
+    expect(track.atEnd()).toBe(false);
+  });
+});
+
+describe('the pickup state on the real track: put back and caught within a frame', () => {
+  /** The state machine with the real timeline under it, and nothing else real. */
+  function pickup() {
+    const stages: Stages = { s: 0, u: 0, o: 0 };
+    let pushed = false;
+    const log: string[] = [];
+    const state: PickupState<string> = createPickupState<string>({
+      track: (_book, events) => buildTrack(stages, PICKUP_MOTION, events),
+      left: () => undefined,
+      landed: () => log.push('landed'),
+      opening: () => log.push('opening'),
+      opened: () => log.push('opened'),
+      settled: () => log.push('settled'),
+      announce: () => undefined,
+      examine: () => undefined,
+      leave: () => undefined,
+      cutExamining: () => false,
+      reduced: () => false,
+      returnSpeed: () => PICKUP_MOTION.returnSpeed,
+      history: {
+        held: () => pushed,
+        push: () => {
+          pushed = true;
+        },
+        replace: () => undefined,
+        back: () => {
+          pushed = false;
+          state.popped();
+        },
+      },
+    });
+    const frames = (seconds: number): void => {
+      step(0);
+      for (let elapsed = 0; elapsed < seconds; elapsed += 1 / 60) step(1 / 60);
+    };
+    return { state, stages, log, frames };
+  }
+
+  it('lands closed each time, however often it is caught, and never opens by itself', () => {
+    const { state, stages, log, frames } = pickup();
+    state.select('a');
+    frames(3);
+    expect(state.closed()).toBe(true);
+
+    // Put back and caught with no frame between, three times in a row: the second and
+    // third start from the rest the first catch parked the book on.
+    for (let catches = 0; catches < 3; catches += 1) {
+      state.putBack();
+      state.select('a');
+      expect(state.closed()).toBe(true);
+    }
+    // Then left alone: still closed, the opening stage untouched.
+    frames(3);
+    expect(state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
+    expect(stages.o).toBeCloseTo(0, 3);
+    expect(log).not.toContain('opening');
+    expect(log).not.toContain('opened');
+  });
+
+  it('is open again when an open book is caught within a frame, and settles', () => {
+    const { state, stages, log, frames } = pickup();
+    state.select('a');
+    frames(3);
+    state.open();
+    frames(3);
+    expect(state.holding()).toEqual({ book: 'a', phase: 'held', opened: true });
+
+    state.putBack();
+    state.select('a');
+    expect(state.holding()).toEqual({ book: 'a', phase: 'held', opened: true });
+    frames(1);
+    expect(stages.o).toBeCloseTo(1, 3);
+    expect(log.at(-1)).toBe('opened');
+
+    // And it goes back from there as from any open book.
+    state.putBack();
+    frames(3);
+    expect(state.holding()).toBeUndefined();
+    expect(log.at(-1)).toBe('settled');
   });
 });
