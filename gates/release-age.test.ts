@@ -523,10 +523,9 @@ describe('G67 — the release-age window is stated, at seven days or more', () =
     // The site deploy calls both Turnstile key checks, which are tested on their own (integrity N1).
     expect(read('scripts/deploy.ts')).toContain('siteKeyProblem(html)');
     expect(read('scripts/deploy.ts')).toContain('keyProblem(process.env');
-    // C3's first half: the list is these three and nothing else.
+    // C3's first half: the list is these two and nothing else.
     expect(readList(read('pnpm-workspace.yaml'), TRUST_EXCLUDE).items).toEqual([
       'semver@6.3.1',
-      'chokidar@4.0.3',
       'chromium-bidi@157.0.8090-0',
     ]);
   });
