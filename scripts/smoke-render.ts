@@ -3636,9 +3636,8 @@ async function measureSampling(
  *   — the control, without which "nothing found" could mean a detector that sees
  *   nothing.
  * - **styled**: on the `?debug` page the root pane is drawn with Tweakpane's own
- *   background, not a browser default; no `securitypolicyviolation` fired; and
- *   `style-src` carries the empty string's hash, which the two placeholders in
- *   `index.astro` depend on (spec §3.7).
+ *   background, not a browser default, and no `securitypolicyviolation` fired
+ *   (spec §3.7).
  * - **pane**: the debug pane's own rows, read off the rendered page, one per
  *   field the view writes, because a check that only mounts the pane cannot
  *   fail when the view stops copying one (ADR-0119): its title; that it starts
@@ -3658,9 +3657,6 @@ interface TunerChecked {
  * so one string finds both halves of the tuner.
  */
 const TUNER_MARKER = '.tp-rotv';
-
-/** SHA-256 of the empty string, the hash the empty placeholders need. */
-const EMPTY_STRING_HASH = "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='";
 
 /** Recorded from before the page's first script, so no violation is missed. */
 const RECORD_VIOLATIONS = `(() => {
@@ -3713,9 +3709,7 @@ async function checkTuner(browser: Browser, origin: string): Promise<TunerChecke
   const styled = debug.styled;
   lines.push(
     `styled pane    pane ${styled.found ? `background ${styled.background}` : 'NOT FOUND'}   ` +
-      `violations ${String(styled.violations.length)}   empty-string hash ${
-        styled.emptyHash ? 'in style-src' : 'MISSING'
-      }`,
+      `violations ${String(styled.violations.length)}`,
   );
   if (!styled.found) failures.push('styled pane: no pane rendered on the ?debug page');
   else if (styled.background === 'rgba(0, 0, 0, 0)') {
@@ -3723,12 +3717,6 @@ async function checkTuner(browser: Browser, origin: string): Promise<TunerChecke
   }
   for (const violation of styled.violations) {
     failures.push(`styled pane: the ?debug page broke its CSP, ${violation}`);
-  }
-  if (!styled.emptyHash) {
-    failures.push(
-      "styled pane: the built style-src lacks the empty string's hash, which the two " +
-        'empty placeholders need',
-    );
   }
   for (const error of [...plain.errors, ...debug.errors, ...narrow.errors]) {
     failures.push(`tuner: ${error}`);
@@ -3845,7 +3833,6 @@ interface TunerVisit {
     readonly found: boolean;
     readonly background: string;
     readonly violations: readonly string[];
-    readonly emptyHash: boolean;
   };
   readonly pane: PaneReading;
   /** Whether `window.__blackbox` was published: behind `?debug` only. */
@@ -3937,13 +3924,10 @@ async function visitForTuner(
 
     const styled = (await page.evaluate(`(() => {
       const pane = document.querySelector('${TUNER_MARKER}');
-      const meta = document.querySelector('meta[http-equiv="content-security-policy" i]');
-      const styleSrc = (meta?.getAttribute('content') ?? '').split(';').find((d) => d.trim().startsWith('style-src')) ?? '';
       return {
         found: pane !== null,
         background: pane === null ? '' : getComputedStyle(pane).backgroundColor,
         violations: window.__cspViolations ?? [],
-        emptyHash: styleSrc.includes(${JSON.stringify(EMPTY_STRING_HASH)}),
       };
     })()`)) as TunerVisit['styled'];
 

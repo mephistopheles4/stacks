@@ -22,8 +22,9 @@ plain constants to paste back into `shelf-settings.ts`.
   step **reads the package file as text** and never imports or evaluates it, so
   a compromised release cannot run code on the machine that deploys; it fails
   when the expected CSS is not found;
-- the empty-string hash those placeholders need is in `style-src` on purpose,
-  because Astro hashes the placeholders, and a gate asserts it.
+- the placeholders need no hash in `style-src`: Astro wrote the empty string's
+  hash until 7.4.3, and the gate asserts the outcome (zero CSP violations, a
+  styled pane) rather than that hash.
 
 **The honesty floor:** each tuner control shows what the shelf applied, never
 only what was asked. The code writes the applied state back and calls
