@@ -13,10 +13,11 @@ import { cardModel, linksRow } from './card.ts';
  * author lead that page too.
  *
  * **Two controls close the book again** to the closed rest it landed on, where
- * it can be turned (#553): "Close the book" at the top left of the page that
- * carries the title — the left page, or the right one on a phone, where it stays
- * in view while the Thoughts scroll — and "Turn the book over" at the foot of the
- * right page. The page carries no put-back control: the book arrives closed with
+ * it can be turned (#553): a back arrow named "Close the book" at the top left
+ * of the page that carries the title — the left page, or the right one on a
+ * phone, where it stays in view while the Thoughts scroll — and a book's outline
+ * with the words "Close the book" at the foot of the right page, where "Turn the
+ * book over" used to be. The class there keeps the old name, `held-turn-over`. The page carries no put-back control: the book arrives closed with
  * its pages hidden, so the X that puts it back lives in the header (#531,
  * `index.astro`).
  *
@@ -28,9 +29,9 @@ import { cardModel, linksRow } from './card.ts';
  * refuses.
  */
 
-/** The class on "Close the book", which `pickup.ts` listens for by delegation. */
+/** The class on the back arrow by the title, which `pickup.ts` listens for by delegation. */
 export const CLOSE_BUTTON_CLASS = 'held-close';
-/** The class on "Turn the book over", the second way to close it. */
+/** The class on "Close the book" at the foot of the right page, the second way to close it. */
 export const TURN_OVER_BUTTON_CLASS = 'held-turn-over';
 
 export type LeftBlock = 'close' | 'title' | 'author';
@@ -98,9 +99,9 @@ export const PAGE_PX = 460;
 export interface HeldPages {
   readonly left: HTMLElement;
   readonly right: HTMLElement;
-  /** "Close the book", by the title: back to the closed rest (#553). */
+  /** The back arrow by the title: back to the closed rest (#553). */
   readonly close: HTMLButtonElement;
-  /** "Turn the book over", at the foot of the right page: the same close. */
+  /** "Close the book", at the foot of the right page: the same close. */
   readonly turnOver: HTMLButtonElement;
   /**
    * Fills the Thoughts slot, when they arrive: plain text, one `<p>` each, and
@@ -126,7 +127,7 @@ export function buildPages(
   const model = cardModel(book);
   const heightPx = (PAGE_PX * size.height) / size.width;
 
-  const close = closeButton();
+  const close = backButton();
   const left = page('held-page held-page-left', heightPx);
   for (const block of leftPageBlocks(book, options)) {
     left.append(
@@ -143,10 +144,7 @@ export function buildPages(
   // opens the book, so the Thoughts are read next.
   right.tabIndex = -1;
   const thoughts = element('div', 'held-thoughts');
-  const turnOver = document.createElement('button');
-  turnOver.type = 'button';
-  turnOver.className = TURN_OVER_BUTTON_CLASS;
-  turnOver.textContent = 'Turn the book over';
+  const turnOver = closeTheBookButton();
 
   for (const block of rightPageBlocks(book, options)) {
     right.append(rightBlock(block, model, { thoughts, close, turnOver }));
@@ -216,32 +214,55 @@ function rightBlock(
 const SVG = 'http://www.w3.org/2000/svg';
 
 /**
- * "Close the book": a closed book's outline and the word, built as elements and
- * never parsed from markup (rule 8), its name set through `textContent`.
+ * The control by the title: a back arrow and nothing else, named "Close the
+ * book" for a screen reader and on hover (#553, at the owner's word: the arrow
+ * says enough).
  */
-function closeButton(): HTMLButtonElement {
+function backButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = CLOSE_BUTTON_CLASS;
-  const icon = document.createElementNS(SVG, 'svg');
-  icon.setAttribute('viewBox', '0 0 24 24');
-  icon.setAttribute('width', '16');
-  icon.setAttribute('height', '16');
-  icon.setAttribute('aria-hidden', 'true');
-  icon.setAttribute('focusable', 'false');
-  icon.setAttribute('fill', 'none');
-  icon.setAttribute('stroke', 'currentColor');
-  icon.setAttribute('stroke-width', '2');
-  icon.setAttribute('stroke-linecap', 'round');
-  icon.setAttribute('stroke-linejoin', 'round');
+  button.setAttribute('aria-label', 'Close the book');
+  button.title = 'Close the book';
+  button.append(icon(['M19 12H5', 'm11 6-6 6 6 6']));
+  return button;
+}
+
+/**
+ * The control at the foot of the right page: a closed book's outline and the
+ * words "Close the book".
+ */
+function closeTheBookButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = TURN_OVER_BUTTON_CLASS;
   // A book seen from the front: the board, and the spine's edge down its left.
-  for (const d of ['M6 3h12v18H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M8 3v18']) {
+  button.append(
+    icon(['M6 3h12v18H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M8 3v18']),
+    text('span', 'Close the book'),
+  );
+  return button;
+}
+
+/** A 24-unit line icon, built as elements and never parsed from markup (rule 8). */
+function icon(paths: readonly string[]): SVGSVGElement {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  for (const d of paths) {
     const path = document.createElementNS(SVG, 'path');
     path.setAttribute('d', d);
-    icon.append(path);
+    svg.append(path);
   }
-  button.append(icon, text('span', 'Close the book'));
-  return button;
+  return svg;
 }
 
 function page(className: string, heightPx: number): HTMLElement {

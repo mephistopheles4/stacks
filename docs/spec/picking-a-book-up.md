@@ -7,8 +7,8 @@
 > **Amended again by [#553](https://github.com/mephistopheles4/stacks/issues/553)**
 > ([ADR-0138](../adr/0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md)):
 > the examining dialog of §3.4 and check 9 is gone. The closed book in your hand
-> turns in place, and the open book closes back to that state from "Close the
-> book" or "Turn the book over".
+> turns in place, and the open book closes back to that state from a back
+> arrow by the title or "Close the book" at the foot of the page.
 
 The output of [Map: picking a book up](https://github.com/mephistopheles4/stacks/issues/366)
 — eight closed tickets, assembled into something an implementation session can

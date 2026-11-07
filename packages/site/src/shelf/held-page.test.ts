@@ -208,7 +208,7 @@ describe('the pages as built', () => {
     expect(markupWrites).toEqual([]);
   });
 
-  it('puts one close control on the page with the title, named in text, its icon built as elements', () => {
+  it('puts one close control on the page with the title, a bare arrow named "Close the book", its icon built as elements', () => {
     for (const [narrow, home, away] of [
       [false, 'left', 'right'],
       [true, 'right', 'left'],
@@ -218,13 +218,16 @@ describe('the pages as built', () => {
       expect(more).toEqual([]);
       expect(byClass(pages[away], 'held-close')).toEqual([]);
       expect(close?.tagName).toBe('button');
-      expect(close?.textContent).toBe('Close the book');
-      const [icon] = close?.children ?? [];
+      expect(close?.attributes['aria-label']).toBe('Close the book');
+      const [icon, ...words] = close?.children ?? [];
+      expect(words).toEqual([]);
       expect(icon?.tagName).toBe('svg');
       expect(icon?.attributes['aria-hidden']).toBe('true');
-      expect(byClass(pages.right, 'held-turn-over').map((node) => node.textContent)).toEqual([
-        'Turn the book over',
-      ]);
+      const [foot, ...feet] = byClass(pages.right, 'held-turn-over');
+      expect(feet).toEqual([]);
+      expect(foot?.tagName).toBe('button');
+      expect(foot?.textContent).toBe('Close the book');
+      expect(foot?.children[0]?.tagName).toBe('svg');
     }
     expect(markupWrites).toEqual([]);
   });

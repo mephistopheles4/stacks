@@ -14,9 +14,12 @@ the book opens it, and a turned book eases square as it opens. Before this, a
 visitor opened the book and pressed "Turn the book over" to reach a separate
 view where it could be turned. The owner found that awkward and asked for it gone.
 
-- **Closing an open book returns it to that same rest.** "Close the book" sits
-  at the top left of the page that carries the title. "Turn the book over" stays
-  at the foot of the right page as a second way. Both run the pickup's track
+- **Closing an open book returns it to that same rest.** A back arrow sits at
+  the top left of the page that carries the title, with no words: its name,
+  "Close the book", is for a screen reader and the hover. The foot of the right
+  page carries a second way, a book's outline and the words "Close the book".
+  That one replaced "Turn the book over" at the owner's word, since the arrow
+  says enough and the turn needs no button of its own any more. Both run the pickup's track
   backward and hold at the closed rest, which `pickup-track.ts` does with a
   hold mode on the stop that every other call disarms. So there is one closed
   state, not two, and a put-back after a close is the normal animated return

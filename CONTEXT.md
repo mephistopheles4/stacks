@@ -258,8 +258,8 @@ nothing plays, which is why the code names it apart (`drop()`).
 **Turning the closed book**:
 The **held** book at its closed rest, turned in your hand by a drag on the
 canvas or the arrow keys, in place of a flat picture of its cover. It is where
-every pickup lands, and where "Close the book" and "Turn the book over" return
-an open book to. The code says `close()` for the way back and `turn` for the
+every pickup lands, and where the back arrow and "Close the book" return an
+open book to. The code says `close()` for the way back and `turn` for the
 pose (`held().turn`). There is no separate view any more
 ([ADR-0138](docs/adr/0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md),
 which replaced ADR-0109's *examining*). Not the public build's *inspector*,

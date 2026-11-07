@@ -176,17 +176,36 @@
   }
 
   /*
-    "Close the book" (#553), by the title: at the top left of the left page,
-    which never scrolls; on a phone, at the top of the right page, held in view
-    by `sticky` while the Thoughts scroll under it, there on a ground of the
-    page's own paper so no line shows through. Its own row, so it never sits on the
-    title.
+    The foot's "Close the book" carries a book's outline beside the words. The
+    control by the title is the arrow alone (#553, at the owner's word), a
+    square the size of a fingertip, borderless until it is pointed at: at the
+    top left of the left page, which never scrolls; on a phone, at the top of
+    the right page, held in view by `sticky` while the Thoughts scroll under it,
+    there on a ground of the page's own paper so no line shows through. Its own
+    row, so it never sits on the title.
   */
+  .shelf :global(.held-page .held-turn-over) {
+    gap: 8px;
+  }
+
   .shelf :global(.held-page .held-close) {
-    gap: 6px;
-    min-height: 2.25rem;
+    justify-content: center;
+    width: 2.75rem;
     margin: 0;
-    padding: 0 12px;
+    padding: 0;
+    border-color: transparent;
+    border-radius: 50%;
+    color: #5d5347;
+  }
+
+  .shelf :global(.held-page .held-close:hover) {
+    border-color: rgba(43, 37, 32, 0.3);
+    color: #2b2520;
+  }
+
+  .shelf :global(.held-page .held-close svg) {
+    width: 22px;
+    height: 22px;
   }
 
   .shelf :global(.held-page-left .held-close) {
@@ -200,7 +219,7 @@
     top: 0;
     z-index: 1;
     background: #ece2cf;
-    margin: -28px 0 18px -16px;
+    margin: -28px 0 18px -20px;
   }
 
   .shelf :global(.held-page button:focus-visible),
