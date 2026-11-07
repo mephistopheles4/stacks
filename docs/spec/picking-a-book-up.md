@@ -1,5 +1,9 @@
 # Picking a book up — the split gate, the Thoughts extractor, and the motion
 
+> **Amended by [`picking-up-closed.md`](picking-up-closed.md)** ([#531](https://github.com/mephistopheles4/stacks/issues/531)):
+> a picked-up book now arrives closed and the visitor opens it, which changes §1,
+> §2, §3.1, §3.4, §3.5, §3.6 and §3.11 below. This file is kept as written.
+
 The output of [Map: picking a book up](https://github.com/mephistopheles4/stacks/issues/366)
 — eight closed tickets, assembled into something an implementation session can
 build **without reopening any of them**. Click a book: it slides out of the

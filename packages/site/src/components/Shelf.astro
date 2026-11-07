@@ -7,8 +7,9 @@
 <div class="shelf">
   <!--
     `tabindex="-1"` makes the canvas *programmatically* focusable without ever
-    becoming a tab stop. It is where focus lands when the put-back control that
-    held it goes away with the book, and only then.
+    becoming a tab stop. It is where focus lands when the control that held it
+    (the X, the Open button, a link on a page) goes away with the book, or when
+    the Open button hides as the book opens.
   -->
   <canvas id="shelf-canvas" tabindex="-1"></canvas>
 
@@ -42,6 +43,18 @@
       Drag, or use the arrow keys, to turn it. Escape returns to the page.
     </p>
     <button id="book-viewer-close" class="book-viewer-close" type="button">
+      <svg
+        aria-hidden="true"
+        focusable="false"
+        viewBox="0 0 24 24"
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"><path d="M19 12H5m6-6-6 6 6 6"></path></svg
+      >
       <span class="visually-hidden">Back to the page</span>
     </button>
   </dialog></div>
@@ -88,6 +101,11 @@
     color: #2b2520;
     font: 17px/1.55 Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
     overflow-wrap: anywhere;
+  }
+
+  /* Focused by script when the book is opened from its button: no ring on a 3D page. */
+  .shelf :global(.held-page-right:focus) {
+    outline: none;
   }
 
   .shelf :global(.held-page-left) {
@@ -177,8 +195,7 @@
     fill: currentColor;
   }
 
-  .shelf :global(.held-page .held-examine),
-  .shelf :global(.held-put-back) {
+  .shelf :global(.held-page .held-examine) {
     display: inline-flex;
     align-items: center;
     min-height: 2.75rem;
@@ -309,9 +326,4 @@
     cursor: pointer;
   }
 
-  .book-viewer-close::before {
-    content: '\00d7';
-    font-size: 1.35rem;
-    line-height: 1;
-  }
 </style>

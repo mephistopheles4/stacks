@@ -1264,14 +1264,17 @@ hook and judge the gate uses.
 pnpm exec tsx scripts/phone-check.ts                  # the default page, 120 s
 pnpm exec tsx scripts/phone-check.ts --matrix         # default ×3, ?shadows=0, ?receivers=all
 pnpm exec tsx scripts/phone-check.ts --gpuinfo        # chrome://gpu, in a tab of its own
-pnpm exec tsx scripts/phone-check.ts --pickups 5      # the default page, picking up five books
-pnpm exec tsx scripts/phone-check.ts --examine 60      # hold a book, tap into examining, the phone's back key out, then turn it for 60 s
+pnpm exec tsx scripts/phone-check.ts --pickups 5      # the default page, picking up five books, each held closed and then open
+pnpm exec tsx scripts/phone-check.ts --examine 60      # hold a book closed, open it, tap into examining, the phone's back key out, then turn it for 60 s
 ```
 
 **`--pickups <n>` drives the shelf's loop hook**, `window.__shelf.pickupLoop(n)`:
-once the page is ready it picks up a book, holds it, puts it back and moves on,
-`n` times, while the run watches the context. The result reports how many books
-reached the held state and, for each held cover, `renderer.initTexture`'s time
+once the page is ready it picks up a book, holds it **closed**, opens it, holds
+it open, puts it back and moves on, `n` times, while the run watches the context.
+A book arrives closed ([#531](https://github.com/mephistopheles4/stacks/issues/531)),
+so a pass has tested a closed book and its memory figure still measures an open
+one. The result reports how many rounds reached the closed rest and how many
+reached open, each on its own, and, for each held cover, `renderer.initTexture`'s time
 on the device and the texture count after it — the swap-frame figures the
 picking-a-book-up spec's §8 asks the owner to judge. ⚠️ **A function, never an
 address switch**: #371's prototype looped on `?autoplay=5`, which any link could

@@ -9,6 +9,12 @@
  *   The shelf picks that book up by id.
  */
 
+/**
+ * The launcher's id, which Ask.astro owns. The shelf reads it to tell when focus
+ * was left on the launcher by a chat link, and moves it to Open (#531).
+ */
+export const LAUNCHER_ID = 'ask-launcher';
+
 export const HELD_EVENT = 'stacks:held';
 export const PICK_UP_EVENT = 'stacks:pick-up';
 

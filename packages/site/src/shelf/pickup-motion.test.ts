@@ -3,29 +3,34 @@ import { bezier, exportMotion, openAngle, schedule, textOpacity } from './pickup
 import { PICKUP_MOTION } from './shelf-settings.ts';
 
 describe('schedule', () => {
-  it('overlaps the stages as #371 accepted: about 1.3 s from click to text', () => {
+  it('overlaps the slide and the turn as #371 accepted, and rests closed before it opens', () => {
     const at = schedule(PICKUP_MOTION);
 
     expect(at.slide).toBe(0);
     expect(at.turn).toBeCloseTo(0.35 - 0.12);
-    expect(at.open).toBeCloseTo(0.23 + 0.7 - 0.2);
-    expect(at.end).toBeCloseTo(1.33);
+    // Closed is the later of the slide's end and the turn's end; opening begins
+    // there, because nothing can overlap a rest.
+    expect(at.closed).toBeCloseTo(0.23 + 0.7);
+    expect(at.open).toBe(at.closed);
+    expect(at.end).toBeCloseTo(0.93 + 0.6);
   });
 
-  it('runs the stages back to back when nothing overlaps', () => {
-    const at = schedule({ ...PICKUP_MOTION, overlapSlideTurn: 0, overlapTurnOpen: 0 });
+  it('runs the slide and the turn back to back when nothing overlaps', () => {
+    const at = schedule({ ...PICKUP_MOTION, overlapSlideTurn: 0 });
 
     expect(at.turn).toBeCloseTo(0.35);
+    expect(at.closed).toBeCloseTo(1.05);
     expect(at.open).toBeCloseTo(1.05);
     expect(at.end).toBeCloseTo(1.65);
   });
 
-  it('never starts a stage before the one it overlaps began', () => {
-    const at = schedule({ ...PICKUP_MOTION, overlapSlideTurn: 5, overlapTurnOpen: 5 });
+  it('never starts the turn before the slide began', () => {
+    const at = schedule({ ...PICKUP_MOTION, overlapSlideTurn: 5 });
 
     expect(at.turn).toBe(0);
-    expect(at.open).toBe(0);
-    expect(at.end).toBeCloseTo(0.7);
+    expect(at.closed).toBeCloseTo(0.7);
+    expect(at.open).toBeCloseTo(0.7);
+    expect(at.end).toBeCloseTo(1.3);
   });
 });
 

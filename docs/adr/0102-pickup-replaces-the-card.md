@@ -4,6 +4,7 @@
 **Status:** accepted; built in [#413](https://github.com/mephistopheles4/stacks/issues/413) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#366](https://github.com/mephistopheles4/stacks/issues/366), [#369](https://github.com/mephistopheles4/stacks/issues/369), [#371](https://github.com/mephistopheles4/stacks/issues/371)
 **Supersedes in part:** [ADR-0049](0049-the-card-is-a-non-modal-bottom-sheet.md)
+**Superseded in part by:** [ADR-0137](0137-a-picked-up-book-arrives-closed.md) — "turns, and opens" and the put-back line
 
 ## Decision
 

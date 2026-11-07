@@ -783,12 +783,10 @@ export interface PickupMotion {
   readonly slide: number;
   /** From slid out to held, turning cover-on. */
   readonly turn: number;
-  /** The front board swinging open. */
+  /** The front board swinging open, once the visitor opens the closed book (#531). */
   readonly open: number;
   /** How long before the slide ends the turn starts. 0 is sequential. */
   readonly overlapSlideTurn: number;
-  /** How long before the turn ends the cover starts to open. 0 is sequential. */
-  readonly overlapTurnOpen: number;
   /** How far the book slides out before it turns. */
   readonly slideOut: number;
   /** How far it rises as it slides. */
@@ -812,7 +810,6 @@ export const PICKUP_MOTION: PickupMotion = {
   turn: 0.7,
   open: 0.6,
   overlapSlideTurn: 0.12,
-  overlapTurnOpen: 0.2,
   slideOut: 0.12,
   lift: 0.01,
   margin: 1.25,

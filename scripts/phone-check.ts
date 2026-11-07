@@ -268,15 +268,15 @@ function startPickups(rounds: number): string {
   // awaiting the whole loop: the evaluate awaits a returned promise.
   return `void (async () => {
     while (window.__shelf?.ready !== true) await new Promise((r) => setTimeout(r, 200));
-    window.__pickups = { asked: ${String(rounds)}, held: await window.__shelf.pickupLoop(${String(rounds)}) };
+    window.__pickups = { asked: ${String(rounds)}, ...(await window.__shelf.pickupLoop(${String(rounds)})) };
   })()`;
 }
 
 /** What the examining drive saw on the phone, kept apart from the context's own verdict. */
 interface ExamineReading {
   readonly held: boolean;
-  /** A real tap on the page's control opened the view. */
-  readonly opened: boolean;
+  /** A real tap on the page's control opened the examining view. */
+  readonly viewOpened: boolean;
   /** The phone's back key left the view with the book still held. */
   readonly backLeftBookHeld: boolean;
   /** …or emptied the hand instead (a back that went to history, not to the dialog). */
@@ -291,7 +291,7 @@ interface ExamineReading {
 
 const HELD_NOW = `(() => {
   const h = window.__shelf?.held?.();
-  return JSON.stringify(h === undefined ? null : { examining: h.examining, phase: h.phase, yaw: h.turn.yaw });
+  return JSON.stringify(h === undefined ? null : { examining: h.examining, phase: h.phase, opened: h.opened, yaw: h.turn.yaw });
 })()`;
 
 /**
@@ -302,8 +302,13 @@ const HELD_NOW = `(() => {
  */
 async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<ExamineReading> {
   const notes: string[] = [];
-  const read = async (): Promise<{ examining: boolean; phase: string; yaw: number } | null> =>
-    parse<{ examining: boolean; phase: string; yaw: number } | null>(
+  const read = async (): Promise<{
+    examining: boolean;
+    phase: string;
+    opened: boolean;
+    yaw: number;
+  } | null> =>
+    parse<{ examining: boolean; phase: string; opened: boolean; yaw: number } | null>(
       await cdp.evaluate(HELD_NOW),
     ) ?? null;
   const tap = async (x: number, y: number): Promise<void> => {
@@ -329,7 +334,7 @@ async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<Exam
     if (Date.now() - waitingFrom > 60_000) {
       return {
         held: false,
-        opened: false,
+        viewOpened: false,
         backLeftBookHeld: false,
         backEmptiedHand: false,
         turnedForS: 0,
@@ -346,7 +351,7 @@ async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<Exam
     if (Date.now() - heldAt > 15_000) {
       return {
         held: false,
-        opened: false,
+        viewOpened: false,
         backLeftBookHeld: false,
         backEmptiedHand: false,
         turnedForS: 0,
@@ -357,13 +362,35 @@ async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<Exam
     }
     await sleep(250);
   }
+  // The book rests closed in the hand (#531). Held a moment so the closed rest is
+  // seen on the phone, then opened through the shelf's hook (a tap on the book is
+  // G35's to cover, not this drive's): the examine control is on a page that is
+  // hidden until the book is open.
+  await sleep(1500);
+  await cdp.evaluate('window.__shelf.open()');
+  const openedAt = Date.now();
+  while ((await read())?.opened !== true) {
+    if (Date.now() - openedAt > 15_000) {
+      return {
+        held: true,
+        viewOpened: false,
+        backLeftBookHeld: false,
+        backEmptiedHand: false,
+        turnedForS: 0,
+        drags: 0,
+        yaw: undefined,
+        notes: ['the closed book never opened'],
+      };
+    }
+    await sleep(250);
+  }
   await sleep(1500);
 
   const at = await control();
   if (at === undefined) notes.push('the page had no examine control');
   else await tap(at.x, at.y);
   await sleep(1500);
-  const opened = (await read())?.examining === true;
+  const viewOpened = (await read())?.examining === true;
 
   // The phone's own back key: Chrome routes it to a modal dialog's close watcher.
   adb('shell', 'input', 'keyevent', 'KEYCODE_BACK');
@@ -413,7 +440,7 @@ async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<Exam
   }
   return {
     held: true,
-    opened,
+    viewOpened,
     backLeftBookHeld,
     backEmptiedHand,
     turnedForS: Math.round((Date.now() - startedTurning) / 1000),
@@ -447,7 +474,12 @@ interface Read {
   readonly threeCalls: number | null;
   readonly bookCount: number;
   readonly profile: string | null;
-  readonly pickups: { readonly asked: number; readonly held: number } | null;
+  readonly pickups: {
+    readonly asked: number;
+    /** Rounds that reached the closed rest, and rounds that reached open, each on its own. */
+    readonly closed: number;
+    readonly open: number;
+  } | null;
   readonly swaps: readonly unknown[] | null;
 }
 
@@ -596,7 +628,7 @@ async function runOne(
     const pickups = read?.pickups;
     if (pickups !== null && pickups !== undefined) {
       console.log(
-        `  pickups: ${String(pickups.held)} of ${String(pickups.asked)} reached the held state; ` +
+        `  pickups: of ${String(pickups.asked)} rounds, ${String(pickups.closed)} reached closed and ${String(pickups.open)} reached open; ` +
           `held cover uploads: ${JSON.stringify(read?.swaps ?? [])}`,
       );
     }

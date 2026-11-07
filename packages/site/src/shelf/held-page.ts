@@ -12,9 +12,9 @@ import { EXAMINE_BUTTON_CLASS } from './book-viewer.ts';
  * a fetch that fails or has not landed leaves no rule over nothing; a book with none shows the card's lines alone
  * (#369's C). On a phone, which frames the right-hand page alone, the title and
  * author lead that page too. Examining the book — closing it in your hand to
- * turn it (#418) — is opened from a control among the lines, for every book, and
- * a put-back control ends the page: a phone fills the screen with the page, so
- * there is no empty space to tap.
+ * turn it (#418) — is opened from a control among the lines, for every book.
+ * The page carries no put-back control: the book arrives closed with its pages
+ * hidden, so the X that puts it back lives in the header (#531, `index.astro`).
  *
  * **What goes where is a pure function** (`leftPageBlocks`, `rightPageBlocks`),
  * tested without a DOM; `buildPages` turns it into nodes and adds nothing.
@@ -34,8 +34,7 @@ export type RightBlock =
   | 'object'
   | 'subjects'
   | 'links'
-  | 'examine'
-  | 'put-back';
+  | 'examine';
 
 export function leftPageBlocks(book: LibraryBook): LeftBlock[] {
   return book.author === undefined ? ['title'] : ['title', 'author'];
@@ -62,7 +61,6 @@ export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): R
     // Every book, covered or not: what is examined is the book, and a book
     // with no cover still has its binding and its spine colour (#418, S7).
     'examine',
-    'put-back',
   ];
   return blocks.filter((block): block is RightBlock => block !== false);
 }
@@ -76,8 +74,6 @@ export const PAGE_PX = 460;
 export interface HeldPages {
   readonly left: HTMLElement;
   readonly right: HTMLElement;
-  /** The put-back control: a real `<button>`, named for what it does. */
-  readonly putBack: HTMLButtonElement;
   /** The control that closes the book in the hand to turn it. */
   readonly examine: HTMLButtonElement;
   /**
@@ -114,24 +110,22 @@ export function buildPages(
   }
 
   const right = page('held-page held-page-right', heightPx);
+  // Focusable by script and never by Tab: where focus goes when a screen reader
+  // opens the book, so the Thoughts are read next.
+  right.tabIndex = -1;
   const thoughts = element('div', 'held-thoughts');
-  const putBack = document.createElement('button');
-  putBack.type = 'button';
-  putBack.className = 'held-put-back';
-  putBack.textContent = 'Put the book back';
   const examine = document.createElement('button');
   examine.type = 'button';
   examine.className = EXAMINE_BUTTON_CLASS;
   examine.textContent = 'Turn the book over';
 
   for (const block of rightPageBlocks(book, options)) {
-    right.append(rightBlock(block, model, { thoughts, examine, putBack }));
+    right.append(rightBlock(block, model, { thoughts, examine }));
   }
 
   return {
     left,
     right,
-    putBack,
     examine,
     showThoughts(paragraphs, fade) {
       const label = text('p', 'Thoughts', 'held-label');
@@ -159,7 +153,6 @@ function rightBlock(
   nodes: {
     readonly thoughts: HTMLElement;
     readonly examine: HTMLButtonElement;
-    readonly putBack: HTMLButtonElement;
   },
 ): HTMLElement {
   switch (block) {
@@ -184,8 +177,6 @@ function rightBlock(
       return linksRow(model.links);
     case 'examine':
       return nodes.examine;
-    case 'put-back':
-      return nodes.putBack;
   }
 }
 
