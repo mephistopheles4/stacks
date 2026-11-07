@@ -780,18 +780,17 @@ not judge the look: no pixel test, and the owner's screenshots at step 4 (§8)
 do that. **Desktop only**: a phone frames the right page alone, so there is no
 spread to align there. Part of the pickup row (§5).
 
-### 3.7 The empty-string hash, pinned on purpose
+### 3.7 The empty placeholders, and the hash they no longer need
 
-#376's placeholders stay quiet only because the built `style-src` already
-carries the hash of an empty string, `'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='`.
-It is in the built page today (checked in a September build) and nothing says
-why. So:
+#376's placeholders were quiet while the built `style-src` carried the hash of
+an empty string, which Astro wrote on its own. Astro 7.4.3 stopped (#555), and
+the pane stays styled with zero violations, so the hash was never the
+requirement; the outcome is. So:
 
-- **The placeholders go in the page template**, empty, so Astro hashes their
-  content itself and the hash is there by construction, not by accident.
-- **The styled-pane gate asserts it**: the built page's `style-src` carries the
-  empty-string hash, a `?debug` page records zero `securitypolicyviolation`
-  events, and a pane element's computed style is not the browser default.
+- **The placeholders go in the page template**, empty.
+- **The styled-pane gate asserts the outcome**: a `?debug` page records zero
+  `securitypolicyviolation` events, and a pane element's computed style is not
+  the browser default. It does not assert the hash.
 - **No `'unsafe-inline'` and no Tweakpane content hashes**, for #376's reasons.
 
 ### 3.8 Types for the two libraries
@@ -960,7 +959,7 @@ until then.
 | **pickup** | Clicking a book reaches the held state with its page, and `location.href` is unchanged; the moved G35 checks; the open spread of §3.6 | step 4 | G35 (`enhanced-card`), reworded |
 | **held reader** | With a book held, one program reads the shadow map in at most `BUDGET` draws | step 4 | G61 (`one-shadow-reader`), extended to a second page |
 | **tuner split** | A page without `?debug` loads zero tuner bytes, JS or CSS | step 4 | a new row |
-| **styled pane** | Under the built site's CSP, a `?debug` page's pane is styled, with zero violations and the empty-string hash in `style-src` | step 4 | a new row |
+| **styled pane** | Under the built site's CSP, a `?debug` page's pane is styled, with zero violations | step 4 | a new row |
 
 **Two new rows, the rest extensions.** #367 chose to extend G2 rather than mint
 a row, and the inspector rules ride G20's existing plants. The two tuner rows

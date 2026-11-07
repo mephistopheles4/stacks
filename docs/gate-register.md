@@ -6561,9 +6561,10 @@ read after.
    cases, which open `?debug`.
 2. **Planted**: both placeholders removed from `index.astro`. Two violations,
    one per bundle, and the row red. ⚠️ **The empty-string hash stayed in
-   `style-src`** with no placeholder on the page, so Astro writes it for a
-   reason of its own; the spec's "by construction" did not hold, and this row
-   is what pins the hash.
+   `style-src`** with no placeholder on the page, so the spec's "by
+   construction" did not hold. The row asserted the hash until Astro 7.4.3
+   stopped writing it (#555); the pane stays styled with zero violations
+   without it, so the assertion was dropped and the row keeps the outcome.
 
 - **Weakening** — **exposed.** "Styled" is one computed property, the root
   pane's background, read against the browser's transparent default. A check
