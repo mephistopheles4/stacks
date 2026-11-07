@@ -1,17 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import {
   atRestFailures,
+  CLOSED_HINT,
+  controlsFailures,
+  drawerFailures,
+  lostFailures,
   phoneFailures,
   pickupFailures,
   spreadFailures,
   viewerFailures,
   type AtRestRead,
+  type ClosedRead,
+  type ControlsRead,
+  type LostCase,
+  type PhoneRead,
   type PickupRead,
   type SpreadRead,
   type ViewerRead,
+  type ViewportControls,
 } from './pickup-gate.ts';
 
+const closed: ClosedRead = {
+  boardAngle: 0.1,
+  opened: false,
+  pagesHidden: true,
+  xOnScreen: true,
+  hint: CLOSED_HINT,
+  openName: 'Open Harbour Garden',
+  title: 'Harbour Garden',
+};
+
 const good: PickupRead = {
+  closed,
   held: 'Harbour Garden',
   pageTitle: 'Harbour Garden',
   reading: 'read · finished 2024-03-02',
@@ -31,6 +51,14 @@ const good: PickupRead = {
   historyHeld: true,
   focusUnmoved: true,
   focusCaught: true,
+  focusCaughtOpen: true,
+  afterEscapeOpen: {
+    held: false,
+    announced: '',
+    historyHeld: false,
+    hrefUnchanged: true,
+    pages: 0,
+  },
   pagesInView: true,
   thoughtsShown: true,
   second: {
@@ -42,6 +70,7 @@ const good: PickupRead = {
   afterPutBack: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
   afterEscape: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
   afterBack: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
+  afterBackOpen: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
 };
 
 describe('pickupFailures', () => {
@@ -66,6 +95,7 @@ describe('pickupFailures', () => {
     ],
     ['focus moved by the pickup', { focusUnmoved: false }, /focus moved/],
     ['focus dropped by Escape', { focusCaught: false }, /dropped focus/],
+    ['focus dropped by Escape from an open book', { focusCaughtOpen: false }, /open book/],
     ['pages off the desktop viewport', { pagesInView: false }, /run off the desktop viewport/],
     ['Thoughts missing from a flagged book', { thoughtsShown: false }, /opened without them/],
     ['no flagged book picked up', { thoughtsShown: undefined }, /no book flagged with Thoughts/],
@@ -83,7 +113,7 @@ describe('pickupFailures', () => {
     ['a second pickup that announced nothing', { announced: '' }, /announced nothing/],
     ['an unchanged announcement', { announced: good.announced }, /did not change/],
     ['the first book still held', { held: good.held }, /left the first book held/],
-    ['no put-back on the second page', { putBack: false }, /second book's page/],
+    ['no X for the second book', { putBack: false }, /X was not there for the second book/],
     ["the first book's pages left behind", { pages: 4 }, /outlived it/],
   ])('fails on %s', (_name, patch, message) => {
     expect(pickupFailures({ ...good, second: { ...good.second, ...patch } }).join('\n')).toMatch(
@@ -101,6 +131,79 @@ describe('pickupFailures', () => {
     expect(
       pickupFailures({ ...good, afterPutBack: { ...good.afterPutBack, ...patch } }).join('\n'),
     ).toMatch(message);
+  });
+});
+
+describe('pickupFailures, the closed book (#531)', () => {
+  it.each<[string, Partial<ClosedRead>, RegExp]>([
+    ['a board off closed', { boardAngle: 4 }, /4\.0° off closed/],
+    ['a board hinged the other way', { boardAngle: 180 }, /off closed/],
+    ['a book that arrived open', { opened: true }, /arrived open/],
+    ['pages showing on a closed book', { pagesHidden: false }, /pages are not hidden/],
+    ['an X off screen', { xOnScreen: false }, /X is not on screen/],
+    ['a hint that does not say a click opens it', { hint: 'Drag to look around' }, /hint/],
+    ['no Open button', { openName: '' }, /Open button/],
+    ['an Open button named for another book', { openName: 'Open Paper Ledger' }, /Open button/],
+  ])('fails on %s', (_name, patch, message) => {
+    expect(pickupFailures({ ...good, closed: { ...closed, ...patch } }).join('\n')).toMatch(
+      message,
+    );
+  });
+
+  it('judges the board within the same half degree as the examined book', () => {
+    expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: 0.5 } })).toEqual([]);
+    expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: 0.51 } }).length).toBe(1);
+    expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: -0.51 } }).length).toBe(1);
+  });
+
+  it('holds Escape to account from an open book too, history included', () => {
+    const left = { ...good.afterEscapeOpen, historyHeld: true };
+    expect(pickupFailures({ ...good, afterEscapeOpen: left }).join('\n')).toMatch(
+      /Escape from an open book left the pickup's history entry/,
+    );
+  });
+
+  it('holds the back button to account from an open book too', () => {
+    const open = { ...good.afterBackOpen, held: true };
+    expect(pickupFailures({ ...good, afterBackOpen: open }).join('\n')).toMatch(
+      /back button from an open book left the book held/,
+    );
+  });
+});
+
+describe('viewerFailures, the coverless book on arrival (#531, C1)', () => {
+  it('fails when a book with no cover arrives off closed, and when none was reached', () => {
+    const base = {
+      opened: true,
+      namedForBook: true,
+      closedAngle: 0,
+      escapeClosedViewer: true,
+      heldAfterEscape: true,
+      pageVisibleAfterEscape: true,
+      held: '/h.jpg',
+      showedHeld: true,
+      withoutHeld: { showedOwn: true },
+      fellBack: true,
+      pathInPage: false,
+      turned: true,
+      keyTurned: true,
+      leftByTap: true,
+      leftByButton: true,
+      reducedCuts: true,
+      fetchedNothing: true,
+      coverlessOpens: true,
+      coverlessArrivesClosed: true,
+      focusInside: true,
+      focusReturned: true,
+      emptiedCloses: true,
+    } satisfies ViewerRead;
+    expect(viewerFailures(base)).toEqual([]);
+    expect(viewerFailures({ ...base, coverlessArrivesClosed: false }).join('\n')).toMatch(
+      /with no cover arrived off closed/,
+    );
+    expect(viewerFailures({ ...base, coverlessArrivesClosed: undefined }).join('\n')).toMatch(
+      /no book without a cover was reached/,
+    );
   });
 });
 
@@ -126,6 +229,7 @@ describe('viewerFailures', () => {
     reducedCuts: true,
     fetchedNothing: true,
     coverlessOpens: true,
+    coverlessArrivesClosed: true,
     emptiedCloses: true,
   };
 
@@ -190,20 +294,25 @@ describe('viewerFailures', () => {
   });
 });
 describe('phoneFailures', () => {
+  const phone: PhoneRead = {
+    pageInView: true,
+    titleLeads: true,
+    putBackInView: true,
+    closedXOnScreen: true,
+  };
+
+  it('fails when the X is off screen while the book is closed', () => {
+    expect(phoneFailures({ ...phone, closedXOnScreen: false }).join('\n')).toMatch(/closed/);
+  });
+
   it('passes a page that fits, leads with the title and keeps put-back on screen', () => {
-    expect(phoneFailures({ pageInView: true, titleLeads: true, putBackInView: true })).toEqual([]);
+    expect(phoneFailures({ ...phone })).toEqual([]);
   });
 
   it('fails each clause alone, and an unreached phone', () => {
-    expect(
-      phoneFailures({ pageInView: false, titleLeads: true, putBackInView: true }),
-    ).toHaveLength(1);
-    expect(
-      phoneFailures({ pageInView: true, titleLeads: false, putBackInView: true }),
-    ).toHaveLength(1);
-    expect(
-      phoneFailures({ pageInView: true, titleLeads: true, putBackInView: false }),
-    ).toHaveLength(1);
+    expect(phoneFailures({ ...phone, pageInView: false })).toHaveLength(1);
+    expect(phoneFailures({ ...phone, titleLeads: false })).toHaveLength(1);
+    expect(phoneFailures({ ...phone, putBackInView: false })).toHaveLength(1);
     expect(phoneFailures(undefined)).toHaveLength(1);
   });
 });
@@ -302,5 +411,203 @@ describe('atRestFailures — the held page at rest (#426)', () => {
   it('fails a links row never scrolled into reach, or one in reach unscrolled', () => {
     expect(atRestFailures({ ...rest, inReachScrolled: false })).toHaveLength(1);
     expect(atRestFailures({ ...rest, inReachUnscrolled: true })).toHaveLength(1);
+  });
+});
+
+describe('controlsFailures — the closed book and its controls (#531)', () => {
+  const inputs = { mouse: true, touch: true, keyboard: true };
+  const viewport: ViewportControls = {
+    opens: inputs,
+    putsBackClosed: inputs,
+    putsBackOpen: inputs,
+    xWidth: 44,
+    xHeight: 44,
+    xOverlaps: [],
+    xOnTopClosed: true,
+    xOnTopOpen: true,
+  };
+  const goodControls: ControlsRead = {
+    desktop: viewport,
+    phone: viewport,
+    xName: 'Put the book back',
+    buttonInTree: true,
+    buttonGoneWhileOpening: true,
+    longTitleOnScreen: true,
+    xStayedPut: true,
+    staysClosed: true,
+    focusToPage: true,
+    focusToPageReduced: true,
+    reducedPickupCuts: true,
+    reducedOpenCuts: true,
+    reducedPutBackCuts: true,
+    markup: [],
+    cspViolations: 0,
+    hintClosed: true,
+    hintOpen: true,
+    cursorPointer: true,
+    cursorReset: true,
+  };
+
+  it('passes a closed book whose controls all work', () => {
+    expect(controlsFailures(goodControls)).toEqual([]);
+  });
+
+  it('says nothing was read when nothing was', () => {
+    expect(controlsFailures(undefined)).toHaveLength(1);
+  });
+
+  it.each<[string, Partial<ControlsRead>, RegExp]>([
+    ['an X with no name', { xName: '' }, /no accessible name/],
+    ['no Open button in the tree', { buttonInTree: false }, /Open button/],
+    [
+      'an Open button left in the tree while opening',
+      { buttonGoneWhileOpening: false },
+      /while it opens/,
+    ],
+    ['an Open button off screen on a long title', { longTitleOnScreen: false }, /fully on screen/],
+    ['an X that moved when Open took focus', { xStayedPut: false }, /X moved/],
+    ['a book that opened by itself', { staysClosed: false }, /opened by itself/],
+    ['focus lost after Open', { focusToPage: false }, /focus did not land on the right-hand page/],
+    [
+      'focus lost after Open under reduced motion',
+      { focusToPageReduced: false },
+      /reduced motion.*focus/,
+    ],
+    [
+      'a pickup that tweened under reduced motion',
+      { reducedPickupCuts: false },
+      /pickup did not cut/,
+    ],
+    [
+      'an opening that tweened under reduced motion',
+      { reducedOpenCuts: false },
+      /opening did not cut/,
+    ],
+    [
+      'a put-back that tweened under reduced motion',
+      { reducedPutBackCuts: false },
+      /put-back did not cut/,
+    ],
+    ['markup built wrongly', { markup: ['the X has a style attribute'] }, /style attribute/],
+    ['a CSP violation', { cspViolations: 2 }, /2 CSP violations/],
+    ['a hint that never changed', { hintClosed: false }, /hint/],
+    ['a hint stuck after opening', { hintOpen: false }, /hint/],
+    ['no pointer cursor over the book', { cursorPointer: false }, /cursor/],
+    ['a cursor left behind', { cursorReset: false }, /cursor/],
+  ])('fails on %s', (_name, patch, message) => {
+    expect(controlsFailures({ ...goodControls, ...patch }).join('\n')).toMatch(message);
+  });
+
+  it.each<[string, Partial<ViewportControls>, RegExp]>([
+    ['a mouse that cannot open', { opens: { ...inputs, mouse: false } }, /mouse could not open/],
+    ['a touch that cannot open', { opens: { ...inputs, touch: false } }, /touch could not open/],
+    [
+      'a keyboard that cannot open',
+      { opens: { ...inputs, keyboard: false } },
+      /keyboard could not open/,
+    ],
+    [
+      'a mouse that cannot put a closed book back',
+      { putsBackClosed: { ...inputs, mouse: false } },
+      /mouse could not put the closed book back/,
+    ],
+    [
+      'a keyboard that cannot put an open book back',
+      { putsBackOpen: { ...inputs, keyboard: false } },
+      /keyboard could not put the open book back/,
+    ],
+    ['an X under 2.75rem wide', { xWidth: 43 }, /2\.75rem/],
+    ['an X under 2.75rem tall', { xHeight: 40 }, /2\.75rem/],
+    ['an X on the brand', { xOverlaps: ['the brand'] }, /overlaps the brand/],
+    ['an X on the closed book', { xOverlaps: ['the closed book'] }, /overlaps the closed book/],
+    [
+      'an X under something over a closed book',
+      { xOnTopClosed: false },
+      /not the top element.*closed/,
+    ],
+    ['an X under an open page', { xOnTopOpen: false }, /not the top element.*open/],
+  ])('fails at either size on %s', (_name, patch, message) => {
+    for (const where of ['desktop', 'phone'] as const) {
+      const failures = controlsFailures({
+        ...goodControls,
+        [where]: { ...viewport, ...patch },
+      }).join('\n');
+      expect(failures).toMatch(message);
+      expect(failures).toContain(where === 'desktop' ? '1280×800' : '375×812');
+    }
+  });
+});
+
+describe('drawerFailures — every cell of the drawer tables (#531, C6)', () => {
+  const cell = {
+    name: 'click on the book',
+    expected: 'drawer closed; book closed',
+    actual: 'drawer closed; book closed',
+  };
+
+  it('passes cells whose outcome is the spec’s', () => {
+    expect(drawerFailures([cell], 1)).toEqual([]);
+  });
+
+  it('fails when a cell dropped out, so a gap cannot pass as a smaller table', () => {
+    expect(drawerFailures([cell], 2).join('\n')).toMatch(/1 of the 2 cells/);
+  });
+
+  it('fails when there are more cells than the table has', () => {
+    expect(drawerFailures([cell, cell], 1).join('\n')).toMatch(/2 of the 1 cells/);
+  });
+
+  it('names the cell, what the spec says and what happened', () => {
+    const failures = drawerFailures(
+      [
+        {
+          name: 'the X by key',
+          expected: 'drawer open; book away',
+          actual: 'drawer closed; book away',
+        },
+      ],
+      1,
+    );
+
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('the X by key');
+    expect(failures[0]).toContain('drawer open; book away');
+    expect(failures[0]).toContain('drawer closed; book away');
+  });
+
+  it('fails when no cell was read at all', () => {
+    expect(drawerFailures([], 0).join('\n')).toMatch(/no cell/);
+  });
+});
+
+describe('lostFailures — a lost context with a book held (#531, C15)', () => {
+  const clean = {
+    away: true,
+    controlsHidden: true,
+    hintRestored: true,
+    cursorReset: true,
+    focusOnCanvas: true,
+  };
+
+  it('passes a book put away at once, from closed and from open', () => {
+    expect(lostFailures({ closed: clean, open: clean })).toEqual([]);
+  });
+
+  it.each<[string, Partial<LostCase>, RegExp]>([
+    ['a book left in the hand', { away: false }, /still held/],
+    ['controls left showing', { controlsHidden: false }, /controls were left showing/],
+    ['a hint left saying a click opens it', { hintRestored: false }, /hint/],
+    ['a cursor left a pointer', { cursorReset: false }, /cursor/],
+    ['focus dropped to the body', { focusOnCanvas: false }, /focus/],
+  ])('fails on %s, in either state', (_name, patch, message) => {
+    for (const state of ['closed', 'open'] as const) {
+      const read = { closed: clean, open: clean, [state]: { ...clean, ...patch } };
+      expect(lostFailures(read).join('\n')).toMatch(message);
+      expect(lostFailures(read).join('\n')).toContain(state);
+    }
+  });
+
+  it('fails when the loss was never driven', () => {
+    expect(lostFailures(undefined)).toHaveLength(1);
   });
 });

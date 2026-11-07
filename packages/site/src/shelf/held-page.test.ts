@@ -92,7 +92,6 @@ describe('the right-hand page', () => {
       'reading',
       'links',
       'examine',
-      'put-back',
     ]);
   });
 
@@ -104,7 +103,6 @@ describe('the right-hand page', () => {
       'reading',
       'links',
       'examine',
-      'put-back',
     ]);
   });
 
@@ -116,7 +114,6 @@ describe('the right-hand page', () => {
       'reading',
       'links',
       'examine',
-      'put-back',
     ]);
   });
 
@@ -135,7 +132,6 @@ describe('the right-hand page', () => {
       'subjects',
       'links',
       'examine',
-      'put-back',
     ]);
   });
 

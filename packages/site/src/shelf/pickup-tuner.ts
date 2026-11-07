@@ -90,7 +90,7 @@ export function mountPickupTuner(
     });
 
     const timing = folder.addFolder({ title: 'Timing (seconds)' });
-    for (const key of ['slide', 'turn', 'open', 'overlapSlideTurn', 'overlapTurnOpen'] as const) {
+    for (const key of ['slide', 'turn', 'open', 'overlapSlideTurn'] as const) {
       timing.addBinding(motion, key, { min: 0, max: 2, step: 0.01 }).on('change', () => {
         pickup.retime();
       });

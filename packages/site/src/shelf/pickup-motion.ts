@@ -11,24 +11,30 @@ import { PICKUP_MOTION, type Bezier, type PickupMotion } from './shelf-settings.
 export interface Schedule {
   readonly slide: number;
   readonly turn: number;
+  /** Where the track rests, closed and cover-on in the hand, until the visitor opens it. */
+  readonly closed: number;
+  /** Always `closed`: nothing can overlap a rest, so opening begins there. */
   readonly open: number;
   readonly end: number;
 }
 
 /**
- * The three stages, overlapping as #371 accepted.
+ * The three stages: the slide and the turn overlap as #371 accepted, and the
+ * track then rests at `closed` before the opening plays (#531).
  *
- * An overlap is how long before one stage ends the next begins, so it is
- * clamped to the stage it overlaps: no stage starts before its predecessor did.
+ * The overlap is how long before the slide ends the turn begins, so it is
+ * clamped to the slide: the turn never starts before the slide did. Opening
+ * begins at the rest, because nothing can overlap a rest.
  */
 export function schedule(motion: PickupMotion): Schedule {
   const turn = Math.max(0, motion.slide - Math.min(motion.overlapSlideTurn, motion.slide));
-  const open = Math.max(0, turn + motion.turn - Math.min(motion.overlapTurnOpen, motion.turn));
+  const closed = Math.max(motion.slide, turn + motion.turn);
   return {
     slide: 0,
     turn,
-    open,
-    end: Math.max(motion.slide, turn + motion.turn, open + motion.open),
+    closed,
+    open: closed,
+    end: closed + motion.open,
   };
 }
 
