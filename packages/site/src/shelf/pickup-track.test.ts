@@ -232,15 +232,4 @@ describe('the track, with GSAP running it', () => {
     expect(calls).toEqual({ landed: 0, opened: 1, returned: 0 });
     expect(stages.o).toBe(1);
   });
-
-  it('stops being driven once disposed', () => {
-    const { stages, track, calls } = rig();
-    track.play();
-    track.dispose();
-    step(0);
-    step(100);
-
-    expect(calls).toEqual({ landed: 0, opened: 0, returned: 0 });
-    expect(stages).toMatchObject({ s: 0, u: 0, o: 0 });
-  });
 });

@@ -33,7 +33,8 @@ Thoughts takes a second action.
   It is now an X, a hard-coded inline SVG in a real `<button>` in the header,
   under the hint, on screen while the book is closed and while it is open, and
   hidden while the examining view holds the page.
-- **Focus.** It still does not move on a shelf pickup, for ADR-0049's reason. A
+- **Focus.** It still does not move on a shelf pickup, for ADR-0049's reason,
+  which ADR-0102 carried over and this record reopens for one case. A
   chat link is a keyboard path to the shelf, which that reason leaned on there
   not being: after one, with focus on the launcher, focus moves to Open when the
   book lands. After Open is pressed, focus lands on the right-hand page.

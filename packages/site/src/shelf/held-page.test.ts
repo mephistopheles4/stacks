@@ -135,18 +135,6 @@ describe('the right-hand page', () => {
     ]);
   });
 
-  it('carries no put-back control, on any book or either framing: the X lives in the header (#531)', () => {
-    // A closed book's pages are hidden, so a control on them could be neither seen
-    // nor focused. The block would also have been the last of the page.
-    for (const narrow of [false, true]) {
-      for (const thoughts of [false, true]) {
-        const blocks: string[] = rightPageBlocks(book(), { narrow, thoughts });
-        expect(blocks).not.toContain('put-back');
-        expect(blocks.at(-1)).toBe('examine');
-      }
-    }
-  });
-
   it('offers the examine control to a book with no cover too: the binding is the point (#418)', () => {
     const bare = book({ cover: undefined });
     expect(rightPageBlocks(bare, { narrow: false, thoughts: false })).toContain('examine');

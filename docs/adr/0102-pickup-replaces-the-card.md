@@ -26,9 +26,6 @@ Thoughts. The card overlay retires.
   stays**, opened from the page, showing the held copy when one exists.
 - **Focus still never moves on pickup**, for ADR-0049's reason: there is no
   keyboard path to the shelf, so there is no origin to return focus to.
-  ([ADR-0137](0137-a-picked-up-book-arrives-closed.md) reopens this for one case:
-  a chat link is a keyboard path to the shelf, and after one focus moves to
-  Open.)
 
 ## What it supersedes
 

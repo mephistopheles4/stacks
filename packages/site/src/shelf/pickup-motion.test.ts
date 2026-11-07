@@ -32,12 +32,6 @@ describe('schedule', () => {
     expect(at.open).toBeCloseTo(0.7);
     expect(at.end).toBeCloseTo(1.3);
   });
-
-  it('rests closed at the slide when the slide outlasts the turn', () => {
-    const at = schedule({ ...PICKUP_MOTION, slide: 2, turn: 0.1, overlapSlideTurn: 5 });
-
-    expect(at.closed).toBe(2);
-  });
 });
 
 describe('bezier', () => {

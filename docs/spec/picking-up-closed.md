@@ -292,7 +292,7 @@ motion" becomes "cuts to closed, then cuts to open".
 | C3 | Opening reaches §3.6's spread: 180° ±0.5°, both pages square, no gutter gap over 1 px | Functional |
 | C4 | Mouse, touch and keyboard can each open the book and put it back, from closed and from open, at 1280×800 and 375×812 | Interaction |
 | C5 | A screen reader's tree holds a button named "Open «Title»" while closed at rest, and not during the opening. Focused, it is fully on screen with the longest fixture title at 375×812, and the X does not move. Focus lands on the right-hand page after it is pressed, also under reduced motion | Interaction |
-| C6 | Every cell of S3's tables gives its stated result in a browser, the motion cases included | Functional |
+| C6 | Every cell of S3's tables that a pointer, a key or a link can reach gives its stated result in a browser, the motion cases included. **Two cells have no browser read, by the owner's decision on 2026-11-07**: a click on another book while one is held (the held book stands in front of the whole shelf at 1280×800, so nothing aims at another) and a click while the book lifts (a race). `pickup-state.test.ts` holds both | Functional |
 | C7 | Under reduced motion, pickup cuts to closed, opening cuts to open, and put-back cuts | Interaction |
 | C8 | The X is a `<button>` with a non-empty name and a target of at least 2.75rem, on screen while closed and while open. At 1280×800 and 375×812 it overlaps neither `.brand`, the hint nor the closed book, and it is the top element at its centre, also over an open page | Interaction |
 | C9 | The X and the arrow are inline SVGs with `aria-hidden` and `focusable="false"`. The page's CSP is unchanged, with zero violations on a built page | Compatibility |

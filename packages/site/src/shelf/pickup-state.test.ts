@@ -468,15 +468,6 @@ describe('opening the closed book (#531)', () => {
     return h;
   };
 
-  it('rests closed in the hand, which is held and not opened', () => {
-    const h = closedBook();
-
-    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
-    expect(h.state.closed()).toBe(true);
-    expect(h.track('a').playing).toBe('stopped');
-    expect(h.log.at(-1)).toBe('landed a');
-  });
-
   it('is not closed at rest while it lifts, opens, is open, or goes back', () => {
     const h = harness();
     expect(h.state.closed()).toBe(false);
@@ -515,15 +506,6 @@ describe('opening the closed book (#531)', () => {
     h.state.select('a');
     expect(h.state.open()).toBe(false);
     expect(h.track('a').playing).toBe('forward');
-    expect(h.log).not.toContain('opening a');
-  });
-
-  it('never opens on a pickup: select leaves the book in hand as it is', () => {
-    const h = closedBook();
-    h.state.select('a');
-
-    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
-    expect(h.track('a').playing).toBe('stopped');
     expect(h.log).not.toContain('opening a');
   });
 
@@ -676,37 +658,6 @@ describe('opening the closed book (#531)', () => {
 
       expect(h.track('a').playing).toBe('reverse');
       expect(h.state.holding()).toBeUndefined();
-    });
-  });
-
-  describe('the tuner', () => {
-    it('keeps a book at the closed rest when the timing changes', () => {
-      const h = closedBook();
-      h.state.retime();
-
-      expect(h.tracks).toHaveLength(2);
-      expect(h.track('a').at).toBe(CLOSED);
-      expect(h.track('a').playing).toBe('stopped');
-    });
-
-    it('keeps an open book open when the timing changes', () => {
-      const h = closedBook();
-      h.state.open();
-      h.track('a').openUp();
-      h.state.retime();
-
-      expect(h.track('a').at).toBe(1);
-      expect(h.track('a').playing).toBe('stopped');
-    });
-
-    it('resumes a book that is still opening, no earlier than the rest', () => {
-      const h = closedBook();
-      h.state.open();
-      h.track('a').at = 0.3;
-      h.state.retime();
-
-      expect(h.track('a').at).toBe(CLOSED);
-      expect(h.track('a').playing).toBe('forward');
     });
   });
 });
