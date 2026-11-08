@@ -13,7 +13,10 @@ the observations a caller may print. The rules: `note-body`, `vault-path`,
 `headers`, `og-image`, and — added later, by
 [#127](https://github.com/mephistopheles4/stacks/issues/127) — `csp`, and, by
 [#410](https://github.com/mephistopheles4/stacks/issues/410), `orphan-note` and
-`notes-shape`.
+`notes-shape`, and, by
+[#562](https://github.com/mephistopheles4/stacks/issues/562), `privacy`, which
+checks that `/privacy` names Cloudflare Web Analytics in every build and names
+Plausible only in a build made with analytics on.
 `PUBLIC_BUILD_RULES` is the list; the type is derived from it, and G20 asserts
 every member has been watched going red. That last clause is what lets a rule
 join without a new gate row, and it is the mechanism #127 was written to use.

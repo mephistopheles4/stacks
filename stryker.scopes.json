@@ -1,6 +1,6 @@
 {
   "$comment": [
-    "The eight declared scopes, from docs/spec/mutation-scoring.md §§4-5.",
+    "The nine declared scopes, from docs/spec/mutation-scoring.md §§4-5.",
     "",
     "Data rather than a comment block, for two reasons. A scope's glob is its",
     "definition and its name is only its identity, so the two have to sit beside",
@@ -156,6 +156,11 @@
           "mechanism": "The bloom composer, imported only by `scene.ts`. Same browser-only chain."
         }
       ]
+    },
+    {
+      "name": "packages/site/src/analytics",
+      "glob": "packages/site/src/analytics/**/*.ts",
+      "exclusions": []
     },
     {
       "name": "packages/cli/src",

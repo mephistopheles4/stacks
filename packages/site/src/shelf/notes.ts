@@ -22,7 +22,7 @@ export interface NotesBook {
 }
 
 /** `idFor`'s shape: lower-case slug words joined by single hyphens. */
-const BOOK_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const BOOK_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function notesPath(id: string): string | undefined {
   return BOOK_ID.test(id) ? `/notes/${id}.json` : undefined;

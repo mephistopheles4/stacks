@@ -274,7 +274,7 @@ describe('attributeClones — a clone is a relation, and relations do not partit
     expect(counted.get('alpha')).toEqual({ clones: 1, duplicatedLines: 9 });
   });
 
-  it('counts a cross-scope clone in both scopes, so the eight do not sum to a total', () => {
+  it('counts a cross-scope clone in both scopes, so the nine do not sum to a total', () => {
     const counted = attributeClones([clone('alpha/a.ts', 'beta/b.ts', 12)], scopes, '.');
     expect(counted.get('alpha')).toEqual({ clones: 1, duplicatedLines: 12 });
     expect(counted.get('beta')).toEqual({ clones: 1, duplicatedLines: 12 });
@@ -525,7 +525,7 @@ describe('duplicationCapsUnaccounted — a population capped by nothing is found
     expect(duplicationCapsUnaccounted(declared)).toEqual([]);
 
     const caps = [...declared.populations.values()].flatMap((entry) => [...entry.caps.values()]);
-    expect(caps).toHaveLength(8 * 3 + 3);
+    expect(caps).toHaveLength(9 * 3 + 3);
     expect(caps.every((entry) => entry.cap === 'unarmed')).toBe(true);
   });
 });

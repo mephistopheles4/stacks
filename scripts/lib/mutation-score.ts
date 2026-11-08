@@ -1,5 +1,5 @@
 /**
- * One Stryker report, tallied against the eight declared scopes.
+ * One Stryker report, tallied against the nine declared scopes.
  *
  * Extracted from `scripts/mutation-scopes.ts`, which is now only its printer,
  * because a second consumer arrived: `scripts/emit-metrics.ts` writes the same

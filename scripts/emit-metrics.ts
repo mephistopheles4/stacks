@@ -263,7 +263,7 @@ function previousScoringRun(fetched: FetchedRecord): { name: string; commit: str
  * `scripts` mutation scope and no spec imports it, so a rule written at this
  * level would be a rule nothing holds.
  *
- * The tree is walked once and handed to every scope, rather than eight walks.
+ * The tree is walked once and handed to every scope, rather than nine walks.
  */
 async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> {
   try {
@@ -294,11 +294,11 @@ async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> 
  * The four counts over each of the two duplication populations, or the eight
  * names failed.
  *
- * ⚠️ **Ten jscpd runs, and each one is there for a reason the others cannot
- * cover.** One over the **union** of the eight populations, because a clone is
- * a relation between two places and eight separate runs are structurally blind
+ * ⚠️ **Eleven jscpd runs, and each one is there for a reason the others cannot
+ * cover.** One over the **union** of the nine populations, because a clone is
+ * a relation between two places and nine separate runs are structurally blind
  * to a clone spanning two scopes — that run is where every scope's clone count
- * and duplicated-line count comes from, attributed by glob. Eight more, one per
+ * and duplicated-line count comes from, attributed by glob. Nine more, one per
  * scope, because jscpd publishes no per-file line count and **its denominator
  * must not be reimplemented**: a hand-rolled one disagreed with jscpd on three
  * of ninety-five files, once by twenty-seven lines. And one over the whole tree.

@@ -1,6 +1,8 @@
 ---
 import type { NoticeProps } from '../site-meta.ts';
 import { absoluteUrl } from '../site-meta.ts';
+import { analyticsOn } from '../analytics/on.ts';
+import AnalyticsStart from './AnalyticsStart.astro';
 
 // A page of notice text: the shelf's palette, no canvas, and `noindex`. Shared by `/attribution`
 // and `/privacy`, so the two are one layout and one style and cannot drift.
@@ -37,6 +39,7 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
     <main>
       <slot />
     </main>
+    {analyticsOn && <AnalyticsStart />}
   </body>
 </html>
 

@@ -226,7 +226,7 @@
     "rather than an omission. See docs/adr/0061-the-mutation-floor-refuses-deploy.md and",
     "docs/adr/0068-the-complexity-cap-only-falls.md."
   ],
-  "configHash": "sha256:5ef1e97654e45a1f533ea35603b3f1ccb64be1b3f8851f14dae1fd626f6fa14d",
+  "configHash": "sha256:8e7769670583154a2150810fd7ec7180af2bdffe06ef4a9d12181dfb703d39f1",
   "fixtureHash": "sha256:2af72f80e58a4aed4c9725b7bd4f8c035e2659ed5843e819befc253218691c6a",
   "scopes": {
     "packages/core/src": {
@@ -293,6 +293,17 @@
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
         "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
         "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "packages/site/src/analytics": {
+      "floor": "unarmed",
+      "armed": "2026-11-07",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-11-07", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-11-07", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-11-07", "notes": [] }
       }
     },
     "packages/cli/src": {

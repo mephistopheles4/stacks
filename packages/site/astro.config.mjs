@@ -1,5 +1,20 @@
 import { defineConfig } from 'astro/config';
 import { tunerCssPlugin } from '../../scripts/lib/tuner-css-plugin.ts';
+import { readSwitch } from './src/analytics/switch.ts';
+
+// The analytics switch (docs/spec/optional-plausible.md S3), decided once, here.
+// Read from `process.env` only: a value in packages/site/.env* is ignored, so the
+// config and the page cannot disagree. A malformed value throws and fails the
+// build, with a message that never echoes it.
+const analytics = readSwitch(process.env.PUBLIC_PLAUSIBLE_DOMAIN);
+
+// ADR-0139 amends ADR-0065 and ADR-0128, which kept `connect-src 'self'`. There
+// are exactly two policy shapes. Off is today's policy. On adds
+// `https://plausible.io` to `connect-src` and nothing else, because the tracker
+// is bundled from npm and served from 'self'. The on shape admits every Plausible
+// account, not only the owner's; the owner accepted that (S16 Q2). G20 holds the
+// two shapes and refuses anything else.
+const connectSrc = analytics.on ? "connect-src 'self' https://plausible.io" : "connect-src 'self'";
 
 // Static output only. The `--public` build has to be a plain deployable folder
 // (GitHub Pages / Cloudflare Pages), so there is no adapter and no SSR here.
@@ -21,6 +36,9 @@ export default defineConfig({
   // in production. A build has no server, so it carries none of this.
   vite: {
     plugins: [tunerCssPlugin()],
+    // A string literal, `""` when off. Site code branches on it and Rollup folds
+    // the branch, so an off build carries no tracker chunk.
+    define: { __PLAUSIBLE_DOMAIN__: JSON.stringify(analytics.on ? analytics.domain : '') },
     server: { proxy: { '/api/chat': 'http://localhost:8787' } },
   },
 
@@ -57,7 +75,7 @@ export default defineConfig({
         // fonts, no `data:` URIs, no workers, no forms and no frames.
         "default-src 'none'",
         "img-src 'self'",
-        "connect-src 'self'",
+        connectSrc,
         "base-uri 'none'",
         "form-action 'none'",
         // Turnstile's challenge frame, for the Ask the library drawer

@@ -43,6 +43,7 @@
 import * as THREE from 'three';
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import type { LibraryBook } from '@stacks/core';
+import { trackBook } from '../analytics/events.ts';
 import { announceHeld, LAUNCHER_ID } from '../ask/bridge.ts';
 import { dragTurn, isTurnKey, keyTurn, press, SQUARE, type Press, type Turn } from './book-turn.ts';
 import { announcement } from './card.ts';
@@ -287,6 +288,9 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         lift(book);
       },
       landed: (book) => {
+        // Once per landing, from a click or a chat link alike: both reach here
+        // through the state machine (docs/spec/optional-plausible.md S6).
+        trackBook('Book Picked Up', book.id);
         // At rest, closed and cover-on: the pages are still hidden and the Open
         // button is the way in. Long Thoughts scroll once it is open.
         current.redrawShadows();
@@ -312,6 +316,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         syncControls();
       },
       opened: (book) => {
+        trackBook('Book Opened', book.id);
         const entry = lifted.get(book.id);
         entry?.pages.setScrollable(true);
         current.redrawShadows();

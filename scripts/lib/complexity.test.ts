@@ -242,7 +242,12 @@ describe('the population rule', () => {
   it('leaves the top of an excluded directory out, because no glob reaches it', () => {
     const claimed = readDeclarations()
       .scopes.flatMap((scope) => populationOf(scope, files))
-      .filter((file) => file.startsWith('packages/site/src/') && !file.includes('/shelf/'));
+      .filter(
+        (file) =>
+          file.startsWith('packages/site/src/') &&
+          !file.includes('/shelf/') &&
+          !file.includes('/analytics/'),
+      );
     expect(claimed).toEqual([]);
   });
 });

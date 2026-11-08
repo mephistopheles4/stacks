@@ -1,3 +1,4 @@
+import { trackAsk } from '../analytics/events.ts';
 import { onHeld, requestPickUp } from './bridge.ts';
 import { answerWith, askLibrary, type AskResult } from './client.ts';
 import { createOutsideClick, escapeTakenBy, type CloseReason } from './close.ts';
@@ -52,6 +53,7 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   function show(): void {
     if (open) return;
     open = true;
+    trackAsk('Ask Opened');
     motion.enter();
     launcher.setAttribute('aria-expanded', 'true');
     // The first open starts Cloudflare's script. A visitor who never opens the

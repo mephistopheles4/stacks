@@ -14,7 +14,15 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { describeStaleCover, probeBuild, probeCovers, stampMeta, stampOf } from './edge-probe.ts';
+import {
+  connectSrcMatches,
+  connectSrcOf,
+  describeStaleCover,
+  probeBuild,
+  probeCovers,
+  stampMeta,
+  stampOf,
+} from './edge-probe.ts';
 
 const ORIGIN = 'https://stacks.example';
 const STAMP = 'a1b2c3d4e5f6';
@@ -54,6 +62,43 @@ const QUICK = { attempts: 3, waitMs: 0 };
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe('connectSrcOf', () => {
+  const policy = (content: string): string =>
+    `<meta http-equiv="content-security-policy" content="${content}">`;
+
+  it('reads connect-src and leaves the hashes out', () => {
+    expect(
+      connectSrcOf(
+        policy("default-src 'none'; connect-src 'self' https://plausible.io 'sha256-abc';"),
+      ),
+    ).toEqual(["'self'", 'https://plausible.io']);
+  });
+
+  it('is undefined when the page has no policy or no connect-src', () => {
+    expect(connectSrcOf(page(STAMP))).toBeUndefined();
+    expect(connectSrcOf(policy("default-src 'none';"))).toBeUndefined();
+  });
+
+  it('matches the built shape in any order, and never a missing or different one', () => {
+    const on = ["'self'", 'https://plausible.io'];
+    expect(connectSrcMatches(['https://plausible.io', "'self'"], on)).toBe(true);
+    expect(connectSrcMatches(["'self'"], on)).toBe(false);
+    expect(connectSrcMatches(on, ["'self'"])).toBe(false);
+    expect(connectSrcMatches(["'self'", 'https://other.example'], on)).toBe(false);
+    expect(connectSrcMatches(undefined, ["'self'"])).toBe(false);
+  });
+
+  it('rides along on a current answer, and only there', async () => {
+    const live = `<html><head>${stampMeta(STAMP)}${policy("connect-src 'self' https://plausible.io;")}</head></html>`;
+    vi.stubGlobal('fetch', answering([ok(live)]));
+    expect(await probeBuild(ORIGIN, STAMP, QUICK)).toEqual({
+      kind: 'current',
+      serving: STAMP,
+      connectSrc: ["'self'", 'https://plausible.io'],
+    });
+  });
 });
 
 describe('stampOf', () => {

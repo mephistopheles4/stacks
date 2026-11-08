@@ -75,6 +75,7 @@ export const PUBLIC_BUILD_RULES = [
   'headers',
   'og-image',
   'csp',
+  'privacy',
 ] as const;
 
 export type PublicBuildRule = (typeof PUBLIC_BUILD_RULES)[number];
@@ -107,6 +108,17 @@ export interface InspectOptions {
    * only shows up in someone else's chat window.
    */
   readonly origin: string;
+  /**
+   * Which of the two policy shapes the build was made with
+   * ([ADR-0139](../../docs/adr/0139-optional-plausible-direct-to-plausible-io.md)).
+   *
+   * Required, and **passed in, never read from the environment**: no rule and
+   * no test here reads `PUBLIC_PLAUSIBLE_DOMAIN`, so `deploy:site`, which loads
+   * `.env` and then runs the suite, gets the same green whether the switch is
+   * on or off. `gate:public` always passes `'off'`, because it builds the
+   * fixture vault with the variable removed from its child's environment.
+   */
+  readonly analytics: 'on' | 'off';
 }
 
 /**
@@ -436,6 +448,7 @@ const CSP_META = /<meta\s+http-equiv="content-security-policy"\s+content="([^"]*
 const CSP_DIRECTIVES: ReadonlyMap<string, readonly string[]> = new Map([
   ['default-src', ["'none'"]],
   ['img-src', ["'self'"]],
+  // The off shape. `cspDirectives('on')` swaps in the one other.
   ['connect-src', ["'self'"]],
   ['base-uri', ["'none'"]],
   ['form-action', ["'none'"]],
@@ -447,6 +460,29 @@ const CSP_DIRECTIVES: ReadonlyMap<string, readonly string[]> = new Map([
   ['frame-src', ['https://challenges.cloudflare.com']],
   ['style-src', ["'self'"]],
 ]);
+
+/**
+ * The pinned policy for one of the two shapes the switch allows.
+ *
+ * **Exactly two shapes, and never a third.** Off is today's policy. On adds
+ * `https://plausible.io` to `connect-src` and changes nothing else, because the
+ * tracker is bundled from npm and served from `'self'`. What the on shape admits
+ * is every Plausible account, not only the owner's: a CSP source cannot name an
+ * account. The owner accepted that (docs/spec/optional-plausible.md S16 Q2).
+ */
+export function cspDirectives(analytics: 'on' | 'off'): ReadonlyMap<string, readonly string[]> {
+  if (analytics === 'off') return CSP_DIRECTIVES;
+  return new Map([...CSP_DIRECTIVES, ['connect-src', ["'self'", 'https://plausible.io']]]);
+}
+
+/**
+ * What an off build must never hold: the tracker's host name. A pattern and not
+ * a `.includes` call, because CodeQL reads a URL-like literal passed to
+ * `.includes` as a host check done by substring
+ * (js/incomplete-url-substring-sanitization). This is a scan for a trace in
+ * files, never a check of a URL against an allowlist.
+ */
+const TRACKER_TRACE = /plausible\.io/;
 
 /**
  * Framing, denied twice, because a `<meta>` CSP cannot deny it at all.
@@ -814,6 +850,7 @@ export async function inspectPublicBuild(
   //
   // It cannot go vacuous: a build with no HTML in it has already failed
   // `robots` above, so this loop is never silent over an empty folder.
+  const pinned = cspDirectives(options.analytics);
   let policed = 0;
   for (const file of pages) {
     const where = posix(relative(dir, file));
@@ -830,7 +867,7 @@ export async function inspectPublicBuild(
     const directives = parseCsp(found[1] ?? '');
     const before = problems.length;
 
-    for (const [name, wanted] of CSP_DIRECTIVES) {
+    for (const [name, wanted] of pinned) {
       const declared = directives.get(name);
       if (declared === undefined) {
         fail(
@@ -872,7 +909,7 @@ export async function inspectPublicBuild(
     // Raised by review on the pull request that added this rule, which is the
     // second time here that checking the named thing missed the unnamed one.
     for (const name of directives.keys()) {
-      if (CSP_DIRECTIVES.has(name)) continue;
+      if (pinned.has(name)) continue;
       fail(
         'csp',
         `${where} declares ${name}, which nothing in this repo names — a directive outside the pinned ` +
@@ -887,9 +924,65 @@ export async function inspectPublicBuild(
   if (policed > 0 && policed === pages.length) {
     // Counted, not assumed — the same rule the share-image observation follows.
     observations.push(
-      `${String(policed)} page(s), every one policed to ${String(CSP_DIRECTIVES.size)} pinned CSP directive(s), ` +
-        `connect-src ${(CSP_DIRECTIVES.get('connect-src') ?? []).join(' ')}`,
+      `${String(policed)} page(s), every one policed to ${String(pinned.size)} pinned CSP directive(s), ` +
+        `connect-src ${(pinned.get('connect-src') ?? []).join(' ')} (analytics ${options.analytics})`,
     );
+  }
+
+  // ── An off build ships no trace of the tracker ────────────────────────────
+  //
+  // Under `'off'`: no file under `dist/` names `plausible.io`, and neither notice
+  // page holds a module script, because an off build starts nothing on them
+  // (docs/spec/optional-plausible.md S5, claim C2). A file that does is a tracker
+  // chunk the switch failed to drop. Reported as `csp` because it is the same
+  // claim as the policy's: what this build may talk to.
+  if (options.analytics === 'off') {
+    for (const file of walk(dir)) {
+      if (!TEXTUAL.has(extname(file))) continue;
+      if (TRACKER_TRACE.test(readFileSync(file, 'utf8'))) {
+        fail(
+          'csp',
+          `${posix(relative(dir, file))} names plausible.io in a build made with analytics off — ` +
+            'the switch did not remove the tracker',
+        );
+      }
+    }
+    for (const notice of ['attribution/index.html', 'privacy/index.html']) {
+      const text = readIfPresent(join(dir, notice));
+      if (/<script\b[^>]*\btype=["']?module/i.test(text)) {
+        fail(
+          'csp',
+          `${notice} holds a module script in a build made with analytics off — ` +
+            'that page ships no script unless the switch is on',
+        );
+      }
+    }
+  }
+
+  // ── What the privacy page says it counts with ─────────────────────────────
+  //
+  // C9: `/privacy` names Cloudflare Web Analytics in every build, and Plausible
+  // only in a build with the switch on, so the page cannot describe a tracker the
+  // build does not carry or omit one it does. Judged only when the page is in the
+  // build: the synthetic folder some specs plant has none.
+  const privacy = readIfPresent(join(dir, 'privacy', 'index.html'));
+  if (privacy !== '') {
+    if (!privacy.includes('Cloudflare Web Analytics')) {
+      fail(
+        'privacy',
+        'privacy/index.html does not name Cloudflare Web Analytics, which is live on the zone',
+      );
+    }
+    const names = privacy.includes('Plausible');
+    if (options.analytics === 'on' && !names) {
+      fail(
+        'privacy',
+        'privacy/index.html does not name Plausible in a build made with analytics on',
+      );
+    }
+    if (options.analytics === 'off' && names) {
+      fail('privacy', 'privacy/index.html names Plausible in a build made with analytics off');
+    }
   }
 
   if (/^\s*Disallow:\s*\/\s*$/m.test(readIfPresent(join(dir, 'robots.txt')))) {

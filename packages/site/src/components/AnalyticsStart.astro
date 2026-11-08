@@ -1,0 +1,11 @@
+---
+// Starts the tracker on a notice page. The shelf starts it from its own script; `/attribution`
+// and `/privacy` ship no script in an off build, so `NoticePage` renders this only when the
+// switch is on (docs/spec/optional-plausible.md S7). One call into a `.ts` module, nothing more.
+---
+
+<script>
+  import { startAnalytics } from '../analytics/events.ts';
+
+  startAnalytics(location);
+</script>

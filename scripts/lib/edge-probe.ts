@@ -53,8 +53,49 @@ export function stampMeta(name: string): string {
   return `<meta name="stacks:build" content="${name}">`;
 }
 
+/**
+ * The sources a page's CSP `<meta>` gives `connect-src`, hashes left out, or
+ * `undefined` when the page states no policy or none for that directive.
+ *
+ * Read from the meta tag for the reason the stamp is: its content survives edge
+ * transforms. `deploy:site` compares it with the shape it built, so a `current`
+ * build whose live policy differs is caught (docs/spec/optional-plausible.md S8).
+ * The pattern is `CSP_META`'s in `public-build.ts`, which this module does not
+ * import because that one pulls in sharp.
+ */
+export function connectSrcOf(page: string): string[] | undefined {
+  const policy = /<meta\s+http-equiv="content-security-policy"\s+content="([^"]*)"/i.exec(
+    page,
+  )?.[1];
+  if (policy === undefined) return undefined;
+  for (const part of policy.split(';')) {
+    const [name, ...sources] = part.trim().split(/\s+/);
+    if (name?.toLowerCase() === 'connect-src') {
+      return sources.filter((source) => source !== '' && !source.startsWith("'sha"));
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Whether the live policy's `connect-src` is the shape the build made: the same
+ * sources, in any order. `undefined` (no policy, or none for the directive) never
+ * matches, because a live page that states no policy is not the build
+ * (docs/spec/optional-plausible.md S8, C10).
+ */
+export function connectSrcMatches(
+  live: readonly string[] | undefined,
+  built: readonly string[],
+): boolean {
+  return (
+    live !== undefined &&
+    live.length === built.length &&
+    built.every((source) => live.includes(source))
+  );
+}
+
 export type EdgeAnswer =
-  | { kind: 'current'; serving: string }
+  | { kind: 'current'; serving: string; connectSrc?: string[] }
   | { kind: 'stale'; serving: string | undefined }
   | { kind: 'refused'; status: number }
   | { kind: 'unreachable' };
@@ -132,8 +173,14 @@ async function askOnce(origin: string, expected: string, last: boolean): Promise
     return { kind: 'retry', message: `origin answered HTTP ${String(response.status)}` };
   }
 
-  const serving = stampOf(await response.text());
-  if (serving === expected) return { kind: 'current', serving };
+  const body = await response.text();
+  const serving = stampOf(body);
+  if (serving === expected) {
+    const connectSrc = connectSrcOf(body);
+    return connectSrc === undefined
+      ? { kind: 'current', serving }
+      : { kind: 'current', serving, connectSrc };
+  }
   if (last) return { kind: 'stale', serving };
 
   return { kind: 'retry', message: `serving ${serving ?? 'an unstamped build'}, want ${expected}` };

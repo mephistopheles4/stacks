@@ -38,10 +38,13 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { readSwitch } from '../packages/site/src/analytics/switch.ts';
 import {
   PROPAGATION_ATTEMPTS,
   describeStaleCover,
   probeBuild,
+  connectSrcMatches,
+  connectSrcOf,
   probeCovers,
   stampMeta,
   stampOf,
@@ -772,6 +775,39 @@ const project = process.env['CF_PAGES_PROJECT'] ?? 'stacks';
 console.log(`deploying ${vault}`);
 console.log(`        → ${siteUrl}  (Cloudflare Pages project "${project}")`);
 
+// ── 0d. Analytics: which of the two policy shapes this deploy is ───────────
+//
+// docs/spec/optional-plausible.md S8. Printed in every mode, and either state
+// proceeds: the switch is a choice, never a refusal. A malformed value is the
+// one failure here, with a message that does not echo it (C5). After the upload
+// a live `connect-src` that differs from this shape also fails the run
+// (`verifyBuildLive`, C10).
+//
+// A build reads `PUBLIC_PLAUSIBLE_DOMAIN` from `process.env` only. `--check-only`
+// builds nothing, so it reads the shape the last build gave `dist/index.html`.
+const PLAUSIBLE_ORIGIN = 'https://plausible.io';
+let analyticsBuilt: 'on' | 'off';
+if (checkOnly) {
+  const lastIndex = join(DIST, 'index.html');
+  const lastShape = existsSync(lastIndex)
+    ? connectSrcOf(readFileSync(lastIndex, 'utf8'))
+    : undefined;
+  analyticsBuilt = lastShape?.some((source) => source === PLAUSIBLE_ORIGIN) === true ? 'on' : 'off';
+  console.log(`analytics: Plausible ${analyticsBuilt} (as last built)`);
+} else {
+  let switched: ReturnType<typeof readSwitch>;
+  try {
+    switched = readSwitch(process.env['PUBLIC_PLAUSIBLE_DOMAIN']);
+  } catch (error) {
+    fail((error as Error).message);
+  }
+  analyticsBuilt = switched.on ? 'on' : 'off';
+  console.log(
+    switched.on ? `analytics: Plausible on (${switched.domain})` : 'analytics: Plausible off',
+  );
+}
+const builtConnectSrc = analyticsBuilt === 'on' ? ["'self'", PLAUSIBLE_ORIGIN] : ["'self'"];
+
 // ── 1. The gates. These stage FIXTURE data — which is why they go first ─────
 //
 // **Four refusals, and no flag clears any of them.** Each `run` below refuses by
@@ -842,7 +878,7 @@ const html = existsSync(join(DIST, 'index.html'))
   ? readFileSync(join(DIST, 'index.html'), 'utf8')
   : '';
 
-const report = await inspectPublicBuild(DIST, { origin: siteUrl });
+const report = await inspectPublicBuild(DIST, { origin: siteUrl, analytics: analyticsBuilt });
 for (const observation of report.observations) console.log(`  ${observation}`);
 
 const problems: { rule: PublicBuildRule | 'stale-fixtures'; message: string }[] = [
@@ -1149,6 +1185,16 @@ async function verifyBuildLive(origin: string): Promise<void> {
 
   if (answer.kind === 'current') {
     console.log(`serving build ${stamp}`);
+    // A `current` build whose live policy differs from the built shape means the
+    // live site is not the build, so unlike a stale stamp this fails (S8).
+    const live = answer.connectSrc;
+    if (!connectSrcMatches(live, builtConnectSrc)) {
+      fail(
+        `the live connect-src is ${live === undefined ? '(none)' : live.join(' ')}, ` +
+          `but this build's is ${builtConnectSrc.join(' ')} (analytics ${analyticsBuilt})`,
+      );
+    }
+    console.log(`live CSP matches the build (analytics ${analyticsBuilt})`);
     return;
   }
 
