@@ -1528,18 +1528,38 @@ async function turnOne(
 
     // C5: a put-back right after a close plays the return. Sampled once a frame from
     // the pickup's own timeline, which outlives `held()` while the book goes back.
+    // The shelf steps GSAP by `performance.now()`, so on a loaded runner one
+    // stalled frame carried the whole return past in a single step and no frame
+    // landed between rest and 0 (#576). The page's clock is held to one 60 Hz
+    // frame per frame sampled while it reads, so the count of frames the return
+    // takes no longer depends on how busy the machine is; it is put back after.
     if (await pickAndOpen(page, index, 'the book for the return')) {
       await page.evaluate(`document.querySelector('${CLOSE_CONTROL}').click()`);
       if (await until(page, CLOSED_AT_REST, 'the close before the return')) {
         const rest = (await page.evaluate('window.__shelf.held().progress')) as number;
         const frames = (await page.evaluate(`(async () => {
           const frames = [];
-          window.__shelf.putBack();
-          for (let frame = 0; frame < 600; frame += 1) {
-            const moving = window.__shelf.current();
-            if (moving === undefined) break;
-            frames.push(moving.progress);
+          const realNow = performance.now;
+          const base = realNow.call(performance);
+          let stepped = 0;
+          // Never ahead of the real clock, so putting it back never runs time backwards.
+          performance.now = () =>
+            Math.min(realNow.call(performance), base + stepped * (1000 / 60));
+          try {
+            // One held frame first: GSAP's root was last set at the shelf's last
+            // draw, and a stall before \`base\` would land unheld in the return's
+            // first step. Drawn once at \`base\`, the book still rests closed.
             await new Promise((resolve) => requestAnimationFrame(resolve));
+            window.__shelf.putBack();
+            for (let frame = 0; frame < 600; frame += 1) {
+              const moving = window.__shelf.current();
+              if (moving === undefined) break;
+              frames.push(moving.progress);
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+              stepped += 1;
+            }
+          } finally {
+            performance.now = realNow;
           }
           return frames;
         })()`)) as number[];
