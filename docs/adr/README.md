@@ -164,3 +164,4 @@ Two other files hold what these deliberately do not:
 | [0138](./0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md) | The closed book in your hand turns, and the examining dialog goes (supersedes 0109 and 0137 in part) |
 | [0139](./0139-optional-plausible-direct-to-plausible-io.md) | Plausible is optional, bundled from npm, and reports straight to plausible.io (amends 0065, 0128, 0053 and 0072's count) |
 | [0140](./0140-stay-on-pages-until-the-hostname-switch-is-tried.md) | Stay on Pages until the hostname switch is tried (answers #535) |
+| [0145](./0145-new-specs-live-on-their-issues.md) | New specs live on their issues, and the ones written before stay files |
