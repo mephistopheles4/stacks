@@ -176,7 +176,7 @@ it with no provenance at all.
   a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
   frontmatter **is** typechecked, by `astro check` inside `pnpm build` (G50,
   `astro-types`); the rule stands on a different footing. **Logic in an `.astro`
-  file is counted by nothing**: all nine globs in `stryker.scopes.json` end
+  file is counted by nothing**: all ten globs in `stryker.scopes.json` end
   `*.ts` and the complexity populations are those same globs, so a function
   there earns no mutation score and no complexity series. Anything with a type
   or a branch lives in a `.ts` file, where the counters can see it.
@@ -245,8 +245,8 @@ pnpm deploy:ask          # the Ask the library Worker: main only   (--dry-run, -
 pnpm evals:ask           # the S9 evals, live, through a test gateway   (--gateway <id>, --site <dir>)
 pnpm ask:status          # the Worker's daily totals, from Workers Logs   (--record, --day <date>)
 pnpm turnstile           # the Ask widget: create it once, rotate its secret later   (--create, --sync, --dry-run)
-pnpm duplication:report  # jscpd over the nine scopes and the whole tree, as a table   (--history)
-pnpm mutation:run        # Stryker over the nine declared scopes — minutes, not seconds
+pnpm duplication:report  # jscpd over the ten scopes and the whole tree, as a table   (--history)
+pnpm mutation:run        # Stryker over the ten declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope   (--markdown)
 pnpm mutation:stamp      # re-derive `stryker.floors.json`'s configHash — G56's remedy   (--check)
 pnpm metrics:emit        # one run's trend series, as the OpenMetrics text CI commits
@@ -271,8 +271,8 @@ same is true of the zero-mutant residual G38 (`mutation-scope`) checks, so
 neither flag reaches a refusal on any path that publishes.
 
 `pnpm duplication:report` prints the same counts CI records — one counter, two
-callers — for the nine declared scopes and for whole-tree TypeScript, plus a
-permalink for every suppression block. **The nine scope rows do not sum to the
+callers — for the ten declared scopes and for whole-tree TypeScript, plus a
+permalink for every suppression block. **The ten scope rows do not sum to the
 tree row**: a clone is a relation between two places, so a clone spanning two
 scopes is counted by both ([ADR-0072](docs/adr/0072-a-clone-is-a-relation-between-two-places.md)).
 It is a print and never a gate; nothing in it refuses on a number. **`--history`

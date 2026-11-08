@@ -593,7 +593,7 @@ if you assumed otherwise. Remove a worktree with `git worktree remove <path>`.
 or `pnpm build` calls it. (Its *dry run* is a gate, and a different thing: the
 `mutation-dry-run` job in `gates.yml` runs `stryker run --dryRunOnly` on every
 pull request, G70, and no mutant is tested — see
-[A red dry run on a pull request](#a-red-dry-run-on-a-pull-request-g70).) It runs Stryker over the **nine declared scopes** in
+[A red dry run on a pull request](#a-red-dry-run-on-a-pull-request-g70).) It runs Stryker over the **ten declared scopes** in
 [`stryker.scopes.json`](../stryker.scopes.json) — minutes on a workstation — and
 `pnpm mutation:score` turns the one report into one number per scope, which is
 the granularity the whole thing exists for. Stryker's own headline is a single
@@ -822,9 +822,9 @@ gate and nothing here refuses on a number; it exits non-zero only when jscpd
 could not run at all — except under `--history`, below, which also refuses a
 report short of a commit or out of order.
 
-**Two populations, and they do not add up.** The nine declared scopes, and
+**Two populations, and they do not add up.** The ten declared scopes, and
 whole-tree TypeScript. A clone is a relation between two places, so a clone
-whose halves sit in two scopes is counted by **both** — the nine rows are
+whose halves sit in two scopes is counted by **both** — the ten rows are
 deliberately not a partition of the tenth. The whole-tree row exists because a
 scope list is structurally blind to exactly that clone, and because `gates/` is
 read by no scope at all. See
@@ -1331,6 +1331,8 @@ pnpm exec tsx scripts/phone-check.ts --matrix         # default ×3, ?shadows=0,
 pnpm exec tsx scripts/phone-check.ts --gpuinfo        # chrome://gpu, in a tab of its own
 pnpm exec tsx scripts/phone-check.ts --pickups 5      # the default page, picking up five books, each held closed and then open
 pnpm exec tsx scripts/phone-check.ts --turn 60         # hold a book closed, turn it, open it, close it, turn it for 60 s, back key puts it back
+pnpm exec tsx scripts/phone-check.ts --notice attribution   # the default page with the attribution notice open over the shelf
+pnpm exec tsx scripts/phone-check.ts --notice privacy       # the same with the privacy notice, reached through the attribution one
 ```
 
 **`--pickups <n>` drives the shelf's loop hook**, `window.__shelf.pickupLoop(n)`:
@@ -1344,6 +1346,17 @@ on the device and the texture count after it — the swap-frame figures the
 picking-a-book-up spec's §8 asks the owner to judge. ⚠️ **A function, never an
 address switch**: #371's prototype looped on `?autoplay=5`, which any link could
 carry to a visitor's phone, and nothing in a URL can start this.
+
+**`--notice <attribution|privacy>` opens a notice over the shelf** once the page is
+ready and before the watched window, by clicking the page's own links as a visitor
+does ([#536](https://github.com/mephistopheles4/stacks/issues/536), the notice
+modals' claim C4), so the same run says whether the WebGL context held with the
+modal showing. Run it beside a plain run on the same phone, once for each notice:
+the figure is the script's own, the `phoneVerdict` kind and the sampling row it
+prints. The modal changes nothing about rendering (no blur, no backdrop animation,
+no new light), so the expectation is the plain run's result, and a phone that
+loses its context with a notice open is the owner's stop. It refuses the run, with
+the page's reason, or after ninety seconds with no answer from the page.
 
 **Not a `pnpm` script, and that is deliberate.** It needs adb and a phone with
 USB debugging on, which no CI runner has and [`CONTRIBUTING.md`](../CONTRIBUTING.md)

@@ -246,7 +246,8 @@ describe('the population rule', () => {
         (file) =>
           file.startsWith('packages/site/src/') &&
           !file.includes('/shelf/') &&
-          !file.includes('/analytics/'),
+          !file.includes('/analytics/') &&
+          !file.includes('/notice/'),
       );
     expect(claimed).toEqual([]);
   });

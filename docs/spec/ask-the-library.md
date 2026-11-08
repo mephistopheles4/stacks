@@ -456,10 +456,12 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   `prefers-reduced-motion`.
 - **Fine print:** "This is an AI answering from my notes. It can be wrong." under the
   box, centred, with a small "Privacy" link to its own page, `/privacy` (owner, 2026-11-05: "Its own
-  page"). The link opens in a new tab (`target="_blank" rel="noopener"`, with "(opens in a new tab)" for a
-  screen reader), because memory lives only in the page and leaving it would end the conversation. The
-  page is `packages/site/src/pages/privacy.astro`, on the layout and style it shares with `/attribution`
-  (`NoticePage.astro`: no canvas, `noindex`), headed "Privacy", and says:
+  page"). The link opens the notice in a modal over the shelf (#536, [ADR-0146](../adr/0146-the-notices-open-in-one-modal-over-the-shelf.md)),
+  which keeps the conversation because the page never changes; it still carries `target="_blank" rel="noopener"` as
+  its fallback, so if the modal cannot open the page opens in a new tab and the conversation stays in the first one,
+  because memory lives only in the page and leaving it would end the conversation. The link drops "(opens in a new tab)", because its usual path opens the notice in place. The
+  page is `packages/site/src/pages/privacy.astro`, on the layout it shares with `/attribution`
+  (`NoticePage.astro`: no canvas, `noindex`), with the type of `NoticeBody.astro` since #536, headed "Privacy", and says:
 
   > Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs
   > when the Ask the library box opens, and a hashed address is counted for a day to limit use.
@@ -671,7 +673,7 @@ choose other books.
 | C6 | The 31st question from one key in a UTC day is refused, parallel requests can't pass it, a compressed IPv6 address maps to its /64, and the record goes when the day ends | Security |
 | C7 | On a test gateway with a small limit, successful calls from the deployed Worker trip a 2045 within 10% of the limit, and the Worker is back on the real gateway after | Security |
 | C8 | A planted `AI.run` outside the one function, or one without the gateway option and `skipCache`, fails a new gate | Security |
-| C9 | Every S7 behaviour holds in a browser, closing by X, Escape, outside click and pickup, not by drag, an outside click with a book held leaving the book held, with focus outside the drawer and a book held, on desktop and phone widths, and the Privacy link opens `/privacy` in a new tab, leaving the conversation in the original tab | Interaction |
+| C9 | Every S7 behaviour holds in a browser, closing by X, Escape, outside click and pickup, not by drag, an outside click with a book held leaving the book held, with focus outside the drawer and a book held, on desktop and phone widths, and the Privacy link opens the privacy notice in a modal over the shelf, leaving the conversation and a held book as they were, or, if the modal cannot open, `/privacy` in a new tab, leaving the conversation in the original tab (#536, `notice-modals.md` C1 and C3) | Interaction |
 | C10 | G20 fails on any CSP change beyond S8's two | Compatibility |
 | C11 | Loading the page without opening the drawer makes no new third-party request | Security |
 | C12 | `pnpm test`, `pnpm lint`, `pnpm build` and `wrangler deploy --dry-run` are green with `smoke:render`, no test makes a live call (G21), and a planted type error in `packages/ask` fails `pnpm typecheck` | Maintainability |
@@ -1201,7 +1203,7 @@ picks"), including the numbers in Q8. The questions stay as the record.
   memory spec.
 - **Q9. Privacy line.** One line on `/attribution` and a small link beside the fine
   print, worded as in S7. My pick: yes. **Changed by the owner on 2026-11-05 ("Its own page"):** the line
-  lives on `/privacy`, `/attribution` links to it, and the drawer's link opens it in a new tab.
+  lives on `/privacy`, `/attribution` links to it, and the drawer's link opens it in a new tab. **Revised 2026-11-08 (#536):** the drawer's link opens it in a modal over the shelf and falls back to the new tab.
 - **Q10. Monitoring.** Counts only, or see what visitors ask? My pick: counts only.
 - **Q11. Threat model.** This is the first public endpoint, and the repo has none. My
   pick: leave it for now, with risks stated in S5.

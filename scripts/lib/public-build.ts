@@ -965,23 +965,32 @@ export async function inspectPublicBuild(
   // only in a build with the switch on, so the page cannot describe a tracker the
   // build does not carry or omit one it does. Judged only when the page is in the
   // build: the synthetic folder some specs plant has none.
-  const privacy = readIfPresent(join(dir, 'privacy', 'index.html'));
-  if (privacy !== '') {
-    if (!privacy.includes('Cloudflare Web Analytics')) {
-      fail(
-        'privacy',
-        'privacy/index.html does not name Cloudflare Web Analytics, which is live on the zone',
-      );
+  //
+  // #536 (docs/spec/notice-modals.md C8): the shelf page holds the same notice as a modal
+  // panel, `notice-privacy`, and says no less and no more. The rule reads that element alone,
+  // sliced out of `index.html`, so text elsewhere on the shelf page cannot satisfy it. Judged
+  // only when the page carries the modal.
+  const judgePrivacyText = (text: string, where: string): void => {
+    if (!text.includes('Cloudflare Web Analytics')) {
+      fail('privacy', `${where} does not name Cloudflare Web Analytics, which is live on the zone`);
     }
-    const names = privacy.includes('Plausible');
+    const names = text.includes('Plausible');
     if (options.analytics === 'on' && !names) {
-      fail(
-        'privacy',
-        'privacy/index.html does not name Plausible in a build made with analytics on',
-      );
+      fail('privacy', `${where} does not name Plausible in a build made with analytics on`);
     }
     if (options.analytics === 'off' && names) {
-      fail('privacy', 'privacy/index.html names Plausible in a build made with analytics off');
+      fail('privacy', `${where} names Plausible in a build made with analytics off`);
+    }
+  };
+  const privacy = readIfPresent(join(dir, 'privacy', 'index.html'));
+  if (privacy !== '') judgePrivacyText(privacy, 'privacy/index.html');
+  const shelf = readIfPresent(join(dir, 'index.html'));
+  if (shelf.includes('notice-dialog')) {
+    const panel = /<section[^>]*\bid="notice-privacy"[^>]*>([\s\S]*?)<\/section>/.exec(shelf);
+    if (panel === null) {
+      fail('privacy', "index.html holds the notice modal but no 'notice-privacy' panel");
+    } else {
+      judgePrivacyText(panel[1] ?? '', "index.html's notice-privacy panel");
     }
   }
 

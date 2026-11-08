@@ -176,6 +176,14 @@
       "reason": "A ninth mutation scope, packages/site/src/analytics, was declared for the optional Plausible module (#562, ADR-0139; spec X4). The configuration gained one scope and one mutate glob and no existing scope changed, so the eight older scopes' mutated files and mutant inventories are as they were and their windows are declared preserved; the new scope starts unarmed with its own window. Measured, not assumed: the diff of stryker.scopes.json and stryker.config.mjs from the spec commit holds the one added scope and comment text, so the eight older scopes' globs and exclusions are identical, and none of the eight older globs matches any of the tracked files under packages/site/src/analytics. Not a full mutation run: the module is new, and a scoped run of its own specs is the only mutation measurement so far.",
       "pr": 564,
       "preserves": true
+    },
+    {
+      "date": "2026-11-08",
+      "stamp": "configHash",
+      "value": "sha256:85ab289b6ac7f8d0db96dc9e0c8749cd292ce3b6d22b3ee29d09d78f5fbe89e1",
+      "reason": "A tenth mutation scope, packages/site/src/notice, was declared for the notice modals (#536, docs/spec/notice-modals.md). The configuration gained one scope and one mutate glob and no existing scope changed, so the nine older scopes' mutated files and mutant inventories are as they were and their windows are declared preserved; the new scope starts unarmed with its own window. Reasoned from the configuration diff, which is the one added scope, and not from a mutation run: the directory holds two pure modules with their specs, measured, and three browser-only files (modal.ts, start.ts, open.ts) excluded with a mechanism each; none of the nine older globs matches a file under packages/site/src/notice.",
+      "pr": 570,
+      "preserves": true
     }
   ]
 }
