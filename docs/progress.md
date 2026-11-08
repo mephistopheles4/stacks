@@ -547,6 +547,7 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-11-05 — [The Ask the library live probe](./log/2026-11-05-ask-the-library-live-probe.md) — [#532](https://github.com/mephistopheles4/stacks/issues/532). Exact routes match the bare path only; one finding was wrong and corrected.
 - 2026-11-06 — [Five models on the Ask evals](./log/2026-11-06-model-comparison.md) — [#540](https://github.com/mephistopheles4/stacks/issues/540). DeepSeek V4.1 Flash passed 18 of 18 twice, at a median near 4 s; the other four passed 14 to 16, and two had calls past the 30-second deadline. It leaks the follow-ups marker where the old split could not see it, so the split and the evals changed ([ADR-0136](./adr/0136-ask-the-library-runs-on-deepseek-v4-1-flash.md)).
 - 2026-11-07 — [The stop in the pickup track](./log/2026-11-07-the-stop-in-the-pickup-track.md) — [#531](https://github.com/mephistopheles4/stacks/issues/531). `addPause` stops a GSAP timeline in both directions and re-fires from a pause placed on it; the track resumes a reverse and lands a jump 0.1 ms past the stop.
+- 2026-11-08 — [Pages or Workers: the probe](./log/2026-11-08-pages-or-workers-probe.md) — [#535](https://github.com/mephistopheles4/stacks/issues/535). Static files do not run a Worker; an old Workers version's files stay public until `preview_urls` is false; the hostname switch, which is also the way back, is untried, so [ADR-0140](./adr/0140-stay-on-pages-until-the-hostname-switch-is-tried.md) records staying on Pages for now.
 
 ## Notes to the next session
 
