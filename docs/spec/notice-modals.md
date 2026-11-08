@@ -1,6 +1,6 @@
 # Spec — the attribution and privacy notices open in a modal
 
-**Status:** draft, waiting for the owner's proceed.
+**Status:** revision 2, after spec round 1 (`executability-lens` and `unstated-lens`). Waiting for the owner's proceed.
 **Source:** [#536](https://github.com/mephistopheles4/stacks/issues/536). Its order
 dependency, [#534](https://github.com/mephistopheles4/stacks/pull/534), merged on 2026-11-05.
 **Tier:** Standard (owner, 2026-11-08). Not on the sensitive list: no auth, crypto or
@@ -9,9 +9,9 @@ data migration.
 ## 1. Objective
 
 The shelf's **Attribution** link and the drawer's **Privacy** link open their notice in a
-modal over the shelf. Closing it puts the visitor back exactly where they were: the Ask
-conversation, an open drawer and a held book all intact. `/attribution` and `/privacy` stay as
-real pages, and the notice text is easier to read on both.
+modal over the shelf. Closing it puts the visitor back where they were: the Ask conversation,
+an open drawer and a held book all intact. `/attribution` and `/privacy` stay as real pages,
+and the notice text is easier to read on both.
 
 Today the first link reloads the site and ends the conversation, because memory is a page
 variable ([ask-the-library.md](ask-the-library.md) D2); the second opens a new tab, which takes
@@ -26,34 +26,38 @@ promise stays true.* It decides every trade-off below.
 | # | Decision | Why |
 | --- | --- | --- |
 | N1 | **One native `<dialog>`, opened with `showModal()`, holding both notices as two panels**; one panel shown at a time. The drawer's notice does not live inside the drawer. | Answers both of the issue's open questions. The platform gives the top layer, an inert background and Escape. A panel inside the drawer would need a second mechanism for the shelf's link, and could not cover a held book. |
-| N2 | **The text exists once in source**: `AttributionNotice.astro` and `PrivacyNotice.astro` (markup only), used by `attribution.astro`, `privacy.astro` and the modal. The page's "Back to the shelf" line stays in the page, not the component. | The issue's "one copy". |
-| N3 | **The modal's copy is rendered into `index.html`**, not fetched when opened. | A fetch is a request, can fail offline, and would need markup parsed from a response. Cost: the text sits in two documents, see residual R1. |
-| N4 | **A plain left-click on a link whose `href` is exactly `/attribution` or `/privacy`** opens the modal and is `preventDefault`ed. A modified or non-primary click (ctrl, shift, meta, alt, middle) is left alone and opens the page in a new tab. One delegated listener; the decision is a pure function. | "The links stay plain links". Also catches the in-notice link from Attribution to Privacy. |
-| N5 | **That in-notice link swaps the panel; it does not stack a second modal.** Closing returns to the link that opened the modal first. | One modal, one opener to remember. |
-| N6 | **The drawer's Privacy link loses `target="_blank"` and its "(opens in a new tab)" text.** It gains `aria-haspopup="dialog"`. | The modal replaces the new tab. If the handler were ever missing, the link would navigate in place; accepted, since the drawer itself is script. |
+| N2 | **The text exists once in source**: `AttributionNotice.astro` and `PrivacyNotice.astro`, used by `attribution.astro`, `privacy.astro` and the modal. `PrivacyNotice.astro` carries the build switch with it: `{analyticsOn && <PlausibleNotice />}`, as `privacy.astro` has today. The page's "Back to the shelf" line stays in the page. | The issue's "one copy", and a modal that states less (or more) about what is counted than the page does would be wrong. A build switch is not logic G7 counts; it is in `privacy.astro` now. |
+| N3 | **The modal's copy is rendered into `index.html`**, not fetched when opened. | A fetch is a request, can fail offline, and would need markup parsed from a response. Cost: the text sits in two documents, see N14. |
+| N4 | **A plain left-click on a link whose `getAttribute('href')` is exactly `/attribution` or `/privacy`** opens the modal. A modified or non-primary click (ctrl, shift, meta, alt, middle) is left alone and opens the page in a new tab. One delegated listener; the decision is a pure function of the attribute and the event. **`preventDefault` runs only after `showModal()` has succeeded**, so a throw, or a missing dialog, lets the link navigate as a plain link does. | "The links stay plain links". Catches the in-notice link from Attribution to Privacy too. The failure case is the Safety quality: the safe state is the page. |
+| N5 | **That in-notice link swaps the panel; it does not stack a second modal.** `aria-labelledby` follows the panel shown. Closing returns focus to the link that opened the modal first. | One modal, one opener to remember, one accessible name that is true. |
+| N6 | **The drawer's Privacy link loses `target="_blank"` and its "(opens in a new tab)" text.** It gains `aria-haspopup="dialog"`. | The modal replaces the new tab. If the handler were ever missing the link would navigate in place; accepted, since the drawer itself is script. |
 | N7 | **Focus is wrapped by us**: Tab on the last control goes to the first, Shift+Tab the reverse. Focus starts on the close button. Close restores focus to the opener explicitly. | Native modal dialogs let Tab leave for the browser chrome, which does not meet C2's "stays there". Explicit restore does not lean on browsers that skip it. |
-| N8 | **Escape and the back gesture close the modal alone.** The modal marks the Escape handled on a window capture listener; the drawer and the shelf each check a shared `noticeIsOpen()` and stand down. The `<dialog>`'s `close` event is the one place cleanup runs. | The drawer listens for Escape first, on the window, and the shelf's Escape is `putBack()`. Without the check one Escape closes all three. |
-| N9 | **A click on the backdrop closes the modal** (pressed and released on the backdrop itself, so a text selection that ends outside does not). The drawer's outside-click rule ignores any click while the modal is open, and a click on a notice link counts as inside the drawer. | C3, and "returns to exactly where they were": opening Attribution from the shelf with the drawer open must not close the drawer. |
+| N8 | **Keys while a notice is open belong to the modal.** Its window-capture keydown listener handles Escape with `preventDefault()` and then calls `dialog.close()` itself, never leaving the close to the browser's default. The drawer's Escape listener stands down when `noticeIsOpen()` **or** `event.defaultPrevented`, so it holds in either listener order. The shelf's whole keydown handler, not only its Escape branch, returns early on the same two tests, so arrow and Home keys cannot turn a held book behind the modal. **The browser's Back is not handled** (R4). | The drawer listens for Escape first, on the window, and reads only its own state; the shelf's Escape is `putBack()`; and the shelf turns a held book from `document.body` on the arrows, which is where focus lands after a click on plain text. |
+| N9 | **A click on the backdrop closes the modal** (pressed and released on the backdrop itself, so a text selection that ends outside does not). The drawer's outside-click rule ignores any click while the modal is open, and a click on a notice link counts as inside the drawer. | C3, and "where they were": opening Attribution from the shelf with the drawer open must not close the drawer. |
 | N10 | **The modal changes nothing about rendering**: no `backdrop-filter`, no blur, no animation on the backdrop, no pause or change to the render loop, no new light or shadow. | C4. A blur over a WebGL canvas is the likeliest way to make the phone worse, and G61's configuration is the only one measured to survive. |
 | N11 | **No history entry, no URL change, no analytics event.** | C1. A new event would make the privacy notice's statement about what is counted wrong. |
-| N12 | **Type.** The shared notice text is `1.125rem` on the page and in the modal, line-height 1.6, body colour at least 7:1 on its background, line length capped near 65 characters. | C5. Today's body is the browser default 1rem in `#a89684`, about 6.3:1. The step 0 screenshots decide whether this goes further. |
+| N12 | **Type: 1.125rem, line-height 1.6, body colour at least 7:1 on its background, about 65 characters a line.** Owner: "18px at 7:1 or better stands" (2026-11-08). Step 0 records the baseline and does not reopen the numbers. The type lives in a scoped `<style>` of one `NoticeBody.astro` that both notice components wrap their text in, so the page and the modal draw alike whatever the host page's global rules say (`index.astro` sets a global `h1`). The heading stays an `h1` in the modal, named by `aria-labelledby`. | C5. Today's body is the browser default 1rem in `#a89684`, about 6.3:1. |
+| N13 | **The dialog has a capped height, `calc(100dvh - 2rem)`, and scrolls inside itself.** The shelf page is `overflow: hidden`, so without it a long notice at 375x812 would be cut off. | C5, C2: the end of the privacy notice must be reachable by keyboard from the close button. |
+| N14 | **Apple's credit line stays in both the modal and `/attribution`**, shown once at a time, from the one source. Lead's decision (2026-11-08, decision 284); the owner can override. | Apple asks for the line "only once in your communication or website" (attribution-surface §3). Displayed, it is once; in the HTML it is two documents. Not legal advice. If overridden before step 3, N3 reverts to a fetch. |
 
 ## 3. Acceptance claims
 
-Each is a test that can fail. Measures use the pact's table.
+Each is a check that can fail. Measures use the pact's table. Every browser check is a cell in
+`scripts/smoke-render.ts`, landing in the build step that §6 names.
 
 | # | Claim | Measure | Proved by |
 | --- | --- | --- | --- |
-| C1 | Opening and closing either notice, from the shelf link or the drawer link, keeps the conversation and a held book, with no navigation request and an unchanged `location.href`. | Functional | Browser: ask a question (a stubbed `/api/chat` reply), open the drawer, hold a book, open and close each notice. Reads the thread text, the held book id, `performance.getEntriesByType('navigation').length` and the request log. |
-| C2 | Focus moves into the modal, cycles inside it (Tab and Shift+Tab, both ends), and returns to the opener; Escape closes the modal alone, leaving the drawer and a held book as they were; the modal has an accessible name and `aria-modal`. | Interaction | Browser, keyboard only, from both openers, with and without a held book and an open drawer. |
-| C3 | A click behind the modal reaches nothing: no pickup, no put-back, no drawer close. | Functional | Browser: click a spine, the empty shelf and the drawer's outside area while the modal is open; the held state and `aria-expanded` are unchanged. Backdrop click closes the modal and nothing else. |
-| C4 | No third-party request, the CSP gate passes, and the render is no worse with the modal open. | Performance, Compatibility | CSP: G20 over the new `index.html`, no inline `style=""` attribute in the markup. Requests: the log from C1. Render: with the modal open, the shadow-sampling draw count equals the same page without it, on the default page and with a book held (G61's reading). **The phone is the owner's run**: `scripts/phone-check.ts` with the modal open, since CI has no GPU. |
-| C5 | The text is comfortable at 1440x900 and 375x812, in the modal and on both direct pages. | Interaction | Computed font size and contrast asserted in the browser run; the six screenshots (two notices, three places) go to the owner. |
+| C1 | Opening and closing either notice, from the shelf link or the drawer link, keeps the conversation, an open drawer and a held book, with no navigation. | Functional | Browser. Set-up in G35's order: hold a book, then open the drawer, then send a question; the offline build has no Turnstile key, so the thread holds the **unavailable reply**, which is enough to read. Open and close each notice from each opener. Reads the thread text, the held id, `aria-expanded`, and **a `window` sentinel set before opening, read after closing**, plus the count of main-frame `framenavigated` events. Planted break: remove the click handler, and the sentinel and count go red. |
+| C2 | Focus moves into the modal, cycles inside it (Tab and Shift+Tab, both ends), returns to the opener; **one Escape** closes the modal alone, leaving the drawer (`aria-expanded` still `true`) and a held book as they were; the dialog's computed accessible name is the shown panel's, **before and after a swap**; the end of each notice is reachable by keyboard from the close button at 375x812. | Interaction | Browser, keyboard only, from both openers, with and without a held book and an open drawer. Planted break: remove the drawer's guard, and the Escape step goes red. |
+| C3 | A click or an arrow key behind the modal reaches nothing: no pickup, no put-back, no drawer close, **no turn of a held book**. | Functional | Browser: click a spine, the empty shelf, the drawer's outside area and plain notice text, press the arrows with focus on `body`, all with a book held; the held state, turn and `aria-expanded` are unchanged. A backdrop click closes the modal and nothing else. |
+| C4 | No third-party request, the CSP gate passes, and the render is no worse with the modal open. | Performance, Compatibility | CSP: G20 over the new `index.html`; no inline `style=""` attribute in the markup. Requests: the log from C1. Render: with the modal open, the shadow-sampling draw count equals the same page without it, on the default page and with a book held (G61's reading). **The phone is the owner's run**: `scripts/phone-check.ts` with the modal open, since CI has no GPU. See §7 for when each runs. |
+| C5 | The text is comfortable at 1440x900 and 375x812, in the modal and on both direct pages, **and the last line of each notice can be scrolled into view in the modal at both widths**. | Interaction | Browser reads of computed font size (at least 18px), contrast (at least 7:1) and heading style, **equal on the page and in the modal**; six screenshots (two notices, three places) go to the owner. |
 | C6 | `/attribution` and `/privacy` show the notice with JavaScript disabled and keep `noindex`. | Compatibility | Browser with JavaScript off reads both built pages; `gate:public`'s robots rule already reads every built page. |
-| C7 | The links stay plain links: `href` unchanged, a modified click still opens the page. | Compatibility | Unit tests of the decision function; browser check of one ctrl-click. |
+| C7 | The links stay plain links: `href` unchanged, a modified click still opens the page. | Compatibility | Unit tests of the decision function, fed the attribute form; one browser ctrl-click. |
+| C8 | The modal's privacy panel states what the page states, in a build with analytics off and one with it on. | Functional | The existing `privacy` rule in `scripts/lib/public-build.ts` (it reads `privacy/index.html` for the Cloudflare and Plausible statements) also reads the panel in `index.html`, with its planted-break cases extended. |
 
-**Tests that back no claim are not added** (the pact's "Tests added" limit is 0). The unit tests
-below each name their claim; none is a restatement of a browser test.
+**Tests that back no claim are not added** (the pact's "Tests added" limit is 0). Every unit
+test names its claim; none restates a browser cell.
 
 ## 4. Where it goes
 
@@ -65,10 +69,13 @@ packages/site/src/notice/
   links.ts             pure: which notice, if any, a click should open       (C7)
   open.ts              noticeIsOpen(document) and the ids the other two modules read
 packages/site/src/components/
+  NoticeBody.astro                               the scoped type (N12), wrapped by both below
   AttributionNotice.astro, PrivacyNotice.astro   the one copy of each text (N2)
 packages/site/src/ask/drawer.ts                  stands down while a notice is open (N8, N9)
-packages/site/src/shelf/pickup.ts                Escape check (N8)
+packages/site/src/shelf/pickup.ts                the whole keydown handler stands down (N8)
 packages/site/src/pages/{attribution,privacy,index}.astro   use the shared text; index mounts <Notices />
+scripts/smoke-render.ts                          the notice cells (C1 to C6)
+scripts/lib/public-build.ts                      the privacy rule reads the panel (C8)
 ```
 
 The seam follows `ask/bridge.ts`: a constant and a one-line check, not an import of the modal's
@@ -76,46 +83,56 @@ logic. Logic is in `.ts` and G7 (`astro-no-logic`) holds it there.
 
 ## 5. Docs the change must also move
 
-- `docs/spec/attribution-surface.md` §2, "A route, not a modal": the route stays; the modal is added on top and the
-  paragraph says so. New ADR (number left with room, checked again before merge) records
-  the reversal and the Apple "once" reading (R1).
+- `docs/spec/attribution-surface.md` §2, "A route, not a modal": the route stays, the modal is added on top, and the paragraph says so. §4's basis ("occluded by a dismissible, **non-modal** overlay") gets a line for the modal case (R6). New ADR (number left with room, checked again before merge) records both and N14.
 - `docs/spec/ask-the-library.md` S7 (lines 458 to 468), C9 and line 1204: the Privacy link opens the modal, not a new tab.
-- `docs/gates.md` and `docs/progress.md` in the commit that adds the browser gate; `AGENTS.md` only if a rule changes (none expected).
+- `docs/gates.md` and `docs/progress.md` in the commit that adds each gate cell, so step 1's commit already moves them; `AGENTS.md` only if a rule changes (none expected). The `privacy` rule (C8) also covers the panel, which the gates doc says.
 - `docs/spec/README.md` build-order row.
 
-## 6. Build order (thin slices, each green on its own)
+## 6. Build order
 
-0. **Baseline**: screenshot both direct pages at both widths and read the computed font size, so C5 starts from a number.
-1. **Shared text and type** (N2, N12): extract the two components; both pages render unchanged but for the type. C5 and C6 on the pages.
-2. **The pure parts, test first**: `links.ts` (C7).
-3. **The modal**: `Notices.astro`, `modal.ts`, `start.ts`; Attribution link opens it; focus and Escape (C1, C2 from the shelf).
-4. **The drawer and the shelf stand down**; drawer link opens it (C1 to C3 from the drawer, with a held book).
-5. **The browser gate** in `smoke-render` (C1 to C6) and the doc moves in §5; the owner's phone check (C4).
+Each step lands the checks for the claims it cites, and is done when its line says so.
 
-## 7. Boundaries
+0. **Baseline.** A throwaway script in the scratch folder (not committed) screenshots both direct pages at 1440x900 and 375x812 into `artifacts/`, and prints computed font size, colour and contrast. **Done when** the four screenshots exist and the numbers are in the commit message of step 1.
+1. **Shared text and type** (N2, N12). Extract the components and `NoticeBody.astro`. **Done when:** the built text of `/attribution` and `/privacy` is identical to step 0's, apart from the type; a new `smoke-render` cell reads both pages with JavaScript off at both widths (C5 on the pages, C6); `docs/gates.md` and `docs/progress.md` carry the cell. The four page screenshots go to the owner here (not a stop).
+2. **The pure parts, test first.** `links.ts`. **Done when** its unit tests were red for the right reason and are green (C7).
+3. **The modal and the Attribution link** (N1, N4, N5, N7, N13). **Done when** the C1 and C2 cells pass from the shelf link with no drawer and no held book, and the planted break (handler removed) turns C1 red.
+4. **The drawer and the shelf stand down; the drawer link** (N6, N8, N9). **Done when** C1 to C3 pass from both openers with the drawer open and a book held, and removing the drawer's guard turns C2 red.
+5. **Render, privacy rule, docs** (C4, C8, §5). **Done when** every cell is green under `pnpm smoke:render` on the host, `pnpm gate:public` is green, the docs have moved, and the six screenshots have gone to the owner.
+
+## 7. Where it runs
+
+- **Browsers.** Desktop Chrome through puppeteer, for every cell. Android Chrome on the owner's Pixel, through `scripts/phone-check.ts`. Firefox and Safari are not checked (R5).
+- **Commands.** `athanor run test`, `typecheck`, `lint` and `build`; on the host `pnpm lint:md`, `pnpm format:check`, `pnpm gate:public` and `pnpm smoke:render`.
+- **Which run proves what.** `athanor run smoke` is a pass or a fail and keeps its screenshots in the container, so the screenshots and step 0 come from the host `pnpm smoke:render`. G60 and G61 skip pull requests (`SKIPPED_ON_PULL_REQUESTS`), so C4's draw-count reading runs on the host and on `main`'s push run; the owner watches that run after merge, as `picking-up-closed.md` S14 asks.
+- **Not run:** `pnpm deploy:site --dry-run`, which builds from the real vault and is the owner's.
+- **The owner's two steps, with defaults a bare proceed carries.** The phone run happens **before merge**, and fails on a lost WebGL context, or a `phone-check` result worse than the same run without the modal open. The six screenshots are reviewed **before merge**, which the owner's merge decision already waits for.
+
+## 8. Boundaries, rollback, stop
 
 - **Always:** text through `textContent` or the shared components, never `innerHTML`; `athanor run` for the suite; the screenshot to `artifacts/`.
 - **Ask first:** any new dependency (none planned), any change to the Google graphic or the Attribution link's look, any change to the notice wording.
 - **Never:** blur or animate the backdrop, pause the render loop, add a third-party request, write the chat to storage, drop `noindex` from the pages.
+- **Rollback** is a revert of the merge and a redeploy; nothing is stored or migrated.
+- **Stop and ask the owner** if the draw count differs with the modal open, if the phone loses its context with it open, or if the Escape interplay does not hold after two approaches.
 
-## 8. Trade-offs and residuals
+## 9. Trade-offs and residuals
 
-**Trade-off points.** Robustness against size: manual Tab wrap and an explicit focus restore
-add about 30 lines over bare `showModal()`, taken for C2. Reach against requests: the
+**Trade-off points.** Robustness against size: manual Tab wrap, an explicit close and an explicit
+focus restore add about 40 lines over bare `showModal()`, taken for C2. Reach against requests: the
 text is in the shelf's HTML twice rather than fetched, taken for the driver.
 
 **Qualities touched:** functional suitability, interaction capability, compatibility,
-performance efficiency. Security is touched only through the CSP gate.
+performance efficiency, safety (N4). Security only through the CSP gate.
 
-- **R1. Apple asks for its credit line "only once in your communication or website"**
-  (attribution-surface §3). Displayed, it is still once at a time; in the HTML it is now in
-  `index.html` and `/attribution`. Not legal advice, and a judgement for the owner.
-- **R2. The back gesture** on Android may close a modal through the browser's close
-  watcher and may not; only the phone says. Not claimed.
+- **R2. The back gesture** on Android may close a modal through the browser's close watcher and may not; only the phone says. Not claimed.
 - **R3. The drawer's notice has no deep link.** `/#privacy` is not added: that would be a URL change (N11).
+- **R4. The browser's Back with a notice open** acts as it does with no modal: with a book held it puts the book back under the modal; with none it leaves the site and the conversation goes. That is today's behaviour on the shelf, not a new loss, but it is the issue's problem arriving by another door. The alternative is the shelf's `popstate` closing the modal first, which leaves the history one entry short of the held book; not taken.
+- **R5. Firefox and Safari are not checked.** `<dialog>` and `showModal()` are in all current browsers; N4's fallback makes a failure a plain navigation.
+- **R6. The modal covers the "powered by Google" graphic while it is open, at every width.** `attribution-surface.md` §4 accepted the phone occlusion because the overlay was "dismissible, non-modal"; this one is dismissible and modal, and the shelf behind it keeps drawing Google-derived geometry. The graphic is in the DOM and displayed on load, and it returns on close. A reading for the owner, as N14 was, and not legal advice.
 
-## 9. Open for the owner
+## 10. Open for the owner
 
-1. **Proceed, change or kill** this spec. Defaults above stand if you only say proceed.
-2. **N12's numbers** (18px, 7:1) are my pick; the step 0 screenshots may move them. Say if you want a larger step.
-3. **R1** needs your reading, not mine.
+1. **Proceed, change or kill** this spec.
+2. **R6**, the Google graphic under a modal: accept it as written, or say what you want instead.
+3. **The two defaults in §7**: phone run and screenshot review both before merge. A bare proceed keeps them.
+4. **R4**, Back with a notice open: accepted as today's behaviour unless you say otherwise.
