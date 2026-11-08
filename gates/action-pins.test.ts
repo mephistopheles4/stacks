@@ -402,3 +402,94 @@ describe('G40 — the required check needs every other job in the workflow', () 
     expect(() => aggregatorGaps(plant(/needs: \[[^\]]*\]/, 'needs: suite'))).toThrow(/flow list/);
   });
 });
+
+/**
+ * What G70 holds the `mutation-dry-run` job to: the Stryker line, read off the
+ * job's own text with comments dropped. G40 holds the job's place in the
+ * `gates` aggregator, and nothing else here looks at what the job runs — so a
+ * swallowed exit code, a narrowing `--mutate`, `continue-on-error` or an `if:`
+ * would each leave the required check green over a job that does nothing.
+ *
+ * Read as lines, as the rest of this file reads the workflow. A `run: |` block
+ * names no Stryker line, so it reads as zero and goes red rather than passing
+ * unread.
+ */
+const DRY_RUN_COMMAND = 'pnpm exec stryker run --dryRunOnly';
+
+function dryRunJobGaps(job: string): string[] {
+  const code = job
+    .split('\n')
+    .map((line) => line.replace(/(^|\s)#.*$/, ''))
+    .join('\n');
+  const gaps: string[] = [];
+
+  const stryker = [...code.matchAll(/^[ \t]*(?:-[ \t]+)?run:[ \t]*(.*?)[ \t]*$/gm)]
+    .map((match) => match[1] ?? '')
+    .filter((run) => run.includes('stryker'));
+  if (stryker.length !== 1) {
+    gaps.push(
+      `${stryker.length} \`run:\` lines name stryker, and the job needs exactly one ` +
+        `(a \`run: |\` block reads as none)`,
+    );
+  } else if (stryker[0] !== DRY_RUN_COMMAND) {
+    gaps.push(`the Stryker line is \`${stryker[0]}\`, not exactly \`${DRY_RUN_COMMAND}\``);
+  }
+  if (/^[ \t]*(?:-[ \t]+)?continue-on-error:/m.test(code)) {
+    gaps.push('a `continue-on-error:` key, which lets a red dry run pass');
+  }
+  if (/^[ \t]*(?:-[ \t]+)?if:/m.test(code)) {
+    gaps.push('an `if:` key, which is the filter the job was written without');
+  }
+  return gaps;
+}
+
+describe('G70 — the `mutation-dry-run` job runs the dry run, whole and unfiltered', () => {
+  const job = (): string => {
+    const found = jobsOf(readRepoFile(GATES_WORKFLOW), GATES_WORKFLOW).get('mutation-dry-run');
+    expect(found, `no job named \`mutation-dry-run\` in ${GATES_WORKFLOW}`).toBeDefined();
+    return found ?? '';
+  };
+
+  it('runs exactly `pnpm exec stryker run --dryRunOnly`, with no escape and no condition', () => {
+    expect(
+      dryRunJobGaps(job()),
+      `the \`mutation-dry-run\` job in ${GATES_WORKFLOW} no longer runs Stryker's dry run ` +
+        'whole and unfiltered. Its row in docs/gates.md says a pull request that breaks the ' +
+        'dry run turns the required check red; each of these leaves that green',
+    ).toEqual([]);
+  });
+
+  it('goes red on copies of the job with each break planted', () => {
+    const source = job();
+    const plant = (pattern: string, replacement: string): string => {
+      const planted = source.replace(pattern, replacement);
+      expect(planted, `the plant ${pattern} matched nothing`).not.toBe(source);
+      return planted;
+    };
+    const run = `run: ${DRY_RUN_COMMAND}`;
+
+    // The unplanted job is clean, and a comment naming a key is not the key.
+    expect(dryRunJobGaps(source)).toEqual([]);
+    expect(dryRunJobGaps(plant(run, `# continue-on-error: true\n        ${run}`))).toEqual([]);
+
+    const breaks: Record<string, string> = {
+      'a swallowed exit code': plant(run, `${run} || true`),
+      'a narrowing --mutate': plant(run, `${run} --mutate scripts/lib/ask-status.ts`),
+      'a different command': plant(run, 'run: echo skipped'),
+      'a block scalar': plant(run, `run: |\n          ${DRY_RUN_COMMAND}`),
+      'continue-on-error on the step': plant(run, `continue-on-error: true\n        ${run}`),
+      'continue-on-error on the job': plant(
+        'timeout-minutes: 15',
+        'timeout-minutes: 15\n    continue-on-error: true',
+      ),
+      'an if on the step': plant(run, `if: false\n        ${run}`),
+      'an if on the job': plant(
+        'runs-on: ubuntu-latest',
+        "runs-on: ubuntu-latest\n    if: github.event_name == 'push'",
+      ),
+    };
+    for (const [name, planted] of Object.entries(breaks)) {
+      expect(dryRunJobGaps(planted), name).not.toEqual([]);
+    }
+  });
+});
