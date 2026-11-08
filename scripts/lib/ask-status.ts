@@ -39,6 +39,41 @@ export function daysToRead(now: number): number[] {
   return days;
 }
 
+/**
+ * The command line: `--record`, and `--day <YYYY-MM-DD>` to read that one day of `readable`
+ * alone, so a day that is not whole, such as a deploy's first, is never recorded (#548,
+ * decision 431). A refusal is fixed words, never an argument quoted back.
+ */
+export function parseArgs(
+  args: readonly string[],
+  readable: readonly number[],
+): { readonly record: boolean; readonly days: readonly number[] } | { readonly error: string } {
+  let record = false;
+  let day: number | undefined;
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === '--record') {
+      record = true;
+    } else if (arg === '--day' && day === undefined) {
+      const value = args[(i += 1)] ?? '';
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      const start =
+        match === null ? NaN : Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      if (Number.isNaN(start) || new Date(start).toISOString().slice(0, 10) !== value) {
+        return { error: '--day takes one UTC date, as YYYY-MM-DD' };
+      }
+      day = start;
+    } else {
+      return { error: 'unknown or repeated argument; the flags are --record and --day YYYY-MM-DD' };
+    }
+  }
+  if (day === undefined) return { record, days: readable };
+  if (!readable.includes(day)) {
+    return { error: '--day names a day that has not ended an hour ago or is no longer whole' };
+  }
+  return { record, days: [day] };
+}
+
 /** `<unix second of the day's UTC midnight>-ask.prom`, the name `trend:sync` imports by. */
 export function recordName(dayStart: number): string {
   return `${String(dayStart / 1000)}-ask.prom`;

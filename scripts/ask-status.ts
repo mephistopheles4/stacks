@@ -6,6 +6,7 @@
  *
  *   pnpm ask:status            print each day still whole in the logs
  *   pnpm ask:status --record   also write each one to .trend/local/, for pnpm trend:sync
+ *   --day YYYY-MM-DD           read that one day alone, so a partial day is never recorded
  *
  * ⚠️ **Pass `--record` only after the first live check has passed (spec C10).** The replies
  * are read against Cloudflare's documented shape, never yet a captured one, and a record is
@@ -20,6 +21,7 @@ import {
   Refused,
   daysToRead,
   checkoutIsLinked,
+  parseArgs,
   queryBody,
   runDays,
   type QueryName,
@@ -34,10 +36,9 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-const args = process.argv.slice(2);
-const unknown = args.filter((arg) => arg !== '--record');
-if (unknown.length > 0) fail(`unknown argument ${unknown[0] ?? ''}; the only flag is --record`);
-const record = args.includes('--record');
+const parsed = parseArgs(process.argv.slice(2), daysToRead(Date.now()));
+if ('error' in parsed) fail(parsed.error);
+const { record, days } = parsed;
 
 const loaded = loadEnv();
 const account = process.env['CLOUDFLARE_ACCOUNT_ID'];
@@ -120,7 +121,6 @@ async function ask(name: QueryName, dayStart: number): Promise<unknown> {
   }
 }
 
-const days = daysToRead(Date.now());
 console.log(
   `Ask the library, ${String(days.length)} completed UTC day(s) still whole in Workers Logs${record ? ', recording' : ''}`,
 );

@@ -456,8 +456,12 @@ came back.
   `pnpm trend:sync` imports, and the Ask page in Grafana draws. It refuses from a linked
   worktree, since that checkout's `.trend/` goes with it, and never rewrites a day.
   ⚠️ **Pass it only after the first live check (spec C10) has passed**: the shape is
-  documented, not yet captured. **To undo a record**, delete its file and run
-  `pnpm trend:sync --rebuild`; it can be written again only while its logs are kept.
+  documented, corrected by the first deployed day's replies (#548). **To undo a record**,
+  delete its file and run `pnpm trend:sync --rebuild`; it can be written again only while
+  its logs are kept.
+- **`--day YYYY-MM-DD`** reads that one day alone, and refuses one that has not ended an
+  hour ago or is no longer whole. Use it with `--record` to leave out a day the logs hold
+  only part of, such as a deploy's first.
 
 ## `pnpm turnstile` — the Ask the library Turnstile widget and its secret
 

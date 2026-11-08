@@ -8,6 +8,7 @@ import {
   dayTotals,
   daysToRead,
   isLinkedWorktree,
+  parseArgs,
   printDay,
   queryBody,
   recordName,
@@ -126,6 +127,37 @@ describe('which days a run reads (spec S3, C7)', () => {
   it('reads no day from before the switch under the longer rule, at the boundary', () => {
     // Dec 3, 02:00: Nov 30 started 3 days and 2 hours back, past its own 3 days.
     expect(daysToRead(Date.UTC(2026, 11, 3) + 2 * HOUR)).not.toContain(Date.UTC(2026, 10, 30));
+  });
+
+  it('reads every day by default, and only the named one with --day', () => {
+    const days = [NOV_5 - DAY, NOV_5 - 2 * DAY];
+    expect(parseArgs([], days)).toEqual({ record: false, days });
+    expect(parseArgs(['--record'], days)).toEqual({ record: true, days });
+    expect(parseArgs(['--record', '--day', '2026-11-03'], days)).toEqual({
+      record: true,
+      days: [NOV_5 - 2 * DAY],
+    });
+    expect(parseArgs(['--day', '2026-11-04'], days)).toEqual({
+      record: false,
+      days: [NOV_5 - DAY],
+    });
+  });
+
+  it('refuses a --day it cannot read, in words that quote no argument', () => {
+    const days = [NOV_5 - DAY];
+    const refusals = [
+      ['--day', '2026-11-02'],
+      ['--day', '2026-11-4'],
+      ['--day', '2026-02-30'],
+      ['--day'],
+      ['--day', '2026-11-04', '--day', '2026-11-04'],
+      ['--days', 'CANARY'],
+    ];
+    for (const args of refusals) {
+      const parsed = parseArgs(args, days);
+      expect(parsed, args.join(' ')).toHaveProperty('error');
+      expect(JSON.stringify(parsed)).not.toContain('CANARY');
+    }
   });
 
   it('names a day by the unix second its UTC midnight starts', () => {
@@ -714,6 +746,8 @@ describe('what a run writes (spec C7)', () => {
     expect(script).toContain('env: uploadEnv(process.env, loaded)');
     // Every day goes through runDays, whose prints are fixed words or printDay's totals.
     expect(script).toMatch(/await runDays\(\{/);
+    // The days come from parseArgs, so --day narrows what runDays reads.
+    expect(script).toMatch(/parseArgs\(process\.argv\.slice\(2\), daysToRead\(Date\.now\(\)\)\)/);
     expect(script).not.toMatch(/\.text\(\)|JSON\.stringify\(repl/);
   });
 });
