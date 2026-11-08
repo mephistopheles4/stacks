@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-10
 **Status:** accepted, built in [#418](https://github.com/mephistopheles4/stacks/issues/418) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md) §3.4
+**Superseded in part by:** [ADR-0138](0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md) — the modal `<dialog>`, the closing overlay and the cut on put-back; the turning rules stand
 **Issue:** [#418](https://github.com/mephistopheles4/stacks/issues/418)
 **Supersedes in part:** [ADR-0052](0052-the-enlarged-cover-is-a-real-dialog.md)
 

@@ -17,10 +17,13 @@
  *   (#371). Imported from `gsap/gsap-core` (#370). One timeline per book,
  *   which stops at closed in the hand and plays on when it is opened
  *   (`pickup-track.ts`).
- * - **The put-back X and the Open button live outside the pages**, in the
- *   header, because a closed book's pages are hidden and a control on them
+ * - **The put-back X and the Open button live outside the pages**, at the top
+ *   right, because a closed book's pages are hidden and a control on them
  *   could neither be seen nor focused. The cursor and the hint say a closed
  *   book opens on a click.
+ * - **The closed book turns in your hand** (#553): a drag on the canvas or the
+ *   arrow keys turn it at the closed rest, whether it was just picked up or
+ *   closed again from its pages, and it squares as it opens.
  * - **The rest of the shelf dims under a veil** in three passes — the shelf, a
  *   55% veil, then the held book — keeping depth, so a book still inside the
  *   shelf stays behind its upright (#371).
@@ -41,10 +44,16 @@ import * as THREE from 'three';
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import type { LibraryBook } from '@stacks/core';
 import { announceHeld, LAUNCHER_ID } from '../ask/bridge.ts';
-import { SQUARE } from './book-turn.ts';
-import type { BookViewer } from './book-viewer.ts';
+import { dragTurn, isTurnKey, keyTurn, press, SQUARE, type Press, type Turn } from './book-turn.ts';
 import { announcement } from './card.ts';
-import { buildPages, PAGE_PX, rooted, type HeldPages } from './held-page.ts';
+import {
+  buildPages,
+  CLOSE_BUTTON_CLASS,
+  PAGE_PX,
+  rooted,
+  CLOSE_FOOT_CLASS,
+  type HeldPages,
+} from './held-page.ts';
 import { loadThoughts } from './notes.ts';
 import { paperMaterial, sheetGeometry } from './gutter-sheet.ts';
 import { openSpread, type OpenSpread } from './open-spread.ts';
@@ -84,17 +93,11 @@ interface Lifted {
   readonly staged: StagedBook;
   readonly rig: Rigged;
   readonly home: { readonly position: THREE.Vector3; readonly quaternion: THREE.Quaternion };
-  /**
-   * The three stages' progress, 0..1 each, tweened by the track — and `c`, how
-   * far the book is closed in the hand for examining, tweened on its own. The
-   * track's turn is complete before its opening starts, but closing by seeking
-   * the shared track would still un-turn the book; the pose reads `o` as
-   * `p.o * (1 - p.c)`.
-   */
-  readonly p: { s: number; u: number; o: number; c: number };
-  /** The turn examining has put on the book, about the camera's own axes. */
+  /** The three stages' progress, 0..1 each, tweened by the track. */
+  readonly p: { s: number; u: number; o: number };
+  /** The turn the visitor has put on the closed book, about the camera's own axes. */
   readonly turn: { yaw: number; pitch: number };
-  /** The tween closing the book or opening it again, while one runs. */
+  /** The tween squaring a turned book as it opens, while one runs. */
   ease: Timeline | undefined;
   readonly pages: HeldPages;
   readonly pageObjects: readonly CSS3DObject[];
@@ -111,12 +114,6 @@ export interface PickupElements {
   readonly status: HTMLElement;
   /** Where the page layer goes: the shelf's container. */
   readonly host: HTMLElement;
-  /**
-   * The examining view's dialog. Its Escape and this module's both listen on
-   * the document, so `isOpen` is what keeps one Escape from leaving the view
-   * and putting the book back in the same keystroke.
-   */
-  readonly viewer: BookViewer;
   /** The controls outside the pages: the put-back X, the Open button and the hint. */
   readonly controls: HeldControls;
 }
@@ -142,8 +139,6 @@ export interface HeldReading {
   readonly thoughts: boolean;
   /** Whether the book is open at rest in the hand: false while closed, lifting or opening. */
   readonly opened: boolean;
-  /** Whether the book is closed in the hand, to be turned (#418). */
-  readonly examining: boolean;
   /**
    * Which cover the book's texture wears now: the held copy once it has been
    * swapped in, the shelf copy for a book with none or one that failed to load,
@@ -152,8 +147,8 @@ export interface HeldReading {
    */
   readonly cover: 'held' | 'shelf' | 'none';
   /**
-   * Whether the book is still being closed or opened again by a tween. Under
-   * reduced motion it never is: the move is a cut, in the same call.
+   * Whether a turned book is still easing square as it opens. Under reduced
+   * motion it never is: the square is a cut, in the same call.
    */
   readonly easing: boolean;
   /** The front board's angle to the page block, in degrees: 0 with the book closed. */
@@ -163,7 +158,7 @@ export interface HeldReading {
    * that the X leaves a closed book room, which no DOM element can tell it.
    */
   readonly screen: ScreenBox;
-  /** The turn examining has put on the book, in degrees. */
+  /** The turn the visitor has put on the closed book, in degrees. */
   readonly turn: { readonly yaw: number; readonly pitch: number };
 }
 
@@ -300,8 +295,20 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         if (chatPickup === book.id && launcherHasFocus()) controls.open.focus();
         chatPickup = undefined;
       },
-      opening: () => {
+      opening: (book) => {
         // The Open button hides now; focus it held is caught on the canvas.
+        syncControls();
+        const entry = lifted.get(book.id);
+        if (entry !== undefined) squareUp(entry);
+      },
+      closing: (book) => {
+        const entry = lifted.get(book.id);
+        // Focus on the pages moves to the X before they hide, never to <body>.
+        if (layer.contains(document.activeElement)) controls.putBack.focus();
+        if (entry !== undefined) {
+          entry.pages.setScrollable(false);
+          entry.pages.right.scrollTop = 0;
+        }
         syncControls();
       },
       opened: (book) => {
@@ -322,6 +329,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       },
       settled: (book) => {
         settle(book);
+        // A book that was going back no longer holds the hint down.
+        syncControls();
       },
       announce: (book) => {
         elements.status.textContent = book === undefined ? '' : announcement(book);
@@ -337,90 +346,6 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
           chatPickup = undefined;
         }
         syncControls();
-      },
-      examine: (book) => {
-        const entry = lifted.get(book.id);
-        if (entry === undefined) return;
-        entry.ease?.kill();
-        entry.ease = undefined;
-        setTurn(entry, SQUARE);
-        // The X is hidden while the modal holds everything, so no inert control
-        // shows behind a transparent dialog.
-        syncControls();
-        elements.viewer.open(`${book.title}, closed in your hand`);
-        if (reduced()) {
-          entry.p.c = 1;
-          return;
-        }
-        entry.ease = engine
-          .timeline({ paused: false })
-          .fromTo(
-            entry.p,
-            { c: entry.p.c },
-            { c: 1, duration: motion.open, ease: bezier(motion.easeOpen) },
-            0,
-          )
-          .eventCallback('onComplete', () => {
-            entry.ease = undefined;
-          });
-      },
-      leave: (book) => {
-        const entry = lifted.get(book.id);
-        if (entry === undefined) return;
-        entry.ease?.kill();
-        entry.ease = undefined;
-        // Closing the dialog sends focus to the control that opened it, which is
-        // still hidden: it would drop to `<body>`. Hold it on the canvas until
-        // the page is visible again (S5).
-        elements.viewer.close();
-        current.canvas.focus();
-        syncControls();
-        const done = (): void => {
-          entry.ease = undefined;
-          entry.p.c = 0;
-          setTurn(entry, SQUARE);
-          pose();
-          const at = document.activeElement;
-          if (!entry.released && (at === document.body || at === current.canvas)) {
-            entry.pages.examine.focus();
-          }
-        };
-        if (reduced()) {
-          done();
-          return;
-        }
-        // Square first, then open: the book is closed until the turn has gone.
-        const squaring = entry.turn.yaw === 0 && entry.turn.pitch === 0 ? 0 : motion.slide;
-        const tl = engine.timeline({ paused: false });
-        if (squaring > 0) {
-          tl.fromTo(
-            entry.turn,
-            { yaw: entry.turn.yaw, pitch: entry.turn.pitch },
-            { yaw: 0, pitch: 0, duration: squaring, ease: bezier(motion.easeOpen) },
-            0,
-          );
-        }
-        tl.fromTo(
-          entry.p,
-          { c: entry.p.c },
-          { c: 0, duration: motion.open, ease: bezier(motion.easeOpen) },
-          squaring,
-        ).eventCallback('onComplete', done);
-        entry.ease = tl;
-      },
-      cutExamining: (book) => {
-        const entry = lifted.get(book.id);
-        if (entry === undefined) return false;
-        const was = entry.p.c > 0 || entry.ease !== undefined || elements.viewer.isOpen();
-        entry.ease?.kill();
-        entry.ease = undefined;
-        entry.p.c = 0;
-        setTurn(entry, SQUARE);
-        if (elements.viewer.isOpen()) {
-          elements.viewer.close();
-          current.canvas.focus();
-        }
-        return was;
       },
       reduced,
       returnSpeed: () => motion.returnSpeed,
@@ -460,7 +385,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       staged: target,
       rig,
       home: { position: group.position.clone(), quaternion: group.quaternion.clone() },
-      p: { s: 0, u: 0, o: 0, c: 0 },
+      p: { s: 0, u: 0, o: 0 },
       turn: { yaw: 0, pitch: 0 },
       ease: undefined,
       pages,
@@ -505,7 +430,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   // ---- the controls outside the pages ------------------------------------------
 
   const hintText = controls.hint.textContent;
-  const CLOSED_HINT = 'Click the book to open it';
+  // Two lines, so it stays clear of the book at every width (#553).
+  const CLOSED_HINT = 'Drag to turn it\nclick to open';
   /** A chat link's pickup in flight, so focus can move to Open when it lands. */
   let chatPickup: string | undefined;
   /** The open began from the controls: a screen reader or a keyboard asked for it. */
@@ -520,14 +446,16 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
 
   /**
    * Shows the controls the state calls for. The X is on screen from the pickup
-   * until the hand empties, and away while the examining view holds the page.
-   * The Open button, the hint and the cursor are for a book closed at rest, and
-   * for that alone. Hiding what holds focus catches it on the canvas.
+   * until the hand empties, closed or open. The Open button, the closed hint
+   * and the cursor are for a book closed at rest, and for that alone. Any other
+   * book in hand hides the hint, which would lie over its pages (#553), and so
+   * does one going back; an empty hand with nothing returning has the shelf's
+   * hint back. Hiding what holds focus catches it on the canvas.
    */
   const syncControls = (): void => {
     const holding = state.holding();
     const closed = state.closed();
-    const showX = holding !== undefined && !state.examining();
+    const showX = holding !== undefined;
     const at = document.activeElement;
     if (
       (!showX && controls.root.contains(at)) ||
@@ -538,6 +466,9 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     controls.root.hidden = !showX;
     controls.open.hidden = !closed;
     controls.hint.textContent = closed ? CLOSED_HINT : hintText;
+    // A book still going back hides the hint as one in hand does (S6).
+    const returning = [...lifted.keys()].some((id) => id !== holding?.book.id);
+    controls.hint.hidden = (holding !== undefined && !closed) || returning;
     if (closed && holding !== undefined) controls.open.textContent = `Open ${holding.book.title}`;
     setCursor(closed);
   };
@@ -838,8 +769,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     for (const entry of lifted.values()) {
       const { p } = entry;
       const { group } = entry.staged;
-      // Open in the hand less however far it is closed for examining.
-      const o = p.o * (1 - p.c);
+      const o = p.o;
       const held = heldPose(entry, o, entry.turn);
       const slid = entry.home.position
         .clone()
@@ -934,33 +864,111 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   addEventListener('popstate', () => {
     state.popped();
   });
+  // ---- turning the closed book, and closing the open one (#553) ------------------
+
+  /** A turned book eases square as it opens, in step with the opening. */
+  const squareUp = (entry: Lifted): void => {
+    entry.ease?.kill();
+    entry.ease = undefined;
+    if (entry.turn.yaw === 0 && entry.turn.pitch === 0) return;
+    if (reduced()) {
+      setTurn(entry, SQUARE);
+      return;
+    }
+    entry.ease = engine
+      .timeline({ paused: false })
+      .fromTo(
+        entry.turn,
+        { yaw: entry.turn.yaw, pitch: entry.turn.pitch },
+        { yaw: 0, pitch: 0, duration: motion.open, ease: bezier(motion.easeOpen) },
+        0,
+      )
+      .eventCallback('onComplete', () => {
+        entry.ease = undefined;
+      });
+  };
+
+  /** Turns the held book by `update`, at the closed rest and nowhere else. */
+  const turnHeld = (update: (turn: Turn) => Turn): void => {
+    if (!state.closed()) return;
+    const entry = heldEntry();
+    if (entry !== undefined) setTurn(entry, update(entry.turn));
+  };
+
+  // A drag on the canvas turns the book; a tap is still the shelf's click.
+  let dragging: { readonly id: number; readonly press: Press; x: number; y: number } | undefined;
+  const onDown = (event: PointerEvent): void => {
+    if (dragging !== undefined || !state.closed()) return;
+    const { pointerId: id, clientX: x, clientY: y } = event;
+    dragging = { id, press: press(x, y), x, y };
+  };
+  const onMove = (event: PointerEvent): void => {
+    if (dragging?.id !== event.pointerId) return;
+    dragging.press.move(event.clientX, event.clientY);
+    // A press inside the tap's slop turns nothing: it may still be a click.
+    if (dragging.press.isTap()) return;
+    const dx = event.clientX - dragging.x;
+    const dy = event.clientY - dragging.y;
+    dragging.x = event.clientX;
+    dragging.y = event.clientY;
+    const shortSide = Math.min(window.innerWidth, window.innerHeight);
+    turnHeld((turn) => dragTurn(turn, dx, dy, shortSide));
+  };
+  const onEnd = (event: PointerEvent): void => {
+    if (dragging?.id === event.pointerId) dragging = undefined;
+  };
+  let draggingOn: HTMLCanvasElement | undefined;
+  /** The canvas the drags are read off: the current one, moved on every install. */
+  const listenForDrags = (canvas: HTMLCanvasElement): void => {
+    if (draggingOn !== undefined) {
+      draggingOn.removeEventListener('pointerdown', onDown);
+      draggingOn.removeEventListener('pointermove', onMove);
+      draggingOn.removeEventListener('pointerup', onEnd);
+      draggingOn.removeEventListener('pointercancel', onEnd);
+    }
+    dragging = undefined;
+    draggingOn = canvas;
+    canvas.addEventListener('pointerdown', onDown);
+    canvas.addEventListener('pointermove', onMove);
+    canvas.addEventListener('pointerup', onEnd);
+    canvas.addEventListener('pointercancel', onEnd);
+  };
+  listenForDrags(current.canvas);
+
+  /**
+   * Where an arrow key turns the book: the canvas, the document body, or the held
+   * controls. Never a text field, the Ask drawer, or an open page and its links,
+   * where the arrows scroll and move as they always do.
+   */
+  const turnsFrom = (target: EventTarget | null): boolean =>
+    target === null ||
+    target === document.body ||
+    target === document.documentElement ||
+    target === current.canvas ||
+    (target instanceof Node && controls.root.contains(target));
+
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    // An open Ask the library drawer took this Escape (it listens first, on the
-    // window): it closes and the book stays held.
-    if (event.defaultPrevented) return;
-    // The examining view is a modal `<dialog>`: the platform closes it on
-    // Escape, and the keydown still reaches here. One Escape leaves the view
-    // and keeps the book held (§3.5, check 9). Also while the book is still
-    // easing open again: that Escape already left the view once.
-    if (elements.viewer.isOpen() || [...lifted.values()].some((entry) => entry.p.c > 0)) return;
-    state.putBack();
+    if (event.key === 'Escape') {
+      // An open Ask the library drawer took this Escape (it listens first, on
+      // the window): it closes and the book stays held.
+      if (event.defaultPrevented) return;
+      state.putBack();
+      return;
+    }
+    if (!isTurnKey(event.key) || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.defaultPrevented || !state.closed() || !turnsFrom(event.target)) return;
+    event.preventDefault();
+    const { key } = event;
+    turnHeld((turn) => keyTurn(turn, key) ?? turn);
   });
 
-  /** What the view's dialog asks for, bound once: the pickup answers each. */
-  elements.viewer.bind({
-    examine: () => {
-      state.examine();
-    },
-    leave: () => {
-      state.leave();
-    },
-    turn: (update) => {
-      const holding = state.holding();
-      const entry = holding === undefined ? undefined : lifted.get(holding.book.id);
-      if (entry === undefined || !state.examining()) return;
-      setTurn(entry, update(entry.turn));
-    },
+  // The two ways to close the open book, on pages built anew for every pickup:
+  // listened for on the layer that holds them all, by delegation.
+  layer.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.closest(`.${CLOSE_BUTTON_CLASS}, .${CLOSE_FOOT_CLASS}`) === null) return;
+    state.close();
   });
 
   const tunable: TunablePickup = {
@@ -1031,6 +1039,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       // The canvas may be a new element: the old one's cursor listener goes first.
       setCursor(false);
       install(next);
+      listenForDrags(next.canvas);
     },
     drop: () => {
       state.drop();
@@ -1045,7 +1054,6 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         progress: entry?.track?.progress() ?? 1,
         thoughts: entry?.pages.right.querySelector('.held-thoughts:not([hidden])') !== null,
         opened: holding.opened,
-        examining: state.examining(),
         easing: entry?.ease !== undefined,
         cover: coverReading(entry),
         boardAngle: entry === undefined ? 0 : boardAngleOf(entry),
@@ -1129,6 +1137,7 @@ function inertTrack(): Track {
   return {
     play: () => undefined,
     reverse: () => undefined,
+    close: () => undefined,
     finish: () => undefined,
     finishOpen: () => undefined,
     rewind: () => undefined,
@@ -1150,7 +1159,7 @@ function coverReading(entry: Lifted | undefined): 'held' | 'shelf' | 'none' {
 /**
  * The front board's angle to the page block, in degrees, read off the scene:
  * its outward normal (+X) against the block's, 0° shut and 180° flat open.
- * Unmoved by turning the whole book, so examining reads 0 at any turn.
+ * Unmoved by turning the whole book, so a closed book reads 0 at any turn.
  */
 function boardAngleOf(entry: Lifted): number {
   const { rig } = entry;

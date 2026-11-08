@@ -25,19 +25,22 @@ beforeAll(() => {
 interface Rig {
   readonly stages: Stages;
   readonly track: Track;
-  readonly calls: { landed: number; opened: number; returned: number };
+  readonly calls: { landed: number; opened: number; closed: number; returned: number };
 }
 
 const rigs: Rig[] = [];
 function rig(): Rig {
   const stages: Stages = { s: 0, u: 0, o: 0 };
-  const calls = { landed: 0, opened: 0, returned: 0 };
+  const calls = { landed: 0, opened: 0, closed: 0, returned: 0 };
   const track = buildTrack(stages, PICKUP_MOTION, {
     landed: () => {
       calls.landed += 1;
     },
     opened: () => {
       calls.opened += 1;
+    },
+    closed: () => {
+      calls.closed += 1;
     },
     returned: () => {
       calls.returned += 1;
@@ -69,7 +72,7 @@ describe('the track, with GSAP running it', () => {
     expect(track.progress()).toBeCloseTo(track.closedProgress(), 10);
     // A rest: more frames change nothing and report nothing more.
     for (let frame = 0; frame < 60; frame += 1) step(1 / 60);
-    expect(calls).toEqual({ landed: 1, opened: 0, returned: 0 });
+    expect(calls).toEqual({ landed: 1, opened: 0, closed: 0, returned: 0 });
     expect(stages.o).toBe(0);
   });
 
@@ -89,7 +92,7 @@ describe('the track, with GSAP running it', () => {
     run(() => calls.opened > 0);
 
     expect(stages).toMatchObject({ s: 1, u: 1, o: 1 });
-    expect(calls).toEqual({ landed: 1, opened: 1, returned: 0 });
+    expect(calls).toEqual({ landed: 1, opened: 1, closed: 0, returned: 0 });
     expect(track.progress()).toBe(1);
   });
 
@@ -99,7 +102,7 @@ describe('the track, with GSAP running it', () => {
     track.reverse(1.6);
     run(() => calls.returned > 0);
 
-    expect(calls).toEqual({ landed: 0, opened: 0, returned: 1 });
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 0, returned: 1 });
     expect(stages).toMatchObject({ s: 0, u: 0, o: 0 });
     expect(track.progress()).toBe(0);
   });
@@ -128,7 +131,7 @@ describe('the track, with GSAP running it', () => {
     track.reverse(1.6);
     run(() => calls.returned > 0);
 
-    expect(calls).toEqual({ landed: 0, opened: 0, returned: 1 });
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 0, returned: 1 });
     expect(stages).toMatchObject({ s: 0, u: 0, o: 0 });
   });
 
@@ -138,14 +141,14 @@ describe('the track, with GSAP running it', () => {
     step(0);
     step(100);
 
-    expect(calls).toEqual({ landed: 1, opened: 0, returned: 0 });
+    expect(calls).toEqual({ landed: 1, opened: 0, closed: 0, returned: 0 });
     expect(stages).toMatchObject({ s: 1, u: 1, o: 0 });
     expect(track.progress()).toBeCloseTo(track.closedProgress(), 10);
 
     track.play();
     step(0);
     step(100);
-    expect(calls).toEqual({ landed: 1, opened: 1, returned: 0 });
+    expect(calls).toEqual({ landed: 1, opened: 1, closed: 0, returned: 0 });
     expect(stages.o).toBe(1);
   });
 
@@ -156,7 +159,7 @@ describe('the track, with GSAP running it', () => {
     step(0);
     step(100);
 
-    expect(calls).toEqual({ landed: 0, opened: 0, returned: 1 });
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 0, returned: 1 });
     expect(stages).toMatchObject({ s: 0, u: 0, o: 0 });
   });
 
@@ -171,7 +174,7 @@ describe('the track, with GSAP running it', () => {
     track.play();
     run(() => calls.opened > 0);
 
-    expect(calls).toEqual({ landed: 0, opened: 1, returned: 0 });
+    expect(calls).toEqual({ landed: 0, opened: 1, closed: 0, returned: 0 });
     expect(stages.o).toBe(1);
   });
 
@@ -186,7 +189,7 @@ describe('the track, with GSAP running it', () => {
     track.play();
     run(() => calls.landed > 0);
 
-    expect(calls).toEqual({ landed: 1, opened: 0, returned: 0 });
+    expect(calls).toEqual({ landed: 1, opened: 0, closed: 0, returned: 0 });
     expect(track.progress()).toBeCloseTo(track.closedProgress(), 10);
     expect(stages.o).toBe(0);
   });
@@ -204,7 +207,7 @@ describe('the track, with GSAP running it', () => {
     track.play();
     run(() => calls.landed > 1 || calls.opened > 0, 3);
 
-    expect(calls).toEqual({ landed: 2, opened: 0, returned: 0 });
+    expect(calls).toEqual({ landed: 2, opened: 0, closed: 0, returned: 0 });
     expect(stages.o).toBeCloseTo(0, 3);
   });
 
@@ -220,7 +223,7 @@ describe('the track, with GSAP running it', () => {
     expect(stages).toMatchObject({ s: 0, u: 0, o: 0 });
     track.seek(0.25);
     expect(track.progress()).toBeCloseTo(0.25, 10);
-    expect(calls).toEqual({ landed: 0, opened: 0, returned: 0 });
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 0, returned: 0 });
   });
 
   it('plays on from a jump to the rest without stopping there again', () => {
@@ -229,8 +232,86 @@ describe('the track, with GSAP running it', () => {
     track.play();
     run(() => calls.opened > 0);
 
-    expect(calls).toEqual({ landed: 0, opened: 1, returned: 0 });
+    expect(calls).toEqual({ landed: 0, opened: 1, closed: 0, returned: 0 });
     expect(stages.o).toBe(1);
+  });
+});
+
+describe('closing an open book: back to the closed rest (#553)', () => {
+  it('runs back from open and holds at the closed rest, reporting it once', () => {
+    const { stages, track, calls } = rig();
+    track.finishOpen();
+    track.close();
+    run(() => calls.closed > 0);
+
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 1, returned: 0 });
+    expect(stages).toMatchObject({ s: 1, u: 1, o: 0 });
+    expect(track.atClosedRest()).toBe(true);
+    // A rest: more frames change nothing and report nothing more.
+    for (let frame = 0; frame < 60; frame += 1) step(1 / 60);
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 1, returned: 0 });
+    expect(track.atClosedRest()).toBe(true);
+  });
+
+  it("takes the opening stage's own time, not the return's", () => {
+    const { stages, track, calls } = rig();
+    track.finishOpen();
+    track.close();
+    step(0);
+    // Three quarters of the opening's time: a close at 1.6× would have reached the rest.
+    step(PICKUP_MOTION.open * 0.75);
+
+    expect(calls.closed).toBe(0);
+    expect(stages.o).toBeGreaterThan(0);
+    expect(stages.o).toBeLessThan(1);
+  });
+
+  it('holds at the rest on one large step, as a stalled tab would deliver', () => {
+    const { stages, track, calls } = rig();
+    track.finishOpen();
+    track.close();
+    step(0);
+    step(100);
+
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 1, returned: 0 });
+    expect(stages).toMatchObject({ s: 1, u: 1, o: 0 });
+  });
+
+  it('opens again when played on from the rest a close parked it on', () => {
+    const { stages, track, calls } = rig();
+    track.finishOpen();
+    track.close();
+    run(() => calls.closed > 0);
+    track.play();
+    run(() => calls.opened > 0);
+
+    expect(calls).toEqual({ landed: 0, opened: 1, closed: 1, returned: 0 });
+    expect(stages.o).toBe(1);
+  });
+
+  it('goes home past the stop when put back from the rest a close parked it on', () => {
+    const { stages, track, calls } = rig();
+    track.finishOpen();
+    track.close();
+    run(() => calls.closed > 0);
+    track.reverse(1.6);
+    run(() => calls.returned > 0);
+
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 1, returned: 1 });
+    expect(stages).toMatchObject({ s: 0, u: 0, o: 0 });
+  });
+
+  it('goes home when put back partway through a close: the hold is disarmed', () => {
+    const { stages, track, calls } = rig();
+    track.finishOpen();
+    track.close();
+    step(0);
+    step(PICKUP_MOTION.open / 2);
+    track.reverse(1.6);
+    run(() => calls.returned > 0);
+
+    expect(calls).toEqual({ landed: 0, opened: 0, closed: 0, returned: 1 });
+    expect(stages).toMatchObject({ s: 0, u: 0, o: 0 });
   });
 });
 
@@ -286,9 +367,7 @@ describe('the pickup state on the real track: put back and caught within a frame
       opened: () => log.push('opened'),
       settled: () => log.push('settled'),
       announce: () => undefined,
-      examine: () => undefined,
-      leave: () => undefined,
-      cutExamining: () => false,
+      closing: () => log.push('closing'),
       reduced: () => false,
       returnSpeed: () => PICKUP_MOTION.returnSpeed,
       history: {

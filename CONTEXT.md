@@ -247,7 +247,7 @@ opening is held, and `closed()` is what says it is not yet at rest.
 The return of a **held** book to its slot, on the same path reversed, from
 closed or from open. Escape, a click on empty space, the back button and the X
 in the header all do it.
-*Avoid*: close, dismiss (those were the card's), drop.
+*Avoid*: close (that is open to closed rest, still held), dismiss, drop.
 
 **Drop**:
 Every book the pickup is moving, back in its slot at once with no motion, when
@@ -255,17 +255,17 @@ the WebGL context is lost and the shelf is rebuilt. It is not a **put back**:
 nothing plays, which is why the code names it apart (`drop()`).
 *Avoid*: put back (for this case), reset.
 
-**Examining**:
-The **held** book closed in your hand and turned, in place of a flat picture of
-its cover: the page's control closes it, a drag or the arrow keys turn it, and
-Escape, a tap, the close button or Android's back gesture open it again at its
-page, still held. The code says `examining` (`held().examining`, `examine()`,
-`leave()`) and the view is `book-viewer.ts`. Not the public build's
-*inspector*, and not `?solo`'s single-book *inspector*, which is a separate
-renderer
-([ADR-0109](docs/adr/0109-the-held-book-is-examined-in-3d.md)).
-*Avoid*: inspect, inspection (both are already the public build's and
-`?solo`'s), view the cover, zoom.
+**Turning the closed book**:
+The **held** book at its closed rest, turned in your hand by a drag on the
+canvas or the arrow keys, in place of a flat picture of its cover. It is where
+every pickup lands, and where the back arrow and "Close the book" return an
+open book to. The code says `close()` for the way back and `turn` for the
+pose (`held().turn`). There is no separate view any more
+([ADR-0138](docs/adr/0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md),
+which replaced ADR-0109's *examining*). Not the public build's *inspector*,
+and not `?solo`'s single-book *inspector*, which is a separate renderer.
+*Avoid*: examining (retired with its dialog), inspect, inspection (both are
+already the public build's and `?solo`'s), view the cover, zoom.
 
 **Open spread**:
 A **held** book's two pages at rest: the front board flat at 180° to the page

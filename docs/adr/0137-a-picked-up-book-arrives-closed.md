@@ -2,6 +2,7 @@
 
 **Date:** 2026-11-07
 **Status:** accepted; built in [#531](https://github.com/mephistopheles4/stacks/issues/531) — [`docs/spec/picking-up-closed.md`](../spec/picking-up-closed.md)
+**Superseded in part by:** [ADR-0138](0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md) — the X under the hint, the hint's words, and the cut for a book closed for examining
 **Issue:** [#531](https://github.com/mephistopheles4/stacks/issues/531)
 **Supersedes in part:** [ADR-0102](0102-pickup-replaces-the-card.md) — its "turns, and opens" and its put-back line
 
