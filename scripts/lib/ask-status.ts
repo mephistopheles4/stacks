@@ -155,6 +155,11 @@ interface Query {
   readonly exists: readonly string[];
   readonly where?: { readonly key: string; readonly value: string };
   readonly calculations: readonly Calculation[];
+  /**
+   * What a sampled count does: `refuse` the day, or, on the outcome counts alone, `mark` the
+   * row and print it as sampled. Absent is `refuse`.
+   */
+  readonly sampled?: 'refuse' | 'mark';
 }
 
 const count: Calculation = { alias: 'lines', operator: 'count' };
@@ -168,11 +173,25 @@ const sum = (key: string): Calculation => ({ alias: key, operator: 'sum', key })
  * the rest without saying so: measured live on 2026-11-08 (#548), `outcome`, `reason` and
  * `limit` at once answered nothing for a day of 4,323 lines. So the outcomes are counted on
  * `outcome` alone, and `reasons` and `limits` add the detail for the lines that carry it.
+ *
+ * ⚠️ **Only those three may be sampled, and a sampled row prints as one** (#548, decision
+ * 413): 2026-11-07's `health-up` count came back at a sample interval of 1.002 with every
+ * other count exact. Sampling on the questions, Neurons, tokens or time still refuses the day.
  */
 export const QUERIES = {
-  outcomes: { groupBys: ['outcome'], exists: [], calculations: [count] },
-  reasons: { groupBys: ['outcome', 'reason'], exists: ['reason'], calculations: [count] },
-  limits: { groupBys: ['outcome', 'limit'], exists: ['limit'], calculations: [count] },
+  outcomes: { groupBys: ['outcome'], exists: [], calculations: [count], sampled: 'mark' },
+  reasons: {
+    groupBys: ['outcome', 'reason'],
+    exists: ['reason'],
+    calculations: [count],
+    sampled: 'mark',
+  },
+  limits: {
+    groupBys: ['outcome', 'limit'],
+    exists: ['limit'],
+    calculations: [count],
+    sampled: 'mark',
+  },
   questions: {
     groupBys: ['question'],
     exists: ['question'],
@@ -234,6 +253,8 @@ export class ShapeError extends Error {}
 interface Aggregate {
   readonly value: number;
   readonly groups: ReadonlyMap<string, string | number | boolean>;
+  /** Only ever true on a query whose `sampled` is `mark`. */
+  readonly sampled: boolean;
 }
 
 const REPLY_KEYS = new Set(['success', 'errors', 'messages', 'result']);
@@ -336,10 +357,13 @@ function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] 
       if (entry['value'] !== 0) throw new ShapeError(`${where} holds a value with no events`);
       return undefined;
     }
+    let sampled = false;
     for (const key of ['sampleInterval', 'interval'] as const) {
-      if (entry[key] !== undefined && entry[key] !== 1) {
+      if (entry[key] === undefined || entry[key] === 1) continue;
+      if (query.sampled !== 'mark' || !finite(entry[key])) {
         throw new ShapeError(`${where} was sampled, so its counts are estimates`);
       }
+      sampled = true;
     }
     const groups = new Map<string, string | number | boolean>();
     const rawGroups = entry['groups'] ?? [];
@@ -357,7 +381,7 @@ function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] 
       }
       groups.set(key, value as string | number | boolean);
     }
-    return { value: entry['value'], groups };
+    return { value: entry['value'], groups, sampled };
   });
   return read.filter((aggregate) => aggregate !== undefined);
 }
@@ -367,6 +391,8 @@ export interface OutcomeCount {
   readonly reason?: string;
   readonly limit?: string;
   readonly count: number;
+  /** The count is Cloudflare's estimate: printed as sampled, recorded as it came. */
+  readonly sampled?: true;
 }
 
 /** One UTC day, counted. Every figure is a sum or a count; nothing identifies anyone. */
@@ -409,12 +435,14 @@ const label = (value: string | number | boolean | undefined): string | undefined
  */
 function outcomeCounts(read: Record<QueryName, Map<string, Aggregate[]>>): OutcomeCount[] {
   const plain = new Map<string, number>();
+  const sampledOutcomes = new Set<string>();
   for (const a of read.outcomes.get('lines') ?? []) {
     const outcome = label(a.groups.get('outcome'));
     if (outcome === undefined) {
       throw new ShapeError('the outcomes reply holds a line with no outcome');
     }
     plain.set(outcome, (plain.get(outcome) ?? 0) + a.value);
+    if (a.sampled) sampledOutcomes.add(outcome);
   }
   const detailed: OutcomeCount[] = [];
   for (const [name, key] of [
@@ -430,12 +458,21 @@ function outcomeCounts(read: Record<QueryName, Map<string, Aggregate[]>>): Outco
       const left = (plain.get(outcome) ?? 0) - a.value;
       if (left < 0) throw new ShapeError(`the ${name} reply counts more lines than its outcome`);
       plain.set(outcome, left);
-      detailed.push({ outcome, [key]: detail, count: a.value });
+      detailed.push({
+        outcome,
+        [key]: detail,
+        count: a.value,
+        ...(a.sampled && { sampled: true }),
+      });
     }
   }
   const rest = [...plain]
     .filter(([, count]) => count > 0)
-    .map(([outcome, count]) => ({ outcome, count }));
+    .map(([outcome, count]) => ({
+      outcome,
+      count,
+      ...(sampledOutcomes.has(outcome) && { sampled: true as const }),
+    }));
   return [...rest, ...detailed];
 }
 
@@ -507,8 +544,11 @@ export function printDay(dayStart: number, totals: DayTotals): string[] {
     .sort((a, b) => b.count - a.count)
     .map((o) => {
       const why = o.reason ?? o.limit;
-      return `  ${o.outcome}${why === undefined ? '' : ` (${why})`} ${String(o.count)}`;
+      return `  ${o.outcome}${why === undefined ? '' : ` (${why})`} ${String(o.count)}${o.sampled === true ? ', sampled' : ''}`;
     });
+  const healthDown = totals.outcomes.some((o) => o.outcome === 'health-down' && o.sampled === true)
+    ? ', sampled'
+    : '';
   return [
     `${day(dayStart)}: questions ${String(totals.questions)}`,
     ...outcomes,
@@ -519,6 +559,6 @@ export function printDay(dayStart: number, totals: DayTotals): string[] {
     `  AI time: ${totals.msAvg === undefined ? 'no ai lines' : `average ${totals.msAvg.toFixed(0)} ms, largest ${String(totals.msMax ?? 0)} ms`}`,
     `  visitor-days reaching 1, 5, 10, 20, 30: ${[1, 5, 10, 20, 30].map((k) => String(totals.reaching.get(k) ?? 0)).join(', ')}`,
     `  questions 11 and up: ${String(share)}% of Neurons, a lower bound`,
-    `  daily test: ${daily}; health-down ${String(counted(totals, 'health-down'))}`,
+    `  daily test: ${daily}; health-down ${String(counted(totals, 'health-down'))}${healthDown}`,
   ];
 }

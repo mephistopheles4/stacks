@@ -210,6 +210,61 @@ describe("a day's totals from the replies (spec C6)", () => {
     });
   });
 
+  it('reads a sampled outcome count and marks it, in print and nowhere else', () => {
+    // Measured live on 2026-11-08 (#548): 2026-11-07's health-up count came back with a
+    // sample interval of 1.002 while every other count that day was exactly 1.
+    const day = fixtureDay();
+    Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[5]!, {
+      interval: 1.002,
+      sampleInterval: 1.002,
+    });
+    Object.assign(at(day, 'limits').result.calculations[0]!.aggregates[0]!, {
+      sampleInterval: 1.5,
+    });
+    const totals = dayTotals(day);
+    expect(totals.outcomes).toContainEqual({ outcome: 'health-down', count: 3, sampled: true });
+    expect(totals.outcomes).toContainEqual({
+      outcome: 'refused-limit',
+      limit: 'minute',
+      count: 4,
+      sampled: true,
+    });
+    expect(totals.outcomes).toContainEqual({ outcome: 'ai', count: 12 });
+    const text = printDay(NOV_5, totals).join('\n');
+    expect(text).toContain('health-down 3, sampled');
+    expect(text).toContain('refused-limit (minute) 4, sampled');
+    expect(text).toContain('daily test: pass; health-down 3, sampled');
+    expect(text).not.toMatch(/ai 12, sampled/);
+    // The record's labels stay outcome, reason and limit: no series or label is added.
+    expect(renderAskDay(totals, NOV_5 / 1000)).not.toContain('sampled');
+  });
+
+  it("marks an outcome's plain remainder sampled when its outcome count was", () => {
+    const day = fixtureDay();
+    Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[1]!, {
+      sampleInterval: 1.002,
+    });
+    expect(dayTotals(day).outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      reason: 'timeout',
+      count: 2,
+    });
+    (at(day, 'outcomes').result.calculations[0]!.aggregates[1] as { value: number }).value = 3;
+    (at(day, 'outcomes').result.calculations[0]!.aggregates[1] as { count: number }).count = 3;
+    expect(dayTotals(day).outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      count: 1,
+      sampled: true,
+    });
+  });
+
+  it('tolerates sampling on the three outcome queries alone', () => {
+    const tolerant = (Object.keys(QUERIES) as QueryName[]).filter(
+      (name) => (QUERIES[name] as { sampled?: string }).sampled === 'mark',
+    );
+    expect(tolerant.sort()).toEqual(['limits', 'outcomes', 'reasons']);
+  });
+
   it('prints the figures the owner reads, and never a reply body', () => {
     const text = printDay(NOV_5, dayTotals(fixtureDay())).join('\n');
     expect(text).toContain('2026-11-05');
@@ -348,6 +403,34 @@ describe("a day's totals from the replies (spec C6)", () => {
         void ((
           day.outcomes as { result: { calculations: { aggregates: unknown[] }[] } }
         ).result.calculations[0]!.aggregates[0] = aggregate(1, { outcome: 'ai', visitor: 'x' })),
+    ],
+    [
+      'a sampled question count',
+      (day) =>
+        void Object.assign(at(day, 'questions').result.calculations[0]!.aggregates[0]!, {
+          sampleInterval: 1.002,
+        }),
+    ],
+    [
+      'a sampled Neurons sum',
+      (day) =>
+        void Object.assign(at(day, 'metered').result.calculations[1]!.aggregates[0]!, {
+          interval: 1.002,
+        }),
+    ],
+    [
+      'a sampled time',
+      (day) =>
+        void Object.assign(at(day, 'time').result.calculations[0]!.aggregates[0]!, {
+          sampleInterval: 2,
+        }),
+    ],
+    [
+      'an outcome count with a sample interval that is not a number',
+      (day) =>
+        void Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[0]!, {
+          sampleInterval: '1.002',
+        }),
     ],
     [
       'a group key that is not a string',

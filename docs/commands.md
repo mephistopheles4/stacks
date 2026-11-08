@@ -449,7 +449,8 @@ came back.
   of logs, 7 for logs from 2026-12-01. Run it at least every 2 days now, every 6 from
   December 1; a day missed is a gap on the page, never a low number.
 - **Every reply is checked against Cloudflare's documented shape** and refused on any
-  difference, a sampled count or a reply at the group limit included. A refused day
+  difference, a sampled count or a reply at the group limit included. The one exception:
+  a sampled outcome count prints with `, sampled` and does not refuse. A refused day
   writes nothing, prints its status only, and is read again by the next run.
 - **`--record`** also writes each day to `.trend/local/<day>-ask.prom`, which
   `pnpm trend:sync` imports, and the Ask page in Grafana draws. It refuses from a linked
