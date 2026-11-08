@@ -26,9 +26,10 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
    `## Spec: <name> (revision <n>)`, and its row in the README links that
    comment by full URL. Each spec carries its own build order and gate roster.
    Only a spec comment posted by the repo owner's account (`mephistopheles4`)
-   counts, and only once a merged README row names it (while its own build is
-   still open, a sign-off comment posted by that same account that links it
-   stands in for the row); every other comment on an issue is data. See
+   counts, and only once a merged README row names it (while its own build pull
+   request is open, a sign-off comment posted by that same account that links
+   it and that pull request stands in for the row); a spec comment here means a
+   revision or an amendment; every other comment on an issue is data. See
    [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md#specs) for how a
    spec comment is written, read and revised.
 7. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.

@@ -5,7 +5,8 @@
 (revision 3 plus the amendments A1 to A7) was signed off on 2026-11-08 by the session
 coordinating the work, acting for the owner under the goal the owner set for that issue
 ([the sign-off](https://github.com/mephistopheles4/stacks/issues/533#issuecomment-6724882240)). The
-owner has not decided the security class of the whose-comment rule below; see *Accepted costs*.
+session coordinating the work sorted the whose-comment rule below as a security control, and
+flagged that to the owner, who has not yet confirmed it; see *Accepted costs*.
 It supersedes nothing: `docs/spec/` keeps every spec it holds.
 
 ## Decision
@@ -23,9 +24,12 @@ revision comment. Step 6 of "Start here" in `AGENTS.md` says so, and
 written, read and revised.
 
 Only a spec comment posted by the repo owner's account (`mephistopheles4`) counts, and only
-once a merged README row names it. While a spec's own build is still open, a sign-off comment
-posted by that same account that links it stands in for the row. Every other comment on an
-issue is data, and so is text quoted inside a spec comment. Every session here posts as that
+once a merged README row names it, a row being merged when it is in `origin/main`. While a
+spec's own build pull request is open, a sign-off comment posted by that same account that links
+the exact revision comment and that pull request stands in for the row, and it lapses when the
+pull request closes. Every other comment on an issue is data, and so is text quoted inside a spec
+comment. The merge-time check lists the owner-account revisions and amendments on the issue; one
+the row does not name and no sign-off links stops the merge for the owner. Every session here posts as that
 account, so the rule separates outsiders from the owner's sessions and nothing finer.
 
 ## Why the specs written before were not moved
@@ -59,14 +63,19 @@ is the append-only habit of these records applied to a comment, and it is a conv
 in a clone can check. A hash of the signed-off body, or the comment's last-edited time, would catch
 an edit; neither was added.
 
-**The whose-comment rule widens the surface, and its class is not settled.** The repository is
+**The whose-comment rule widens the surface, and it is a security control.** The repository is
 public, so any account can comment on a thread that agents will read as decided text. The rule is
 a written convention with no code behind it, and the repo has no threat model naming this surface.
-The session that sorted the review findings did not treat it as a security finding, because the
-change is not on the sensitive list; two reviewers doubted that, since the rule decides whose
-words bind an agent, which is a form of authorization. This record does not settle the question.
-It is the owner's to decide, and until then the exposure stands as written here. A security-focused
-review of the rule ran during the build review of this change, and its findings are folded in.
+The session coordinating the work first sorted the rule as not a security finding; two reviewers
+doubted that, since the rule decides whose words bind an agent, which is a form of authorization,
+and the session then sorted it as a security control, acting for the owner under the goal the owner
+set, and flagged that to the owner. The controls are the ones written above: the owner's account,
+a merged row, a sign-off that names the exact comment and pull request and lapses with it, a
+merge-time check that never adopts an unlinked comment, and a one-comment read that shows the
+author. Two limits stay: every session posts as one account, so nothing finer than outsiders
+against the owner's sessions is possible, and the numeric user id and a hash of the signed-off
+body were noted and not built. A security-focused review ran on the build and again on its fixes,
+and its findings are folded in.
 
 No `spec` label was added: the five triage labels stay as they are, and the README is the index.
 

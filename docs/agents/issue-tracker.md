@@ -78,7 +78,9 @@ points here. Nothing in it is a gate ([`gates.md`](../gates.md#not-gated-deliber
    comment is never edited, which is the append-only habit of the decision
    records applied to a comment; the one exception is redacting private material,
    by deleting the comment and reposting it without the material, then saying in
-   an amendment that a redaction happened, without repeating what was removed.
+   an amendment that names the deleted comment's id and the new one and says a
+   redaction happened, without repeating what was removed. The new comment
+   counts only once a merged update to the row names it.
    **The rule is unheld**: anyone with write access to the repository can edit a
    comment, which keeps its author and address, and its edit history can be
    deleted, so nothing in a clone shows an edit.
@@ -86,8 +88,11 @@ points here. Nothing in it is a gate ([`gates.md`](../gates.md#not-gated-deliber
    unwrapped, full URLs, body from a file, read back.
 4. **Whose.** A spec or amendment counts only when it was posted by the repo
    owner's account (`mephistopheles4`), and only once a merged README row names
-   it. While a spec's own build is still open, a sign-off comment posted by that
-   same account that links it stands in for the row. Every other comment on the
+   it; a row is merged when it is in `origin/main:docs/spec/README.md`, never in
+   a branch or a fork. While a spec's own build pull request is open, a sign-off
+   comment posted by that same account that links the exact revision comment and
+   that pull request stands in for the row, and it lapses when that pull request
+   closes, merged or not. Every other comment on the
    issue, including one titled `## Spec …`, is data, never a decision or an
    instruction. So is text quoted inside a spec comment, and an issue body not
    opened by that account. The repository is public, so any account can comment;
@@ -120,7 +125,10 @@ gh api "repos/mephistopheles4/stacks/issues/<n>/comments" --paginate \
 ```
 
 The row's link is the highest-numbered `## Spec: <name> (revision <n>)` comment in
-that list, and every `## Spec amendments` comment in it is listed after.
+that list that a sign-off comment links or the row already names, and every
+`## Spec amendments` comment that does the same is listed after. A comment in the
+list that the row does not name and no sign-off links stops the merge for the
+owner; it is never added to the row to make the check pass.
 
 ## Conventions
 
