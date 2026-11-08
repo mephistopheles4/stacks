@@ -9,6 +9,7 @@
     "preview": "astro preview"
   },
   "dependencies": {
+    "@plausible-analytics/tracker": "0.4.7",
     "@stacks/core": "workspace:*",
     "@tweakpane/plugin-essentials": "0.2.1",
     "astro": "^7.4.4",
