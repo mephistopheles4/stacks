@@ -48,9 +48,9 @@ export interface PhoneOptions {
   readonly pickups: number | undefined;
   /**
    * Seconds to keep turning a held book at its closed rest once the page is ready
-   * (#553): a book is held, turned, opened by a real tap, closed by its control
-   * and turned again, the phone's own back key puts it back, and a drag turns it
-   * for this long while the context is watched. Undefined runs none.
+   * (#553), in this order: a book is held, a drag turns it, a real tap opens it,
+   * its control closes it, drags turn it again for this long while the context
+   * is watched, and the phone's own back key puts it back. Undefined runs none.
    */
   readonly turn: number | undefined;
 }

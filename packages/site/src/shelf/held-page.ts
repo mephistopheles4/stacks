@@ -17,7 +17,7 @@ import { cardModel, linksRow } from './card.ts';
  * of the page that carries the title — the left page, or the right one on a
  * phone, where it stays in view while the Thoughts scroll — and a book's outline
  * with the words "Close the book" at the foot of the right page, where "Turn the
- * book over" used to be. The class there keeps the old name, `held-turn-over`. The page carries no put-back control: the book arrives closed with
+ * book over" used to be. The page carries no put-back control: the book arrives closed with
  * its pages hidden, so the X that puts it back lives in the header (#531,
  * `index.astro`).
  *
@@ -32,7 +32,7 @@ import { cardModel, linksRow } from './card.ts';
 /** The class on the back arrow by the title, which `pickup.ts` listens for by delegation. */
 export const CLOSE_BUTTON_CLASS = 'held-close';
 /** The class on "Close the book" at the foot of the right page, the second way to close it. */
-export const TURN_OVER_BUTTON_CLASS = 'held-turn-over';
+export const CLOSE_FOOT_CLASS = 'held-close-foot';
 
 export type LeftBlock = 'close' | 'title' | 'author';
 export type RightBlock =
@@ -45,7 +45,7 @@ export type RightBlock =
   | 'object'
   | 'subjects'
   | 'links'
-  | 'turn-over';
+  | 'close-foot';
 
 /**
  * The left page: the close control by the title, then the title and author. On
@@ -83,9 +83,8 @@ export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): R
     model.object !== undefined && 'object',
     model.subjects !== undefined && 'subjects',
     'links',
-    // Every book, covered or not: what is turned is the book, and a book with
-    // no cover still has its binding and its spine colour (#418, S7).
-    'turn-over',
+    // Every book, covered or not: every open book can be closed (#418, S7).
+    'close-foot',
   ];
   return blocks.filter((block): block is RightBlock => block !== false);
 }
@@ -100,9 +99,9 @@ export interface HeldPages {
   readonly left: HTMLElement;
   readonly right: HTMLElement;
   /** The back arrow by the title: back to the closed rest (#553). */
-  readonly close: HTMLButtonElement;
+  readonly closeArrow: HTMLButtonElement;
   /** "Close the book", at the foot of the right page: the same close. */
-  readonly turnOver: HTMLButtonElement;
+  readonly closeFoot: HTMLButtonElement;
   /**
    * Fills the Thoughts slot, when they arrive: plain text, one `<p>` each, and
    * the rule below them. `fade` for Thoughts that land once the page is
@@ -127,12 +126,12 @@ export function buildPages(
   const model = cardModel(book);
   const heightPx = (PAGE_PX * size.height) / size.width;
 
-  const close = backButton();
+  const closeArrow = closeArrowButton();
   const left = page('held-page held-page-left', heightPx);
   for (const block of leftPageBlocks(book, options)) {
     left.append(
       block === 'close'
-        ? close
+        ? closeArrow
         : block === 'title'
           ? text('h2', model.title, 'held-title')
           : text('p', model.author ?? '', 'held-author'),
@@ -144,17 +143,17 @@ export function buildPages(
   // opens the book, so the Thoughts are read next.
   right.tabIndex = -1;
   const thoughts = element('div', 'held-thoughts');
-  const turnOver = closeTheBookButton();
+  const closeFoot = closeFootButton();
 
   for (const block of rightPageBlocks(book, options)) {
-    right.append(rightBlock(block, model, { thoughts, close, turnOver }));
+    right.append(rightBlock(block, model, { thoughts, closeArrow, closeFoot }));
   }
 
   return {
     left,
     right,
-    close,
-    turnOver,
+    closeArrow,
+    closeFoot,
     showThoughts(paragraphs, fade) {
       const label = text('p', 'Thoughts', 'held-label');
       thoughts.replaceChildren(
@@ -180,8 +179,8 @@ function rightBlock(
   model: ReturnType<typeof cardModel>,
   nodes: {
     readonly thoughts: HTMLElement;
-    readonly close: HTMLButtonElement;
-    readonly turnOver: HTMLButtonElement;
+    readonly closeArrow: HTMLButtonElement;
+    readonly closeFoot: HTMLButtonElement;
   },
 ): HTMLElement {
   switch (block) {
@@ -205,9 +204,9 @@ function rightBlock(
     case 'links':
       return linksRow(model.links);
     case 'close':
-      return nodes.close;
-    case 'turn-over':
-      return nodes.turnOver;
+      return nodes.closeArrow;
+    case 'close-foot':
+      return nodes.closeFoot;
   }
 }
 
@@ -218,7 +217,7 @@ const SVG = 'http://www.w3.org/2000/svg';
  * book" for a screen reader and on hover (#553, at the owner's word: the arrow
  * says enough).
  */
-function backButton(): HTMLButtonElement {
+function closeArrowButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = CLOSE_BUTTON_CLASS;
@@ -232,10 +231,10 @@ function backButton(): HTMLButtonElement {
  * The control at the foot of the right page: a closed book's outline and the
  * words "Close the book".
  */
-function closeTheBookButton(): HTMLButtonElement {
+function closeFootButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = TURN_OVER_BUTTON_CLASS;
+  button.className = CLOSE_FOOT_CLASS;
   // A book seen from the front: the board, and the spine's edge down its left.
   button.append(
     icon(['M6 3h12v18H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M8 3v18']),

@@ -160,7 +160,7 @@
     fill: currentColor;
   }
 
-  .shelf :global(.held-page .held-turn-over),
+  .shelf :global(.held-page .held-close-foot),
   .shelf :global(.held-page .held-close) {
     display: inline-flex;
     align-items: center;
@@ -181,10 +181,12 @@
     square the size of a fingertip, borderless until it is pointed at: at the
     top left of the left page, which never scrolls; on a phone, at the top of
     the right page, held in view by `sticky` while the Thoughts scroll under it,
-    there on a ground of the page's own paper so no line shows through. Its own
-    row, so it never sits on the title.
+    there on a ground of the page's own paper so no line shows through. On the
+    right page it has a row of its own, so it never sits on the title; on the
+    left page it is out of the flow, and the page's 44px of padding keeps it
+    off the centred title.
   */
-  .shelf :global(.held-page .held-turn-over) {
+  .shelf :global(.held-page .held-close-foot) {
     gap: 8px;
   }
 

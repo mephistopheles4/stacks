@@ -4,6 +4,7 @@ import {
   CLOSED_HINT,
   controlsFailures,
   drawerFailures,
+  arrowFailures,
   lostFailures,
   meets,
   OVERLAP_READS,
@@ -18,6 +19,7 @@ import {
   type CloseRead,
   type ClosedFraming,
   type ClosedRead,
+  type ArrowPlace,
   type ControlsRead,
   type Inset,
   type LostCase,
@@ -194,8 +196,8 @@ describe('turnFailures — the closed book that turns, and closes again (#553)',
     noDialog: true,
     xDescription:
       'Drag the closed book, or use the arrow keys, to turn it. Click it, or use Open, to open it.',
-    closeButton: closes,
-    turnOverButton: closes,
+    closeArrow: closes,
+    closeFoot: closes,
     held: '/held-covers/a.jpg',
     showedHeld: true,
     withoutHeld: { showedOwn: true },
@@ -204,6 +206,7 @@ describe('turnFailures — the closed book that turns, and closes again (#553)',
     turned: true,
     keyTurned: true,
     tapOpensSquare: true,
+    wobbleKeepsHold: true,
     escapeFromClosed: true,
     escapeFromOpen: true,
     escapeMidClose: true,
@@ -262,6 +265,7 @@ describe('turnFailures — the closed book that turns, and closes again (#553)',
       /arrow key did not turn the book by 15°/,
     ],
     ['a tap that did not open it square', { tapOpensSquare: false }, /tap on the turned book/],
+    ['a wobble that opened the book', { wobbleKeepsHold: false }, /wobbled 8 px/],
     ['an Escape that left the closed book', { escapeFromClosed: false }, /closed book back/],
     ['an Escape that left the open book', { escapeFromOpen: false }, /open book back/],
     ['an Escape that did nothing mid-close', { escapeMidClose: false }, /close in flight/],
@@ -304,8 +308,8 @@ describe('turnFailures — the closed book that turns, and closes again (#553)',
     ['a closed book no key turns', { turnable: false }, /arrow key did not turn the book/],
   ])('fails each control on %s', (_name, patch, message) => {
     for (const [key, control] of [
-      ['closeButton', 'the top close control'],
-      ['turnOverButton', 'the bottom close control'],
+      ['closeArrow', 'the back arrow'],
+      ['closeFoot', "the foot's Close the book"],
     ] as const) {
       const failures = turnFailures({ ...turn, [key]: { ...closes, ...patch } }).join('\n');
       expect(failures).toMatch(message);
@@ -314,8 +318,8 @@ describe('turnFailures — the closed book that turns, and closes again (#553)',
   });
 
   it('passes a book exactly at the closed tolerance, either way', () => {
-    expect(turnFailures({ ...turn, closeButton: { ...closes, boardAngle: 0.5 } })).toEqual([]);
-    expect(turnFailures({ ...turn, turnOverButton: { ...closes, boardAngle: -0.5 } })).toEqual([]);
+    expect(turnFailures({ ...turn, closeArrow: { ...closes, boardAngle: 0.5 } })).toEqual([]);
+    expect(turnFailures({ ...turn, closeFoot: { ...closes, boardAngle: -0.5 } })).toEqual([]);
   });
 
   it.each<[string, { rest: number; frames: number[] }]>([
@@ -687,6 +691,7 @@ describe('overlapFailures — the hint, the X and the brand off the book (#553, 
   const open: OpenFraming = {
     hintHidden: true,
     x: { left: 1200, top: 24, right: 1244, bottom: 68 },
+    xInset: { top: 24, right: 24, expected: 24 },
     brand: { left: 24, top: 24, right: 120, bottom: 60 },
     launcher: { left: 1200, top: 700, right: 1256, bottom: 756 },
     left: { left: 180, top: 120, right: 620, bottom: 700 },
@@ -731,6 +736,11 @@ describe('overlapFailures — the hint, the X and the brand off the book (#553, 
       'a hint showing over the open book',
       { hintHidden: false },
       /hint is showing over the open book/,
+    ],
+    [
+      'the X inset off the clamp (2.5vw at 800 wide)',
+      { xInset: { top: 20, right: 20, expected: 24 } },
+      /X's top offset is 20\.0px with the book open/,
     ],
     [
       'the X on the left page',
@@ -800,4 +810,61 @@ describe('overlapFailures — the hint, the X and the brand off the book (#553, 
       }
     },
   );
+});
+
+describe('arrowFailures — the back arrow keeps its place (#553, C4)', () => {
+  const place: ArrowPlace = {
+    desktop: {
+      arrow: { left: 200, top: 130, right: 244, bottom: 174 },
+      leftPage: { left: 180, top: 110, right: 640, bottom: 700 },
+    },
+    phone: {
+      innerHeight: 812,
+      before: { left: 16, top: 90, right: 60, bottom: 134 },
+      after: { left: 16, top: 90, right: 60, bottom: 134 },
+      scrolled: true,
+    },
+  };
+
+  it('passes an arrow in the left page corner, and held in view on the phone', () => {
+    expect(arrowFailures(place)).toEqual([]);
+  });
+
+  it.each<[string, ArrowPlace, RegExp]>([
+    [
+      'an arrow at the foot of the left page',
+      {
+        ...place,
+        desktop: {
+          arrow: { left: 200, top: 640, right: 244, bottom: 684 },
+          leftPage: { left: 180, top: 110, right: 640, bottom: 700 },
+        },
+      },
+      /outside the left page's top-left quarter/,
+    ],
+    [
+      'an arrow that scrolled away with the Thoughts',
+      {
+        ...place,
+        phone: { ...place.phone!, after: { left: 16, top: -300, right: 60, bottom: -256 } },
+      },
+      /top half after the page is scrolled/,
+    ],
+    [
+      'an arrow in the lower half of the phone',
+      {
+        ...place,
+        phone: { ...place.phone!, before: { left: 16, top: 600, right: 60, bottom: 644 } },
+      },
+      /top half before the page is scrolled/,
+    ],
+    [
+      'Thoughts too short to scroll',
+      { ...place, phone: { ...place.phone!, scrolled: false } },
+      /too short to scroll/,
+    ],
+    ['no phone read', { ...place, phone: undefined }, /no back arrow to read at phone size/],
+  ])('fails on %s', (_name, patch, message) => {
+    expect(arrowFailures(patch).join(' / ')).toMatch(message);
+  });
 });

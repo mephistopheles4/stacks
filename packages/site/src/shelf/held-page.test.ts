@@ -100,11 +100,11 @@ describe('the left-hand page', () => {
 });
 
 describe('the right-hand page', () => {
-  it("is the card's lines and the turn-over control for a book with no Thoughts (#369's C)", () => {
+  it("is the card's lines and the foot control for a book with no Thoughts (#369's C)", () => {
     expect(rightPageBlocks(book(), { narrow: false, thoughts: false })).toEqual([
       'reading',
       'links',
-      'turn-over',
+      'close-foot',
     ]);
   });
 
@@ -115,7 +115,7 @@ describe('the right-hand page', () => {
       'thoughts',
       'reading',
       'links',
-      'turn-over',
+      'close-foot',
     ]);
   });
 
@@ -127,11 +127,11 @@ describe('the right-hand page', () => {
       'thoughts',
       'reading',
       'links',
-      'turn-over',
+      'close-foot',
     ]);
   });
 
-  it('carries every optional line the card would, in the card order, and the turn-over control', () => {
+  it('carries every optional line the card would, in the card order, and the foot control', () => {
     const full = book({
       tags: ['autumn'],
       publisher: 'Fieldfare Press',
@@ -145,13 +145,13 @@ describe('the right-hand page', () => {
       'object',
       'subjects',
       'links',
-      'turn-over',
+      'close-foot',
     ]);
   });
 
-  it('offers the turn-over control to a book with no cover too: the binding is the point (#418)', () => {
+  it('offers the foot control to a book with no cover too: every open book can be closed (#418)', () => {
     const bare = book({ cover: undefined });
-    expect(rightPageBlocks(bare, { narrow: false, thoughts: false })).toContain('turn-over');
+    expect(rightPageBlocks(bare, { narrow: false, thoughts: false })).toContain('close-foot');
   });
 });
 
@@ -223,7 +223,7 @@ describe('the pages as built', () => {
       expect(words).toEqual([]);
       expect(icon?.tagName).toBe('svg');
       expect(icon?.attributes['aria-hidden']).toBe('true');
-      const [foot, ...feet] = byClass(pages.right, 'held-turn-over');
+      const [foot, ...feet] = byClass(pages.right, 'held-close-foot');
       expect(feet).toEqual([]);
       expect(foot?.tagName).toBe('button');
       expect(foot?.textContent).toBe('Close the book');

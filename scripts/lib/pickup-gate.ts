@@ -308,9 +308,9 @@ export interface TurnRead {
   /** The X's description, the text its `aria-describedby` names. */
   readonly xDescription: string;
   /** The close control by the title (`.held-close`), pressed by the keyboard from the open book. */
-  readonly closeButton: CloseRead;
-  /** The close control at the foot of the right page (`.held-turn-over`), pressed by the keyboard. */
-  readonly turnOverButton: CloseRead;
+  readonly closeArrow: CloseRead;
+  /** The close control at the foot of the right page (`.held-close-foot`), pressed by the keyboard. */
+  readonly closeFoot: CloseRead;
   /**
    * The held copy `library.json` names for this book's cover, or nothing for a
    * book with none. Read from `library.json` rather than from the page, so a
@@ -344,6 +344,8 @@ export interface TurnRead {
   readonly keyTurned: boolean;
   /** A tap on the turned book opened it, and it came to rest square. */
   readonly tapOpensSquare: boolean;
+  /** A press that moved 8 px and came back opened nothing and emptied no hand (C9). */
+  readonly wobbleKeepsHold: boolean;
   /** Escape put the book back from the closed rest. */
   readonly escapeFromClosed: boolean;
   /** …from the open book. */
@@ -430,8 +432,8 @@ export function turnFailures(read: TurnRead | undefined): string[] {
     }
   }
   failures.push(
-    ...closeFailures(read.closeButton, 'the top close control'),
-    ...closeFailures(read.turnOverButton, 'the bottom close control'),
+    ...closeFailures(read.closeArrow, 'the back arrow'),
+    ...closeFailures(read.closeFoot, "the foot's Close the book"),
   );
   if (read.held === undefined) {
     failures.push('no held book offered a held copy, so turning one was never checked');
@@ -459,6 +461,9 @@ export function turnFailures(read: TurnRead | undefined): string[] {
   }
   if (!read.tapOpensSquare) {
     failures.push('a tap on the turned book did not open it, or it did not come to rest square');
+  }
+  if (!read.wobbleKeepsHold) {
+    failures.push('a press that wobbled 8 px and came back opened the book or emptied the hand');
   }
   if (!read.escapeFromClosed) failures.push('Escape did not put the closed book back');
   if (!read.escapeFromOpen) failures.push('Escape did not put the open book back');
@@ -534,6 +539,20 @@ export interface Inset {
 /** How near the clamp the X's offsets must lie, in CSS pixels. */
 const INSET_TOLERANCE_PX = 1;
 
+/** Where the X stands against the clamp, at `at`, with the book `state`. */
+function insetFailures(at: string, state: 'closed' | 'open', inset: Inset): string[] {
+  const failures: string[] = [];
+  for (const side of ['top', 'right'] as const) {
+    if (Math.abs(inset[side] - inset.expected) > INSET_TOLERANCE_PX) {
+      failures.push(
+        `at ${at} the X's ${side} offset is ${inset[side].toFixed(1)}px with the book ${state}, ` +
+          `not clamp(0.75rem, 3vw, 1.5rem) = ${inset.expected.toFixed(1)}px`,
+      );
+    }
+  }
+  return failures;
+}
+
 /** The closed book's controls (#531, claims C4, C5, C7 to C9 and C12), read in a browser. */
 export interface ControlsRead {
   readonly desktop: ViewportControls;
@@ -565,7 +584,7 @@ export interface ControlsRead {
   readonly hintClosed: boolean;
   /** …is hidden once the book is open. */
   readonly hintOpen: boolean;
-  /** …and is the template's again once the hand is empty. */
+  /** …stays hidden while the book goes back, and is the template's again once the hand is empty. */
   readonly hintReturns: boolean;
   /** The cursor is a pointer over the closed book, and the canvas's own after. */
   readonly cursorPointer: boolean;
@@ -605,19 +624,10 @@ export function controlsFailures(read: ControlsRead | undefined): string[] {
     if (!v.xOnTopOpen) {
       failures.push(`at ${at} the X is not the top element at its centre with the book open`);
     }
-    for (const [state, inset] of [
-      ['closed', v.xInsetClosed],
-      ['open', v.xInsetOpen],
-    ] as const) {
-      for (const side of ['top', 'right'] as const) {
-        if (Math.abs(inset[side] - inset.expected) > INSET_TOLERANCE_PX) {
-          failures.push(
-            `at ${at} the X's ${side} offset is ${inset[side].toFixed(1)}px with the book ${state}, ` +
-              `not clamp(0.75rem, 3vw, 1.5rem) = ${inset.expected.toFixed(1)}px`,
-          );
-        }
-      }
-    }
+    failures.push(
+      ...insetFailures(at, 'closed', v.xInsetClosed),
+      ...insetFailures(at, 'open', v.xInsetOpen),
+    );
   }
   if (read.xName.length === 0) failures.push('the X has no accessible name');
   if (!read.buttonInTree) {
@@ -655,7 +665,9 @@ export function controlsFailures(read: ControlsRead | undefined): string[] {
   }
   if (!read.hintOpen) failures.push('the hint is not hidden once the book is open');
   if (!read.hintReturns)
-    failures.push("the hint is not the template's again once the hand is empty");
+    failures.push(
+      "the hint shows while the book goes back, or is not the template's again once the hand is empty",
+    );
   if (!read.cursorPointer) failures.push('the cursor is not a pointer over the closed book');
   if (!read.cursorReset) failures.push("the cursor is not the canvas's own once the book is open");
   return failures;
@@ -863,6 +875,8 @@ export interface OpenFraming {
   /** The hint is hidden: it would lie over the pages. */
   readonly hintHidden: boolean;
   readonly x: Box;
+  /** The X's offsets and the clamp they must meet, read at this size (#553, C3). */
+  readonly xInset: Inset;
   readonly brand: Box;
   readonly launcher: Box;
   /** The pages' rects. The left is nothing where the framing builds none, as on a phone. */
@@ -906,6 +920,7 @@ export function overlapFailures(reads: readonly OverlapRead[]): string[] {
     const at = read.label;
     const { open } = read;
     if (!open.hintHidden) failures.push(`${at}: the hint is showing over the open book`);
+    failures.push(...insetFailures(at, 'open', open.xInset));
     for (const [name, page] of [
       ['left', open.left],
       ['right', open.right],
@@ -940,6 +955,67 @@ export function overlapFailures(reads: readonly OverlapRead[]): string[] {
       }
       if (meets(closed.x, closed.launcher)) {
         failures.push(`${at}: the X meets the Ask launcher with the book closed, ${how}`);
+      }
+    }
+  }
+  return failures;
+}
+
+/**
+ * The back arrow's place (#553, C4), read with long Thoughts planted. On a
+ * desktop it sits in the top-left quarter of the left page. On a phone the
+ * right page carries it, and it stays in the viewport's top half before and
+ * after that page is scrolled to its end.
+ */
+export interface ArrowPlace {
+  readonly desktop: { readonly arrow: Box; readonly leftPage: Box } | undefined;
+  readonly phone:
+    | {
+        readonly innerHeight: number;
+        readonly before: Box;
+        readonly after: Box;
+        /** The right page's content is taller than the page: the scroll moved something. */
+        readonly scrolled: boolean;
+      }
+    | undefined;
+}
+
+export function arrowFailures(read: ArrowPlace): string[] {
+  const failures: string[] = [];
+  const { desktop, phone } = read;
+  if (desktop === undefined) failures.push('no back arrow and left page to read at desktop size');
+  else {
+    const { arrow, leftPage } = desktop;
+    const quarter: Box = {
+      left: leftPage.left,
+      top: leftPage.top,
+      right: leftPage.left + (leftPage.right - leftPage.left) / 2,
+      bottom: leftPage.top + (leftPage.bottom - leftPage.top) / 2,
+    };
+    if (
+      arrow.left < quarter.left ||
+      arrow.top < quarter.top ||
+      arrow.right > quarter.right ||
+      arrow.bottom > quarter.bottom
+    ) {
+      failures.push(
+        `at desktop size the back arrow (${show(arrow)}) is outside the left page's top-left quarter (${show(quarter)})`,
+      );
+    }
+  }
+  if (phone === undefined) failures.push('no back arrow to read at phone size');
+  else {
+    if (!phone.scrolled) {
+      failures.push('the planted Thoughts were too short to scroll the phone page under the arrow');
+    }
+    for (const [when, arrow] of [
+      ['before', phone.before],
+      ['after', phone.after],
+    ] as const) {
+      if (arrow.top < 0 || arrow.bottom > phone.innerHeight / 2) {
+        failures.push(
+          `at phone size the back arrow (${show(arrow)}) is outside the viewport's top half ${when} the page is scrolled`,
+        );
       }
     }
   }

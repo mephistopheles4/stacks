@@ -771,6 +771,14 @@ describe('closing the open book again (#553)', () => {
     expect(h.track('a').playing).toBe('reverse');
     expect(h.track('a').speed).toBe(1.6);
     expect(h.state.holding()).toBeUndefined();
+    // Caught a few frames into the return: it lands closed, and opens again.
+    h.track('a').at = 0.4;
+    h.state.select('a');
+    h.track('a').land();
+    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: false });
+    expect(h.state.closed()).toBe(true);
+    expect(h.state.open()).toBe(true);
+    h.state.putBack();
     h.track('a').returnHome();
     expect(h.log.filter((line) => line === 'settled a')).toHaveLength(1);
     expect(h.entries()).toEqual([null]);

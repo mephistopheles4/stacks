@@ -254,12 +254,14 @@ describe('closing an open book: back to the closed rest (#553)', () => {
   });
 
   it("takes the opening stage's own time, not the return's", () => {
-    const { stages, track } = rig();
+    const { stages, track, calls } = rig();
     track.finishOpen();
     track.close();
     step(0);
-    step(PICKUP_MOTION.open / 2);
+    // Three quarters of the opening's time: a close at 1.6× would have reached the rest.
+    step(PICKUP_MOTION.open * 0.75);
 
+    expect(calls.closed).toBe(0);
     expect(stages.o).toBeGreaterThan(0);
     expect(stages.o).toBeLessThan(1);
   });

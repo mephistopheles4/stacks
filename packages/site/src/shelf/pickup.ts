@@ -51,7 +51,7 @@ import {
   CLOSE_BUTTON_CLASS,
   PAGE_PX,
   rooted,
-  TURN_OVER_BUTTON_CLASS,
+  CLOSE_FOOT_CLASS,
   type HeldPages,
 } from './held-page.ts';
 import { loadThoughts } from './notes.ts';
@@ -329,6 +329,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       },
       settled: (book) => {
         settle(book);
+        // A book that was going back no longer holds the hint down.
+        syncControls();
       },
       announce: (book) => {
         elements.status.textContent = book === undefined ? '' : announcement(book);
@@ -446,8 +448,9 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
    * Shows the controls the state calls for. The X is on screen from the pickup
    * until the hand empties, closed or open. The Open button, the closed hint
    * and the cursor are for a book closed at rest, and for that alone. Any other
-   * book in hand hides the hint, which would lie over its pages (#553); an
-   * empty hand has the shelf's hint back. Hiding what holds focus catches it on
+   * book in hand hides the hint, which would lie over its pages (#553), and so
+   * does one going back; an empty hand with nothing returning has the shelf's
+   * hint back. Hiding what holds focus catches it on
    * the canvas.
    */
   const syncControls = (): void => {
@@ -464,7 +467,9 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     controls.root.hidden = !showX;
     controls.open.hidden = !closed;
     controls.hint.textContent = closed ? CLOSED_HINT : hintText;
-    controls.hint.hidden = holding !== undefined && !closed;
+    // A book still going back hides the hint as one in hand does (S6).
+    const returning = [...lifted.keys()].some((id) => id !== holding?.book.id);
+    controls.hint.hidden = (holding !== undefined && !closed) || returning;
     if (closed && holding !== undefined) controls.open.textContent = `Open ${holding.book.title}`;
     setCursor(closed);
   };
@@ -932,7 +937,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   listenForDrags(current.canvas);
 
   /**
-   * Where an arrow key turns the book: the canvas, the page itself, or the held
+   * Where an arrow key turns the book: the canvas, the document body, or the held
    * controls. Never a text field, the Ask drawer, or an open page and its links,
    * where the arrows scroll and move as they always do.
    */
@@ -963,7 +968,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   layer.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    if (target.closest(`.${CLOSE_BUTTON_CLASS}, .${TURN_OVER_BUTTON_CLASS}`) === null) return;
+    if (target.closest(`.${CLOSE_BUTTON_CLASS}, .${CLOSE_FOOT_CLASS}`) === null) return;
     state.close();
   });
 
