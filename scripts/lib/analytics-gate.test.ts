@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { PRODUCTION_HOST } from '../../packages/site/src/analytics/events.ts';
 import { WIDGET_DOMAIN } from './turnstile.ts';
 import {
+  callsMissing,
   foreignRequests,
   gateBuildEnv,
   judgeAnalyticsCalls,
@@ -104,5 +106,28 @@ describe('foreignRequests', () => {
         'http://127.0.0.1:1',
       ),
     ).toEqual(['https://plausible.io/api/event']);
+  });
+});
+
+describe('the gate scripts strip the switch from the build they start (S5, C13)', () => {
+  const read = (path: string): string => readFileSync(new URL(path, import.meta.url), 'utf8');
+
+  it('finds a build call that passes the parent environment through', () => {
+    const planted = "runShell('pnpm', ['build'], { wholeEnv: process.env });";
+    expect(callsMissing(planted, 'runShell(', 'gateBuildEnv(')).toHaveLength(1);
+    const stripped = "runShell('pnpm', ['build'], { wholeEnv: gateBuildEnv(process.env) });";
+    expect(callsMissing(stripped, 'runShell(', 'gateBuildEnv(')).toEqual([]);
+  });
+
+  it('holds check-public-build.ts to it on every build it starts', () => {
+    const source = read('../check-public-build.ts');
+    expect(source).toContain('runShell(');
+    expect(callsMissing(source, 'runShell(', 'gateBuildEnv(')).toEqual([]);
+  });
+
+  it('holds smoke-render.ts to it: every child gets the stripped environment', () => {
+    const source = read('../smoke-render.ts');
+    expect(source).toContain('env: NodeJS.ProcessEnv = gateBuildEnv(process.env)');
+    expect(callsMissing(source, 'spawn(', 'env,')).toEqual([]);
   });
 });

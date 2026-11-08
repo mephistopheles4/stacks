@@ -108,3 +108,28 @@ export function foreignRequests(urls: readonly string[], pageOrigin: string): st
     return new URL(url).host !== home;
   });
 }
+
+/**
+ * The text of every call to `opener` in `source` (its parenthesised arguments)
+ * that does not contain `marker`. Used to hold the two gate scripts to stripping
+ * the switch from the build they start (S5, C13): those scripts run on import,
+ * so a test cannot call them, and reads their source instead.
+ */
+export function callsMissing(source: string, opener: string, marker: string): string[] {
+  const missing: string[] = [];
+  let from = source.indexOf(opener);
+  while (from !== -1) {
+    let depth = 1;
+    let at = from + opener.length;
+    while (at < source.length && depth > 0) {
+      const ch = source[at];
+      if (ch === '(') depth += 1;
+      else if (ch === ')') depth -= 1;
+      at += 1;
+    }
+    const call = source.slice(from, at);
+    if (!call.includes(marker)) missing.push(call);
+    from = source.indexOf(opener, at);
+  }
+  return missing;
+}

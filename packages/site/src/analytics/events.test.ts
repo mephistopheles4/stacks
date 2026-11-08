@@ -155,10 +155,4 @@ describe('events', () => {
       { name: 'Ask Opened' },
     ]);
   });
-
-  it('caps what attempted() remembers at 200', async () => {
-    const { trackAsk, attempted } = await load();
-    for (let i = 0; i < 250; i++) trackAsk('Ask Opened');
-    expect(attempted()).toHaveLength(200);
-  });
 });

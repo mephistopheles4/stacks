@@ -74,6 +74,23 @@ file's `// @vitest-environment` comment. Every other test keeps `node` (spec X3)
 `packages/site/src/analytics` is a ninth mutation scope, floor `unarmed` like the others,
 which amends ADR-0053's eight (spec X4).
 
+## Two things the build added to the spec
+
+**The privacy paragraph names engagement.** The pinned tracker sends an engagement request
+carrying time on page and scroll depth, and 0.4.7 has no option to turn it off. S7's sentence
+did not say so, so the on-build paragraph on `/privacy` now reads "how long they stay and how
+far they scroll" after "where visitors came from". The page's meta description and the
+sentence on `/attribution` that points to it also say the page covers how the site counts
+visits, where they had said only that it covers Ask questions.
+
+**Two template conditionals are an exception to the no-logic rule.** `NoticePage.astro`
+renders `AnalyticsStart` and `privacy.astro` renders `PlausibleNotice` behind
+`{analyticsOn && ...}`, a single boolean exported from `analytics/on.ts`. AGENTS.md says a
+branch belongs in a `.ts` file, and G7 reads only `<script>` blocks, so it cannot see these.
+They are the only conditional renders in any `.astro` file here. The rule is left as written:
+this is a recorded exception, limited to one boolean show-or-hide on a value exported from a
+module, and a second use is a reason to amend the rule.
+
 ## Consequences
 
 - Page views and events count against the owner's Plausible plan. Counts will not agree with
@@ -91,3 +108,8 @@ which amends ADR-0053's eight (spec X4).
 - The tracker's `customProperties` is left unset on purpose. Setting it to an empty object
   makes every request carry an empty `p`, which `tracker.test.ts` would then have to
   allow; the default sends no `p` at all.
+- Hardening candidates the owner has not asked for, listed rather than built: an allowlist in
+  the request transform for event names and properties (the tracker's tagged-class listener is
+  always on); a warning in `deploy:site` when the site name is not the production host; a
+  narrower off-build scan that skips the data files; a catch around the tracker's `init`. None
+  is a security finding under the rules file.
