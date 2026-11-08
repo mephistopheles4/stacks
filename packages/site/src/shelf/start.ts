@@ -22,8 +22,6 @@ import { boot } from './boot.ts';
 export function start(): void {
   const canvas = document.getElementById('shelf-canvas');
   const status = document.getElementById('pickup-status');
-  const viewer = document.getElementById('book-viewer');
-  const viewerClose = document.getElementById('book-viewer-close');
   const root = document.getElementById('held-controls');
   const putBack = document.getElementById('held-put-back');
   const open = document.getElementById('held-open');
@@ -32,8 +30,6 @@ export function start(): void {
   if (
     !(canvas instanceof HTMLCanvasElement) ||
     !(status instanceof HTMLElement) ||
-    !(viewer instanceof HTMLDialogElement) ||
-    !(viewerClose instanceof HTMLButtonElement) ||
     !(root instanceof HTMLElement) ||
     !(putBack instanceof HTMLButtonElement) ||
     !(open instanceof HTMLButtonElement) ||
@@ -48,7 +44,6 @@ export function start(): void {
 
   void boot(canvas, {
     status,
-    bookViewer: { dialog: viewer, close: viewerClose },
     controls: { root, putBack, open, hint },
   });
 }

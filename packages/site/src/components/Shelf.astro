@@ -22,42 +22,7 @@
     children.
   -->
   <p id="pickup-status" class="visually-hidden" role="status"></p>
-
-  <!--
-    Examining the held book (#418, ADR-0109). A real `<dialog>` opened with
-    `showModal`: focus moves in, the page goes inert, Escape and Android's back
-    gesture close it. It carries no picture: it is a transparent surface over
-    the canvas, where the closed book is drawn and turned. One Escape leaves it
-    and keeps the book held.
-
-    In the template rather than built at runtime, so Astro's scoping reaches it
-    and the styles below need no `:global()`.
-  -->
-  <dialog
-    id="book-viewer"
-    class="book-viewer"
-    aria-label="Book"
-    aria-describedby="book-viewer-hint"
-  >
-    <p id="book-viewer-hint" class="book-viewer-hint">
-      Drag, or use the arrow keys, to turn it. Escape returns to the page.
-    </p>
-    <button id="book-viewer-close" class="book-viewer-close" type="button">
-      <svg
-        aria-hidden="true"
-        focusable="false"
-        viewBox="0 0 24 24"
-        width="20"
-        height="20"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"><path d="M19 12H5m6-6-6 6 6 6"></path></svg
-      >
-      <span class="visually-hidden">Back to the page</span>
-    </button>
-  </dialog></div>
+</div>
 
 <script>
   import { startAnalytics } from '../analytics/events.ts';
@@ -197,7 +162,8 @@
     fill: currentColor;
   }
 
-  .shelf :global(.held-page .held-examine) {
+  .shelf :global(.held-page .held-close-foot),
+  .shelf :global(.held-page .held-close) {
     display: inline-flex;
     align-items: center;
     min-height: 2.75rem;
@@ -211,8 +177,70 @@
     cursor: pointer;
   }
 
-  .shelf :global(.held-page .held-examine) {
-    cursor: grab;
+  /*
+    The foot's "Close the book" carries a book's outline beside the words. The
+    control by the title is the arrow alone (#553, at the owner's word), a
+    square the size of a fingertip, borderless until it is pointed at: at the
+    top left of the left page, which never scrolls; on a phone, at the top of
+    the right page, held in view by `sticky` while the Thoughts scroll under it,
+    there on a ground of the page's own paper so no line shows through. On the
+    right page it has a row of its own, so it never sits on the title; on the
+    left page it is out of the flow, and the page's 44px of padding keeps it
+    off the centred title.
+  */
+  .shelf :global(.held-page .held-close-foot) {
+    gap: 8px;
+  }
+
+  .shelf :global(.held-page .held-close) {
+    justify-content: center;
+    width: 2.75rem;
+    margin: 0;
+    padding: 0;
+    border-color: transparent;
+    border-radius: 50%;
+    color: #5d5347;
+  }
+
+  .shelf :global(.held-page .held-close:hover) {
+    border-color: rgba(43, 37, 32, 0.3);
+    color: #2b2520;
+  }
+
+  .shelf :global(.held-page .held-close svg) {
+    width: 22px;
+    height: 22px;
+  }
+
+  .shelf :global(.held-page-left .held-close) {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+  }
+
+  .shelf :global(.held-page-right .held-close) {
+    position: sticky;
+    /* The page's padding is outside where sticky holds it: the same pull up as
+       the margin, so it rests where it was laid out and scrolls nowhere. */
+    top: -28px;
+    z-index: 1;
+    background: #ece2cf;
+    margin: -28px 0 18px -20px;
+  }
+
+  /*
+    The phone frames the right page alone, drawn at about two thirds of its
+    size, so the arrow is enlarged on the page to land near the X's 2.75rem on
+    screen, a fingertip's target.
+  */
+  .shelf :global(.held-page-right .held-close) {
+    width: 4.25rem;
+    height: 4.25rem;
+  }
+
+  .shelf :global(.held-page-right .held-close svg) {
+    width: 32px;
+    height: 32px;
   }
 
   .shelf :global(.held-page button:focus-visible),
@@ -251,81 +279,6 @@
     clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
-  }
-
-  /*
-    Examining the held book. The dialog is a transparent surface the size of the
-    viewport and nothing else: the book it is about is drawn on the canvas
-    behind it, over the shelf's own veil (which dims everything else), so neither the dialog nor its
-    backdrop paints anything of its own.
-
-    `inset: 0` and the full size are stated because the UA's `dialog:modal`
-    shrink-wraps its content, and this one has none to wrap. `touch-action:
-    none` is what lets a drag turn the book rather than scroll or swipe back.
-  */
-  .book-viewer {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    background: none;
-    overflow: hidden;
-    touch-action: none;
-    /* A drag must turn the book, not select the hint beneath the pointer. */
-    user-select: none;
-    cursor: grab;
-  }
-
-  .book-viewer:active {
-    cursor: grabbing;
-  }
-
-  .book-viewer::backdrop {
-    background: none;
-  }
-
-  /*
-    The instruction is visible text, not only a description for a screen reader:
-    a sighted visitor with a keyboard needs to know the arrows work too. It sits
-    at the foot, over the veil, where the book is not.
-  */
-  .book-viewer-hint {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: clamp(0.75rem, 3vw, 1.5rem);
-    margin: 0;
-    padding: 0 1rem;
-    text-align: center;
-    font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
-    color: #f2e8dc;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-    pointer-events: none;
-  }
-
-  /*
-    Redundant with a tap and with Escape, and deliberately so: a surface you can
-    only leave by knowing a convention is a surface some people are stuck on.
-    Top-right of the viewport.
-  */  .book-viewer-close {
-    position: fixed;
-    top: clamp(0.75rem, 3vw, 1.5rem);
-    right: clamp(0.75rem, 3vw, 1.5rem);
-    display: grid;
-    place-items: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(26, 22, 19, 0.6);
-    color: #f2e8dc;
-    cursor: pointer;
   }
 
 </style>

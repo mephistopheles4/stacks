@@ -1,4 +1,4 @@
-# ADR-0138 — Plausible is optional, bundled from npm, and reports straight to plausible.io
+# ADR-0139 — Plausible is optional, bundled from npm, and reports straight to plausible.io
 
 **Date:** 2026-11-07
 **Status:** accepted. The owner signed off the spec on 2026-11-07

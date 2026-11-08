@@ -110,7 +110,7 @@ export interface InspectOptions {
   readonly origin: string;
   /**
    * Which of the two policy shapes the build was made with
-   * ([ADR-0138](../../docs/adr/0138-optional-plausible-direct-to-plausible-io.md)).
+   * ([ADR-0139](../../docs/adr/0139-optional-plausible-direct-to-plausible-io.md)).
    *
    * Required, and **passed in, never read from the environment**: no rule and
    * no test here reads `PUBLIC_PLAUSIBLE_DOMAIN`, so `deploy:site`, which loads

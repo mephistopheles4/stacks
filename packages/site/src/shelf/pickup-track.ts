@@ -13,6 +13,11 @@
  * pause and reports `returned` at the shelf, and never `landed`: a book on its
  * way back must not read as closed at rest.
  *
+ * **Closing is the one reverse that holds** (#553). `close()` runs back from
+ * open at the opening's own speed and stops at the same rest a pickup lands on,
+ * reporting `closed`; the book is then exactly as it was when it landed. Every
+ * other call disarms the hold, so a put-back during a close goes home.
+ *
  * The mechanism is `addPause`, measured rather than assumed: it snaps the
  * playhead to the stop in either direction, and it pauses a reverse as well,
  * which is why the callback resumes one. A plain callback was tried and
@@ -86,43 +91,65 @@ export function buildTrack(stages: Stages, motion: PickupMotion, events: TrackEv
     { o: 1, duration: motion.open, ease: bezier(motion.easeOpen) },
     at.open,
   );
+  const hold = { armed: false };
   tl.addPause(at.closed, () => {
-    if (tl.reversed()) tl.resume();
-    else events.landed();
+    if (!tl.reversed()) {
+      events.landed();
+    } else if (hold.armed) {
+      hold.armed = false;
+      // Parked a hair past the stop, as `finish()` parks, so playing on opens.
+      tl.pause(at.closed + REST_PAST_STOP, true);
+      events.closed();
+    } else {
+      tl.resume();
+    }
   });
   tl.eventCallback('onComplete', events.opened);
   tl.eventCallback('onReverseComplete', events.returned);
-  return trackOf(tl, at.closed);
+  return trackOf(tl, at.closed, hold);
 }
 
 /** How far past the stop a jump to the closed rest lands, in seconds: far below a frame. */
 const REST_PAST_STOP = 1e-4;
 
 /** `closed` is the stop's time on the timeline, in seconds. */
-function trackOf(tl: Timeline, closed: number): Track {
+function trackOf(tl: Timeline, closed: number, hold: { armed: boolean }): Track {
+  const disarm = (): void => {
+    hold.armed = false;
+  };
   const stop = (): number => {
     const length = tl.duration();
     return length === 0 ? 0 : closed / length;
   };
   return {
     play: () => {
+      disarm();
       tl.timeScale(1).play();
     },
     reverse: (speed) => {
+      disarm();
       tl.timeScale(speed).reverse();
     },
+    close: () => {
+      hold.armed = true;
+      tl.timeScale(1).reverse();
+    },
     finish: () => {
+      disarm();
       // A hair past the stop, never on it: a pause placed exactly on an addPause
       // fires it again when played on, and the book would stop where it stands.
       tl.pause(closed + REST_PAST_STOP, true);
     },
     finishOpen: () => {
+      disarm();
       tl.pause().progress(1, true);
     },
     rewind: () => {
+      disarm();
       tl.pause().progress(0, true);
     },
     seek: (progress) => {
+      disarm();
       tl.pause().progress(progress, true);
     },
     progress: () => tl.progress(),

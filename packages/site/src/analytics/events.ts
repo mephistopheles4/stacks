@@ -1,6 +1,6 @@
 /**
  * The analytics module: the only code in this repo that starts the tracker or
- * sends an event (docs/spec/optional-plausible.md S4, ADR-0138).
+ * sends an event (docs/spec/optional-plausible.md S4, ADR-0139).
  *
  * **The name is vendor-neutral on purpose.** A shared chunk named after the
  * vendor can be matched by an ad blocker's filter list, which would stop the

@@ -1269,7 +1269,7 @@ pnpm exec tsx scripts/phone-check.ts                  # the default page, 120 s
 pnpm exec tsx scripts/phone-check.ts --matrix         # default ×3, ?shadows=0, ?receivers=all
 pnpm exec tsx scripts/phone-check.ts --gpuinfo        # chrome://gpu, in a tab of its own
 pnpm exec tsx scripts/phone-check.ts --pickups 5      # the default page, picking up five books, each held closed and then open
-pnpm exec tsx scripts/phone-check.ts --examine 60      # hold a book closed, open it, tap into examining, the phone's back key out, then turn it for 60 s
+pnpm exec tsx scripts/phone-check.ts --turn 60         # hold a book closed, turn it, open it, close it, turn it for 60 s, back key puts it back
 ```
 
 **`--pickups <n>` drives the shelf's loop hook**, `window.__shelf.pickupLoop(n)`:
@@ -1472,7 +1472,7 @@ probes athanor. To switch it off, delete the `PreToolUse` entry.
 ## Analytics
 
 Optional Plausible on the shelf ([#562](https://github.com/mephistopheles4/stacks/issues/562),
-[ADR-0138](./adr/0138-optional-plausible-direct-to-plausible-io.md),
+[ADR-0139](./adr/0139-optional-plausible-direct-to-plausible-io.md),
 [the spec](./spec/optional-plausible.md)). Off unless `PUBLIC_PLAUSIBLE_DOMAIN` is set at build
 time, from the shell or `.env`. Unset is a complete and supported build.
 

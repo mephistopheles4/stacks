@@ -123,6 +123,13 @@ describe('a press', () => {
     expect(p.isTap()).toBe(false);
   });
 
+  it('is a drag at 8 px out and back, the wobble that must not both turn and open', () => {
+    const p = press(100, 100);
+    p.move(108, 100);
+    p.move(100, 100);
+    expect(p.isTap()).toBe(false);
+  });
+
   it('stays a drag once it has gone far, even if it comes back to where it began', () => {
     const p = press(100, 100);
     p.move(200, 100);

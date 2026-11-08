@@ -2,7 +2,6 @@ import type { Library, LibraryBook } from '@stacks/core';
 import { attempted, type Attempt } from '../analytics/events.ts';
 import { onPickUpRequest } from '../ask/bridge.ts';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
-import { mountBookViewer, type BookViewerElements } from './book-viewer.ts';
 import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
 import {
   createPickup,
@@ -117,6 +116,12 @@ declare global {
        * read. Nothing while the hand is empty.
        */
       held(): HeldReading | undefined;
+      /**
+       * The latest book in motion, whatever its phase, with its timeline's own
+       * progress: the one reading that outlives `held()` while a book goes back,
+       * for the gate to see the return play (#553, C5). Read-only.
+       */
+      current(): ReturnType<Pickup['tunable']['state']>;
       /** Picks up the book at this index, as a click on it would. */
       pickUp(index: number): void;
       /** Opens the book in hand, as the Open button would: a gate need not aim at it. */
@@ -146,8 +151,6 @@ export interface PageHandles {
    * «Author» on pickup, changed on a second book, empty after put-back.
    */
   readonly status: HTMLElement;
-  /** The dialog that examines the held book. See `book-viewer.ts`. */
-  readonly bookViewer: BookViewerElements;
   /** The X, the Open button and the hint, outside the pages. See `pickup.ts`. */
   readonly controls: HeldControls;
 }
@@ -463,7 +466,6 @@ export async function boot(
   const live = createPickup(handle.stage, {
     status: page.status,
     host,
-    viewer: mountBookViewer(page.bookViewer, host),
     controls: page.controls,
   });
   held.pickup = live;
@@ -545,6 +547,7 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind, pickup?: Pic
     attempted: () => attempted(),
     stats: () => handle.stats(),
     held: () => pickup?.held(),
+    current: () => pickup?.tunable.state(),
     pickUp: (index) => {
       pickup?.pickUp(index);
     },

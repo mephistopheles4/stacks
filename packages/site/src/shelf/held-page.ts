@@ -1,6 +1,5 @@
 import type { LibraryBook } from '@stacks/core';
 import { cardModel, linksRow } from './card.ts';
-import { EXAMINE_BUTTON_CLASS } from './book-viewer.ts';
 
 /**
  * The held book's two pages: what replaced the card (spec §3.4, ADR-0102).
@@ -11,10 +10,16 @@ import { EXAMINE_BUTTON_CLASS } from './book-viewer.ts';
  * links stay reachable for every book. The rule belongs to the Thoughts' slot, so
  * a fetch that fails or has not landed leaves no rule over nothing; a book with none shows the card's lines alone
  * (#369's C). On a phone, which frames the right-hand page alone, the title and
- * author lead that page too. Examining the book — closing it in your hand to
- * turn it (#418) — is opened from a control among the lines, for every book.
- * The page carries no put-back control: the book arrives closed with its pages
- * hidden, so the X that puts it back lives in the header (#531, `index.astro`).
+ * author lead that page too.
+ *
+ * **Two controls close the book again** to the closed rest it landed on, where
+ * it can be turned (#553): a back arrow named "Close the book" at the top left
+ * of the page that carries the title — the left page, or the right one on a
+ * phone, where it stays in view while the Thoughts scroll — and a book's
+ * outline with the words "Close the book" at the foot of the right page, where
+ * "Turn the book over" used to be. The page carries no put-back control: the
+ * book arrives closed with its pages hidden, so the X that puts it back lives
+ * in the header (#531, `index.astro`).
  *
  * **What goes where is a pure function** (`leftPageBlocks`, `rightPageBlocks`),
  * tested without a DOM; `buildPages` turns it into nodes and adds nothing.
@@ -24,8 +29,14 @@ import { EXAMINE_BUTTON_CLASS } from './book-viewer.ts';
  * refuses.
  */
 
-export type LeftBlock = 'title' | 'author';
+/** The class on the back arrow by the title, which `pickup.ts` listens for by delegation. */
+export const CLOSE_BUTTON_CLASS = 'held-close';
+/** The class on "Close the book" at the foot of the right page, the second way to close it. */
+export const CLOSE_FOOT_CLASS = 'held-close-foot';
+
+export type LeftBlock = 'close' | 'title' | 'author';
 export type RightBlock =
+  | 'close'
   | 'title'
   | 'author'
   | 'thoughts'
@@ -34,10 +45,23 @@ export type RightBlock =
   | 'object'
   | 'subjects'
   | 'links'
-  | 'examine';
+  | 'close-foot';
 
-export function leftPageBlocks(book: LibraryBook): LeftBlock[] {
-  return book.author === undefined ? ['title'] : ['title', 'author'];
+/**
+ * The left page: the close control by the title, then the title and author. On
+ * a phone the left page is off screen and carries no control, so Tab never
+ * reaches a button nobody can see.
+ */
+export function leftPageBlocks(
+  book: LibraryBook,
+  options: { readonly narrow: boolean },
+): LeftBlock[] {
+  const blocks: (LeftBlock | false)[] = [
+    !options.narrow && 'close',
+    'title',
+    book.author !== undefined && 'author',
+  ];
+  return blocks.filter((block): block is LeftBlock => block !== false);
 }
 
 export interface RightPageOptions {
@@ -50,6 +74,7 @@ export interface RightPageOptions {
 export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): RightBlock[] {
   const model = cardModel(book);
   const blocks: (RightBlock | false)[] = [
+    options.narrow && 'close',
     options.narrow && 'title',
     options.narrow && book.author !== undefined && 'author',
     options.thoughts && 'thoughts',
@@ -58,9 +83,8 @@ export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): R
     model.object !== undefined && 'object',
     model.subjects !== undefined && 'subjects',
     'links',
-    // Every book, covered or not: what is examined is the book, and a book
-    // with no cover still has its binding and its spine colour (#418, S7).
-    'examine',
+    // Every book, covered or not: every open book can be closed (#418, S7).
+    'close-foot',
   ];
   return blocks.filter((block): block is RightBlock => block !== false);
 }
@@ -74,8 +98,10 @@ export const PAGE_PX = 460;
 export interface HeldPages {
   readonly left: HTMLElement;
   readonly right: HTMLElement;
-  /** The control that closes the book in the hand to turn it. */
-  readonly examine: HTMLButtonElement;
+  /** The back arrow by the title: back to the closed rest (#553). */
+  readonly closeArrow: HTMLButtonElement;
+  /** "Close the book", at the foot of the right page: the same close. */
+  readonly closeFoot: HTMLButtonElement;
   /**
    * Fills the Thoughts slot, when they arrive: plain text, one `<p>` each, and
    * the rule below them. `fade` for Thoughts that land once the page is
@@ -100,12 +126,15 @@ export function buildPages(
   const model = cardModel(book);
   const heightPx = (PAGE_PX * size.height) / size.width;
 
+  const closeArrow = closeArrowButton();
   const left = page('held-page held-page-left', heightPx);
-  for (const block of leftPageBlocks(book)) {
+  for (const block of leftPageBlocks(book, options)) {
     left.append(
-      block === 'title'
-        ? text('h2', model.title, 'held-title')
-        : text('p', model.author ?? '', 'held-author'),
+      block === 'close'
+        ? closeArrow
+        : block === 'title'
+          ? text('h2', model.title, 'held-title')
+          : text('p', model.author ?? '', 'held-author'),
     );
   }
 
@@ -114,19 +143,17 @@ export function buildPages(
   // opens the book, so the Thoughts are read next.
   right.tabIndex = -1;
   const thoughts = element('div', 'held-thoughts');
-  const examine = document.createElement('button');
-  examine.type = 'button';
-  examine.className = EXAMINE_BUTTON_CLASS;
-  examine.textContent = 'Turn the book over';
+  const closeFoot = closeFootButton();
 
   for (const block of rightPageBlocks(book, options)) {
-    right.append(rightBlock(block, model, { thoughts, examine }));
+    right.append(rightBlock(block, model, { thoughts, closeArrow, closeFoot }));
   }
 
   return {
     left,
     right,
-    examine,
+    closeArrow,
+    closeFoot,
     showThoughts(paragraphs, fade) {
       const label = text('p', 'Thoughts', 'held-label');
       thoughts.replaceChildren(
@@ -152,7 +179,8 @@ function rightBlock(
   model: ReturnType<typeof cardModel>,
   nodes: {
     readonly thoughts: HTMLElement;
-    readonly examine: HTMLButtonElement;
+    readonly closeArrow: HTMLButtonElement;
+    readonly closeFoot: HTMLButtonElement;
   },
 ): HTMLElement {
   switch (block) {
@@ -175,9 +203,65 @@ function rightBlock(
       return text('p', model.subjects ?? '', 'subjects');
     case 'links':
       return linksRow(model.links);
-    case 'examine':
-      return nodes.examine;
+    case 'close':
+      return nodes.closeArrow;
+    case 'close-foot':
+      return nodes.closeFoot;
   }
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+
+/**
+ * The control by the title: a back arrow and nothing else, named "Close the
+ * book" for a screen reader and on hover (#553, at the owner's word: the arrow
+ * says enough).
+ */
+function closeArrowButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = CLOSE_BUTTON_CLASS;
+  button.setAttribute('aria-label', 'Close the book');
+  button.title = 'Close the book';
+  button.append(icon(['M19 12H5', 'm11 6-6 6 6 6']));
+  return button;
+}
+
+/**
+ * The control at the foot of the right page: a closed book's outline and the
+ * words "Close the book".
+ */
+function closeFootButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = CLOSE_FOOT_CLASS;
+  // A book seen from the front: the board, and the spine's edge down its left.
+  button.append(
+    icon(['M6 3h12v18H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M8 3v18']),
+    text('span', 'Close the book'),
+  );
+  return button;
+}
+
+/** A 24-unit line icon, built as elements and never parsed from markup (rule 8). */
+function icon(paths: readonly string[]): SVGSVGElement {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  for (const d of paths) {
+    const path = document.createElementNS(SVG, 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  return svg;
 }
 
 function page(className: string, heightPx: number): HTMLElement {

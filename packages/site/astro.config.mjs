@@ -8,7 +8,7 @@ import { readSwitch } from './src/analytics/switch.ts';
 // build, with a message that never echoes it.
 const analytics = readSwitch(process.env.PUBLIC_PLAUSIBLE_DOMAIN);
 
-// ADR-0138 amends ADR-0065 and ADR-0128, which kept `connect-src 'self'`. There
+// ADR-0139 amends ADR-0065 and ADR-0128, which kept `connect-src 'self'`. There
 // are exactly two policy shapes. Off is today's policy. On adds
 // `https://plausible.io` to `connect-src` and nothing else, because the tracker
 // is bundled from npm and served from 'self'. The on shape admits every Plausible
