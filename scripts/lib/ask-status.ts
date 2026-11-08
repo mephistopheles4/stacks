@@ -3,9 +3,11 @@
  * reads, what it asks Workers Observability, and how the replies become a day's totals.
  * Nothing here touches the network or the disk, so the suite holds all of it.
  *
- * ⚠️ **The reply shape is Cloudflare's documented one, not a captured one.** Every reply is
- * checked against it and refused on any difference, so a misread reply prints a refusal
- * rather than becoming a wrong day in the trend store, where a record is never corrected.
+ * ⚠️ **The reply shape is Cloudflare's documented one, corrected where the first deployed
+ * day's replies differed (#548: `groupKey`, and how several grouped keys drop lines).** Every
+ * reply is checked against it and refused on any difference, so a misread reply prints a
+ * refusal rather than becoming a wrong day in the trend store, where a record is never
+ * corrected.
  */
 import { resolve } from 'node:path';
 import { DAILY_LIMIT } from '../../packages/ask/src/limits.ts';
@@ -35,6 +37,41 @@ export function daysToRead(now: number): number[] {
     if (ended && whole) days.push(start);
   }
   return days;
+}
+
+/**
+ * The command line: `--record`, and `--day <YYYY-MM-DD>` to read that one day of `readable`
+ * alone, so a day that is not whole, such as a deploy's first, is never recorded (#548,
+ * decision 431). A refusal is fixed words, never an argument quoted back.
+ */
+export function parseArgs(
+  args: readonly string[],
+  readable: readonly number[],
+): { readonly record: boolean; readonly days: readonly number[] } | { readonly error: string } {
+  let record = false;
+  let day: number | undefined;
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === '--record' && !record) {
+      record = true;
+    } else if (arg === '--day' && day === undefined) {
+      const value = args[(i += 1)] ?? '';
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      const start =
+        match === null ? NaN : Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      if (Number.isNaN(start) || new Date(start).toISOString().slice(0, 10) !== value) {
+        return { error: '--day takes one UTC date, as YYYY-MM-DD' };
+      }
+      day = start;
+    } else {
+      return { error: 'unknown or repeated argument; the flags are --record and --day YYYY-MM-DD' };
+    }
+  }
+  if (day === undefined) return { record, days: readable };
+  if (!readable.includes(day)) {
+    return { error: '--day names a day that has not ended an hour ago or is no longer whole' };
+  }
+  return { record, days: [day] };
 }
 
 /** `<unix second of the day's UTC midnight>-ask.prom`, the name `trend:sync` imports by. */
@@ -153,14 +190,43 @@ interface Query {
   readonly exists: readonly string[];
   readonly where?: { readonly key: string; readonly value: string };
   readonly calculations: readonly Calculation[];
+  /**
+   * What a sampled count does: `refuse` the day, or, on the outcome counts alone, `mark` the
+   * row and print it as sampled. Absent is `refuse`.
+   */
+  readonly sampled?: 'refuse' | 'mark';
 }
 
 const count: Calculation = { alias: 'lines', operator: 'count' };
 const sum = (key: string): Calculation => ({ alias: key, operator: 'sum', key });
 
-/** The six questions a day is asked. Each names its own fields; none reads a line's text. */
+/**
+ * The eight questions a day is asked. Each names its own fields; none reads a line's text.
+ *
+ * ⚠️ **A grouped key other than `outcome` must be one the query requires to exist.** Grouped
+ * by several keys, Cloudflare counts only the lines that carry every one of them, and drops
+ * the rest without saying so: measured live on 2026-11-08 (#548), `outcome`, `reason` and
+ * `limit` at once answered nothing for a day of 4,323 lines. So the outcomes are counted on
+ * `outcome` alone, and `reasons` and `limits` add the detail for the lines that carry it.
+ *
+ * ⚠️ **Only those three may be sampled, and a sampled row prints as one** (#548, decision
+ * 413): 2026-11-07's `health-up` count came back at a sample interval of 1.002 with every
+ * other count exact. Sampling on the questions, Neurons, tokens or time still refuses the day.
+ */
 export const QUERIES = {
-  outcomes: { groupBys: ['outcome', 'reason', 'limit'], exists: [], calculations: [count] },
+  outcomes: { groupBys: ['outcome'], exists: [], calculations: [count], sampled: 'mark' },
+  reasons: {
+    groupBys: ['outcome', 'reason'],
+    exists: ['reason'],
+    calculations: [count],
+    sampled: 'mark',
+  },
+  limits: {
+    groupBys: ['outcome', 'limit'],
+    exists: ['limit'],
+    calculations: [count],
+    sampled: 'mark',
+  },
   questions: {
     groupBys: ['question'],
     exists: ['question'],
@@ -222,11 +288,21 @@ export class ShapeError extends Error {}
 interface Aggregate {
   readonly value: number;
   readonly groups: ReadonlyMap<string, string | number | boolean>;
+  /** Only ever true on a query whose `sampled` is `mark`. */
+  readonly sampled: boolean;
 }
 
 const REPLY_KEYS = new Set(['success', 'errors', 'messages', 'result']);
 const CALCULATION_KEYS = new Set(['calculation', 'alias', 'aggregates', 'series']);
-const AGGREGATE_KEYS = new Set(['count', 'interval', 'sampleInterval', 'value', 'groups']);
+/** `groupKey` is not in the published schema; every grouped aggregate carried one live (#548). */
+const AGGREGATE_KEYS = new Set([
+  'count',
+  'interval',
+  'sampleInterval',
+  'value',
+  'groups',
+  'groupKey',
+]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -304,6 +380,9 @@ function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] 
   const read = raw.map((entry: unknown) => {
     if (!isRecord(entry)) throw new ShapeError(`${where} holds an aggregate that is not an object`);
     only(entry, AGGREGATE_KEYS, where);
+    if (entry['groupKey'] !== undefined && typeof entry['groupKey'] !== 'string') {
+      throw new ShapeError(`${where} holds a group key that is not a string`);
+    }
     if (!finite(entry['value']) || !finite(entry['count'])) {
       throw new ShapeError(`${where} holds a value that is not a number`);
     }
@@ -313,10 +392,13 @@ function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] 
       if (entry['value'] !== 0) throw new ShapeError(`${where} holds a value with no events`);
       return undefined;
     }
+    let sampled = false;
     for (const key of ['sampleInterval', 'interval'] as const) {
-      if (entry[key] !== undefined && entry[key] !== 1) {
+      if (entry[key] === undefined || entry[key] === 1) continue;
+      if (query.sampled !== 'mark' || !finite(entry[key])) {
         throw new ShapeError(`${where} was sampled, so its counts are estimates`);
       }
+      sampled = true;
     }
     const groups = new Map<string, string | number | boolean>();
     const rawGroups = entry['groups'] ?? [];
@@ -334,7 +416,7 @@ function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] 
       }
       groups.set(key, value as string | number | boolean);
     }
-    return { value: entry['value'], groups };
+    return { value: entry['value'], groups, sampled };
   });
   return read.filter((aggregate) => aggregate !== undefined);
 }
@@ -344,6 +426,8 @@ export interface OutcomeCount {
   readonly reason?: string;
   readonly limit?: string;
   readonly count: number;
+  /** The count is Cloudflare's estimate: printed as sampled, recorded as it came. */
+  readonly sampled?: true;
 }
 
 /** One UTC day, counted. Every figure is a sum or a count; nothing identifies anyone. */
@@ -379,25 +463,63 @@ const single = (aggregates: readonly Aggregate[] | undefined): number | undefine
 const label = (value: string | number | boolean | undefined): string | undefined =>
   value === undefined || value === '' ? undefined : String(value);
 
-/** The day's totals from its six replies, or a `ShapeError` if any reply is not as documented. */
+/**
+ * Each outcome's lines, counted once: the `reasons` and `limits` rows for the lines that carry
+ * a detail, and a plain row for the rest of that outcome. Detail that outnumbers its outcome,
+ * or names one the day does not hold, is refused rather than netted off.
+ */
+function outcomeCounts(read: Record<QueryName, Map<string, Aggregate[]>>): OutcomeCount[] {
+  const plain = new Map<string, number>();
+  const sampledOutcomes = new Set<string>();
+  for (const a of read.outcomes.get('lines') ?? []) {
+    const outcome = label(a.groups.get('outcome'));
+    if (outcome === undefined) {
+      throw new ShapeError('the outcomes reply holds a line with no outcome');
+    }
+    plain.set(outcome, (plain.get(outcome) ?? 0) + a.value);
+    if (a.sampled) sampledOutcomes.add(outcome);
+  }
+  const detailed: OutcomeCount[] = [];
+  for (const [name, key] of [
+    ['reasons', 'reason'],
+    ['limits', 'limit'],
+  ] as const) {
+    for (const a of read[name].get('lines') ?? []) {
+      const outcome = label(a.groups.get('outcome'));
+      const detail = label(a.groups.get(key));
+      if (outcome === undefined || detail === undefined) {
+        throw new ShapeError(`the ${name} reply holds a line with no ${key}`);
+      }
+      const left = (plain.get(outcome) ?? 0) - a.value;
+      if (left < 0) throw new ShapeError(`the ${name} reply counts more lines than its outcome`);
+      plain.set(outcome, left);
+      // A remainder taken from an estimate is one too.
+      if (a.sampled) sampledOutcomes.add(outcome);
+      detailed.push({
+        outcome,
+        [key]: detail,
+        count: a.value,
+        ...(a.sampled && { sampled: true }),
+      });
+    }
+  }
+  const rest = [...plain]
+    .filter(([, count]) => count > 0)
+    .map(([outcome, count]) => ({
+      outcome,
+      count,
+      ...(sampledOutcomes.has(outcome) && { sampled: true as const }),
+    }));
+  return [...rest, ...detailed];
+}
+
+/** The day's totals from its eight replies, or a `ShapeError` if any reply is not as documented. */
 export function dayTotals(replies: Readonly<Record<QueryName, unknown>>): DayTotals {
   const read = Object.fromEntries(
     (Object.keys(QUERIES) as QueryName[]).map((name) => [name, readReply(name, replies[name])]),
   ) as Record<QueryName, Map<string, Aggregate[]>>;
 
-  const outcomes = (read.outcomes.get('lines') ?? []).map((a) => {
-    const outcome = label(a.groups.get('outcome'));
-    if (outcome === undefined)
-      throw new ShapeError('the outcomes reply holds a line with no outcome');
-    const reason = label(a.groups.get('reason'));
-    const limit = label(a.groups.get('limit'));
-    return {
-      outcome,
-      ...(reason !== undefined && { reason }),
-      ...(limit !== undefined && { limit }),
-      count: a.value,
-    };
-  });
+  const outcomes = outcomeCounts(read);
 
   const byQuestion = (alias: string): Map<number, number> => {
     const map = new Map<number, number>();
@@ -459,8 +581,11 @@ export function printDay(dayStart: number, totals: DayTotals): string[] {
     .sort((a, b) => b.count - a.count)
     .map((o) => {
       const why = o.reason ?? o.limit;
-      return `  ${o.outcome}${why === undefined ? '' : ` (${why})`} ${String(o.count)}`;
+      return `  ${o.outcome}${why === undefined ? '' : ` (${why})`} ${String(o.count)}${o.sampled === true ? ', sampled' : ''}`;
     });
+  const healthDown = totals.outcomes.some((o) => o.outcome === 'health-down' && o.sampled === true)
+    ? ', sampled'
+    : '';
   return [
     `${day(dayStart)}: questions ${String(totals.questions)}`,
     ...outcomes,
@@ -471,6 +596,6 @@ export function printDay(dayStart: number, totals: DayTotals): string[] {
     `  AI time: ${totals.msAvg === undefined ? 'no ai lines' : `average ${totals.msAvg.toFixed(0)} ms, largest ${String(totals.msMax ?? 0)} ms`}`,
     `  visitor-days reaching 1, 5, 10, 20, 30: ${[1, 5, 10, 20, 30].map((k) => String(totals.reaching.get(k) ?? 0)).join(', ')}`,
     `  questions 11 and up: ${String(share)}% of Neurons, a lower bound`,
-    `  daily test: ${daily}; health-down ${String(counted(totals, 'health-down'))}`,
+    `  daily test: ${daily}; health-down ${String(counted(totals, 'health-down'))}${healthDown}`,
   ];
 }

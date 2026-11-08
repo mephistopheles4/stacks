@@ -48,6 +48,11 @@ Every new field is a number or a fixed word. No new field can carry text.
 - `wrangler.jsonc` pins `observability.head_sampling_rate` to `1`, and
   `pnpm deploy:ask` refuses a config that does not, beside its `invocation_logs`
   refusal. A sampled log makes every count in this spec wrong, and silently.
+  **Amended 2026-11-08 (#548, the lead's decision 413, not yet the owner's):** a sampled
+  count still refuses the day on the questions, Neurons, tokens and time queries. On the
+  three outcome-count queries alone (`outcomes`, `reasons`, `limits`), a sampled row is
+  read as Cloudflare gave it and printed as `, sampled`; the record carries it unmarked,
+  since no series or label is added.
 
 **What the question number reveals (S8, Q1).** It holds no address and no key, and
 because the counter's key includes the day, nothing links across days. Within a
@@ -118,6 +123,19 @@ zeros, its sample intervals 0 too, which the first check refused as sampled. An 
 with a count of 0 now reads as no events. Grouped replies with data, `usage.neurons` and the
 comparison with the gateway's cost wait for a deployed day.
 
+**First deployed day (C10's second half, #548), read 2026-11-08 in structure and counts,
+never in content:** both days were refused. Two differences, both fixed. Every grouped
+aggregate carries a **`groupKey`** string beside `groups`, which the schema does not list.
+And **grouped by several keys, a query counts only the lines carrying all of them**:
+`outcome`, `reason` and `limit` at once answered no aggregate for 2026-11-07, while
+`outcome` alone answered 4,323 lines. So outcomes are now three queries, eight in all:
+`outcomes` on `outcome` alone, and `reasons` and `limits`, each requiring its key, giving
+the detail; an outcome's lines with no detail stay a plain count, and detail outnumbering
+its outcome is refused. Every spending line that day carried `neurons`. **Open:**
+2026-11-07's `health-up` count came back with a sample interval of 1.002 though
+`head_sampling_rate` is 1, every other count at exactly 1. Under the S2 amendment above,
+that row prints as sampled and the day is read.
+
 **Records, only when asked.** With `--record` it also writes one OpenMetrics record
 per day to `.trend/local/<day>-ask.prom`, where `<day>` is the UTC midnight that
 starts it, in unix seconds. `pnpm trend:sync` already imports every `.trend/local/`
@@ -140,7 +158,7 @@ constant with its change date: 3 days before 2026-12-01, 7 from then. A day
 - its start is **later than** now minus the retention, so the oldest, partly aged-out
   day is skipped;
 - it has **no file** already: a day is never rewritten;
-- all six queries were accepted, and each reply passed the shape check and the
+- all eight queries were accepted, and each reply passed the shape check and the
   group-limit check.
 
 So the owner runs it at least every 2 days now, and every 6 from December 1. A
