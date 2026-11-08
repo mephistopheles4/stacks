@@ -176,6 +176,14 @@
       "reason": "A ninth mutation scope, packages/site/src/analytics, was declared for the optional Plausible module (#562, ADR-0139; spec X4). The configuration gained one scope and one mutate glob and no existing scope changed, so the eight older scopes' mutated files and mutant inventories are as they were and their windows are declared preserved; the new scope starts unarmed with its own window. Measured, not assumed: the diff of stryker.scopes.json and stryker.config.mjs from the spec commit holds the one added scope and comment text, so the eight older scopes' globs and exclusions are identical, and none of the eight older globs matches any of the tracked files under packages/site/src/analytics. Not a full mutation run: the module is new, and a scoped run of its own specs is the only mutation measurement so far.",
       "pr": 564,
       "preserves": true
+    },
+    {
+      "date": "2026-11-08",
+      "stamp": "configHash",
+      "value": "sha256:8de42aa0d384b9de569621f8281da27aba480fc91f911c295dc4d45de224ff62",
+      "reason": "THROWAWAY, never merged (#558): this branch removes the scripts/ask-status.ts exclusion on purpose, to prove the mutation-dry-run job turns red on a pull request. The scripts scope gains one mutated file and the stamp moves with it; no score is re-derived.",
+      "pr": 558,
+      "preserves": false
     }
   ]
 }
