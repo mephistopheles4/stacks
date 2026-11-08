@@ -7,7 +7,7 @@ crypto or data migration), but it opens a new flow from every visitor's browser 
 third party and widens the page's CSP. There is no `docs/threat-model.md`, so the
 sensitive list decides what counts as a security finding. Written on 2026-11-07 from a
 grilling through an eagle-eye box, whose accepted set is S2. Base: `ca372c4`.
-Revision 3: the owner answered S16 on 2026-11-07, relayed by the lead (decision 74). **Nothing here is built. Not signed off.**
+Revision 4: round 2's two spec-text highs fixed (the build literal, where C8 is proven); the owner's answers to round 2 are pending in S17. Revision 3 recorded the owner's answers to S16, relayed by the lead (decision 74). **Nothing here is built. Not signed off.**
 
 ## S1. Objective
 
@@ -26,7 +26,7 @@ gate pins this), so its SPA mode never records them. Plausible adds custom event
 Sources report, on an account the owner already pays for.
 
 **Done means:** a build with `PUBLIC_PLAUSIBLE_DOMAIN` unset is the same site as today,
-and a build with it set reports page views and four events from `stacks.aymandiab.com`
+and a build with it set reports page views and the events S6 builds from `stacks.aymandiab.com`
 to Plausible, and from nowhere else. The CSP and the privacy page say what each build
 does (S7 names the one change an off build makes). The two analytics run side by side, and their counts will not agree: ad blockers
 block `plausible.io` far more often than Cloudflare's same-origin `/cdn-cgi/rum`.
@@ -74,13 +74,20 @@ or eval'd script, configured outside the repo).
   `PUBLIC_TURNSTILE_SITE_KEY`. A typo must not ship a tracker that reports to a site
   nobody reads.
 - **The config decides, once, and hands the site a literal.** `astro.config.mjs` reads
-  the raw value from Vite's `loadEnv(mode, packages/site, 'PUBLIC_')` merged over
-  `process.env`, which are the same sources `import.meta.env` is built from, so the config
-  and the page cannot disagree. It calls `readSwitch`, builds the CSP from the result
+  the raw value from `process.env` only. A value put in `packages/site/.env*` is ignored,
+  and since the site never reads `import.meta.env` for this, the config and the page cannot
+  disagree. It calls `readSwitch`, builds the CSP from the result
   (S5), and injects the domain through `vite.define` as `__PLAUSIBLE_DOMAIN__`, a string
   literal that is `""` when off. **The site never reads `import.meta.env` for this.** It
   branches on that literal, which Rollup folds, so an off build drops the branch and the
   chunk behind it (C2).
+- **Only site code reads the literal.** `switch.ts` holds `readSwitch` alone and never
+  names `__PLAUSIBLE_DOMAIN__`, because the config, `deploy.ts` (under `tsx`) and vitest
+  import it and none of them has the `define`. The literal is read in exactly two places,
+  both bundled by Vite: `events.ts`, and `analytics/on.ts`, which exports
+  `analyticsOn = __PLAUSIBLE_DOMAIN__ !== ''` for the `.astro` files. `vitest.config.ts`
+  gains `define: { __PLAUSIBLE_DOMAIN__: '""' }`, so a test that imports `events.ts` or
+  `on.ts` loads; tests that need "on" pass the domain as an argument (S4).
 - `.env.example` gains a commented `# PUBLIC_PLAUSIBLE_DOMAIN=` with a comment block:
   what it does, that it is public by design, that the site must exist in the Plausible
   account under that name with S6's goals, and that unset is a complete and supported
@@ -101,15 +108,23 @@ aymandiab.com's `src/lib/analytics.ts` already runs.
 declare const __PLAUSIBLE_DOMAIN__: string;
 export const PRODUCTION_HOST = 'stacks.aymandiab.com';
 
-/** Start the tracker once, if the switch is on and the host is production. */
-export function startAnalytics(where: Location): void;
+/** Start the tracker once, if the switch is on and the host is production.
+ *  `domain` defaults to the build literal; a test passes its own. */
+export function startAnalytics(where: Location, domain?: string): void;
 /** Send one event. A no-op when off, off-host, or not started yet. */
 export function trackBook(name: 'Book Picked Up' | 'Book Opened', id: string): void;
-export function trackAsk(name: 'Ask Opened' | 'Ask Sent'): void;
+export function trackAsk(name: 'Ask Opened'): void; // 'Ask Sent' only if S16 Q4 brings it back
+/** Every event asked for since load, sent or not, for `window.__shelf` (S10). */
+export function attempted(): readonly { name: string; book?: string }[];
 export function scrubUrl(href: string): string;
 ```
 
-- **The tracker is loaded by a dynamic `import()` inside `if (__PLAUSIBLE_DOMAIN__)`.**
+- **The tracker is loaded by a dynamic `import()` inside `if (domain)`,** where `domain`
+  is the argument or the build literal.
+- **`attempted()` records each call** to `trackBook` or `trackAsk`, by name and `book`, in
+  memory, whether or not the tracker started. It never leaves the page. It is exposed on
+  `window.__shelf` beside `held()`, so a browser check can count call sites with the
+  tracker never started. It is capped at 200 entries.
 - **Off-host means never started.** `startAnalytics` compares `where.hostname` with
   `PRODUCTION_HOST` exactly, before the import. localhost, `*.pages.dev`, previews and
   copies stay out of the dashboard. `PRODUCTION_HOST` must equal `WIDGET_DOMAIN` in
@@ -202,7 +217,7 @@ export function scrubUrl(href: string): string;
   new component, `components/AnalyticsStart.astro`, holds one `<script>` that imports
   `startAnalytics` and calls it. `NoticePage.astro` renders it as
   `{analyticsOn && <AnalyticsStart />}`, with `analyticsOn` read from S3's literal through
-  a one-line export in `analytics/switch.ts`. The build session confirms that Astro emits
+  `analytics/on.ts`, never `switch.ts` (S3). The build session confirms that Astro emits
   no script for a component that is not rendered; S5's clause checks it.
 - **`/privacy`** gains two paragraphs, the Plausible one as `components/PlausibleNotice.astro`
   under the same condition. One template expression reading a typed value is the shape
@@ -234,7 +249,7 @@ export function scrubUrl(href: string): string;
   it does today and skips this comparison. Unlike a stale stamp, a mismatch on a `current`
   build means the live site is not the build, so it fails.
 - **`--check-only`** builds nothing, so it takes the expected shape from
-  `dist/index.html`'s CSP meta. `--dry-run` prints the analytics line and stops as today.
+  `dist/index.html`'s CSP meta, both for its `dist/` pre-flight and for the live comparison. `--dry-run` prints the analytics line and stops as today.
 
 ## S9. Records, in the build's commit
 
@@ -279,10 +294,15 @@ Written first, each backing a claim in S11.
 - `PRODUCTION_HOST === WIDGET_DOMAIN`, in a gate test that may import both.
 - `gates/public-build-artifact.test.ts`: the two planted CSP defects and the planted
   `plausible.io` string and notice-page script of S5, each firing `csp` alone.
-- `shelf/pickup.ts` and `ask/drawer.ts`, through their existing tests with a spy on the
-  module: one `Book Picked Up` per landing from each path, none for a chat link to the book
-  in hand, one `Book Opened` per opening, one `Ask Opened` per shut-to-open, one `Ask Sent`
-  per non-empty send (only if S16 Q4 brings it back) and none for an empty one.
+- **C8 in a browser.** `pickup.ts` and `drawer.ts` have no unit tests and run only in a
+  browser, so C8 is proven in `scripts/smoke-render.ts`, inside the G35 row, by a new
+  `checkAnalyticsCalls` that reads `window.__shelf.attempted()` after each step: a shelf
+  click that lands (one `Book Picked Up` with that id), a chat link dispatched as
+  `stacks:pick-up` (one more), a chat link to the book in hand (none), an open (one
+  `Book Opened`), the drawer opened twice from shut (two `Ask Opened`), and no page view
+  from a pickup. `pickup-state.test.ts` already holds that `landed` and `opened` fire once
+  per landing and opening; the browser check holds that each calls the module once.
+  Planting a second `trackBook` call in `landed` turns it red.
 - **One real on run on the host:** `PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com pnpm
   smoke:render`. It serves from localhost, so the tracker never starts. `smoke-render.ts`
   gains a request-host listener that counts requests to any host other than the page's own,
@@ -300,7 +320,7 @@ Written first, each backing a claim in S11.
 | C5 | A value of `PUBLIC_PLAUSIBLE_DOMAIN` outside `^[a-z0-9.-]+$` fails the build and `deploy:site`, and neither message contains the value | Safety |
 | C6 | The tracker is imported only on `stacks.aymandiab.com`, and never with the switch off | Functional |
 | C7 | Every request the real tracker makes carries a `u` and `r` with no query parameter outside the seven and no fragment, and no property outside C8's | Security |
-| C8 | Each built event fires as S6 says, once per action, from both pickup paths; the only property is `book` holding an id that matches `BOOK_ID`; a click on an outbound link sends nothing; no page view comes from a pickup | Functional |
+| C8 | Each built event fires as S6 says, once per action, from both pickup paths, as `window.__shelf.attempted()` records it in `smoke:render`; the only property is `book` holding an id that matches `BOOK_ID`; a click on an outbound link sends nothing; no page view comes from a pickup | Functional |
 | C9 | `/privacy` names Cloudflare Web Analytics in every build and Plausible only in an on build, in S7's words | Interaction |
 | C10 | `deploy:site` prints the analytics line in every mode, proceeds in either state, and exits non-zero naming both shapes when a `current` live index's `connect-src` differs from the built shape | Reliability |
 | C11 | The on run of S10 passes `pnpm smoke:render` with zero CSP violations and zero requests to another host | Reliability |
@@ -387,3 +407,25 @@ decision 74), relayed to this session by the lead.
   in the ADR.
 - **Q5. Hardening: the catch on the import only.** The path allowlist in `scrubUrl` and
   Plausible's hostname allowlist are accepted risks (S13).
+
+## S17. Round 2's questions for the owner
+
+Raised by the final spec round on revision 3, 2026-11-07. The owner chose to keep going
+without a prototype (decision 88, via the lead). Each blocks sign-off.
+
+- **X3. A DOM test environment.** The real-tracker test (C7) needs `location`,
+  `history`, `document` and `sendBeacon`; `vitest.config.ts` runs `node`, and no DOM
+  package is installed. Install one (an ADR note, the owner's install), or prove C7 another
+  way, for example in `smoke:render` with the tracker started against a stubbed host.
+- **X4. `packages/site/src/analytics/` and G38.** The new folder must be declared or
+  excluded in `stryker.scopes.json`, or G38 is red and `deploy:site` refuses.
+- **X5. The unknown-path risk, again.** Pages answers any unknown path with the shelf
+  (`infra/main.tf:165`), so the tracker starts there and sends the path. S13's "only if"
+  premise was false. Build the path allowlist in `scrubUrl`, or accept the risk knowing this.
+- **Which answers "Yes, all four" covered.** S16 records five. Confirm the fifth.
+- **The plan allowance.** On-build page views and events count against the existing
+  Plausible plan's monthly allowance. Confirm that is acceptable; S14 will say so.
+- **Trade-offs from the final round:** stripping the variable from the gate builds'
+  children and giving `smoke:render` an explicit on flag; the on-run and C13 commands for
+  PowerShell and under the agent guard; a guard around track calls if the loaded tracker
+  throws.
