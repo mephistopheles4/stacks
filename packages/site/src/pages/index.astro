@@ -268,7 +268,9 @@ const pageUrl = absoluteUrl('/', Astro.site);
     Beside the Ask panel, never under it, wherever the panel leaves room: it is
     fixed to the right edge above them, so the X would sit under the panel's own
     close and a click meant for the book would close the drawer. Narrower than
-    this the panel is the whole screen, and the controls wait under it.
+    this the panel is the whole screen, and the controls wait under it. 27rem
+    is the panel's own width, `min(27rem, 100%)` in ../ask/Ask.astro: change
+    one and change the other.
   */
   @media (min-width: 36rem) {
     body:has(#ask-panel:not([hidden])) .held-controls {

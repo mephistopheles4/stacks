@@ -247,7 +247,7 @@ opening is held, and `closed()` is what says it is not yet at rest.
 The return of a **held** book to its slot, on the same path reversed, from
 closed or from open. Escape, a click on empty space, the back button and the X
 in the header all do it.
-*Avoid*: close, dismiss (those were the card's), drop.
+*Avoid*: close (that is open to closed rest, still held), dismiss, drop.
 
 **Drop**:
 Every book the pickup is moving, back in its slot at once with no motion, when

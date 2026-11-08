@@ -3,7 +3,7 @@
 **Date:** 2026-11-07
 **Status:** accepted; built in [#553](https://github.com/mephistopheles4/stacks/issues/553), spec revision 2 on that issue
 **Issue:** [#553](https://github.com/mephistopheles4/stacks/issues/553)
-**Supersedes in part:** [ADR-0109](0109-the-held-book-is-examined-in-3d.md), its modal `<dialog>` and its closing overlay; [ADR-0137](0137-a-picked-up-book-arrives-closed.md), its X under the hint and its hint text
+**Supersedes in part:** [ADR-0109](0109-the-held-book-is-examined-in-3d.md), its modal `<dialog>`, its closing overlay and the cut on put-back; [ADR-0137](0137-a-picked-up-book-arrives-closed.md), its X under the hint, its hint text and the cut for a book closed for examining
 
 ## Decision
 
@@ -40,6 +40,9 @@ view where it could be turned. The owner found that awkward and asked for it gon
   scrolled away would make the reader scroll past the Thoughts to close the
   book, which is the thing the owner asked to avoid.
 - **A tap on the book while it is closing is ignored** until it lands.
+- **`phone-check.ts --examine` is renamed `--turn`**, since there is no view to
+  examine any more: it turns the closed book, opens it, closes it and turns it
+  again.
 - **One tap rule.** The shelf's click and the turn both use `book-turn.ts`'s
   `press()`, farthest travel under 6 px. They had disagreed (an end-point
   distance of 5 px against farthest travel of 6), so a wobble out and back
