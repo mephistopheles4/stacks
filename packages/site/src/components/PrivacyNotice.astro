@@ -15,7 +15,7 @@ const { headingId } = Astro.props as { headingId?: string };
 ---
 
 <NoticeBody>
-  <h1 id={headingId}>Privacy</h1>
+  <h1 id={headingId} tabindex={headingId === undefined ? undefined : -1}>Privacy</h1>
 
   <p>
     Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs when the

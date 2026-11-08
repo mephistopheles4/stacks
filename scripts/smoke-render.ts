@@ -313,6 +313,9 @@ async function main(): Promise<void> {
         checkAnalyticsCalls(browser, origin, analyticsOn),
       );
       const notices = await timed('G35 notices (#536)', () => checkNoticePages(browser, origin));
+      const noticeModal = await timed('G35 notice modal (#536)', () =>
+        checkNoticeModal(browser, origin, notices.types),
+      );
 
       report({
         skipped: pullRequest ? SKIPPED_ON_PULL_REQUESTS : undefined,
@@ -338,6 +341,7 @@ async function main(): Promise<void> {
         readout,
         analytics,
         notices,
+        noticeModal,
       });
     } finally {
       await browser.close();
@@ -1227,13 +1231,16 @@ const CLOSE_FOOT_CONTROL = '.held-page-right .held-close-foot';
 /** The closed rest a pickup lands on, or a close returns to: held, not open, Open showing. */
 const CLOSED_AT_REST = `window.__shelf.held()?.phase === 'held' && window.__shelf.held()?.opened === false && document.querySelector('.held-open')?.hidden === false`;
 
-/** No dialog anywhere on the page, and what the X is described by. */
+/**
+ * No dialog anywhere on the page but the notice modal's (#536), which is a different thing from
+ * the closed book's modal view that #553 retired, and what the X is described by.
+ */
 const READ_DESCRIPTION = `(() => {
   const buttons = [...document.querySelectorAll('button')];
   const back = buttons.some((b) => /back to the page/i.test((b.getAttribute('aria-label') ?? '') + ' ' + (b.textContent ?? '')));
   const x = document.querySelector('${X_BUTTON}');
   const described = (x?.getAttribute('aria-describedby') ?? '').split(/\\s+/).map((id) => document.getElementById(id)?.textContent ?? '');
-  return { noDialog: document.querySelector('dialog') === null && !back, text: described.join(' ').replace(/\\s+/g, ' ').trim() };
+  return { noDialog: document.querySelector('dialog:not(#notice-dialog)') === null && !back, text: described.join(' ').replace(/\\s+/g, ' ').trim() };
 })()`;
 
 /**
@@ -4986,6 +4993,7 @@ function report(result: {
   readout: TunerChecked;
   analytics: TunerChecked;
   notices: LinesAndFailures;
+  noticeModal: LinesAndFailures;
 }): void {
   const {
     skipped,
@@ -5011,6 +5019,7 @@ function report(result: {
     readout,
     analytics,
     notices,
+    noticeModal,
   } = result;
   const failures: string[] = [
     ...fallback.failures,
@@ -5120,6 +5129,8 @@ function report(result: {
   for (const line of drawerCells.lines) console.log(`  ${line}`);
   console.log('the attribution and privacy notices (#536)');
   for (const line of notices.lines) console.log(`  ${line}`);
+  console.log('the notice modal over the shelf (#536)');
+  for (const line of noticeModal.lines) console.log(`  ${line}`);
   console.log('the hint, the X and the brand off the book (#553)');
   for (const line of overlap.lines) console.log(`  ${line}`);
   console.log(
@@ -5191,6 +5202,7 @@ function report(result: {
     ...controls.failures,
     ...drawerCells.failures,
     ...notices.failures,
+    ...noticeModal.failures,
     ...overlap.failures,
     ...lost,
   );
@@ -5468,7 +5480,8 @@ interface NoticeType {
   readonly h1: TypeRead;
   /** Absent on a notice with no sub-headings, which the privacy notice is. */
   readonly h2: TypeRead | null;
-  readonly a: TypeRead;
+  /** Absent in a notice with no link, which the modal's privacy panel is: the page's way back is a link. */
+  readonly a: TypeRead | null;
 }
 
 /** The type of the first `p`, `h1`, `h2` and `a` under `root`, as one expression for the page. */
@@ -5495,7 +5508,7 @@ function readNoticeType(root: string): string {
       };
     };
     const found = { p: read('p'), h1: read('h1'), h2: read('h2'), a: read('a') };
-    return found.p === null || found.h1 === null || found.a === null ? null : found;
+    return found.p === null || found.h1 === null ? null : found;
   })()`;
 }
 
@@ -5550,9 +5563,13 @@ const NOTICE_PAGES = [
  * C5 on the pages, and C6: both direct pages, at both widths, with JavaScript
  * off — the type, the text, the way back and `noindex`.
  */
-async function checkNoticePages(browser: Browser, origin: string): Promise<LinesAndFailures> {
+async function checkNoticePages(
+  browser: Browser,
+  origin: string,
+): Promise<LinesAndFailures & { readonly types: ReadonlyMap<string, NoticeType | null> }> {
   const failures: string[] = [];
   const lines: string[] = [];
+  const types = new Map<string, NoticeType | null>();
   const context = await browser.createBrowserContext();
   try {
     for (const { path, says } of NOTICE_PAGES) {
@@ -5566,6 +5583,7 @@ async function checkNoticePages(browser: Browser, origin: string): Promise<Lines
           await page.goto(`${origin}${path}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
           const type = (await page.evaluate(readNoticeType('main'))) as NoticeType | null;
           failures.push(...noticeTypeFailures(where, type));
+          types.set(`${path} ${viewport.name}`, type);
           const read = (await page.evaluate(`(() => ({
             text: document.querySelector('main')?.textContent ?? '',
             back: document.querySelector('main a[href="/"]') !== null,
@@ -5591,6 +5609,245 @@ async function checkNoticePages(browser: Browser, origin: string): Promise<Lines
     }
   } finally {
     await context.close();
+  }
+  return { lines, failures, types };
+}
+
+/** Two readings of the same notice, in two places, must agree on every property (C5). */
+function noticeTypeDifferences(a: NoticeType, b: NoticeType): string[] {
+  const differences: string[] = [];
+  for (const part of ['p', 'h1', 'h2', 'a'] as const) {
+    const [left, right] = [a[part], b[part]];
+    if (left === null || right === null) {
+      // A link is the page's own way back; the modal's privacy panel has none to compare.
+      if (left !== right && part !== 'a') differences.push(`${part}: present in one reading only`);
+      continue;
+    }
+    for (const key of Object.keys(left) as (keyof TypeRead)[]) {
+      if (left[key] !== right[key]) {
+        differences.push(`${part} ${key}: ${String(left[key])} against ${String(right[key])}`);
+      }
+    }
+  }
+  return differences;
+}
+
+/** The modal's state, as one sentence's worth of facts. */
+const READ_MODAL = `(() => {
+  const d = document.getElementById('notice-dialog');
+  const a = document.activeElement;
+  return {
+    open: d !== null && d.open,
+    labelledby: d?.getAttribute('aria-labelledby') ?? '',
+    shown: d === null ? [] : [...d.querySelectorAll('section')].filter((s) => !s.hidden).map((s) => s.id),
+    active: a === null ? '' : a.id || a.tagName,
+    activeInDialog: d !== null && d.contains(a),
+    activeIsOpener: a?.getAttribute('href') === '/attribution' && !d?.contains(a),
+  };
+})()`;
+
+interface ModalRead {
+  readonly open: boolean;
+  readonly labelledby: string;
+  readonly shown: readonly string[];
+  readonly active: string;
+  readonly activeInDialog: boolean;
+  readonly activeIsOpener: boolean;
+}
+
+/** The accessible name the browser computes for the dialog, from its accessibility tree. */
+async function dialogName(page: Page): Promise<string> {
+  const dialog = await page.$('#notice-dialog');
+  if (dialog === null) return '(no dialog)';
+  const tree = await page.accessibility.snapshot({ root: dialog, interestingOnly: false });
+  return tree?.name ?? '(no name)';
+}
+
+/**
+ * Whether the last paragraph of the shown panel scrolls into the dialog's box: the key moves the
+ * dialog by a smooth scroll, so this waits for it to land and a miss is the answer.
+ */
+async function lastLineScrolledIn(page: Page): Promise<boolean> {
+  return searchFor(page, LAST_LINE_IN_VIEW, 2500);
+}
+
+/** Whether the last paragraph of the shown panel is inside the dialog's visible box. */
+const LAST_LINE_IN_VIEW = `(() => {
+  const d = document.getElementById('notice-dialog');
+  const panel = [...d.querySelectorAll('section')].find((s) => !s.hidden);
+  const last = [...panel.querySelectorAll('p')].at(-1);
+  const box = d.getBoundingClientRect();
+  const line = last.getBoundingClientRect();
+  return line.bottom <= box.bottom + 1 && line.top >= box.top;
+})()`;
+
+/**
+ * G35, the notice modal opened from the shelf's Attribution link (#536, `notice-modals.md` C1,
+ * C2, C5 and the browser half of C7), with no drawer and no held book: the drawer and the held
+ * book join in the next step. At both widths: focus goes in, cycles at both ends, the dialog is
+ * named by the panel shown before and after the swap to the privacy panel, the type is the
+ * pages' type, the last line of each notice scrolls into view, one Escape closes it and returns
+ * focus to the link, a click on the backdrop closes it, a ctrl-click opens the page and not the
+ * modal, and through all of it nothing navigated and a sentinel set on `window` survived.
+ */
+async function checkNoticeModal(
+  browser: Browser,
+  origin: string,
+  pageTypes: ReadonlyMap<string, NoticeType | null>,
+): Promise<LinesAndFailures> {
+  const failures: string[] = [];
+  const lines: string[] = [];
+  for (const viewport of NOTICE_VIEWPORTS) {
+    const where = `notice modal, ${viewport.name}`;
+    const context = await browser.createBrowserContext();
+    try {
+      const page = await context.newPage();
+      await page.setViewport({ width: viewport.width, height: viewport.height });
+      await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+      await page.evaluate('window.__noticeSentinel = 7');
+      let navigations = 0;
+      page.on('framenavigated', (frame) => {
+        if (frame === page.mainFrame()) navigations += 1;
+      });
+      const read = async (): Promise<ModalRead> => (await page.evaluate(READ_MODAL)) as ModalRead;
+      const say = (what: string, ok: boolean): void => {
+        if (!ok) failures.push(`${where}: ${what}`);
+      };
+      const link = '.pattr-link[href="/attribution"]';
+
+      // Opening: a plain click on the shelf's link.
+      await page.click(link);
+      let state = await read();
+      say('a click on Attribution did not open the modal', state.open);
+      // Nothing below reads a modal that never opened, and the rest would only throw.
+      if (!state.open) continue;
+      say(
+        `the first panel shown is ${state.shown.join()}, not the attribution notice`,
+        state.shown.join() === 'notice-attribution',
+      );
+      say(`focus starts on ${state.active}, not the close button`, state.active === 'notice-close');
+      say(
+        `the dialog is named by ${state.labelledby}`,
+        state.labelledby === 'notice-attribution-title',
+      );
+      const name = await dialogName(page);
+      say(`the dialog's accessible name is "${name}", not "Attribution"`, name === 'Attribution');
+
+      // The type, equal to the direct page's (C5), and the end of the notice reachable (C2).
+      const modalType = (await page.evaluate(
+        readNoticeType('#notice-attribution'),
+      )) as NoticeType | null;
+      failures.push(...noticeTypeFailures(`${where}, attribution`, modalType));
+      const pageType = pageTypes.get(`/attribution ${viewport.name}`) ?? null;
+      if (modalType !== null && pageType !== null) {
+        for (const difference of noticeTypeDifferences(pageType, modalType)) {
+          failures.push(`${where}: the type differs from the page's: ${difference}`);
+        }
+      }
+      await page.keyboard.press('End');
+      say(
+        'the last line of the attribution notice cannot be scrolled into view',
+        await lastLineScrolledIn(page),
+      );
+      await page.evaluate('document.getElementById("notice-close").focus()');
+
+      // Tab cycles inside: forward round the whole ring, then back from the first.
+      const ring = (await page.evaluate(
+        `[...document.querySelectorAll('#notice-dialog button, #notice-dialog a[href]')].filter((e) => !e.closest('[hidden]')).length`,
+      )) as number;
+      let escaped = false;
+      for (let step = 0; step < ring; step += 1) {
+        await page.keyboard.press('Tab');
+        if (!(await read()).activeInDialog) escaped = true;
+      }
+      say('Tab left the modal', !escaped);
+      say(
+        'Tab round the ring did not come back to the close button',
+        (await read()).active === 'notice-close',
+      );
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('Tab');
+      await page.keyboard.up('Shift');
+      state = await read();
+      say('Shift+Tab from the close button left the modal', state.activeInDialog);
+
+      // The in-notice link swaps the panel: name follows, focus lands on the heading.
+      await page.click('#notice-attribution a[href="/privacy"]');
+      state = await read();
+      say('the privacy link closed the modal instead of swapping the panel', state.open);
+      say(
+        `the panel shown after the swap is ${state.shown.join()}`,
+        state.shown.join() === 'notice-privacy',
+      );
+      say(
+        `the dialog is named by ${state.labelledby} after the swap`,
+        state.labelledby === 'notice-privacy-title',
+      );
+      say(
+        `focus is on ${state.active} after the swap, not the privacy heading`,
+        state.active === 'notice-privacy-title',
+      );
+      const swapped = await dialogName(page);
+      say(
+        `the accessible name after the swap is "${swapped}", not "Privacy"`,
+        swapped === 'Privacy',
+      );
+      const privacyType = (await page.evaluate(
+        readNoticeType('#notice-privacy'),
+      )) as NoticeType | null;
+      failures.push(...noticeTypeFailures(`${where}, privacy`, privacyType));
+      const privacyPage = pageTypes.get(`/privacy ${viewport.name}`) ?? null;
+      if (privacyType !== null && privacyPage !== null) {
+        for (const difference of noticeTypeDifferences(privacyPage, privacyType)) {
+          failures.push(`${where}: the privacy type differs from the page's: ${difference}`);
+        }
+      }
+      await page.evaluate('document.getElementById("notice-close").focus()');
+      await page.keyboard.press('End');
+      say(
+        'the last line of the privacy notice cannot be scrolled into view',
+        await lastLineScrolledIn(page),
+      );
+
+      // One Escape closes it, and focus goes back to the link that opened it first.
+      await page.keyboard.press('Escape');
+      state = await read();
+      say('Escape did not close the modal', !state.open);
+      say(
+        `focus is on ${state.active} after the close, not the Attribution link`,
+        state.activeIsOpener,
+      );
+
+      // The backdrop closes it too.
+      await page.click(link);
+      say('the modal did not open a second time', (await read()).open);
+      await page.mouse.click(2, 2);
+      say('a click on the backdrop did not close the modal', !(await read()).open);
+
+      // A modified click is the browser's: a new tab, and no modal.
+      const before = (await browser.pages()).length;
+      await page.keyboard.down('Control');
+      await page.click(link);
+      await page.keyboard.up('Control');
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      say('a ctrl-click opened the modal', !(await read()).open);
+      const tabs = await browser.pages();
+      say('a ctrl-click did not open the page in a new tab', tabs.length > before);
+      for (const extra of tabs.slice(before)) await extra.close();
+
+      say(`the page navigated ${String(navigations)} time(s)`, navigations === 0);
+      say(
+        'the window sentinel did not survive',
+        (await page.evaluate('window.__noticeSentinel')) === 7,
+      );
+      lines.push(
+        `${viewport.name.padEnd(17)} opens, Tab ring of ${String(ring)}, swap names "${swapped}", ` +
+          `Escape and backdrop close, ctrl-click is the page's, ${String(navigations)} navigations`,
+      );
+    } finally {
+      await context.close();
+    }
   }
   return { lines, failures };
 }

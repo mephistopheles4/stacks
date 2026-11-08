@@ -2,6 +2,7 @@
 import Ask from '../ask/Ask.astro';
 import Attribution from '../components/Attribution.astro';
 import Shelf from '../components/Shelf.astro';
+import Notices from '../notice/Notices.astro';
 import { absoluteUrl } from '../site-meta.ts';
 
 // The mark itself, inlined rather than fetched: it is four rects, and an <img>
@@ -132,6 +133,7 @@ const pageUrl = absoluteUrl('/', Astro.site);
     -->
     <Attribution />
     <Ask />
+    <Notices />
   </body>
 </html>
 

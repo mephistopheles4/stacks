@@ -180,8 +180,8 @@
     {
       "date": "2026-11-08",
       "stamp": "configHash",
-      "value": "sha256:7b4ff459af4daa51ef25421ce18fbcc0a26ea8e02e5b1547f658e61cf6948bcd",
-      "reason": "A tenth mutation scope, packages/site/src/notice, was declared for the notice modals (#536, docs/spec/notice-modals.md). The configuration gained one scope and one mutate glob and no existing scope changed, so the nine older scopes' mutated files and mutant inventories are as they were and their windows are declared preserved; the new scope starts unarmed with its own window. Reasoned from the configuration diff, which is the one added scope, and not from a mutation run: the directory holds one pure module and its spec so far, and none of the nine older globs matches a file under packages/site/src/notice.",
+      "value": "sha256:85ab289b6ac7f8d0db96dc9e0c8749cd292ce3b6d22b3ee29d09d78f5fbe89e1",
+      "reason": "A tenth mutation scope, packages/site/src/notice, was declared for the notice modals (#536, docs/spec/notice-modals.md). The configuration gained one scope and one mutate glob and no existing scope changed, so the nine older scopes' mutated files and mutant inventories are as they were and their windows are declared preserved; the new scope starts unarmed with its own window. Reasoned from the configuration diff, which is the one added scope, and not from a mutation run: the directory holds two pure modules with their specs, measured, and three browser-only files (modal.ts, start.ts, open.ts) excluded with a mechanism each; none of the nine older globs matches a file under packages/site/src/notice.",
       "pr": 570,
       "preserves": true
     }

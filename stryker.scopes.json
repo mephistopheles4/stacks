@@ -165,7 +165,20 @@
     {
       "name": "packages/site/src/notice",
       "glob": "packages/site/src/notice/**/*.ts",
-      "exclusions": []
+      "exclusions": [
+        {
+          "path": "packages/site/src/notice/modal.ts",
+          "mechanism": "Browser-only DOM glue: it drives a native `<dialog>` and reads the focus, which no in-process spec has. The decisions in it live in `links.ts` and `focus.ts`, which are measured; the glue is held by the `smoke-render` notice cells (G35), planted red."
+        },
+        {
+          "path": "packages/site/src/notice/start.ts",
+          "mechanism": "Imported only by `packages/site/src/notice/Notices.astro`. `.astro` files are not in the Vitest project, so nothing runs it in-process."
+        },
+        {
+          "path": "packages/site/src/notice/open.ts",
+          "mechanism": "Reads a `<dialog>` element from the document, which no in-process spec has; its one function is exercised by the `smoke-render` notice cells."
+        }
+      ]
     },
     {
       "name": "packages/cli/src",

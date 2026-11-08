@@ -10,7 +10,7 @@ const { headingId } = Astro.props as { headingId?: string };
 ---
 
 <NoticeBody>
-  <h1 id={headingId}>Attribution</h1>
+  <h1 id={headingId} tabindex={headingId === undefined ? undefined : -1}>Attribution</h1>
 
   <p>
     Book data on this shelf comes from four catalogues. Nothing here is
