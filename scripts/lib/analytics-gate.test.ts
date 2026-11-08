@@ -107,6 +107,27 @@ describe('foreignRequests', () => {
       ),
     ).toEqual(['https://plausible.io/api/event']);
   });
+
+  it("does not count the Ask drawer's Turnstile script, which a build with the real .env loads", () => {
+    expect(
+      foreignRequests(
+        ['https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'],
+        'http://127.0.0.1:1',
+      ),
+    ).toEqual([]);
+  });
+
+  it('still counts every other host, look-alikes of the Turnstile host included', () => {
+    const others = [
+      'https://evil.challenges.cloudflare.com/a.js',
+      'https://challenges.cloudflare.com.evil.example/a.js',
+      'https://xchallenges.cloudflare.com/a.js',
+      'https://challenges.cloudflare.co/a.js',
+      'https://cloudflare.com/a.js',
+      'https://challenges.cloudflare.com:8443/a.js',
+    ];
+    expect(foreignRequests(others, 'http://127.0.0.1:1')).toEqual(others);
+  });
 });
 
 describe('the gate scripts name gateBuildEnv at the calls that start a build (S5, C13), read from source', () => {
