@@ -4,9 +4,8 @@
  * provider's record from another's, and Apple is consulted for artwork alone.
  *
  * `oreilly` is kept as a name and is inert: the provider was removed (#450), so
- * no lookup returns it and nothing makes a request under it. It stays so the
- * tables keyed on a source (`precedence.ts`) keep their shape if a provider
- * ever comes back.
+ * no lookup returns it and nothing makes a request under it. Why it stays is in
+ * ADR-0147.
  */
 export type MetadataSource = 'open-library' | 'google-books' | 'oreilly' | 'apple-books';
 
@@ -86,8 +85,9 @@ export interface BookMetadata {
 /**
  * Third-party prose arrives as markup and is stored as text.
  *
- * Apple's descriptions carry `<b>`, and Google's can carry markup too. A note is a file the owner reads and hand-edits, so the tags
- * come off at the edge rather than in whatever renders it later — and `## About`
+ * Apple's descriptions carry `<b>`, and Google's can carry markup too. A note is
+ * a file the owner reads and hand-edits, so the tags come off at the edge rather
+ * than in whatever renders it later — and `## About`
  * is written into a Markdown body, where a stray `<div>` would be passed
  * straight through by every renderer that reads it.
  *

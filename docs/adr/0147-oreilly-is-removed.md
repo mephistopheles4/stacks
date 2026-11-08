@@ -31,18 +31,22 @@ it, and returned nothing.
 | The Content API | It has a description field, but its tokens are made by account managers on an integrations page, and it is rate-limited for bulk sync (2 calls a second). |
 | The MCP search with a personal token | It needs a credential tied to the owner's account, stored in plain text, and two review rounds still left high findings on it. The owner chose removal over carrying that. |
 
-**Re-adding O'Reilly starts from #450's spec revision 2**, which designed the MCP
-route and carries its measurements and the findings of both rounds.
+**Re-adding O'Reilly starts from [#450's spec revision 2](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728059674)**,
+which designed the route through O'Reilly's MCP (Model Context Protocol) search
+with a personal token, and carries its measurements and the findings of both
+review rounds. Revision 3 was written and never posted.
 
 ## What is lost
+
+Against a provider that worked, these are lost:
 
 - O'Reilly early releases, which no other provider holds.
 - The 1200px cover borrowed for a book Open Library holds only as a placeholder.
 - `oreilly_ourn` on new notes.
 
-Compared with today, nothing is lost: the provider already returned nothing. A
-book only O'Reilly held is an ordinary miss, and the owner fills in the note by
-hand.
+Against the provider as it has been since June, nothing is lost, because it
+already returned nothing. A book only O'Reilly held is an ordinary miss, and the
+owner fills in the note by hand.
 
 ## What stays, and why
 
@@ -63,11 +67,11 @@ hand.
 
 ## The trade-offs
 
-- **Inert entries kept, against stripped.** Kept, because the cheaper side to
-  reverse is the one that does not touch G31's table, the `absent-only` gate's
-  unfillable key, `precedence.test.ts` and `enrich.ts` for no change in
-  behaviour. The cost is a handful of lines no provider exercises, and this
-  record is what says they are not live.
+- **Inert entries kept, against stripped.** Kept. Stripping them would touch
+  G31's table, the `absent-only` gate's unfillable key, `precedence.test.ts` and
+  `enrich.ts`, and change no behaviour. The kept side is the cheaper one to
+  reverse if the owner comes back to an O'Reilly route. The cost is a handful of
+  lines no provider exercises, and this record is what says they are not live.
 - **A hand-added cover's provenance is written by hand.** `stacks covers
   --backfill` infers an absent `cover_source` from the image, and anything 700px
   or wider is guessed as `apple-books`, so an O'Reilly cover saved by hand at

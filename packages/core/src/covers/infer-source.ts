@@ -8,13 +8,13 @@
  * on disk.
  *
  * **Three providers, not four, and deliberately.** O'Reilly arrived after
- * `cover_source` did, so every O'Reilly cover fetched by the provider was
- * recorded at fetch time. That premise ended with the provider's removal
- * (#450): a cover saved by hand has no source recorded, and a hand-added
- * O'Reilly cover at 1200x1575 sits inside Apple's measured 778–2400px range, so
- * a signature for it could not separate them anyway. Anything 700px or wider
- * that reaches here with no source is guessed as Apple, so a cover added by
- * hand needs `cover_source: unknown` written by hand.
+ * `cover_source` did, so every O'Reilly cover the provider fetched was recorded
+ * at fetch time and never reached this function. The provider is gone (#450),
+ * but a cover saved by hand never had a source recorded either. An O'Reilly
+ * cover at 1200x1575 sits inside Apple's measured 778–2400px range, so a
+ * signature for it could not separate them anyway. Anything 700px or wider that
+ * reaches here with no source is guessed as Apple, so a cover added by hand
+ * needs `cover_source: unknown` written by hand.
  *
  * What can be read off the files is their size, and the three providers serve
  * visibly different things:

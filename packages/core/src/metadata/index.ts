@@ -205,9 +205,8 @@ export async function lookup(
  * book.
  *
  * Two things happen and they are deliberately separate. `fillGaps` and the Apple
- * cover rule decide `title`, `author`, `isbn`, `pages` and `cover` exactly as
- * they always have — that behaviour is pinned by G26 and is not what this work
- * changes. Then `mergeFields` fills the four new fields and the four contributor
+ * cover rule decide `title`, `author`, `isbn`, `pages` and `cover`, and G26 pins
+ * what they decide. Then `mergeFields` fills the four new fields and the four contributor
  * ids from whichever provider wins each, by the table in `precedence.ts`.
  *
  * Every provider consulted along the way records itself in `contributors`, and
@@ -305,10 +304,11 @@ async function fillGaps(
   language: ReadingLanguage,
   contributors: Contributors,
 ): Promise<BookMetadata> {
+  if (primary.source === 'google-books') return primary;
+
   // A speculative cover counts as missing: it is a URL we invented from an
   // ISBN, and the endpoint answers with a placeholder as readily as with art.
   const needsCover = primary.coverUrl === undefined || primary.coverIsSpeculative === true;
-  if (primary.source === 'google-books') return primary;
 
   /**
    * Google is asked whether or not there is a gap to fill, and that is new.

@@ -119,6 +119,7 @@ describe("O'Reilly is not a provider (#450)", () => {
     return { get, seen };
   }
 
+  /** The two O'Reilly hosts the spec (#450, C1) rules out: the search site and the API host. */
   const asked = (seen: readonly string[]): boolean =>
     seen.some((url) => isHost(url, OREILLY) || isHost(url, 'api.oreilly.com'));
 
@@ -384,6 +385,7 @@ describe('API miss', () => {
 
     expect(seen.some((url) => isHost(url, GOOGLE_BOOKS))).toBe(true);
     expect(seen.some((url) => isHost(url, APPLE))).toBe(true);
+    // Kept from before the removal; the new block above is the real guard.
     expect(seen.some((url) => isHost(url, OREILLY))).toBe(false);
   });
 
