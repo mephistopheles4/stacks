@@ -1270,6 +1270,8 @@ pnpm exec tsx scripts/phone-check.ts --matrix         # default ×3, ?shadows=0,
 pnpm exec tsx scripts/phone-check.ts --gpuinfo        # chrome://gpu, in a tab of its own
 pnpm exec tsx scripts/phone-check.ts --pickups 5      # the default page, picking up five books, each held closed and then open
 pnpm exec tsx scripts/phone-check.ts --turn 60         # hold a book closed, turn it, open it, close it, turn it for 60 s, back key puts it back
+pnpm exec tsx scripts/phone-check.ts --notice attribution   # the default page with the attribution notice open over the shelf
+pnpm exec tsx scripts/phone-check.ts --notice privacy       # the same with the privacy notice, reached through the attribution one
 ```
 
 **`--pickups <n>` drives the shelf's loop hook**, `window.__shelf.pickupLoop(n)`:
@@ -1283,6 +1285,17 @@ on the device and the texture count after it — the swap-frame figures the
 picking-a-book-up spec's §8 asks the owner to judge. ⚠️ **A function, never an
 address switch**: #371's prototype looped on `?autoplay=5`, which any link could
 carry to a visitor's phone, and nothing in a URL can start this.
+
+**`--notice <attribution|privacy>` opens a notice over the shelf** once the page is
+ready and before the watched window, by clicking the page's own links as a visitor
+does ([#536](https://github.com/mephistopheles4/stacks/issues/536), the notice
+modals' claim C4), so the same run says whether the WebGL context held with the
+modal showing. Run it beside a plain run on the same phone, once for each notice:
+the figure is the script's own, the `phoneVerdict` kind and the sampling row it
+prints. The modal changes nothing about rendering (no blur, no backdrop animation,
+no new light), so the expectation is the plain run's result, and a phone that
+loses its context with a notice open is the owner's stop. It refuses the run, with
+the page's reason, if the notice does not open within ninety seconds.
 
 **Not a `pnpm` script, and that is deliberate.** It needs adb and a phone with
 USB debugging on, which no CI runner has and [`CONTRIBUTING.md`](../CONTRIBUTING.md)

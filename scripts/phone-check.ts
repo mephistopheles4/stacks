@@ -23,6 +23,9 @@
  *                        drag, open it with a real tap, close it with the page's control,
  *                        turn it again for s seconds, and put it back with the phone's own
  *                        back key (#553)
+ *     --notice <name>    once the page is ready, open the attribution or privacy notice
+ *                        over the shelf before the watched window (#536); privacy is
+ *                        reached through the attribution notice, as a visitor reaches it
  *
  * **Not a `pnpm` script, deliberately**: it needs adb and a phone with USB
  * debugging on, which no CI runner and few contributors have, and a documented
@@ -271,6 +274,47 @@ function startPickups(rounds: number): string {
     while (window.__shelf?.ready !== true) await new Promise((r) => setTimeout(r, 200));
     window.__pickups = { asked: ${String(rounds)}, ...(await window.__shelf.pickupLoop(${String(rounds)})) };
   })()`;
+}
+
+/**
+ * Starts opening a notice over the shelf once the page is ready, without waiting for it (a
+ * phone's boot can outlast one evaluate), and leaves the answer, `open` or why not, on
+ * `window.__notice` for `noticeAnswer` to read. So the watched window that follows reads the
+ * context with the modal showing (#536, notice-modals.md C4). Clicks on the page's own links, as
+ * a visitor makes them.
+ */
+function startNotice(notice: 'attribution' | 'privacy'): string {
+  const swap =
+    notice === 'privacy'
+      ? `document.querySelector('#notice-attribution a[href="/privacy"]')?.click();
+    if (!(await until(() => document.getElementById('notice-privacy')?.hidden === false))) return finish('the privacy panel never showed');`
+      : '';
+  return `void (async () => {
+    const finish = (answer) => { window.__notice = answer; };
+    const until = async (test) => {
+      for (let i = 0; i < 300; i += 1) {
+        if (test()) return true;
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      return false;
+    };
+    if (!(await until(() => window.__shelf?.ready === true))) return finish('the shelf never said it was ready');
+    document.querySelector('.pattr-link[href="/attribution"]')?.click();
+    if (!(await until(() => document.getElementById('notice-dialog')?.open === true))) return finish('the notice never opened');
+    ${swap}
+    finish('open');
+  })()`;
+}
+
+/** Waits for the answer `startNotice` leaves, and refuses the run if the notice is not open. */
+async function noticeAnswer(cdp: Cdp, notice: string): Promise<void> {
+  for (let waited = 0; waited < 90_000; waited += 500) {
+    const answer = await cdp.evaluate('window.__notice');
+    if (answer === 'open') return;
+    if (typeof answer === 'string') throw new Error(`--notice ${notice}: ${answer}`);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`--notice ${notice}: no answer from the page in 90 s`);
 }
 
 /** What the turning drive saw on the phone, kept apart from the context's own verdict. */
@@ -550,6 +594,10 @@ async function runOne(
 
     const started = Date.now();
     await cdp.send('Page.navigate', { url });
+    if (options.notice !== undefined) {
+      await cdp.evaluate(startNotice(options.notice));
+      await noticeAnswer(cdp, options.notice);
+    }
     if (options.pickups !== undefined) await cdp.evaluate(startPickups(options.pickups));
     const driving =
       options.turn === undefined

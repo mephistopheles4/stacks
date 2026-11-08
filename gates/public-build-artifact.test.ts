@@ -1125,6 +1125,53 @@ describe('G20 — every rule goes red', () => {
     );
   });
 
+  /** The shelf page carrying the notice modal, whose privacy panel is `panel`, plus `elsewhere`. */
+  const shelfWithModal = (panel: string, elsewhere = '', on = false): string =>
+    indexHtml({ csp: cspMeta(on ? { connectSrc: "'self' https://plausible.io" } : {}) }).replace(
+      '<div id="shelf"></div>',
+      `<div id="shelf"></div>${elsewhere}<dialog id="notice-dialog">` +
+        '<section id="notice-attribution"><p>Attribution.</p></section>' +
+        `<section id="notice-privacy" hidden>${panel}</section></dialog>`,
+    );
+
+  it("privacy: the modal's panel is read as the page is, and only the panel (C8)", async () => {
+    await writePrivacy(privacyPage('<p>Cloudflare Web Analytics counts page views.</p>'));
+    await writeIndex(shelfWithModal('<p>Cloudflare Web Analytics counts page views.</p>'));
+    expect((await inspect('off')).problems).toEqual([]);
+  });
+
+  it('privacy: a panel that omits the Plausible paragraph while the page names it elsewhere (C8)', async () => {
+    // Text elsewhere on the shelf page must not satisfy the rule: only the panel is read.
+    await expectOnly(
+      'privacy',
+      async () => {
+        await writePrivacy(
+          privacyPage(
+            '<p>Cloudflare Web Analytics counts.</p><p>Plausible Analytics counts.</p>',
+            true,
+          ),
+        );
+        await writeIndex(
+          shelfWithModal(
+            '<p>Cloudflare Web Analytics counts.</p>',
+            '<p>Plausible Analytics counts, said outside the panel.</p>',
+            true,
+          ),
+        );
+      },
+      'on',
+    );
+  });
+
+  it('privacy: a page that holds the modal with no privacy panel (C8)', async () => {
+    await expectOnly('privacy', async () => {
+      await writePrivacy(privacyPage('<p>Cloudflare Web Analytics counts.</p>'));
+      await writeIndex(
+        indexHtml().replace('<div id="shelf"></div>', '<dialog id="notice-dialog"></dialog>'),
+      );
+    });
+  });
+
   it('csp: a script origin nobody named', async () => {
     /**
      * The exception has to stay enumerable. `static.cloudflareinsights.com` is

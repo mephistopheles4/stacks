@@ -90,7 +90,17 @@ describe('parsePhoneArgs', () => {
       gpuinfo: false,
       pickups: undefined,
       turn: undefined,
+      notice: undefined,
     });
+  });
+
+  it('takes --notice as the notice to open over the shelf, and refuses any other', () => {
+    expect(parsePhoneArgs(['--notice', 'attribution']).notice).toBe('attribution');
+    expect(parsePhoneArgs(['--notice', 'privacy']).notice).toBe('privacy');
+    expect(() => parsePhoneArgs(['--notice', 'terms'])).toThrow(
+      /--notice takes attribution or privacy/,
+    );
+    expect(() => parsePhoneArgs(['--notice'])).toThrow(/--notice needs a value/);
   });
 
   it('takes --turn as the seconds to keep turning a held book', () => {

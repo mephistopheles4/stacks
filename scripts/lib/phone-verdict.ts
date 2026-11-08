@@ -53,7 +53,16 @@ export interface PhoneOptions {
    * is watched, and the phone's own back key puts it back. Undefined runs none.
    */
   readonly turn: number | undefined;
+  /**
+   * A notice to open over the shelf before the watched window (#536, notice-modals.md C4), so
+   * the same run reads the context with and without it. `privacy` is reached by the swap inside
+   * the attribution notice, as a visitor reaches it. Undefined opens none.
+   */
+  readonly notice: NoticeChoice | undefined;
 }
+
+export type NoticeChoice = 'attribution' | 'privacy';
+const NOTICES: readonly NoticeChoice[] = ['attribution', 'privacy'];
 
 const FLAGS_WITH_VALUES = [
   'url',
@@ -65,6 +74,7 @@ const FLAGS_WITH_VALUES = [
   'port',
   'pickups',
   'turn',
+  'notice',
 ] as const;
 const SWITCHES = ['keep', 'shot', 'gpuinfo', 'matrix'] as const;
 
@@ -129,7 +139,17 @@ export function parsePhoneArgs(argv: readonly string[]): PhoneOptions {
     gpuinfo: switches.has('gpuinfo'),
     pickups: values.has('pickups') ? number(values.get('pickups') ?? '', '--pickups') : undefined,
     turn: values.has('turn') ? number(values.get('turn') ?? '', '--turn') : undefined,
+    notice: notice(values.get('notice')),
   };
+}
+
+function notice(raw: string | undefined): NoticeChoice | undefined {
+  if (raw === undefined) return undefined;
+  const found = NOTICES.find((name) => name === raw);
+  if (found === undefined) {
+    throw new Error(`--notice takes ${NOTICES.join(' or ')}, not "${raw}"`);
+  }
+  return found;
 }
 
 function number(raw: string, flag: string): number {

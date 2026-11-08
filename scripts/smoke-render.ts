@@ -3729,8 +3729,7 @@ async function visit(page: Page, origin: string, path: string): Promise<void> {
   // shelf that never settles is this case's failure, which the loop records.
   const settle = watchSettle(page);
   const started = performance.now();
-  // A trailing slash: the static server resolves a folder's index only for one.
-  await page.goto(`${origin}${path}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await page.goto(`${origin}${path}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
   const ready = performance.now();
   must(await settle(), `${path} never settled`);
@@ -3871,6 +3870,15 @@ interface SamplingPage {
    * open one: each is read.
    */
   readonly hold?: 'closed' | 'open';
+  /**
+   * Opens a notice over the page before the count (#536 C4, `notice-modals.md`): the modal
+   * changes nothing about rendering, so the draw count equals its twin's. The attribution
+   * notice is opened from the shelf's link; the privacy notice is reached by the swap inside
+   * it, so both panels are on a page that is read.
+   */
+  readonly notice?: 'attribution' | 'privacy';
+  /** The page without the notice, whose steady draws this one must equal. */
+  readonly twin?: string;
 }
 
 const SAMPLING_PAGES: readonly SamplingPage[] = [
@@ -3903,6 +3911,25 @@ const SAMPLING_PAGES: readonly SamplingPage[] = [
     library: LIBRARY,
     minRows: 0,
     hold: 'open',
+  },
+  {
+    name: 'a notice open, 50 books',
+    url: (main) => `${main}/`,
+    role: 'gate',
+    library: LIBRARY,
+    minRows: 0,
+    notice: 'attribution',
+    twin: 'default, 50 books',
+  },
+  {
+    name: 'a notice over a held book, 50 books',
+    url: (main) => `${main}/`,
+    role: 'gate',
+    library: LIBRARY,
+    minRows: 0,
+    hold: 'closed',
+    notice: 'privacy',
+    twin: 'a book held closed, 50 books',
   },
   {
     // The permanent planted defect: every book reads the map again, through
@@ -3941,9 +3968,15 @@ async function checkShadowReaders(
       `${'draws/frame'.padStart(13)}   verdict`,
   ];
   const failures: string[] = [];
+  const steadyDraws = new Map<string, number>();
 
   for (const page of SAMPLING_PAGES) {
-    const { read, errors } = await measureSampling(browser, page.url(main, large), page.hold);
+    const { read, errors } = await measureSampling(
+      browser,
+      page.url(main, large),
+      page.hold,
+      page.notice,
+    );
     const run = {
       snapshot: read.snapshot ?? undefined,
       bookCount: read.bookCount,
@@ -3984,15 +4017,37 @@ async function checkShadowReaders(
     );
     lines.push(`${''.padEnd(PAGE_COLUMN)}${describeSampling(run)}`);
     failures.push(...found.map((failure) => `G61, ${page.name}: ${failure}`));
+    if (s !== undefined) steadyDraws.set(page.name, s.mostSteadyDraws);
+    // C4: the modal changes nothing about rendering, so the count is its twin's.
+    const twinDraws = page.twin === undefined ? undefined : steadyDraws.get(page.twin);
+    if (s !== undefined && twinDraws !== undefined && s.mostSteadyDraws !== twinDraws) {
+      failures.push(
+        `G61, ${page.name}: ${String(s.mostSteadyDraws)} sampling draws a frame with the notice open, ` +
+          `${String(twinDraws)} without it (${page.twin ?? ''})`,
+      );
+    }
   }
 
   return { lines, failures };
+}
+
+/** Opens the notice a sampling page asks for, and waits for the panel it names to be shown. */
+async function openNoticeForSampling(
+  page: Page,
+  notice: 'attribution' | 'privacy',
+): Promise<boolean> {
+  await page.click('.pattr-link[href="/attribution"]');
+  if (!(await searchFor(page, `document.getElementById('notice-dialog').open`, 3000))) return false;
+  if (notice === 'attribution') return true;
+  await page.click('#notice-attribution a[href="/privacy"]');
+  return searchFor(page, `document.getElementById('notice-privacy').hidden === false`, 3000);
 }
 
 async function measureSampling(
   browser: Browser,
   url: string,
   hold?: 'closed' | 'open',
+  notice?: 'attribution' | 'privacy',
 ): Promise<{ read: SamplingRead; errors: string[] }> {
   const context = await browser.createBrowserContext();
   const errors: string[] = [];
@@ -4040,6 +4095,9 @@ async function measureSampling(
       } else if (hold === 'open' && !(await openBook(page, 'the book held for this page'))) {
         errors.push('the book held for this page never opened');
       }
+    }
+    if (notice !== undefined && !(await openNoticeForSampling(page, notice))) {
+      errors.push('the notice for this page never opened');
     }
     try {
       await page.waitForFunction(
