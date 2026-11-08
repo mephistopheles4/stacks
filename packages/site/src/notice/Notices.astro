@@ -11,7 +11,11 @@ import PrivacyNotice from '../components/PrivacyNotice.astro';
 
 <dialog id="notice-dialog" class="notice-dialog" aria-labelledby="notice-attribution-title">
   <div class="notice-sheet">
-    <button id="notice-close" class="notice-close" type="button">Close</button>
+    <button id="notice-close" class="notice-close" type="button" aria-label="Close">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+        <path d="M3 3l10 10M13 3L3 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+    </button>
     <section id="notice-attribution">
       <AttributionNotice headingId="notice-attribution-title" tabindex={-1} />
     </section>
@@ -51,21 +55,34 @@ import PrivacyNotice from '../components/PrivacyNotice.astro';
     background: rgba(10, 8, 7, 0.72);
   }
 
+  /*
+    The close X sits in the sheet's top right corner, on the title's row, so the title is the
+    first thing in the sheet and no band is left above it. The heading keeps clear of the X on its
+    right, so a long title wraps before it reaches it.
+  */
   .notice-sheet {
-    padding: clamp(1.25rem, 5vw, 2.5rem);
+    position: relative;
+    padding: 1.25rem clamp(1.25rem, 5vw, 2.5rem) clamp(1.25rem, 5vw, 2.5rem);
+  }
+
+  .notice-sheet :global(h1) {
+    padding-right: 3.5rem;
   }
 
   .notice-close {
-    display: block;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    margin: 0 0 0.5rem auto;
-    padding: 0.5rem 1rem;
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
     border: 1px solid rgba(242, 232, 220, 0.4);
-    border-radius: 1.4rem;
+    border-radius: 50%;
     background: transparent;
     color: #f2e8dc;
-    font: 1rem/1.3 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     cursor: pointer;
   }
 

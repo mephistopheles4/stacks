@@ -39,7 +39,7 @@ beforeAll(() => {
     '',
     [
       node('div', 'sheet', '', [
-        node('button', 'notice-close', 'Close', [], { type: 'button' }),
+        node('button', 'notice-close', '', [], { type: 'button', 'aria-label': 'Close' }),
         node('section', 'notice-attribution', '', [
           heading('notice-attribution-title', 'Attribution'),
           node('p', 'text', 'Text.'),
