@@ -1,0 +1,38 @@
+---
+import NoticeBody from './NoticeBody.astro';
+import PlausibleNotice from './PlausibleNotice.astro';
+import type { NoticeHeadingProps } from '../site-meta.ts';
+import { analyticsOn } from '../analytics/on.ts';
+
+// The one copy of the privacy notice's text (docs/spec/notice-modals.md N2), for `/privacy` and
+// for the modal over the shelf: what the Ask the library box does with a question
+// (docs/spec/ask-the-library.md S7, S14 Q9), and what the page counts visits with
+// (docs/spec/optional-plausible.md S7). The analytics paragraphs ride with it, so the modal
+// states exactly what the page does in a build with analytics on and in one with it off.
+//
+// Markup only. The way back to the shelf is the page's, passed in the slot; `headingId` names
+// the heading for the dialog's `aria-labelledby` and `tabindex` lets a swap focus it.
+const { headingId, tabindex } = Astro.props as NoticeHeadingProps;
+---
+
+<NoticeBody>
+  <h1 id={headingId} tabindex={tabindex}>Privacy</h1>
+
+  <p>
+    Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs when the
+    Ask the library box opens, and a hashed address is counted for a day to limit use. Each
+    question is logged with a few counts, among them how many have been asked from that
+    address that day, and with no address, for up to a week; daily totals are kept on our own
+    machine. Please don't type personal details.
+  </p>
+
+  <p>
+    Cloudflare Web Analytics counts page views, where visitors came from, their country and how
+    fast pages load. It sets no cookies, and it reports to Cloudflare through this site's own
+    address.
+  </p>
+
+  {analyticsOn && <PlausibleNotice />}
+
+  <slot />
+</NoticeBody>

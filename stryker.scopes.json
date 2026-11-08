@@ -1,6 +1,6 @@
 {
   "$comment": [
-    "The nine declared scopes, from docs/spec/mutation-scoring.md §§4-5.",
+    "The ten declared scopes, from docs/spec/mutation-scoring.md §§4-5.",
     "",
     "Data rather than a comment block, for two reasons. A scope's glob is its",
     "definition and its name is only its identity, so the two have to sit beside",
@@ -161,6 +161,24 @@
       "name": "packages/site/src/analytics",
       "glob": "packages/site/src/analytics/**/*.ts",
       "exclusions": []
+    },
+    {
+      "name": "packages/site/src/notice",
+      "glob": "packages/site/src/notice/**/*.ts",
+      "exclusions": [
+        {
+          "path": "packages/site/src/notice/modal.ts",
+          "mechanism": "Browser-only DOM glue: it drives a native `<dialog>` and reads the focus, and the project's Vitest environment is `node`, where no `<dialog>` exists. The decisions about which click opens and where Tab goes live in `links.ts` and `focus.ts`, which are measured. Four decisions stay here. Two are held by `modal.test.ts` under happy-dom, each shown red against a planted break: `preventDefault` waits for `showModal()` to succeed (N4), and a press which began in the text does not close the modal (N9). Two are held by the `smoke-render` notice cells (G35), which read the label set on open and the focus restored on close, with planted breaks made by hand."
+        },
+        {
+          "path": "packages/site/src/notice/start.ts",
+          "mechanism": "Imported only by `packages/site/src/notice/Notices.astro`. `.astro` files are not in the Vitest project, so nothing runs it in-process."
+        },
+        {
+          "path": "packages/site/src/notice/open.ts",
+          "mechanism": "Imported only by `modal.ts`, `ask/drawer.ts` and `shelf/pickup.ts`, each excluded as browser-only, and its one function reads `HTMLDialogElement`, which the project's Vitest environment (`node`) does not define. The `smoke-render` notice cells read it through the drawer's and the shelf's stand-down."
+        }
+      ]
     },
     {
       "name": "packages/cli/src",

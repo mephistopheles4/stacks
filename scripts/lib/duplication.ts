@@ -19,9 +19,9 @@
  * the per-scope share. See `docs/spec/static-analysis-and-style.md` §5.
  *
  * **Two populations, because a clone is a relation between two places.** The
- * nine declared scopes cannot express a clone whose halves sit in two of them,
+ * ten declared scopes cannot express a clone whose halves sit in two of them,
  * and `gates/` is read by no scope at all — so a whole-tree TypeScript number
- * sits beside the nine, and no scope list can shrink it.
+ * sits beside the ten, and no scope list can shrink it.
  * [ADR-0072](../../docs/adr/0072-a-clone-is-a-relation-between-two-places.md).
  *
  * **Pure where it can be, with the disk and the subprocess at the edge**, which
@@ -454,16 +454,16 @@ export function repoRelative(reported: string, root: string = REPO_ROOT): string
 /**
  * Each scope's clone count and duplicated-line count, from one union run.
  *
- * ⚠️ **One run over the union, never nine runs over nine populations**, and
+ * ⚠️ **One run over the union, never ten runs over ten populations**, and
  * the difference is the whole of [ADR-0072](../../docs/adr/0072-a-clone-is-a-relation-between-two-places.md).
- * Nine independent runs are structurally blind to a clone whose halves sit in
+ * Ten independent runs are structurally blind to a clone whose halves sit in
  * two scopes — which is precisely the cross-file duplication a largely
  * agent-written repository is expected to grow. The hole is latent rather than
  * hypothetical: [#232](https://github.com/mephistopheles4/stacks/issues/232)'s
- * combined run and its nine separate runs agree **today**, so closing it costs
+ * combined run and its ten separate runs agree **today**, so closing it costs
  * nothing now and cannot be closed cheaply later.
  *
- * ⚠️ **A clone in two scopes is counted by both, so the nine numbers do not
+ * ⚠️ **A clone in two scopes is counted by both, so the ten numbers do not
  * sum to a repository total.** That is deliberate and it is what the whole-tree
  * population exists beside. A clone is a relation, and a relation does not
  * partition.
@@ -658,7 +658,7 @@ export interface AllCounts {
 }
 
 /**
- * The whole measurement: nine scopes and the tree, in one call.
+ * The whole measurement: ten scopes and the tree, in one call.
  *
  * ⚠️ **Extracted because the duplication counter reported it duplicated**, like
  * `walkSource` one file over and on the same commit: `scripts/emit-metrics.ts`
@@ -673,8 +673,8 @@ export interface AllCounts {
  *
  * ⚠️ **Eleven jscpd runs, and each is there for something the others cannot do.**
  * One over the **union**, because a clone is a relation between two places and
- * nine separate runs are structurally blind to one spanning two scopes — that
- * run is where every clone count and duplicated-line count comes from. Nine
+ * ten separate runs are structurally blind to one spanning two scopes — that
+ * run is where every clone count and duplicated-line count comes from. Ten
  * more, one per scope, because jscpd publishes no per-file line count and **its
  * denominator must not be reimplemented**: a hand-rolled one disagreed with
  * jscpd on three of ninety-five files, once by twenty-seven lines. And one over
@@ -693,7 +693,7 @@ export function countAllPopulations(
   );
   if (unionRun === null) {
     throw new Error(
-      'no file in any declared scope for jscpd to run over. Nine scopes are declared, so ' +
+      'no file in any declared scope for jscpd to run over. Ten scopes are declared, so ' +
         'nothing to measure is a broken declaration rather than a tree with no duplication.',
     );
   }
@@ -763,9 +763,9 @@ export const TREE_POPULATION = 'whole-tree';
  * **The second cap mechanism**, and it exists so the first does not have to
  * weaken ([#269](https://github.com/mephistopheles4/stacks/issues/269), spec
  * §5). `CAPPED_SERIES` in `floors.ts` is calibrated under `fixtureHash` and
- * keyed on the nine declared mutation scopes; a duplication number is produced
+ * keyed on the ten declared mutation scopes; a duplication number is produced
  * under `duplicationHash`, and three of these six carry no `scope=` label at
- * all. So they are capped here, keyed on this file's ten populations (the nine scopes and the tree), and
+ * all. So they are capped here, keyed on this file's eleven populations (the ten scopes and the tree), and
  * `parseCaps` in `floors.ts` keeps rejecting every one of them.
  *
  * **Split by population, not listed once**, because a tree series under a scope

@@ -3,7 +3,7 @@ import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import { cliResolveConditions } from './vitest.cli-conditions.ts';
 
 /**
- * The nine declared scope globs, read from the file that declares them.
+ * The ten declared scope globs, read from the file that declares them.
  *
  * ⚠️ **Derived rather than copied, because `coverage.include` is a claim that
  * can go stale.** `docs/spec/no-coverage-floor.md` named that risk while
