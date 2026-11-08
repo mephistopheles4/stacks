@@ -136,6 +136,10 @@ import { cliResolveConditions } from './vitest.cli-conditions.ts';
  */
 export default defineConfig({
   plugins: [cliResolveConditions()],
+  // The same empty build literal `vitest.config.ts` defines. Without it the
+  // analytics specs throw `__PLAUSIBLE_DOMAIN__ is not defined`, and the dry run
+  // fails before any mutant is tested.
+  define: { __PLAUSIBLE_DOMAIN__: '""' },
   test: {
     include: ['packages/**/src/**/*.test.ts', 'gates/**/*.test.ts', 'scripts/**/*.test.ts'],
     exclude: [
