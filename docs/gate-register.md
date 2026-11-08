@@ -6718,3 +6718,17 @@ stayed green under both, which is the reason the gate exists.
 - **Decay** — **exposed.** If Cloudflare renames the binding's `run` method or
   the `gateway` option, this row stays green over a call that no longer meters.
   C7 would show it. Disposition `accepted`.
+
+### G70 — `mutation-dry-run`
+
+**Gate:** [`.github/workflows/gates.yml`](../.github/workflows/gates.yml), the `mutation-dry-run` job, held in the `gates` aggregator by [`gates/action-pins.test.ts`](../gates/action-pins.test.ts) (G40)
+**Date:** 2026-11-08
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on a pull request and not on a copy: [#569](https://github.com/mephistopheles4/stacks/pull/569) un-excluded `scripts/ask-status.ts` (the 2026-11-07 nightly's break) on a branch cut from the build branch, and run [42505624828](https://github.com/mephistopheles4/stacks/actions/runs/42505624828) turned `mutation-dry-run` red in 53 s with `One or more tests failed in the initial test run`, one test, `expected '/**\n * Daily totals for the Ask the …' to match /if \(linked\) \{\s*fail\(/`. The build branch's own run, [42505448348](https://github.com/mephistopheles4/stacks/actions/runs/42505448348), had the job green in 1 min 38 s, so the red came from the planted change. `suite` was red on both for G41 alone, because that commit had no register entry yet; `typecheck`, `lint` and the other gates did not move.
+
+- **Weakening** — **exposed.** G40 holds the job's place in `needs:` and its `success` comparison, and nothing holds the rest. A `continue-on-error`, an `|| true`, a job-level `if:`, a path filter or a narrowed `--mutate` on the Stryker line each weakens the job with the aggregator still green. Disposition `accepted`; the workflow is a reviewed diff, and the header comment above the job says why it has no filter.
+- **Satisfying the letter** — **exposed.** A job that runs `stryker run --dryRunOnly` over one file passes while testing a fraction of the suite, because the Vitest runner narrows the dry run to the specs related to what it was told to mutate. Disposition `accepted`.
+- **Routing around** — **exposed.** The remedy for a red run is to exclude the spec in `vitest.stryker.config.ts` or the file in `stryker.scopes.json`, and either turns the job green without fixing anything. That is the intended escape, so it is a reviewed diff with a reason beside it, and `docs/commands.md` says to name what keeps an oracle. Disposition `accepted`.
+- **Vacuous green** — **gated.** Stryker exits non-zero when the initial run executes no test (`No tests were executed. Stryker will exit prematurely`), which was seen on a scoped run here when only an unimported script was named. Disposition `gated`.
+- **Decay** — **exposed.** A Stryker or Vitest release that changes what a dry run does moves this job with no line of the repository changing, and that is the case it exists to catch; a flaky red blocks every merge, since the job feeds the one required check. `docs/commands.md` says a flake gets an issue and not an exclusion. Disposition `accepted`.
