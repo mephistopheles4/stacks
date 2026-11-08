@@ -263,8 +263,12 @@ async function writeHeld(path: string, contents: Buffer | string): Promise<void>
   await writeFile(file, contents);
 }
 
-function inspect(): ReturnType<typeof inspectPublicBuild> {
-  return inspectPublicBuild(dist, { origin: ORIGIN });
+/**
+ * The switch is an argument, never read from the environment (S5): a test passes
+ * its own, and a run with `PUBLIC_PLAUSIBLE_DOMAIN` set is the same green.
+ */
+function inspect(analytics: 'on' | 'off' = 'off'): ReturnType<typeof inspectPublicBuild> {
+  return inspectPublicBuild(dist, { origin: ORIGIN, analytics });
 }
 
 /** Every rule some defect below was seen to produce. Checked for completeness. */
@@ -277,9 +281,13 @@ const exercised = new Set<PublicBuildRule>();
  * once proves none of them individually, and the clean baseline above is what
  * makes the difference attributable.
  */
-async function expectOnly(rule: PublicBuildRule, plant: () => Promise<void>): Promise<void> {
+async function expectOnly(
+  rule: PublicBuildRule,
+  plant: () => Promise<void>,
+  analytics: 'on' | 'off' = 'off',
+): Promise<void> {
   await plant();
-  const fired = new Set((await inspect()).problems.map((problem) => problem.rule));
+  const fired = new Set((await inspect(analytics)).problems.map((problem) => problem.rule));
   expect([...fired].sort(), `planted a ${rule} defect`).toEqual([rule]);
   exercised.add(rule);
 }
@@ -1080,6 +1088,114 @@ describe('G20 — every rule goes red', () => {
         indexHtml({ csp: cspMeta({ connectSrc: "'self' https://telemetry.example" }) }),
       );
     });
+  });
+
+  it('csp: the on shape, inspected as on, is clean (C3)', async () => {
+    await writeIndex(indexHtml({ csp: cspMeta({ connectSrc: "'self' https://plausible.io" }) }));
+    expect((await inspect('on')).problems).toEqual([]);
+  });
+
+  it('csp: an off-shape page inspected as on — the origin is missing (C4)', async () => {
+    await expectOnly(
+      'csp',
+      async () => {
+        await writeIndex(indexHtml());
+      },
+      'on',
+    );
+  });
+
+  it('csp: an on-shape page inspected as off — an origin nobody turned on (C4)', async () => {
+    await expectOnly('csp', async () => {
+      await writeIndex(indexHtml({ csp: cspMeta({ connectSrc: "'self' https://plausible.io" }) }));
+    });
+  });
+
+  it('csp: the on shape with anything more than plausible.io is refused (C3)', async () => {
+    await expectOnly(
+      'csp',
+      async () => {
+        await writeIndex(
+          indexHtml({
+            csp: cspMeta({ connectSrc: "'self' https://plausible.io https://other.example" }),
+          }),
+        );
+      },
+      'on',
+    );
+  });
+
+  it('csp: an off build holding plausible.io in any file (C2, C4)', async () => {
+    await expectOnly('csp', async () => {
+      await writeFile(join(dist, 'leftover.js'), 'fetch("https://plausible.io/api/event")');
+    });
+  });
+
+  it('csp: an off build whose notice page holds a module script (C2, C4)', async () => {
+    await expectOnly('csp', async () => {
+      await mkdir(join(dist, 'attribution'), { recursive: true });
+      await writeFile(
+        join(dist, 'attribution', 'index.html'),
+        `<!doctype html><html><head><meta name="robots" content="noindex">${cspMeta()}</head>` +
+          '<body><script type="module" src="/_astro/start.js"></script></body></html>',
+      );
+    });
+  });
+
+  it('csp: the trace clause does not apply to an on build', async () => {
+    await writeIndex(indexHtml({ csp: cspMeta({ connectSrc: "'self' https://plausible.io" }) }));
+    await writeFile(join(dist, 'tracker.js'), 'fetch("https://plausible.io/api/event")');
+    expect((await inspect('on')).problems).toEqual([]);
+  });
+
+  const privacyPage = (body: string, on = false): string =>
+    `<!doctype html><html><head><meta name="robots" content="noindex">${cspMeta(
+      on ? { connectSrc: "'self' https://plausible.io" } : {},
+    )}</head><body>${body}</body></html>`;
+
+  async function writePrivacy(html: string): Promise<void> {
+    await mkdir(join(dist, 'privacy'), { recursive: true });
+    await writeFile(join(dist, 'privacy', 'index.html'), html);
+  }
+
+  it('privacy: the page names Cloudflare in every build and Plausible only when on (C9)', async () => {
+    await writePrivacy(privacyPage('<p>Cloudflare Web Analytics counts page views.</p>'));
+    expect((await inspect('off')).problems).toEqual([]);
+    await writeIndex(indexHtml({ csp: cspMeta({ connectSrc: "'self' https://plausible.io" }) }));
+    await writePrivacy(
+      privacyPage(
+        '<p>Cloudflare Web Analytics counts.</p><p>Plausible Analytics counts.</p>',
+        true,
+      ),
+    );
+    expect((await inspect('on')).problems).toEqual([]);
+  });
+
+  it('privacy: a page that omits the Cloudflare paragraph (C9)', async () => {
+    await expectOnly('privacy', async () => {
+      await writePrivacy(privacyPage('<p>Nothing is counted here.</p>'));
+    });
+  });
+
+  it('privacy: an off build whose page names Plausible (C9)', async () => {
+    await expectOnly('privacy', async () => {
+      await writePrivacy(
+        privacyPage('<p>Cloudflare Web Analytics counts.</p><p>Plausible Analytics counts.</p>'),
+      );
+    });
+  });
+
+  it('privacy: an on build whose page omits Plausible (C9)', async () => {
+    await expectOnly(
+      'privacy',
+      async () => {
+        await writeIndex(
+          indexHtml({ csp: cspMeta({ connectSrc: "'self' https://plausible.io" }) }),
+        );
+        await writePrivacy(privacyPage('<p>Cloudflare Web Analytics counts.</p>', true));
+      },
+      'on',
+    );
   });
 
   it('csp: a script origin nobody named', async () => {

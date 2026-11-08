@@ -581,7 +581,7 @@ if you assumed otherwise. Remove a worktree with `git worktree remove <path>`.
 ## `pnpm mutation:run` and `pnpm mutation:score`
 
 **`pnpm mutation:run` is a measurement, not a gate**, and nothing in `pnpm test`
-or `pnpm build` calls it. It runs Stryker over the **eight declared scopes** in
+or `pnpm build` calls it. It runs Stryker over the **nine declared scopes** in
 [`stryker.scopes.json`](../stryker.scopes.json) — minutes on a workstation — and
 `pnpm mutation:score` turns the one report into one number per scope, which is
 the granularity the whole thing exists for. Stryker's own headline is a single
@@ -757,9 +757,9 @@ gate and nothing here refuses on a number; it exits non-zero only when jscpd
 could not run at all — except under `--history`, below, which also refuses a
 report short of a commit or out of order.
 
-**Two populations, and they do not add up.** The eight declared scopes, and
+**Two populations, and they do not add up.** The nine declared scopes, and
 whole-tree TypeScript. A clone is a relation between two places, so a clone
-whose halves sit in two scopes is counted by **both** — the eight rows are
+whose halves sit in two scopes is counted by **both** — the nine rows are
 deliberately not a partition of the ninth. The whole-tree row exists because a
 scope list is structurally blind to exactly that clone, and because `gates/` is
 read by no scope at all. See
@@ -1464,3 +1464,34 @@ Node's own type stripping, so it works in a worktree before `pnpm install`.
 Measured on the owner's Windows machine: **219 ms** median for an unguarded
 command against 151 ms for a bare `node`, and 330 ms for a guarded one, which
 probes athanor. To switch it off, delete the `PreToolUse` entry.
+
+## Analytics
+
+Optional Plausible on the shelf ([#562](https://github.com/mephistopheles4/stacks/issues/562),
+[ADR-0138](./adr/0138-optional-plausible-direct-to-plausible-io.md),
+[the spec](./spec/optional-plausible.md)). Off unless `PUBLIC_PLAUSIBLE_DOMAIN` is set at build
+time, from the shell or `.env`. Unset is a complete and supported build.
+
+- **The switch.** `PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com` where `deploy:site` runs, then
+  deploy. A value outside lowercase letters, digits, dots and hyphens fails the build and
+  `deploy:site`, and the message does not repeat it. `deploy:site` prints
+  `analytics: Plausible on (...)` or `analytics: Plausible off`, proceeds in either state, and
+  after upload fails if the live `connect-src` differs from the built shape.
+- **The goals to create** in the Plausible site (the owner creates them; the site is named as
+  the variable names it): `Book Picked Up`, `Book Opened` and `Ask Opened`. There is no
+  `Outbound Link: Click` goal, since outbound links are off, and no `Ask Sent`.
+- **What is sent.** Page views, and those three events. The two book events carry one property,
+  `book`, the book's public id. Nothing from `notes/`, no question, no setting. The URL keeps only
+  `ref`, `source` and the five `utm_*` parameters.
+- **Your own visits.** Run `localStorage.plausible_ignore = 'true'` in the console of the live
+  site.
+- **The gates check the shape they were asked to.** `gate:public` and `smoke:render` strip the
+  variable from their build child, so `gate:public` proves the off build only. The one way in is
+  `pnpm smoke:render --analytics-on`, which builds on and prints the other-host request count
+  (zero), the CSP violations (zero) and the script gzip bytes. G20 reads no environment variable,
+  so `athanor run -- sh -c 'PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com pnpm test'` is as green as
+  the plain run.
+- **Marking a book private** after it was published does not remove its past events from
+  Plausible. A shared or public Plausible dashboard would expose the `book` values.
+- **Rollback.** Unset the variable and run `deploy:site`. Earlier Pages deployments keep the
+  tracker at their own addresses until they are deleted.

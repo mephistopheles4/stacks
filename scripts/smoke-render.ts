@@ -23,9 +23,16 @@ import { toRows } from '../packages/site/src/shelf/books.ts';
 // and default the page does rather than a copy that could drift from them.
 import { FALLBACK_KEY, RESTORE_WAIT_MS } from '../packages/site/src/shelf/shadow-fallback.ts';
 import { DEFAULT_SETTINGS } from '../packages/site/src/shelf/shelf-settings.ts';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import puppeteer, { type Browser, type HTTPRequest, type Page } from 'puppeteer-core';
+import {
+  foreignRequests,
+  gateBuildEnv,
+  judgeAnalyticsCalls,
+  type Attempt,
+} from './lib/analytics-gate.ts';
 import { lightingOf, litFailures, type Frame, type Lighting } from './lib/large-library-lit.ts';
 import {
   CLOSED_HINT,
@@ -136,18 +143,28 @@ const CHROME_CANDIDATES = [
  * so a typo in the workflow cannot quietly run a different set and pass.
  */
 const PULL_REQUEST_FLAG = '--pull-request';
+
+/**
+ * The one way an on build reaches this gate: sets the switch to the production
+ * host for the build child and nothing else (docs/spec/optional-plausible.md
+ * S5, X6). Without it the variable is removed, whatever the parent holds.
+ */
+const ANALYTICS_ON_FLAG = '--analytics-on';
 const SKIPPED_ON_PULL_REQUESTS = 'G60, G61';
 
-function readArgs(argv: readonly string[]): { pullRequest: boolean } {
-  const unknown = argv.filter((arg) => arg !== PULL_REQUEST_FLAG);
+function readArgs(argv: readonly string[]): { pullRequest: boolean; analyticsOn: boolean } {
+  const unknown = argv.filter((arg) => arg !== PULL_REQUEST_FLAG && arg !== ANALYTICS_ON_FLAG);
   if (unknown.length > 0) {
     console.error(
       `smoke:render: unknown argument ${unknown.map((arg) => JSON.stringify(arg)).join(', ')}. ` +
-        `The only flag is ${PULL_REQUEST_FLAG}.`,
+        `The flags are ${PULL_REQUEST_FLAG} and ${ANALYTICS_ON_FLAG}.`,
     );
     process.exit(1);
   }
-  return { pullRequest: argv.includes(PULL_REQUEST_FLAG) };
+  return {
+    pullRequest: argv.includes(PULL_REQUEST_FLAG),
+    analyticsOn: argv.includes(ANALYTICS_ON_FLAG),
+  };
 }
 
 /**
@@ -168,10 +185,10 @@ async function timed<T>(label: string, run: () => Promise<T>): Promise<T> {
 }
 
 async function main(): Promise<void> {
-  const { pullRequest } = readArgs(process.argv.slice(2));
+  const { pullRequest, analyticsOn } = readArgs(process.argv.slice(2));
   mkdirSync(ARTIFACTS, { recursive: true });
 
-  await timed('build the site (fixtures and astro)', buildSite);
+  await timed('build the site (fixtures and astro)', () => buildSite(analyticsOn));
   const { server, origin } = await serveDist({ root: DIST });
   const large = await serveDist({ root: DIST, overlay: join(REPO_ROOT, LARGE_ASSETS) });
   try {
@@ -281,6 +298,9 @@ async function main(): Promise<void> {
       const tuner = await timed('G64 tuner-split', () => checkTuner(browser, origin));
       const tuning = await timed('tuning panel', () => checkTuningPanel(browser, origin));
       const readout = await timed('black box readout', () => checkReadout(browser, origin));
+      const analytics = await timed('analytics calls (C8, C11)', () =>
+        checkAnalyticsCalls(browser, origin, analyticsOn),
+      );
 
       report({
         skipped: pullRequest ? SKIPPED_ON_PULL_REQUESTS : undefined,
@@ -303,6 +323,7 @@ async function main(): Promise<void> {
         tuner,
         tuning,
         readout,
+        analytics,
       });
     } finally {
       await browser.close();
@@ -4560,6 +4581,7 @@ function report(result: {
   tuner: TunerChecked;
   tuning: TunerChecked;
   readout: TunerChecked;
+  analytics: TunerChecked;
 }): void {
   const {
     skipped,
@@ -4582,6 +4604,7 @@ function report(result: {
     tuner,
     tuning,
     readout,
+    analytics,
   } = result;
   const failures: string[] = [
     ...fallback.failures,
@@ -4589,6 +4612,7 @@ function report(result: {
     ...tuner.failures,
     ...tuning.failures,
     ...readout.failures,
+    ...analytics.failures,
   ];
   // Fails closed: a run that skipped nothing must have run both, so a flagless
   // run that left them out cannot print `OK` on the strength of empty results.
@@ -4718,6 +4742,8 @@ function report(result: {
   for (const line of tuning.lines) console.log(`  ${line}`);
   console.log('black box readout, each page in a browser context of its own');
   for (const line of readout.lines) console.log(`  ${line}`);
+  console.log('analytics calls and outside requests (C8, C11)');
+  for (const line of analytics.lines) console.log(`  ${line}`);
   console.log('step times');
   for (const { label, seconds } of TIMINGS) {
     console.log(`  ${label.padEnd(40)} ${seconds.toFixed(1).padStart(6)} s`);
@@ -4802,7 +4828,11 @@ function report(result: {
  * Builds the site; `serveDist` then serves `dist/` from this process, so the
  * gate screenshots what actually ships.
  */
-function run(command: string, args: readonly string[]): Promise<void> {
+function run(
+  command: string,
+  args: readonly string[],
+  env: NodeJS.ProcessEnv = gateBuildEnv(process.env),
+): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     // `shellCommand`, not an args array: this spawns `pnpm`, which needs a shell
     // on Windows, and an array alongside one is DEP0190.
@@ -4810,6 +4840,8 @@ function run(command: string, args: readonly string[]): Promise<void> {
       cwd: REPO_ROOT,
       shell: true,
       stdio: 'inherit',
+      // The switch is removed unless this run was asked for `--analytics-on`.
+      env,
     });
     child.on('error', reject);
     child.on('exit', (code) =>
@@ -4825,7 +4857,7 @@ function run(command: string, args: readonly string[]): Promise<void> {
  * someone else had put the right library there would pass or fail depending on
  * which gate ran last. Each one regenerates what it needs.
  */
-async function buildSite(): Promise<void> {
+async function buildSite(analyticsOn: boolean): Promise<void> {
   await run('pnpm', ['fixtures:50']);
   // --public stages library.json *and* the covers it references, so the render
   // never depends on someone having copied cover files in by hand.
@@ -4849,7 +4881,144 @@ async function buildSite(): Promise<void> {
     '--assets',
     LARGE_ASSETS,
   ]);
-  await run('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
+  await run(
+    'pnpm',
+    ['--filter', '@stacks/site', 'run', 'build'],
+    gateBuildEnv(process.env, analyticsOn),
+  );
+}
+
+/**
+ * C8 and C11: the shelf asks for each analytics event as S6 says, and an on build
+ * makes no request to another host.
+ *
+ * It serves from localhost, so the tracker never starts: `attempted()` records
+ * what the call sites asked for either way, which is what this reads. A pickup
+ * sends no page view, because the tracker never starts here; `tracker.test.ts`
+ * holds that count against the real tracker. Every request to a host other than
+ * the page itself is counted over the whole walk, and a CSP violation is a
+ * console error. The gzip of the site scripts is printed so the pull request
+ * can record what an on build adds over an off one.
+ */
+async function checkAnalyticsCalls(
+  browser: Browser,
+  origin: string,
+  analyticsOn: boolean,
+): Promise<TunerChecked> {
+  const failures: string[] = [];
+  const requested: string[] = [];
+  const consoleErrors: string[] = [];
+  const context = await browser.createBrowserContext();
+  try {
+    const page = await context.newPage();
+    await page.setViewport(VIEWPORT);
+    page.on('request', (request) => requested.push(request.url()));
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text());
+    });
+    const settle = watchSettle(page);
+    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    if (!(await settle())) failures.push('analytics: the shelf never settled');
+
+    const attempted = async (): Promise<Attempt[]> =>
+      (await page.evaluate('window.__shelf.attempted().slice()')) as Attempt[];
+    const toggle = async (expanded: boolean): Promise<void> => {
+      // Open with the launcher, shut with the panel's own button: an open panel covers the launcher.
+      await page.click(expanded ? '#ask-launcher' : '#ask-close');
+      await until(
+        page,
+        `document.getElementById('ask-launcher').getAttribute('aria-expanded') === '${String(expanded)}'`,
+        `the drawer to be ${expanded ? 'open' : 'shut'}`,
+      );
+    };
+
+    // The drawer, from shut, twice, with nothing held.
+    await toggle(true);
+    await toggle(false);
+    await toggle(true);
+    await toggle(false);
+    const drawer = await attempted();
+
+    // A real click lands a book.
+    const first = await clickToPickUp(page, HELD);
+    if (first === undefined) {
+      failures.push('analytics: a click never picked a book up');
+      return { lines: [], failures };
+    }
+    await until(page, HELD, 'the clicked book to come to rest held');
+    const clicked = await attempted();
+
+    // A chat link to another book, then to the book already in the hand.
+    const heldTitle = (await page.evaluate('window.__shelf.held()?.title')) as string;
+    const library = (await page.evaluate(
+      `fetch('/library.json').then((response) => response.json())`,
+    )) as { books: { id: string; title: string }[] };
+    const other = library.books.find(
+      (book) =>
+        book.title !== heldTitle &&
+        library.books.filter((candidate) => candidate.title === book.title).length === 1,
+    );
+    if (other === undefined) {
+      failures.push('analytics: no second book to link to');
+      return { lines: [], failures };
+    }
+    const link = `window.dispatchEvent(new CustomEvent('stacks:pick-up', { detail: { id: ${JSON.stringify(other.id)} } }))`;
+    await page.evaluate(link);
+    await until(
+      page,
+      `window.__shelf.held()?.phase === 'held' && window.__shelf.held()?.title === ${JSON.stringify(other.title)}`,
+      'the chat-linked book to come to rest held',
+    );
+    const chat = await attempted();
+    await page.evaluate(link);
+    // Absence (K1): time for a wrong second count to have happened. A slower
+    // runner can only make this weaker, never flaky.
+    await new Promise((resolve) => setTimeout(resolve, PUT_BACK_CHANCE_MS));
+    const chatAgain = await attempted();
+
+    if (!(await openBook(page, 'the held book for the analytics check'))) {
+      failures.push('analytics: the held book never opened');
+      return { lines: [], failures };
+    }
+    const opened = await attempted();
+
+    failures.push(
+      ...judgeAnalyticsCalls({ drawer, clicked, chat, chatId: other.id, chatAgain, opened }),
+    );
+
+    const foreign = foreignRequests(requested, origin);
+    if (foreign.length > 0) {
+      failures.push(
+        `analytics: ${String(foreign.length)} request(s) to another host, the first ${foreign[0] ?? ''}`,
+      );
+    }
+    const csp = consoleErrors.filter((text) => /content security policy/i.test(text));
+    if (csp.length > 0) {
+      failures.push(`analytics: ${String(csp.length)} CSP violation(s): ${csp[0] ?? ''}`);
+    }
+
+    return {
+      lines: [
+        `build               analytics ${analyticsOn ? 'on' : 'off'}`,
+        `events asked for    ${opened.map((entry) => entry.name).join(', ')}`,
+        `other-host requests ${String(foreign.length)}   CSP violations ${String(csp.length)}`,
+        `site script gzip    ${String(scriptGzipBytes())} bytes`,
+      ],
+      failures,
+    };
+  } finally {
+    await context.close();
+  }
+}
+
+/** Total gzip size of the built site scripts, for the pull request record of on versus off. */
+function scriptGzipBytes(): number {
+  const dir = join(DIST, '_astro');
+  if (!existsSync(dir)) return 0;
+  return readdirSync(dir)
+    .filter((file) => file.endsWith('.js'))
+    .reduce((sum, file) => sum + gzipSync(readFileSync(join(dir, file))).length, 0);
 }
 
 function findChrome(): string {

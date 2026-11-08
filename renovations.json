@@ -168,6 +168,14 @@
       "reason": "The scripts scope excludes scripts/ask-status.ts and scripts/deploy-ask.ts: each spec reads its script as source text and never imports it, so an instrumented copy failed Stryker's dry run (the 2026-11-07 nightly) and no mutant can be killed there anyway. Their logic stays measured in lib/. Two files leave the mutated set, so the scripts scope's inventory moves; reasoned from the configuration diff and a scoped dry run, not a full mutation run.",
       "pr": 557,
       "preserves": false
+    },
+    {
+      "date": "2026-11-07",
+      "stamp": "configHash",
+      "value": "sha256:8e7769670583154a2150810fd7ec7180af2bdffe06ef4a9d12181dfb703d39f1",
+      "reason": "A ninth mutation scope, packages/site/src/analytics, was declared for the optional Plausible module (#562, ADR-0138; spec X4). The configuration gained one scope and one mutate glob and no existing scope changed, so the eight older scopes' mutated files and mutant inventories are as they were and their windows are declared preserved; the new scope starts unarmed with its own window. Reasoned from the configuration diff and not from a full mutation run: the module is new, and a scoped run of its own specs is the only measurement so far.",
+      "pr": 563,
+      "preserves": true
     }
   ]
 }

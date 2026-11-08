@@ -525,7 +525,7 @@ describe('duplicationCapsUnaccounted — a population capped by nothing is found
     expect(duplicationCapsUnaccounted(declared)).toEqual([]);
 
     const caps = [...declared.populations.values()].flatMap((entry) => [...entry.caps.values()]);
-    expect(caps).toHaveLength(8 * 3 + 3);
+    expect(caps).toHaveLength(9 * 3 + 3);
     expect(caps.every((entry) => entry.cap === 'unarmed')).toBe(true);
   });
 });

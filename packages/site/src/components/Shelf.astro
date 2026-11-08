@@ -60,8 +60,10 @@
   </dialog></div>
 
 <script>
+  import { startAnalytics } from '../analytics/events.ts';
   import { start } from '../shelf/start.ts';
 
+  startAnalytics(location);
   start();
 </script>
 

@@ -37,6 +37,7 @@ import {
 } from './lib/public-build.ts';
 import { PUBLISH_HELD_COVERS, PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
+import { gateBuildEnv } from './lib/analytics-gate.ts';
 import { runShell } from './lib/run.ts';
 import { walk } from './lib/walk.ts';
 
@@ -167,16 +168,14 @@ process.env['SITE_URL'] = CANONICAL_ORIGIN;
 // at a home directory that may well have a space in it — `runShell` joins its
 // arguments verbatim and quotes nothing. `fixtures/vault` needs none: it is a
 // repo-relative literal and `cwd` is the repo root.
-runShell('pnpm', [
-  'stacks',
-  'build',
-  '--public',
-  '--vault',
-  'fixtures/vault',
-  '--assets',
-  `"${ASSETS}"`,
-]);
-runShell('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
+runShell(
+  'pnpm',
+  ['stacks', 'build', '--public', '--vault', 'fixtures/vault', '--assets', `"${ASSETS}"`],
+  { wholeEnv: gateBuildEnv(process.env) },
+);
+runShell('pnpm', ['--filter', '@stacks/site', 'run', 'build'], {
+  wholeEnv: gateBuildEnv(process.env),
+});
 
 if (!existsSync(DIST)) {
   console.error(`FAILED: no build output at ${DIST}`);
@@ -184,7 +183,7 @@ if (!existsSync(DIST)) {
 }
 
 // 3. Every rule, against the folder that Astro actually assembled.
-const report = await inspectPublicBuild(DIST, { origin: CANONICAL_ORIGIN });
+const report = await inspectPublicBuild(DIST, { origin: CANONICAL_ORIGIN, analytics: 'off' });
 
 for (const observation of report.observations) console.log(observation);
 console.log(`inspected ${relative(REPO_ROOT, DIST).split('\\').join('/')}`);

@@ -7,8 +7,8 @@ import { readFileSync } from 'node:fs';
  * instrument the rest of the mutation rollout consumes; `pnpm mutation:score`
  * turns one run into a number per declared scope.
  *
- * The eight scopes and their exclusions live in `stryker.scopes.json`, because
- * a flat `mutate` array cannot say which of eight populations a glob belongs to
+ * The nine scopes and their exclusions live in `stryker.scopes.json`, because
+ * a flat `mutate` array cannot say which of nine populations a glob belongs to
  * and every exclusion owes a named mechanism (or, for one dated case, the exception of ADR-0134). `mutate` is derived from it below.
  */
 

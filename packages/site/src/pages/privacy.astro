@@ -1,5 +1,7 @@
 ---
 import NoticePage from '../components/NoticePage.astro';
+import PlausibleNotice from '../components/PlausibleNotice.astro';
+import { analyticsOn } from '../analytics/on.ts';
 
 // What the Ask the library box does with a question (docs/spec/ask-the-library.md S7, S14 Q9).
 // Markup only: the layout, the `noindex` and the style are `NoticePage`'s, as on `/attribution`.
@@ -15,6 +17,14 @@ import NoticePage from '../components/NoticePage.astro';
     address that day, and with no address, for up to a week; daily totals are kept on our own
     machine. Please don't type personal details.
   </p>
+
+  <p>
+    Cloudflare Web Analytics counts page views, where visitors came from, their country and how
+    fast pages load. It sets no cookies, and it reports to Cloudflare through this site's own
+    address.
+  </p>
+
+  {analyticsOn && <PlausibleNotice />}
 
   <p class="back"><a href="/">Back to the shelf</a></p>
 </NoticePage>

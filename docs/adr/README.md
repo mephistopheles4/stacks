@@ -161,3 +161,4 @@ Two other files hold what these deliberately do not:
 | [0135](./0135-the-turnstile-widget-is-made-and-rotated-by-a-script.md) | The Turnstile widget is made and rotated by a script, outside Terraform (changes the Ask spec's S14 Q4 mechanism) |
 | [0136](./0136-ask-the-library-runs-on-deepseek-v4-1-flash.md) | Ask the library runs on DeepSeek V4.1 Flash (changes the Ask spec's S3 model) |
 | [0137](./0137-a-picked-up-book-arrives-closed.md) | A picked-up book arrives closed, and the visitor opens it (supersedes ADR-0102 in part) |
+| [0138](./0138-optional-plausible-direct-to-plausible-io.md) | Plausible is optional, bundled from npm, and reports straight to plausible.io (amends 0065, 0128 and 0053) |
