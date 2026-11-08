@@ -980,6 +980,8 @@ export interface ArrowPlace {
     | undefined;
 }
 
+const MIN_ARROW_WIDTH_PX = 40;
+
 export function arrowFailures(read: ArrowPlace): string[] {
   const failures: string[] = [];
   const { desktop, phone } = read;
@@ -1007,6 +1009,14 @@ export function arrowFailures(read: ArrowPlace): string[] {
   else {
     if (!phone.scrolled) {
       failures.push('the planted Thoughts were too short to scroll the phone page under the arrow');
+    }
+    // A fingertip's size: 40 px leaves a margin under the 44 px the arrow is
+    // drawn at, for rounding and for a scale the browser applies.
+    const width = phone.before.right - phone.before.left;
+    if (width < MIN_ARROW_WIDTH_PX) {
+      failures.push(
+        `at phone size the back arrow is ${String(width)} px wide, under ${String(MIN_ARROW_WIDTH_PX)} px`,
+      );
     }
     for (const [when, arrow] of [
       ['before', phone.before],

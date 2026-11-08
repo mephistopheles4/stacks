@@ -851,6 +851,15 @@ describe('arrowFailures — the back arrow keeps its place (#553, C4)', () => {
       /too short to scroll/,
     ],
     ['no phone read', { ...place, phone: undefined }, /no back arrow to read at phone size/],
+    ['no desktop read', { ...place, desktop: undefined }, /at desktop size/],
+    [
+      'an arrow too narrow to hit',
+      {
+        ...place,
+        phone: { ...place.phone!, before: { left: 16, top: 90, right: 46, bottom: 134 } },
+      },
+      /30 px wide, under 40 px/,
+    ],
   ])('fails on %s', (_name, patch, message) => {
     expect(arrowFailures(patch).join(' / ')).toMatch(message);
   });

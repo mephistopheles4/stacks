@@ -1197,7 +1197,7 @@ type Turned = Pick<
 };
 
 const X_BUTTON = '#held-put-back';
-/** The top close control: in the left page on a wide window, sticky on the right one on a phone. */
+/** The back arrow: in the left page on a wide window, sticky on the right one on a phone. */
 const CLOSE_CONTROL = '.held-close';
 const CLOSE_FOOT_CONTROL = '.held-page-right .held-close-foot';
 
@@ -1367,15 +1367,18 @@ async function turnOne(
     const at = await bookCentre(page);
     // C9, the canvas's half: a press that wobbles 8 px and comes back is a tap
     // in every sense but the pointer's path, and neither opens the book nor
-    // empties the hand. Judged by the Picker's tap slop, not by `press()`.
+    // empties the hand. Reaches `press()` through the Picker's own pointer
+    // handlers, which book-turn.test.ts does not.
     await page.mouse.move(at.x, at.y);
     await page.mouse.down();
     await page.mouse.move(at.x + 8, at.y);
     await page.mouse.move(at.x, at.y);
     await page.mouse.up();
     await page.evaluate(TWO_FRAMES);
+    // A book that has started opening still reads held and not opened, so the
+    // read is the closed rest itself, with nothing easing.
     wobbleKeepsHold = (await page.evaluate(
-      `window.__shelf.held()?.phase === 'held' && window.__shelf.held()?.opened === false`,
+      `${CLOSED_AT_REST} && !window.__shelf.held()?.easing`,
     )) as boolean;
     await page.mouse.click(at.x, at.y);
     const opened = await until(page, HELD_OPEN, 'a tap on the turned book to open it');
@@ -2193,12 +2196,20 @@ async function checkClosedControls(browser: Browser, origin: string): Promise<Li
     const cursorReset = (await page.evaluate(
       `getComputedStyle(document.getElementById('shelf-canvas')).cursor !== 'pointer'`,
     )) as boolean;
-    // S6: the book going back keeps the hint hidden, read in the call that sends it.
-    const hintHiddenGoingBack = (await page.evaluate(`(() => {
-      window.__shelf.putBack();
-      const hint = document.getElementById('shelf-hint');
-      return hint.hidden && hint.getClientRects().length === 0;
-    })()`)) as boolean;
+    // S6: the book going back keeps the hint hidden. Read once the book is
+    // actually returning: the hand is empty and the shelf has the book again.
+    await page.evaluate(`window.__shelf.putBack()`);
+    const returning = await until(
+      page,
+      `window.__shelf.held() === undefined && window.__shelf.current() !== undefined`,
+      'the book to be on its way back',
+    );
+    const hintHiddenGoingBack =
+      returning &&
+      ((await page.evaluate(`(() => {
+        const hint = document.getElementById('shelf-hint');
+        return hint.hidden && hint.getClientRects().length === 0;
+      })()`)) as boolean);
     await until(page, NOTHING_HELD, 'the book to be put back');
     // C12: the hand empty again, the hint reads the shelf's text, and shows.
     const hintReturns =
@@ -2659,7 +2670,7 @@ async function checkDrawerCells(browser: Browser, origin: string): Promise<Drawe
       await reset();
     }
 
-    // The open page's top close control by key, with the drawer open: the book closes
+    // The open page's back arrow by key, with the drawer open: the book closes
     // and the drawer stays; then two Escapes, the first for the drawer and the second
     // for the book.
     if (await holdClosed(page, 3, 'the book for the close cell')) {

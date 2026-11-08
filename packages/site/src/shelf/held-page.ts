@@ -15,11 +15,11 @@ import { cardModel, linksRow } from './card.ts';
  * **Two controls close the book again** to the closed rest it landed on, where
  * it can be turned (#553): a back arrow named "Close the book" at the top left
  * of the page that carries the title — the left page, or the right one on a
- * phone, where it stays in view while the Thoughts scroll — and a book's outline
- * with the words "Close the book" at the foot of the right page, where "Turn the
- * book over" used to be. The page carries no put-back control: the book arrives closed with
- * its pages hidden, so the X that puts it back lives in the header (#531,
- * `index.astro`).
+ * phone, where it stays in view while the Thoughts scroll — and a book's
+ * outline with the words "Close the book" at the foot of the right page, where
+ * "Turn the book over" used to be. The page carries no put-back control: the
+ * book arrives closed with its pages hidden, so the X that puts it back lives
+ * in the header (#531, `index.astro`).
  *
  * **What goes where is a pure function** (`leftPageBlocks`, `rightPageBlocks`),
  * tested without a DOM; `buildPages` turns it into nodes and adds nothing.

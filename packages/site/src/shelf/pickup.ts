@@ -450,8 +450,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
    * and the cursor are for a book closed at rest, and for that alone. Any other
    * book in hand hides the hint, which would lie over its pages (#553), and so
    * does one going back; an empty hand with nothing returning has the shelf's
-   * hint back. Hiding what holds focus catches it on
-   * the canvas.
+   * hint back. Hiding what holds focus catches it on the canvas.
    */
   const syncControls = (): void => {
     const holding = state.holding();

@@ -765,7 +765,7 @@ describe('closing the open book again (#553)', () => {
     expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: true });
   });
 
-  it('puts the book back with the normal return when it comes during a close', () => {
+  it('puts the book back with the normal return when it comes during a close, and a book caught on its way back lands closed', () => {
     const h = open();
     h.state.close();
     h.pressBack();
