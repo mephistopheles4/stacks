@@ -456,7 +456,7 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   `prefers-reduced-motion`.
 - **Fine print:** "This is an AI answering from my notes. It can be wrong." under the
   box, centred, with a small "Privacy" link to its own page, `/privacy` (owner, 2026-11-05: "Its own
-  page"). The link opens the notice in a modal over the shelf (#536, [ADR-0140](../adr/0140-the-notices-open-in-one-modal-over-the-shelf.md)),
+  page"). The link opens the notice in a modal over the shelf (#536, [ADR-0146](../adr/0146-the-notices-open-in-one-modal-over-the-shelf.md)),
   which keeps the conversation because the page never changes; it still carries `target="_blank" rel="noopener"` as
   its fallback, so if the modal cannot open the page opens in a new tab and the conversation stays in the first one,
   because memory lives only in the page and leaving it would end the conversation. The link drops "(opens in a new tab)", because its usual path opens the notice in place. The

@@ -1,4 +1,4 @@
-# ADR-0140 — The notices open in one modal over the shelf
+# ADR-0146 — The notices open in one modal over the shelf
 
 **Date:** 2026-11-08
 **Status:** accepted. The lead decided it, relayed under the owner's standing goal for the

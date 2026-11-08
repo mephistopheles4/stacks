@@ -483,7 +483,7 @@ describe('complexityFactsOf — all four, or none of them', () => {
   });
 
   it('fails all four when no population was counted', () => {
-    // Nine scopes are declared, so an empty map is the counter having found
+    // Ten scopes are declared, so an empty map is the counter having found
     // nothing to walk — a broken declaration, not a healthy run.
     expect(complexityFactsOf(new Map()).complexity).toBeUndefined();
     expect(complexityFactsOf(new Map()).failed).toHaveLength(4);

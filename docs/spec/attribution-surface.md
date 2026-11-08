@@ -127,7 +127,7 @@ footer and no scroll, so a modal is in-page machinery on a page whose chrome is
 otherwise inert, and a new Astro page is the shape the constraint already names.
 
 **Revised 2026-11-08 ([#536](https://github.com/mephistopheles4/stacks/issues/536),
-[ADR-0140](../adr/0140-the-notices-open-in-one-modal-over-the-shelf.md)): the route stays and a
+[ADR-0146](../adr/0146-the-notices-open-in-one-modal-over-the-shelf.md)): the route stays and a
 modal is added on top.** The shelf's Attribution link now opens the same notice in a native
 `<dialog>` over the shelf, because a visitor who leaves the shelf loses a held book and the Ask
 conversation, which lives in a page variable. `/attribution` is unchanged as a page, `noindex`

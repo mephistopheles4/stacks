@@ -340,10 +340,52 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: pnpm exec tsx scripts/check-pr.ts
 
+  # Stryker's dry run: the suite, run once against the instrumented tree, with no
+  # mutant tested. It is the first place a spec meets Stryker's sandbox, and it
+  # used to run only in the nightly (`metrics.yml`), so a spec that reads a file
+  # as text, or one a dependency bump broke, showed up the next night instead of
+  # on the pull request that caused it (#558; the 2026-11-07 break was
+  # `scripts/ask-status.ts`, read as source by its spec).
+  #
+  # ⚠️ **No filter, on purpose.** Not a job-level `if:` (the `gates` aggregator
+  # fails on a skipped dependency, and the header above rules path-filtering out),
+  # and no step-level skip either. The sandbox rewrites `.ts` files that no
+  # `mutate` glob matches, and a Stryker or Vitest bump breaks a dry run without
+  # touching a line of code here, so a list of paths that can break it fails
+  # closed on exactly the pull request it should have caught. It costs about
+  # 2 to 3 runner minutes beside `suite`'s 8, in parallel, so no wall clock.
+  #
+  # ⚠️ **This is a dry run and nothing else.** The full run stays nightly;
+  # `--dryRunOnly` stops after the initial test run and writes no report. How to
+  # reproduce a red one, and the usual fixes, are in `docs/commands.md`.
+  #
+  # Its own job rather than a step in the matrix, for the reason `audit`, `style`
+  # and `conventions` already state: the answer does not depend on which Node
+  # version is running. `persist-credentials: false` because nothing here speaks
+  # to git, on the `style` job's stated reasoning.
+  mutation-dry-run:
+    name: mutation-dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: stryker dry run
+        run: pnpm exec stryker run --dryRunOnly
+
   # The required status check. Named `gates` and nothing else.
   gates:
     name: gates
-    needs: [suite, audit, style, conventions]
+    needs: [suite, audit, style, conventions, mutation-dry-run]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -358,7 +400,9 @@ jobs:
           echo "audit: ${{ needs.audit.result }}"
           echo "style: ${{ needs.style.result }}"
           echo "conventions: ${{ needs.conventions.result }}"
+          echo "mutation-dry-run: ${{ needs.mutation-dry-run.result }}"
           test "${{ needs.suite.result }}" = "success"
           test "${{ needs.audit.result }}" = "success"
           test "${{ needs.style.result }}" = "success"
           test "${{ needs.conventions.result }}" = "success"
+          test "${{ needs.mutation-dry-run.result }}" = "success"
