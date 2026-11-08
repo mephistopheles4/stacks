@@ -7,7 +7,7 @@ crypto or data migration), but it opens a new flow from every visitor's browser 
 third party and widens the page's CSP. There is no `docs/threat-model.md`, so the
 sensitive list decides what counts as a security finding. Written on 2026-11-07 from a
 grilling through an eagle-eye box, whose accepted set is S2. Base: `ca372c4`.
-Revision 5: the owner answered most of S17 on 2026-11-07, relayed by the lead (decision 89); three trade-offs and the plan allowance stay open. Revision 4 fixed round 2's two spec-text highs (the build literal, where C8 is proven). Revision 3 recorded the owner's answers to S16, relayed by the lead (decision 74). **Nothing here is built. Not signed off.**
+Revision 6: **signed off by the owner on 2026-11-07** ("Yes, sign off", decision 91, relayed by the lead), with the last S17 items settled. Revision 5 recorded the owner's other round-2 answers (decision 89). Revision 3 recorded the owner's answers to S16, relayed by the lead (decision 74). **Nothing here is built.**
 
 ## S1. Objective
 
@@ -186,8 +186,13 @@ export function scrubUrl(href: string): string;
 - **An off build ships no trace.** A new clause of the same rule, under `'off'`: no file
   under `dist/` contains `plausible.io`, and neither notice page holds a module script. It
   is planted red by a file that does.
-- `pnpm smoke:render` likewise builds with the variable removed, unless S10's on run sets
-  it explicitly on its own command line.
+- **The gate builds strip the variable themselves (S17 X6).** `runShell` inherits
+  `process.env`, so `scripts/check-public-build.ts` and `scripts/smoke-render.ts` each delete
+  `PUBLIC_PLAUSIBLE_DOMAIN` from the environment they hand their build child. A value set
+  where `deploy:site` runs therefore never reaches a gate's build. `pnpm smoke:render
+  --analytics-on` is the one way in: it sets the variable to `PRODUCTION_HOST` for its own
+  child and nothing else. A test plants the variable in the parent and asserts the child
+  environment lacks it, for each script.
 - `frame-ancestors` and `_headers` are untouched.
 
 ## S6. The events
@@ -312,8 +317,8 @@ Written first, each backing a claim in S11.
   from a pickup. `pickup-state.test.ts` already holds that `landed` and `opened` fire once
   per landing and opening; the browser check holds that each calls the module once.
   Planting a second `trackBook` call in `landed` turns it red.
-- **One real on run on the host:** `PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com pnpm
-  smoke:render`. It serves from localhost, so the tracker never starts. `smoke-render.ts`
+- **One real on run on the host:** `pnpm smoke:render --analytics-on`, the same in bash and
+  PowerShell (S17 X7). It serves from localhost, so the tracker never starts. `smoke-render.ts`
   gains a request-host listener that counts requests to any host other than the page's own,
   and prints the count. The PR records the command, that count (zero), zero CSP console
   errors, and the gzip bytes the on build adds over the off build.
@@ -332,9 +337,9 @@ Written first, each backing a claim in S11.
 | C8 | Each built event fires as S6 says, once per action, from both pickup paths, as `window.__shelf.attempted()` records it in `smoke:render`; the only property is `book` holding an id that matches `BOOK_ID`; a click on an outbound link sends nothing; no page view comes from a pickup | Functional |
 | C9 | `/privacy` names Cloudflare Web Analytics in every build and Plausible only in an on build, in S7's words | Interaction |
 | C10 | `deploy:site` prints the analytics line in every mode, proceeds in either state, and exits non-zero naming both shapes when a `current` live index's `connect-src` differs from the built shape | Reliability |
-| C11 | The on run of S10 passes `pnpm smoke:render` with zero CSP violations and zero requests to another host | Reliability |
+| C11 | `pnpm smoke:render --analytics-on` (S10) passes with zero CSP violations and zero requests to another host | Reliability |
 | C12 | `athanor run`, `athanor run lint`, `athanor run build`, `athanor run smoke`, `pnpm lint:md`, `pnpm format:check` and `pnpm gate:public` are green | Maintainability |
-| C13 | `PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com pnpm test` is green, and no file under `scripts/lib/` or `gates/` reads that variable | Reliability |
+| C13 | `athanor run -- sh -c 'PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com pnpm test'` is green, from bash or PowerShell alike, and no file under `scripts/lib/` or `gates/` reads that variable | Reliability |
 
 ## S12. Boundaries for the build session
 
@@ -363,10 +368,15 @@ The repo names no business driver, so the owner's stated reasons decide.
 | **Hardening, limit 0, Reliability:** a catch on the tracker's `import()` | Built (S16 Q5) | The owner asked for it |
 | **Hardening, limit 0, Security:** mapping any path outside the three pages to one value in `scrubUrl` | Not built; an accepted risk (S16 Q5), re-accepted on the corrected premise (S17 X5) | Pages serves the shelf at every unknown path (`infra/main.tf:165`), so the tracker starts there and sends that path |
 | **Hardening, limit 0, Security:** Plausible's hostname allowlist, set in the owner's account | Not set; an accepted risk (S16 Q5) | It would only partly block forged events |
+| **Hardening, limit 0, Reliability:** a guard around each track call, in case the loaded tracker throws | Not built; an accepted risk (S17 T1) | The import catch covers the likely failure |
+| **Gate builds against `deploy:site`'s environment** | The two gate scripts strip the variable, and `--analytics-on` is the one way in (S17 X6) | The gates must check the shape they were asked to |
 
 ## S14. Residuals and rollback
 
 - **The counts will not agree with Cloudflare's**, and nothing here reconciles them.
+- **The plan allowance.** An on build's page views and events count against the owner's
+  existing Plausible plan's monthly allowance. Accepted by the owner (S17); the owner
+  watches the plan's headroom in Plausible.
 - **Anyone can forge events** for `stacks.aymandiab.com`, with any referrer, campaign tag or
   `book` value: Plausible's endpoint takes unauthenticated requests, and the host check runs
   in the visitor's browser. The dashboard is not trusted data.
@@ -433,12 +443,11 @@ picks on #562's open items?" (decision 89), relayed to this session by the lead.
   allowlist in `scrubUrl` stays unbuilt, accepted on that premise (S13).
 - **The five answers in S16: confirmed as recorded.**
 
-Still open, each a trade-off for the owner before sign-off:
+Settled at sign-off ("Yes, sign off", decision 91, relayed by the lead):
 
-- **X6.** Nothing strips `PUBLIC_PLAUSIBLE_DOMAIN` from the gate builds' children, so a
-  value set where `deploy:site` runs reaches `gate:public` and `smoke:render` too.
-- **X7.** The on-run and C13 commands are POSIX-only, and host `pnpm test` is refused by
-  the agent guard.
-- **T1.** No guard around the track calls if the loaded tracker throws (Hardening, limit 0).
-- **The plan allowance.** On-build page views and events count against the existing
-  Plausible plan's monthly allowance.
+- **X6. Built.** The two gate scripts strip `PUBLIC_PLAUSIBLE_DOMAIN` from their build
+  child, and `smoke:render --analytics-on` is the one way in (S5).
+- **X7. Built.** The on run is a flag and C13 runs through athanor, so both commands are
+  the same in bash and PowerShell (S10, S11).
+- **T1. Not built; risk accepted** (S13).
+- **The plan allowance: accepted** and recorded in S14.
