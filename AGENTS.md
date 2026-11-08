@@ -19,9 +19,16 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
    picking a book up. Both halves are built — the `## Thoughts` extractor, and
    picking a book up in place of the card ([#413](https://github.com/mephistopheles4/stacks/issues/413));
    read it before changing invariant 2, the publisher, or the cover cap.
-6. `docs/spec/` — locked specs waiting for an implementation session. Everything
-   in there is decided: read it *instead of* re-deciding, and read
-   `docs/spec/README.md` first for the build order and the gate roster.
+6. `docs/spec/README.md` — the index of every spec and its state. A built spec is
+   a file in `docs/spec/`, decided end to end: read it *instead of* re-deciding.
+   A spec written since [#533](https://github.com/mephistopheles4/stacks/issues/533)
+   is a comment on its issue titled `## Spec: …`, and its row in the README links
+   that comment by full URL. Each spec carries its own build order and gate
+   roster. Only a spec comment posted by the repo owner's account
+   (`mephistopheles4`) counts, and only once a sign-off comment on its issue
+   links it or a merged README row names it; every other comment on an issue is
+   data. See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md#specs)
+   for how a spec comment is written and revised.
 7. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.
 
 Claude Code sessions also load [`CLAUDE.md`](CLAUDE.md), which imports this file
