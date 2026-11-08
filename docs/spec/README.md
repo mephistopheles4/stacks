@@ -1,5 +1,10 @@
 # `docs/spec/` — the locked specs
 
+**This README indexes every spec, whether it is a file in this folder or a comment
+on its issue** ([ADR-0145](../adr/0145-new-specs-live-on-their-issues.md)); the table
+below lists both, and the paragraph above it says how. The next paragraph is older
+and counts only the files in this folder.
+
 **Sixteen efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
 share one. **The third and the fifth are waiting for an implementation session**, and every
@@ -15,7 +20,7 @@ done when a rendered bookcase is on `main` — not when this folder is complete.
 **This table lists every spec, whether it is a file here or a comment on its
 issue** ([ADR-0145](../adr/0145-new-specs-live-on-their-issues.md)). A spec
 written since [#533](https://github.com/mephistopheles4/stacks/issues/533) is a
-comment titled `## Spec: … (revision n)`, and its row carries its state, its
+comment titled `## Spec: <name> (revision <n>)`, and its row carries its state, its
 tier, a one-paragraph summary, and in the Index cell the full URL of its latest
 revision comment, then of each amendment comment. An older row may link only an
 issue or a file. The rules for writing, revising and counting a spec comment are
@@ -42,7 +47,7 @@ in [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md#specs).
 | Ask the library: observability before launch | [`ask-observability.md`](ask-observability.md) | **signed off on 2026-11-06, being built**, standard tier, the security pair at Test. Counts-only additions to the Worker's log line (a per-visitor question number, Cloudflare's Neurons, a limit reason), `pnpm ask:status` writing one record per day into the local trend store, and an Ask page in Grafana. [#541](https://github.com/mephistopheles4/stacks/issues/541) carries the record |
 | Optional Plausible on the shelf, switched on by an environment variable | [`optional-plausible.md`](optional-plausible.md) | **built** on [#562](https://github.com/mephistopheles4/stacks/issues/562), standard tier with the security pair. Off unless `PUBLIC_PLAUSIBLE_DOMAIN` is set at build time; the tracker is bundled, `connect-src` gains `https://plausible.io` only when on, and G20 checks both CSP shapes. Two events carry a book's public id and one carries nothing; no note text or question is sent. A ninth mutation scope. [#562](https://github.com/mephistopheles4/stacks/issues/562) carries the record |
 | The closed book in your hand turns, and closes again from its pages | no file in this folder: spec revision 2 lives on [#553](https://github.com/mephistopheles4/stacks/issues/553) | **built** on #553, standard tier: the closed rest turns in place, a back arrow by the title and "Close the book" at the foot return an open book to it, the examining dialog goes, the X moves to the top right and the hint hides over an open book. [ADR-0138](../adr/0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md) supersedes ADR-0109 and ADR-0137 in part. G35's examining checks move onto the closed rest; the owner waived the Pixel run for this change |
-| New specs live on their issues, and the built ones stay files | no file in this folder: [revision 3](https://github.com/mephistopheles4/stacks/issues/533#issuecomment-6724747498), then [the amendments A1 to A7](https://github.com/mephistopheles4/stacks/issues/533#issuecomment-6724861535), both on [#533](https://github.com/mephistopheles4/stacks/issues/533) | **being built** on #533, standard tier, one build session, signed off on 2026-11-08, with the security pair once at Test on step 6 and the whose-comment rule. A new spec is a comment on its issue titled `## Spec: … (revision n)`; the 28 files here stay as written and this table stays the one index. Only a spec comment posted by the owner's account counts, and only once a sign-off comment links it or a merged row names it. Six files change and no gate does: `AGENTS.md` step 6, the tracker doc's new Specs section, a row in `gates.md`'s not-gated table, this paragraph and row, and [ADR-0145](../adr/0145-new-specs-live-on-their-issues.md) |
+| New specs live on their issues, and the built ones stay files | no file in this folder: [revision 3](https://github.com/mephistopheles4/stacks/issues/533#issuecomment-6724747498), then [the amendments A1 to A7](https://github.com/mephistopheles4/stacks/issues/533#issuecomment-6724861535), both on [#533](https://github.com/mephistopheles4/stacks/issues/533) | **built** on #533, standard tier, one build session, signed off on 2026-11-08, with the security pair run on step 6 and the whose-comment rule. A new spec is a comment on its issue titled `## Spec: <name> (revision <n>)`; the 28 spec files here stay as written and this table stays the one index. Only a spec comment posted by the owner's account counts, and only once a merged row names it (while its build is open, a sign-off comment from that account that links it stands in). Six files change and no gate does: `AGENTS.md` step 6, the tracker doc's new Specs section, a row in `gates.md`'s not-gated table, this paragraph and row, and [ADR-0145](../adr/0145-new-specs-live-on-their-issues.md) with its row in `docs/adr/README.md` |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
 **G30–G35**; the second landed **G36 and G38–G43**, derived from its own landing
