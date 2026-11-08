@@ -218,10 +218,27 @@
 
   .shelf :global(.held-page-right .held-close) {
     position: sticky;
-    top: 0;
+    /* The page's padding is outside where sticky holds it: the same pull up as
+       the margin, so it rests where it was laid out and scrolls nowhere. */
+    top: -28px;
     z-index: 1;
     background: #ece2cf;
     margin: -28px 0 18px -20px;
+  }
+
+  /*
+    The phone frames the right page alone, drawn at about two thirds of its
+    size, so the arrow is enlarged on the page to land near the X's 2.75rem on
+    screen, a fingertip's target.
+  */
+  .shelf :global(.held-page-right .held-close) {
+    width: 4.25rem;
+    height: 4.25rem;
+  }
+
+  .shelf :global(.held-page-right .held-close svg) {
+    width: 32px;
+    height: 32px;
   }
 
   .shelf :global(.held-page button:focus-visible),

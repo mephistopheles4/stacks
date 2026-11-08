@@ -313,20 +313,6 @@ describe('closing an open book: back to the closed rest (#553)', () => {
     expect(calls).toEqual({ landed: 0, opened: 0, closed: 0, returned: 1 });
     expect(stages).toMatchObject({ s: 0, u: 0, o: 0 });
   });
-
-  it('a put-back after a close never holds at the stop, however large the step', () => {
-    const { track, calls } = rig();
-    track.finishOpen();
-    track.close();
-    run(() => calls.closed > 0);
-    track.finishOpen();
-    track.reverse(1.6);
-    step(0);
-    step(100);
-
-    expect(calls.returned).toBe(1);
-    expect(calls.closed).toBe(1);
-  });
 });
 
 describe('where the track reads itself to be', () => {

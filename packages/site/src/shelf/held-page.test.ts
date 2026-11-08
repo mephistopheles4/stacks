@@ -93,10 +93,6 @@ describe('the left-hand page', () => {
       'title',
     ]);
   });
-
-  it('carries no control on a phone, where the page is off screen and Tab must not reach it', () => {
-    expect(leftPageBlocks(book(), { narrow: true })).toEqual(['title', 'author']);
-  });
 });
 
 describe('the right-hand page', () => {

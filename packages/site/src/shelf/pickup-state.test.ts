@@ -758,6 +758,8 @@ describe('closing the open book again (#553)', () => {
     h.state.close();
     h.track('a').closeDown();
     h.state.clicked('a', false);
+    // Played forward: an open, not a refusal the fake's openUp would mask.
+    expect(h.track('a').playing).toBe('forward');
     h.track('a').openUp();
 
     expect(h.state.holding()).toEqual({ book: 'a', phase: 'held', opened: true });

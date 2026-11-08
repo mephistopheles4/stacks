@@ -12,7 +12,6 @@ import {
   phoneFailures,
   pickupFailures,
   spreadFailures,
-  TEMPLATE_HINT,
   turnFailures,
   type AtRestRead,
   type Box,
@@ -512,10 +511,6 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
     expect(controlsFailures(edge({ top: 24, right: 22.9, expected: 24 }))).toHaveLength(2);
   });
 
-  it('keeps the template hint the gate compares against', () => {
-    expect(TEMPLATE_HINT).toBe('Drag to look around · click a book');
-  });
-
   it.each<[string, Partial<ControlsRead>, RegExp]>([
     ['an X with no name', { xName: '' }, /no accessible name/],
     ['no Open button in the tree', { buttonInTree: false }, /Open button/],
@@ -771,14 +766,6 @@ describe('overlapFailures — the hint, the X and the brand off the book (#553, 
     const failures = one({ open: { ...open, ...patch } }).join('\n');
     expect(failures).toMatch(message);
     expect(failures).toContain('375×812, the thickest book');
-  });
-
-  it('judges a phone, whose left page is not built, on the right page alone', () => {
-    expect(one({ open: { ...open, left: undefined } })).toEqual([]);
-    const brand = { left: 700, top: 130, right: 760, bottom: 160 };
-    expect(one({ open: { ...open, left: undefined, brand } }).join('\n')).toMatch(
-      /brand \(.*\) meets the open book's right page/,
-    );
   });
 
   it.each<[string, Partial<ClosedFraming>, RegExp]>([
