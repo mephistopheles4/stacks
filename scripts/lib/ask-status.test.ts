@@ -144,13 +144,16 @@ describe('which days a run reads (spec S3, C7)', () => {
   });
 
   it('refuses a --day it cannot read, in words that quote no argument', () => {
-    const days = [NOV_5 - DAY];
+    // 2 March is readable, so 2026-02-30 is refused by the date check, never by the window.
+    const days = [NOV_5 - DAY, Date.UTC(2026, 2, 2)];
     const refusals = [
       ['--day', '2026-11-02'],
       ['--day', '2026-11-4'],
       ['--day', '2026-02-30'],
+      ['--day', '2026-11-CANARY'],
       ['--day'],
       ['--day', '2026-11-04', '--day', '2026-11-04'],
+      ['--record', '--record'],
       ['--days', 'CANARY'],
     ];
     for (const args of refusals) {
@@ -158,6 +161,9 @@ describe('which days a run reads (spec S3, C7)', () => {
       expect(parsed, args.join(' ')).toHaveProperty('error');
       expect(JSON.stringify(parsed)).not.toContain('CANARY');
     }
+    expect(parseArgs(['--day', '2026-02-30'], days)).toEqual({
+      error: '--day takes one UTC date, as YYYY-MM-DD',
+    });
   });
 
   it('names a day by the unix second its UTC midnight starts', () => {
@@ -184,6 +190,14 @@ describe('the queries (spec S3)', () => {
         value: 'stacks-ask',
       });
     }
+  });
+
+  it('counts outcomes over every line: grouped on outcome alone, filtered by service alone', () => {
+    const body = queryBody('outcomes', NOV_5) as {
+      parameters: { groupBys: unknown[]; filters: { key: string }[] };
+    };
+    expect(body.parameters.groupBys).toEqual([{ type: 'string', value: 'outcome' }]);
+    expect(body.parameters.filters.map((f) => f.key)).toEqual(['$metadata.service']);
   });
 
   it('requires every key it groups by, outcome aside, so no event is dropped unseen', () => {
@@ -290,11 +304,29 @@ describe("a day's totals from the replies (spec C6)", () => {
     });
   });
 
-  it('tolerates sampling on the three outcome queries alone', () => {
-    const tolerant = (Object.keys(QUERIES) as QueryName[]).filter(
-      (name) => (QUERIES[name] as { sampled?: string }).sampled === 'mark',
-    );
-    expect(tolerant.sort()).toEqual(['limits', 'outcomes', 'reasons']);
+  it('marks a sampled reason row, the remainder it leaves, and only health-down on the test line', () => {
+    const day = fixtureDay();
+    Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[1]!, {
+      value: 5,
+      count: 5,
+    });
+    Object.assign(at(day, 'reasons').result.calculations[0]!.aggregates[0]!, {
+      sampleInterval: 1.5,
+    });
+    const totals = dayTotals(day);
+    expect(totals.outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      reason: 'timeout',
+      count: 2,
+      sampled: true,
+    });
+    // 5 exact less 2 estimated is itself an estimate.
+    expect(totals.outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      count: 3,
+      sampled: true,
+    });
+    expect(printDay(NOV_5, totals)).toContain('  daily test: pass; health-down 3');
   });
 
   it('prints the figures the owner reads, and never a reply body', () => {
@@ -448,6 +480,13 @@ describe("a day's totals from the replies (spec C6)", () => {
       (day) =>
         void Object.assign(at(day, 'metered').result.calculations[1]!.aggregates[0]!, {
           interval: 1.002,
+        }),
+    ],
+    [
+      'a sampled cached-token sum',
+      (day) =>
+        void Object.assign(at(day, 'cached').result.calculations[1]!.aggregates[0]!, {
+          sampleInterval: 1.002,
         }),
     ],
     [

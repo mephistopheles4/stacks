@@ -9,7 +9,9 @@
  *   --day YYYY-MM-DD           read that one day alone, so a partial day is never recorded
  *
  * ⚠️ **Pass `--record` only after the first live check has passed (spec C10).** The replies
- * are read against Cloudflare's documented shape, never yet a captured one, and a record is
+ * are read against Cloudflare's documented shape, corrected by the first deployed day's
+ * replies (#548), and refused on any other difference; a sampled outcome count prints as
+ * sampled and is recorded as it came (decision 413, not yet the owner's). A record is
  * imported once and never corrected. A wrong one is undone by deleting its file and running
  * `pnpm trend:sync --rebuild`, and can be written again only while its logs are kept.
  */

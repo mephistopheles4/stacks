@@ -52,7 +52,7 @@ export function parseArgs(
   let day: number | undefined;
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
-    if (arg === '--record') {
+    if (arg === '--record' && !record) {
       record = true;
     } else if (arg === '--day' && day === undefined) {
       const value = args[(i += 1)] ?? '';
@@ -493,6 +493,8 @@ function outcomeCounts(read: Record<QueryName, Map<string, Aggregate[]>>): Outco
       const left = (plain.get(outcome) ?? 0) - a.value;
       if (left < 0) throw new ShapeError(`the ${name} reply counts more lines than its outcome`);
       plain.set(outcome, left);
+      // A remainder taken from an estimate is one too.
+      if (a.sampled) sampledOutcomes.add(outcome);
       detailed.push({
         outcome,
         [key]: detail,
