@@ -3,7 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const init = vi.fn();
 const track = vi.fn();
 
-const working = () => ({ init, track });
+// One factory, registered once per test, that a test can break: registering a
+// second doMock for the same module raced the first when the suite was busy,
+// and the working one sometimes won.
+let blocked = false;
+const working = () => {
+  if (blocked) throw new Error('blocked');
+  return { init, track };
+};
 
 type Events = typeof import('./events.ts');
 const prod = { hostname: 'stacks.aymandiab.com' } as Location;
@@ -17,6 +24,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 beforeEach(() => {
   init.mockReset();
   track.mockReset();
+  blocked = false;
   vi.doMock('@plausible-analytics/tracker', working);
 });
 
@@ -107,9 +115,7 @@ describe('startAnalytics', () => {
   });
 
   it('survives a failed import: unstarted, events are no-ops, no unhandled rejection', async () => {
-    vi.doMock('@plausible-analytics/tracker', () => {
-      throw new Error('blocked');
-    });
+    blocked = true;
     const unhandled = vi.fn();
     process.on('unhandledRejection', unhandled);
     const { startWith, trackBook, trackAsk } = await load();
