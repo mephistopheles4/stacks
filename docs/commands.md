@@ -1548,3 +1548,5 @@ time, from the shell or `.env`. Unset is a complete and supported build.
   Plausible. A shared or public Plausible dashboard would expose the `book` values.
 - **Rollback.** Unset the variable and run `deploy:site`. Earlier Pages deployments keep the
   tracker at their own addresses until they are deleted.
+
+Throwaway docs-only line for #558 claim C3; this change is never merged.
