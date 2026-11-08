@@ -3,9 +3,10 @@
  * records where a cover's *bytes* came from — the metadata layer completes one
  * provider's record from another's, and Apple is consulted for artwork alone.
  *
- * `oreilly` is both, and the two still do not have to agree: a book Open
- * Library answered for can carry an O'Reilly cover, which is what `fillGaps`
- * produces when nothing else has art for it.
+ * `oreilly` is kept as a name and is inert: the provider was removed (#450), so
+ * no lookup returns it and nothing makes a request under it. It stays so the
+ * tables keyed on a source (`precedence.ts`) keep their shape if a provider
+ * ever comes back.
  */
 export type MetadataSource = 'open-library' | 'google-books' | 'oreilly' | 'apple-books';
 
@@ -85,8 +86,7 @@ export interface BookMetadata {
 /**
  * Third-party prose arrives as markup and is stored as text.
  *
- * Apple's descriptions carry `<b>` and O'Reilly's arrive wrapped in
- * `<span><div><p>`. A note is a file the owner reads and hand-edits, so the tags
+ * Apple's descriptions carry `<b>`, and Google's can carry markup too. A note is a file the owner reads and hand-edits, so the tags
  * come off at the edge rather than in whatever renders it later — and `## About`
  * is written into a Markdown body, where a stray `<div>` would be passed
  * straight through by every renderer that reads it.

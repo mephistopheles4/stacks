@@ -2,7 +2,6 @@ import { isProbablySameBook, isValidIsbn, rankingScore } from '../identity.ts';
 import * as appleBooks from './apple-books.ts';
 import * as googleBooks from './google-books.ts';
 import * as openLibrary from './open-library.ts';
-import * as oreilly from './oreilly.ts';
 import { mergeFields, type Contributors } from './precedence.ts';
 import type { HttpGet } from './http.ts';
 import {
@@ -71,12 +70,7 @@ export async function lookupByIsbn(
 ): Promise<BookMetadata | undefined> {
   return (
     (await openLibrary.lookupByIsbn(isbn, get)) ??
-    (await googleBooks.lookupByIsbn(isbn, get, options.googleBooksKey)) ??
-    // Last here for the same reason it is last in the search: only asked when
-    // the first two have nothing. `enrich` reaches this path for every note that
-    // carries an ISBN, so without it a book O'Reilly had just supplied could
-    // never be enriched again.
-    (await oreilly.lookupByIsbn(isbn, get))
+    (await googleBooks.lookupByIsbn(isbn, get, options.googleBooksKey))
   );
 }
 
@@ -116,22 +110,7 @@ async function searchAll(
   // Primary results are kept rather than replaced. They did not match the query
   // well, but neither may Google's, and dropping them would leave a caller that
   // wants *any* candidate with fewer than it had before.
-  const both = [...primary, ...fallback];
-  if (both.some((book) => matchesQuery(query, book))) return both;
-
-  /**
-   * O'Reilly last, on the same terms Google is second.
-   *
-   * Only asked when neither of the first two has actually found the book, so it
-   * costs a request on the path that is currently failing and nothing on the
-   * path that works. That is the whole reason it can be added without relaxing
-   * the short-circuit above — a change measured to be orthogonal to this and
-   * still unshipped.
-   *
-   * It answers for a narrow class: O'Reilly's own titles, and early releases in
-   * particular, which the other three have never heard of.
-   */
-  return [...both, ...(await oreilly.searchByTitle(query, get))];
+  return [...primary, ...fallback];
 }
 
 function matchesQuery(query: string, book: BookMetadata): boolean {
@@ -225,8 +204,8 @@ export async function lookup(
  * One record, completed from every provider that can be confirmed to hold this
  * book.
  *
- * Two things happen and they are deliberately separate. `fillGaps` and the two
- * cover rescues decide `title`, `author`, `isbn`, `pages` and `cover` exactly as
+ * Two things happen and they are deliberately separate. `fillGaps` and the Apple
+ * cover rule decide `title`, `author`, `isbn`, `pages` and `cover` exactly as
  * they always have — that behaviour is pinned by G26 and is not what this work
  * changes. Then `mergeFields` fills the four new fields and the four contributor
  * ids from whichever provider wins each, by the table in `precedence.ts`.
@@ -329,9 +308,7 @@ async function fillGaps(
   // A speculative cover counts as missing: it is a URL we invented from an
   // ISBN, and the endpoint answers with a placeholder as readily as with art.
   const needsCover = primary.coverUrl === undefined || primary.coverIsSpeculative === true;
-  if (primary.source === 'google-books') {
-    return needsCover ? await borrowOReillyCover(primary, get, contributors) : primary;
-  }
+  if (primary.source === 'google-books') return primary;
 
   /**
    * Google is asked whether or not there is a gap to fill, and that is new.
@@ -354,8 +331,7 @@ async function fillGaps(
         )[0]
       : await googleBooks.lookupByIsbn(primary.isbn, get, options.googleBooksKey);
 
-  if (candidate === undefined)
-    return needsCover ? await borrowOReillyCover(primary, get, contributors) : primary;
+  if (candidate === undefined) return primary;
 
   // An ISBN lookup is already proof of identity; a title search is not.
   const sameBook =
@@ -364,12 +340,12 @@ async function fillGaps(
       `${primary.title} ${primary.author ?? ''}`,
       `${candidate.title} ${candidate.author ?? ''}`,
     );
-  if (!sameBook) return needsCover ? await borrowOReillyCover(primary, get, contributors) : primary;
+  if (!sameBook) return primary;
 
   // Confirmed to be this book, which is the bar a contributor has to clear.
   contributors.set('google-books', candidate);
 
-  const filled: BookMetadata = {
+  return {
     ...primary,
     // A confirmed cover from the fallback beats a guessed one from the primary.
     ...(needsCover && candidate.coverUrl !== undefined
@@ -388,43 +364,4 @@ async function fillGaps(
       ? { author: candidate.author }
       : {}),
   };
-
-  return filled.coverUrl === undefined || filled.coverIsSpeculative === true
-    ? await borrowOReillyCover(filled, get, contributors)
-    : filled;
-}
-
-/**
- * A cover from O'Reilly for a book the first two providers know and cannot
- * picture.
- *
- * The gap the fallback above cannot close. *Evals for AI Engineers* is in Open
- * Library, so the ISBN lookup stops there and never reaches a fourth provider —
- * but Open Library's cover for it is a **43-byte placeholder**, Google has no
- * art either, and Apple has never heard of the book. O'Reilly has it at 1200px.
- * Without this the book sits on the shelf as a blank spine while the picture is
- * one request away.
- *
- * Runs only when a cover is still missing or still a guess after everything
- * else, so it costs a request on exactly the books that would otherwise have
- * nothing. Needs an ISBN: this is a by-identifier lookup and a title search here
- * would be borrowing art on a resemblance.
- */
-async function borrowOReillyCover(
-  book: BookMetadata,
-  get: HttpGet,
-  contributors: Contributors,
-): Promise<BookMetadata> {
-  if (book.isbn === undefined || book.source === 'oreilly') return book;
-
-  const candidate = await oreilly.lookupByIsbn(book.isbn, get);
-  if (candidate === undefined) return book;
-
-  // An ISBN lookup is proof of identity, so this record is a contributor even
-  // when it has no cover to lend — O'Reilly's `ourn` is worth recording for a
-  // book it holds whatever the art situation is.
-  contributors.set('oreilly', candidate);
-
-  if (candidate.coverUrl === undefined) return book;
-  return { ...book, coverUrl: candidate.coverUrl, coverIsSpeculative: false };
 }

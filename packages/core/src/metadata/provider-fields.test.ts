@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CAPTURED_ISBN, fixtureHttpGet } from '../test-support.ts';
 import * as appleBooks from './apple-books.ts';
-import type { HttpGet } from './http.ts';
 import * as openLibrary from './open-library.ts';
-import * as oreilly from './oreilly.ts';
+import { toPlainText } from './types.ts';
 
 /**
  * The fields the providers were always sending and the code threw away.
@@ -16,10 +15,6 @@ import * as oreilly from './oreilly.ts';
 
 const openLibraryHit = fixtureHttpGet({
   '/api/books': 'open-library-isbn-hit.json',
-});
-
-const oreillyIsbnHit = fixtureHttpGet({
-  'learning.oreilly.com': 'oreilly-isbn-hit.json',
 });
 
 const appleHit = fixtureHttpGet({ 'itunes.apple.com': 'apple-search-hit.json' });
@@ -45,36 +40,7 @@ describe('Open Library keeps what it always sent', () => {
   });
 });
 
-describe("O'Reilly keeps what it always sent", () => {
-  it('takes publisher, issue date, topics, description and the ourn', async () => {
-    const result = await oreilly.lookupByIsbn('9798341674738', oreillyIsbnHit);
-
-    expect(result?.publisher).toBe("O'Reilly Media, Inc.");
-    // **Verbatim, timestamp and all.** The note keeps what the provider said and
-    // the card renders the first four-digit run — #102 over #97, and this is the
-    // exact value that made the difference.
-    expect(result?.published).toBe('2027-02-25T00:00:00Z');
-    // `topics` is a list of UUIDs; the names live in `topics_payload`.
-    expect(result?.subjects).toEqual(['Engineering']);
-    expect(result?.description).toContain('engineers');
-    // The URN verbatim, not re-derived — and note it wraps `archive_id`, the
-    // identifier CLAUDE.md documents as a trap, **not** the ISBN. That is why
-    // the key is named `oreilly_ourn` and not `oreilly_id`.
-    expect(result?.oreillyOurn).toBe('urn:orm:book:0642572352530');
-  });
-
-  it('strips markup out of a description rather than storing tags', async () => {
-    const result = await oreilly.lookupByIsbn('9798341674738', oreillyIsbnHit);
-
-    expect(result?.description).not.toMatch(/<[a-z/]/i);
-  });
-});
-
 describe('stripping tags takes more than one pass', () => {
-  const withDescription =
-    (description: string): HttpGet =>
-    async () => ({ results: [{ title: 'A Book', description }] });
-
   it.each([
     ['<p>plain</p>', 'plain'],
     // The case CodeQL named (`js/incomplete-multi-character-sanitization`): a
@@ -84,10 +50,11 @@ describe('stripping tags takes more than one pass', () => {
     // Nothing that could open a tag survives at all, which is a stronger claim
     // than "no tags survive" and a much easier one to be sure of.
     ['a < b and c > d', 'a b and c d'],
-  ])('reduces %j to text', async (input, expected) => {
-    const result = await oreilly.lookupByIsbn('9798341674738', withDescription(input));
-
-    expect(result?.description).toBe(expected);
+  ])('reduces %j to text', (input, expected) => {
+    // The stripper every provider description passes through on its way into
+    // `## About`. It was reached through the O'Reilly parser until that provider
+    // was removed (#450); Google and Apple descriptions still depend on it.
+    expect(toPlainText(input)).toBe(expected);
   });
 });
 

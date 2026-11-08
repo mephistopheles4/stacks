@@ -27,9 +27,6 @@ const openLibraryMiss = fixtureHttpGet({
   '/api/books': 'open-library-isbn-miss.json',
   '/search.json': 'open-library-search-miss.json',
   'googleapis.com': 'google-books-quota-exceeded.json',
-  // Reached on every miss path now: O'Reilly is asked whenever neither of the
-  // first two found the book, which is exactly what these fixtures describe.
-  'learning.oreilly.com': 'oreilly-search-miss.json',
 });
 
 describe('ISBN hit', () => {
@@ -108,108 +105,79 @@ describe('fuzzy title search', () => {
   });
 });
 
-describe("O'Reilly, for the books the other three do not have", () => {
-  /** Both of the first two providers come up empty; O'Reilly has the book. */
-  const onlyOReillyHasIt = fixtureHttpGet({
-    '/search.json': 'open-library-search-miss.json',
-    'googleapis.com': 'google-books-quota-exceeded.json',
-    'learning.oreilly.com': 'oreilly-search-hit.json',
-    'itunes.apple.com': '',
+describe("O'Reilly is not a provider (#450)", () => {
+  /**
+   * A recording reader, so a request to O'Reilly shows up in `seen` instead of
+   * throwing on an unmapped URL the way `fixtureHttpGet` does.
+   */
+  function recording(answer: (url: string) => unknown): { get: HttpGet; seen: string[] } {
+    const seen: string[] = [];
+    const get: HttpGet = async (url) => {
+      seen.push(url);
+      return answer(url);
+    };
+    return { get, seen };
+  }
+
+  const asked = (seen: readonly string[]): boolean =>
+    seen.some((url) => isHost(url, OREILLY) || isHost(url, 'api.oreilly.com'));
+
+  it('is not asked for an ISBN every provider misses', async () => {
+    const { get, seen } = recording(() => undefined);
+
+    expect(await lookup(CAPTURED_ISBN, get)).toEqual([]);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(asked(seen)).toBe(false);
   });
 
-  it('finds a book Open Library and Google have never heard of', async () => {
-    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
+  it('is not asked for a title every provider misses', async () => {
+    const { get, seen } = recording(() => undefined);
 
-    expect(best?.title).toBe('Learning AI-Native Software Engineering');
-    expect(best?.author).toBe('Alfonso Graziano');
-    expect(best?.source).toBe('oreilly');
+    expect(await lookup('Learning AI-Native Software Engineering', get)).toEqual([]);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(asked(seen)).toBe(false);
   });
 
-  it('takes the ISBN from the response, not the identifier in the library URL', async () => {
-    // `0642572352530` is O'Reilly's internal archive id. It passes an ISBN-13
-    // check digit while beginning `064`, which no Bookland range assigns — so
-    // reading it out of the URL would write a plausible non-ISBN into a note.
-    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
-
-    expect(best?.isbn).toBe('9798341674738');
-    expect(best?.isbn).not.toBe('0642572352530');
-  });
-
-  it('resolves an ISBN the first two providers do not hold', async () => {
-    // `enrich` searches by a note's ISBN whenever it has one, so without this
-    // path a book O'Reilly had just supplied could never be enriched by it.
-    const byIsbn = fixtureHttpGet({
-      '/api/books': 'open-library-isbn-miss.json',
-      'googleapis.com': 'google-books-quota-exceeded.json',
-      'learning.oreilly.com': 'oreilly-isbn-hit.json',
-      'itunes.apple.com': '',
+  it('is not asked to lend a cover to an Open Library hit that has none', async () => {
+    // The path `borrowOReillyCover` took: Open Library knows the ISBN, holds no
+    // art for it, and Google has nothing either.
+    const hit = readApiFixture('open-library-isbn-hit.json') as Record<
+      string,
+      Record<string, unknown>
+    >;
+    const withoutCover = Object.fromEntries(
+      Object.entries(hit).map(([key, { cover: _removed, ...book }]) => [key, book]),
+    );
+    const { get, seen } = recording((url) => {
+      if (url.includes('/api/books')) return withoutCover;
+      return isHost(url, GOOGLE_BOOKS)
+        ? readApiFixture('google-books-quota-exceeded.json')
+        : undefined;
     });
 
-    const result = await lookupByIsbn('9798341674738', byIsbn);
-    expect(result?.title).toBe('Learning AI-Native Software Engineering');
-    expect(result?.source).toBe('oreilly');
+    const [best] = await lookup(CAPTURED_ISBN, get);
+
+    expect(best?.source).toBe('open-library');
+    expect(best?.coverUrl).toBeUndefined();
+    expect(asked(seen)).toBe(false);
   });
 
-  it('asks the ISBN as a search field, not as its own parameter', async () => {
-    // `isbn=<n>` is ignored by the endpoint and returns the catalogue ranked by
-    // relevance to nothing — 54,423 results, the wrong book first.
-    const seen: string[] = [];
-    const spy: HttpGet = async (url) => {
-      seen.push(url);
-      return undefined;
-    };
-
-    await lookupByIsbn('9798341674738', spy);
-    const oreilly = seen.find((url) => isHost(url, OREILLY));
-    expect(oreilly).toContain('query=9798341674738');
-    expect(oreilly).toContain('field=isbn');
-  });
-
-  it('offers a cover, sized to match Apple rather than to the endpoint maximum', async () => {
-    // The only source for these books: Open Library answers their ISBNs with a
-    // 43-byte placeholder and Apple has never heard of them.
-    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
-
-    expect(best?.coverUrl).toBe(
-      'https://learning.oreilly.com/covers/urn:orm:book:0642572352530/1200w/',
+  it('is not asked after Open Library has already found the book by title', async () => {
+    const { get, seen } = recording((url) =>
+      url.includes('/search.json') ? readApiFixture('open-library-search-hit.json') : undefined,
     );
-    // 2000w exists and is a megabyte; MAX_COVER_EDGE resizes to 512 anyway.
-    expect(best?.coverUrl).not.toContain('2000w');
+
+    await searchByTitle('thinking in systems', get);
+    expect(asked(seen)).toBe(false);
   });
 
-  it('records those bytes as oreilly, so a takedown can name them', async () => {
+  it("still names the bytes of an O'Reilly cover already in a vault", () => {
+    // `cover_source: oreilly` stays in the contract as provenance for notes
+    // written before the provider was removed; nothing writes it any more.
     expect(coverSourceFor('https://learning.oreilly.com/covers/urn:orm:book:123/1200w/')).toBe(
       'oreilly',
     );
-    // Nothing filters on this — it is an index for acting precisely, not a gate.
     expect(COVER_SOURCES).toContain('oreilly');
-  });
-
-  it('asks for books, not videos or courses', async () => {
-    const seen: string[] = [];
-    const spy: HttpGet = async (url) => {
-      seen.push(url);
-      return undefined;
-    };
-
-    await searchByTitle('anything at all', spy);
-    const oreilly = seen.find((url) => isHost(url, OREILLY));
-    expect(oreilly).toContain('formats=book');
-  });
-
-  it('is not consulted when Open Library already found the book', async () => {
-    // The quota argument, applied to a fourth provider: it costs a request only
-    // on the path that is currently failing.
-    const seen: string[] = [];
-    const watched: HttpGet = async (url) => {
-      seen.push(url);
-      return url.includes('/search.json')
-        ? readApiFixture('open-library-search-hit.json')
-        : undefined;
-    };
-
-    await searchByTitle('thinking in systems', watched);
-    expect(seen.some((url) => isHost(url, OREILLY))).toBe(false);
   });
 });
 
@@ -416,9 +384,6 @@ describe('API miss', () => {
 
     expect(seen.some((url) => isHost(url, GOOGLE_BOOKS))).toBe(true);
     expect(seen.some((url) => isHost(url, APPLE))).toBe(true);
-    // The *ask*-order is unchanged: O'Reilly is still only consulted when the
-    // book still has no usable cover, which is a quota decision with a far
-    // larger blast radius than the merge table.
     expect(seen.some((url) => isHost(url, OREILLY))).toBe(false);
   });
 
@@ -575,7 +540,6 @@ describe("Google's title search refuses a volume in another language", () => {
     // Open Library knows nothing, so Google's title search is the primary.
     const primary = fixtureHttpGet({
       '/search.json': 'open-library-search-miss.json',
-      'learning.oreilly.com': 'oreilly-search-miss.json',
       'itunes.apple.com': '',
     });
     return async (url) => (isHost(url, GOOGLE_BOOKS) ? answer : await primary(url));
@@ -584,7 +548,7 @@ describe("Google's title search refuses a volume in another language", () => {
   const TURKISH_ISBN = '9789754345315';
 
   it('refuses the volume when it is not in the reading language', async () => {
-    // Open Library and O'Reilly both miss, so a whole refusal leaves nothing.
+    // Open Library misses, so a whole refusal leaves nothing.
     expect(await lookup('Thinking, Fast and Slow', googleAnswering('tr'))).toEqual([]);
   });
 
@@ -604,7 +568,6 @@ describe("Google's title search refuses a volume in another language", () => {
     };
     const rest = fixtureHttpGet({
       'googleapis.com': 'google-books-volume-translation.json',
-      [OREILLY]: 'oreilly-search-miss.json',
       [APPLE]: '',
     });
     const get: HttpGet = async (url) =>
@@ -624,7 +587,6 @@ describe("Google's title search refuses a volume in another language", () => {
     const malformed = { kind: 'books#volumes', items: [null, 'volume', {}] };
     const rest = fixtureHttpGet({
       '/search.json': 'open-library-search-miss.json',
-      [OREILLY]: 'oreilly-search-miss.json',
       [APPLE]: '',
     });
     const get: HttpGet = async (url) => (isHost(url, GOOGLE_BOOKS) ? malformed : await rest(url));

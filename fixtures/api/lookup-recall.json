@@ -1896,52 +1896,6 @@
    }
   ]
  },
- "https://learning.oreilly.com/api/v2/search/?query=The%20Creative%20Brain%20in%20the%20Age%20of%20Artificial%20Intelligence%3A%20How%20to%20Use%20AI%20Without%20Losing%20Yourself%20Maria%20Ian&field=title&formats=book&limit=5": {
-  "results": [],
-  "facets": {
-   "facet_queries": {
-    "{!ex=format}(format:video AND title_unstemmed:\"Learning Path: .*\")": 0
-   },
-   "facet_fields": {
-    "format": [],
-    "subjects": [],
-    "topic_uuids": [],
-    "publishers_exact": [],
-    "language": [],
-    "sharing_status": [],
-    "expert_playlist": [],
-    "video_classification": [],
-    "certification_name_exact": [],
-    "certification_vendor_name_exact": [],
-    "topics": []
-   },
-   "facet_ranges": {},
-   "facet_intervals": {
-    "average_rating": {
-     "no_stars": 0,
-     "zero_stars": 0,
-     "one_star": 0,
-     "two_stars": 0,
-     "three_stars": 0,
-     "four_stars": 0,
-     "five_stars": 0
-    },
-    "issued": {
-     "last_two_years": 0,
-     "last_year": 0,
-     "last_six_months": 0
-    }
-   },
-   "facet_heatmaps": {}
-  },
-  "total": 0,
-  "meta": {
-   "query_identifier": "7750f991-99d1-4048-ba0a-4338db9f4ce3"
-  },
-  "page": 0,
-  "previous": null,
-  "next": null
- },
  "https://www.googleapis.com/books/v1/volumes/JQ_e0QEACAAJ": {
   "kind": "books#volume",
   "id": "JQ_e0QEACAAJ",
