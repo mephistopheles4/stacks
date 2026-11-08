@@ -163,6 +163,11 @@
       "exclusions": []
     },
     {
+      "name": "packages/site/src/notice",
+      "glob": "packages/site/src/notice/**/*.ts",
+      "exclusions": []
+    },
+    {
       "name": "packages/cli/src",
       "glob": "packages/cli/src/**/*.ts",
       "exclusions": [

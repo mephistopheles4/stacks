@@ -209,6 +209,15 @@
         "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-11-07", "notes": [] }
       }
     },
+    "packages/site/src/notice": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-11-08", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-11-08", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-11-08", "notes": [] }
+      }
+    },
     "packages/cli/src": {
       "ignoredLines": 0,
       "notes": [],

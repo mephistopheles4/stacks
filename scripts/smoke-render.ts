@@ -312,6 +312,7 @@ async function main(): Promise<void> {
       const analytics = await timed('analytics calls (C8, C11)', () =>
         checkAnalyticsCalls(browser, origin, analyticsOn),
       );
+      const notices = await timed('G35 notices (#536)', () => checkNoticePages(browser, origin));
 
       report({
         skipped: pullRequest ? SKIPPED_ON_PULL_REQUESTS : undefined,
@@ -336,6 +337,7 @@ async function main(): Promise<void> {
         tuning,
         readout,
         analytics,
+        notices,
       });
     } finally {
       await browser.close();
@@ -3716,7 +3718,8 @@ async function visit(page: Page, origin: string, path: string): Promise<void> {
   // shelf that never settles is this case's failure, which the loop records.
   const settle = watchSettle(page);
   const started = performance.now();
-  await page.goto(`${origin}${path}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  // A trailing slash: the static server resolves a folder's index only for one.
+  await page.goto(`${origin}${path}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
   const ready = performance.now();
   must(await settle(), `${path} never settled`);
@@ -4982,6 +4985,7 @@ function report(result: {
   tuning: TunerChecked;
   readout: TunerChecked;
   analytics: TunerChecked;
+  notices: LinesAndFailures;
 }): void {
   const {
     skipped,
@@ -5006,6 +5010,7 @@ function report(result: {
     tuning,
     readout,
     analytics,
+    notices,
   } = result;
   const failures: string[] = [
     ...fallback.failures,
@@ -5113,6 +5118,8 @@ function report(result: {
   for (const line of controls.lines) console.log(`  ${line}`);
   console.log('the Ask drawer over a held book (#531)');
   for (const line of drawerCells.lines) console.log(`  ${line}`);
+  console.log('the attribution and privacy notices (#536)');
+  for (const line of notices.lines) console.log(`  ${line}`);
   console.log('the hint, the X and the brand off the book (#553)');
   for (const line of overlap.lines) console.log(`  ${line}`);
   console.log(
@@ -5183,6 +5190,7 @@ function report(result: {
     ...atRest.failures,
     ...controls.failures,
     ...drawerCells.failures,
+    ...notices.failures,
     ...overlap.failures,
     ...lost,
   );
@@ -5425,6 +5433,166 @@ async function checkAnalyticsCalls(
   } finally {
     await context.close();
   }
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * G35, the notices (#536, `notice-modals.md` C5 and C6): the type a notice is read in,
+ * on the two direct pages, with JavaScript off. The modal's cells read the same
+ * properties through the same function, so "equal on the page and in the modal"
+ * is a comparison of two readings and not of two assertions.
+ */
+const NOTICE_MIN_PX = 18;
+const NOTICE_MIN_CONTRAST = 7;
+/** Line-height as a multiple of the font size, at least. */
+const NOTICE_MIN_LEADING = 1.5;
+const NOTICE_VIEWPORTS = [
+  { name: 'desktop 1440x900', width: 1440, height: 900 },
+  { name: 'phone 375x812', width: 375, height: 812 },
+] as const;
+
+/** One element's type, as the browser computes it. */
+interface TypeRead {
+  readonly size: number;
+  readonly leading: number;
+  readonly weight: string;
+  readonly family: string;
+  readonly color: string;
+  /** The first opaque background up the tree, which is what the text is read against. */
+  readonly background: string;
+}
+
+interface NoticeType {
+  readonly p: TypeRead;
+  readonly h1: TypeRead;
+  /** Absent on a notice with no sub-headings, which the privacy notice is. */
+  readonly h2: TypeRead | null;
+  readonly a: TypeRead;
+}
+
+/** The type of the first `p`, `h1`, `h2` and `a` under `root`, as one expression for the page. */
+function readNoticeType(root: string): string {
+  return `(() => {
+    const root = document.querySelector(${JSON.stringify(root)});
+    if (root === null) return null;
+    const read = (selector) => {
+      const element = root.querySelector(selector);
+      if (element === null) return null;
+      const style = getComputedStyle(element);
+      let background = 'rgba(0, 0, 0, 0)';
+      for (let node = element; node !== null; node = node.parentElement) {
+        const value = getComputedStyle(node).backgroundColor;
+        if (!/rgba\\(.*, 0\\)$/.test(value) && value !== 'transparent') { background = value; break; }
+      }
+      return {
+        size: parseFloat(style.fontSize),
+        leading: parseFloat(style.lineHeight),
+        weight: style.fontWeight,
+        family: style.fontFamily,
+        color: style.color,
+        background,
+      };
+    };
+    const found = { p: read('p'), h1: read('h1'), h2: read('h2'), a: read('a') };
+    return found.p === null || found.h1 === null || found.a === null ? null : found;
+  })()`;
+}
+
+function channels(colour: string): [number, number, number] {
+  const [r = 0, g = 0, b = 0] = (colour.match(/[\d.]+/g) ?? []).map(Number);
+  return [r, g, b];
+}
+
+function luminance(colour: string): number {
+  const [r, g, b] = channels(colour).map((value) => {
+    const s = value / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  }) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG contrast ratio of two computed colours. */
+function contrastRatio(a: string, b: string): number {
+  const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (high + 0.05) / (low + 0.05);
+}
+
+/** What is wrong with a notice's type, one sentence each; empty when it reads well. */
+function noticeTypeFailures(where: string, type: NoticeType | null): string[] {
+  if (type === null) return [`${where}: no paragraph, heading and link to read`];
+  const failures: string[] = [];
+  const { p } = type;
+  if (p.size < NOTICE_MIN_PX) {
+    failures.push(`${where}: body text is ${String(p.size)}px, under ${String(NOTICE_MIN_PX)}px`);
+  }
+  const ratio = contrastRatio(p.color, p.background);
+  if (ratio < NOTICE_MIN_CONTRAST) {
+    failures.push(
+      `${where}: body text is ${ratio.toFixed(2)}:1 on its background, under ${String(NOTICE_MIN_CONTRAST)}:1`,
+    );
+  }
+  if (p.leading < p.size * NOTICE_MIN_LEADING) {
+    failures.push(
+      `${where}: line-height ${String(p.leading)}px is under ${String(NOTICE_MIN_LEADING)} times the size`,
+    );
+  }
+  return failures;
+}
+
+/** What each direct page must say, so a page that lost its text is not read as well-typed. */
+const NOTICE_PAGES = [
+  { path: '/attribution', says: 'Apple Books is a service mark of Apple Inc.' },
+  { path: '/privacy', says: 'Questions pass through Cloudflare' },
+] as const;
+
+/**
+ * C5 on the pages, and C6: both direct pages, at both widths, with JavaScript
+ * off — the type, the text, the way back and `noindex`.
+ */
+async function checkNoticePages(browser: Browser, origin: string): Promise<LinesAndFailures> {
+  const failures: string[] = [];
+  const lines: string[] = [];
+  const context = await browser.createBrowserContext();
+  try {
+    for (const { path, says } of NOTICE_PAGES) {
+      for (const viewport of NOTICE_VIEWPORTS) {
+        const where = `notice ${path}, ${viewport.name}`;
+        const page = await context.newPage();
+        try {
+          await page.setJavaScriptEnabled(false);
+          await page.setViewport({ width: viewport.width, height: viewport.height });
+          // A trailing slash: the static server resolves a folder's index only for one.
+          await page.goto(`${origin}${path}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+          const type = (await page.evaluate(readNoticeType('main'))) as NoticeType | null;
+          failures.push(...noticeTypeFailures(where, type));
+          const read = (await page.evaluate(`(() => ({
+            text: document.querySelector('main')?.textContent ?? '',
+            back: document.querySelector('main a[href="/"]') !== null,
+            robots: document.querySelector('meta[name="robots"]')?.getAttribute('content') ?? '',
+            sideways: document.documentElement.scrollWidth > innerWidth,
+          }))()`)) as { text: string; back: boolean; robots: string; sideways: boolean };
+          if (!read.text.includes(says)) failures.push(`${where}: the notice text is not there`);
+          if (!read.back) failures.push(`${where}: no way back to the shelf`);
+          if (!/noindex/.test(read.robots)) failures.push(`${where}: no noindex`);
+          if (read.sideways) failures.push(`${where}: the page scrolls sideways`);
+          if (type !== null) {
+            const ratio = contrastRatio(type.p.color, type.p.background).toFixed(2);
+            lines.push(
+              `${path.padEnd(13)} ${viewport.name.padEnd(17)} body ${String(type.p.size)}px, ${ratio}:1, ` +
+                `line ${String(type.p.leading)}px   text ${read.text.includes(says) ? 'there' : 'MISSING'}   ` +
+                `${/noindex/.test(read.robots) ? 'noindex' : 'INDEXABLE'}`,
+            );
+          }
+        } finally {
+          await page.close();
+        }
+      }
+    }
+  } finally {
+    await context.close();
+  }
+  return { lines, failures };
 }
 
 /** Total gzip size of the built site scripts, for the pull request record of on versus off. */
