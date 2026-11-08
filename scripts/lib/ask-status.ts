@@ -3,9 +3,11 @@
  * reads, what it asks Workers Observability, and how the replies become a day's totals.
  * Nothing here touches the network or the disk, so the suite holds all of it.
  *
- * ⚠️ **The reply shape is Cloudflare's documented one, not a captured one.** Every reply is
- * checked against it and refused on any difference, so a misread reply prints a refusal
- * rather than becoming a wrong day in the trend store, where a record is never corrected.
+ * ⚠️ **The reply shape is Cloudflare's documented one, corrected where the first deployed
+ * day's replies differed (#548: `groupKey`, and how several grouped keys drop lines).** Every
+ * reply is checked against it and refused on any difference, so a misread reply prints a
+ * refusal rather than becoming a wrong day in the trend store, where a record is never
+ * corrected.
  */
 import { resolve } from 'node:path';
 import { DAILY_LIMIT } from '../../packages/ask/src/limits.ts';
@@ -158,9 +160,19 @@ interface Query {
 const count: Calculation = { alias: 'lines', operator: 'count' };
 const sum = (key: string): Calculation => ({ alias: key, operator: 'sum', key });
 
-/** The six questions a day is asked. Each names its own fields; none reads a line's text. */
+/**
+ * The eight questions a day is asked. Each names its own fields; none reads a line's text.
+ *
+ * ⚠️ **A grouped key other than `outcome` must be one the query requires to exist.** Grouped
+ * by several keys, Cloudflare counts only the lines that carry every one of them, and drops
+ * the rest without saying so: measured live on 2026-11-08 (#548), `outcome`, `reason` and
+ * `limit` at once answered nothing for a day of 4,323 lines. So the outcomes are counted on
+ * `outcome` alone, and `reasons` and `limits` add the detail for the lines that carry it.
+ */
 export const QUERIES = {
-  outcomes: { groupBys: ['outcome', 'reason', 'limit'], exists: [], calculations: [count] },
+  outcomes: { groupBys: ['outcome'], exists: [], calculations: [count] },
+  reasons: { groupBys: ['outcome', 'reason'], exists: ['reason'], calculations: [count] },
+  limits: { groupBys: ['outcome', 'limit'], exists: ['limit'], calculations: [count] },
   questions: {
     groupBys: ['question'],
     exists: ['question'],
@@ -226,7 +238,15 @@ interface Aggregate {
 
 const REPLY_KEYS = new Set(['success', 'errors', 'messages', 'result']);
 const CALCULATION_KEYS = new Set(['calculation', 'alias', 'aggregates', 'series']);
-const AGGREGATE_KEYS = new Set(['count', 'interval', 'sampleInterval', 'value', 'groups']);
+/** `groupKey` is not in the published schema; every grouped aggregate carried one live (#548). */
+const AGGREGATE_KEYS = new Set([
+  'count',
+  'interval',
+  'sampleInterval',
+  'value',
+  'groups',
+  'groupKey',
+]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -304,6 +324,9 @@ function readAggregates(raw: unknown, query: Query, where: string): Aggregate[] 
   const read = raw.map((entry: unknown) => {
     if (!isRecord(entry)) throw new ShapeError(`${where} holds an aggregate that is not an object`);
     only(entry, AGGREGATE_KEYS, where);
+    if (entry['groupKey'] !== undefined && typeof entry['groupKey'] !== 'string') {
+      throw new ShapeError(`${where} holds a group key that is not a string`);
+    }
     if (!finite(entry['value']) || !finite(entry['count'])) {
       throw new ShapeError(`${where} holds a value that is not a number`);
     }
@@ -379,25 +402,50 @@ const single = (aggregates: readonly Aggregate[] | undefined): number | undefine
 const label = (value: string | number | boolean | undefined): string | undefined =>
   value === undefined || value === '' ? undefined : String(value);
 
-/** The day's totals from its six replies, or a `ShapeError` if any reply is not as documented. */
+/**
+ * Each outcome's lines, counted once: the `reasons` and `limits` rows for the lines that carry
+ * a detail, and a plain row for the rest of that outcome. Detail that outnumbers its outcome,
+ * or names one the day does not hold, is refused rather than netted off.
+ */
+function outcomeCounts(read: Record<QueryName, Map<string, Aggregate[]>>): OutcomeCount[] {
+  const plain = new Map<string, number>();
+  for (const a of read.outcomes.get('lines') ?? []) {
+    const outcome = label(a.groups.get('outcome'));
+    if (outcome === undefined) {
+      throw new ShapeError('the outcomes reply holds a line with no outcome');
+    }
+    plain.set(outcome, (plain.get(outcome) ?? 0) + a.value);
+  }
+  const detailed: OutcomeCount[] = [];
+  for (const [name, key] of [
+    ['reasons', 'reason'],
+    ['limits', 'limit'],
+  ] as const) {
+    for (const a of read[name].get('lines') ?? []) {
+      const outcome = label(a.groups.get('outcome'));
+      const detail = label(a.groups.get(key));
+      if (outcome === undefined || detail === undefined) {
+        throw new ShapeError(`the ${name} reply holds a line with no ${key}`);
+      }
+      const left = (plain.get(outcome) ?? 0) - a.value;
+      if (left < 0) throw new ShapeError(`the ${name} reply counts more lines than its outcome`);
+      plain.set(outcome, left);
+      detailed.push({ outcome, [key]: detail, count: a.value });
+    }
+  }
+  const rest = [...plain]
+    .filter(([, count]) => count > 0)
+    .map(([outcome, count]) => ({ outcome, count }));
+  return [...rest, ...detailed];
+}
+
+/** The day's totals from its eight replies, or a `ShapeError` if any reply is not as documented. */
 export function dayTotals(replies: Readonly<Record<QueryName, unknown>>): DayTotals {
   const read = Object.fromEntries(
     (Object.keys(QUERIES) as QueryName[]).map((name) => [name, readReply(name, replies[name])]),
   ) as Record<QueryName, Map<string, Aggregate[]>>;
 
-  const outcomes = (read.outcomes.get('lines') ?? []).map((a) => {
-    const outcome = label(a.groups.get('outcome'));
-    if (outcome === undefined)
-      throw new ShapeError('the outcomes reply holds a line with no outcome');
-    const reason = label(a.groups.get('reason'));
-    const limit = label(a.groups.get('limit'));
-    return {
-      outcome,
-      ...(reason !== undefined && { reason }),
-      ...(limit !== undefined && { limit }),
-      count: a.value,
-    };
-  });
+  const outcomes = outcomeCounts(read);
 
   const byQuestion = (alias: string): Map<number, number> => {
     const map = new Map<number, number>();

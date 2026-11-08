@@ -23,9 +23,9 @@ const HOUR = 3_600_000;
 const NOV_5 = Date.UTC(2026, 10, 5);
 
 /**
- * ⚠️ **Documented shape, not captured.** Built from Cloudflare's published schema for the
- * telemetry query's `calculations` view; no reply from the live API has been seen. The
- * owner's first run (spec C10) is what proves it, and until then `ask:status` writes nothing.
+ * Cloudflare's published schema for the telemetry query's `calculations` view, corrected by
+ * the first deployed day's replies (#548, read 2026-11-08 in structure, never in content): a
+ * grouped aggregate carries a `groupKey` string beside its `groups`.
  */
 const aggregate = (value: number, groups?: Record<string, string | number | boolean>) => ({
   count: value,
@@ -34,6 +34,7 @@ const aggregate = (value: number, groups?: Record<string, string | number | bool
   value,
   ...(groups !== undefined && {
     groups: Object.entries(groups).map(([key, v]) => ({ key, value: v })),
+    groupKey: Object.values(groups).map(String).join(','),
   }),
 });
 const calc = (alias: string, aggregates: unknown[]) => ({
@@ -63,12 +64,20 @@ function fixtureDay(): Record<QueryName, unknown> {
     outcomes: reply(
       calc('lines', [
         aggregate(12, { outcome: 'ai' }),
-        aggregate(2, { outcome: 'search-ai-failed', reason: 'timeout' }),
-        aggregate(4, { outcome: 'refused-limit', limit: 'minute' }),
-        aggregate(1, { outcome: 'refused-limit', limit: 'error' }),
+        aggregate(2, { outcome: 'search-ai-failed' }),
+        aggregate(5, { outcome: 'refused-limit' }),
         aggregate(1, { outcome: 'refused-secret' }),
         aggregate(1, { outcome: 'daily-pass' }),
         aggregate(3, { outcome: 'health-down' }),
+      ]),
+    ),
+    reasons: reply(
+      calc('lines', [aggregate(2, { outcome: 'search-ai-failed', reason: 'timeout' })]),
+    ),
+    limits: reply(
+      calc('lines', [
+        aggregate(4, { outcome: 'refused-limit', limit: 'minute' }),
+        aggregate(1, { outcome: 'refused-limit', limit: 'error' }),
       ]),
     ),
     questions: reply(calc('lines', reaching), calc('neurons', neuronsByQuestion)),
@@ -144,6 +153,18 @@ describe('the queries (spec S3)', () => {
       });
     }
   });
+
+  it('requires every key it groups by, outcome aside, so no event is dropped unseen', () => {
+    // Measured live on 2026-11-08 (#548): grouped by outcome, reason and limit at once, a day
+    // with 4,323 lines answered no aggregate at all, since no line carries all three. Every
+    // line carries `outcome`; any other grouped key must be one the query filters on.
+    for (const name of Object.keys(QUERIES) as QueryName[]) {
+      const query = QUERIES[name];
+      for (const key of query.groupBys) {
+        if (key !== 'outcome') expect(query.exists, `${name} groups by ${key}`).toContain(key);
+      }
+    }
+  });
 });
 
 describe("a day's totals from the replies (spec C6)", () => {
@@ -168,6 +189,25 @@ describe("a day's totals from the replies (spec C6)", () => {
     expect(totals.reaching.get(30)).toBe(0);
     expect(totals.reaching.size).toBe(30);
     expect(totals.neuronsByBand).toEqual({ '1-10': 600, '11-20': 100, '21-30': 0 });
+    expect(totals.outcomes).toContainEqual({ outcome: 'refused-limit', limit: 'minute', count: 4 });
+    expect(totals.outcomes).toContainEqual({ outcome: 'refused-limit', limit: 'error', count: 1 });
+    // Every line is counted once: the detail rows replace their outcome's plain count.
+    expect(totals.outcomes.reduce((acc, o) => acc + o.count, 0)).toBe(24);
+    expect(totals.outcomes.filter((o) => o.outcome === 'refused-limit')).toHaveLength(2);
+  });
+
+  it("keeps an outcome's lines that carry no reason or limit as a plain count", () => {
+    const day = fixtureDay();
+    (
+      day.outcomes as { result: { calculations: { aggregates: unknown[] }[] } }
+    ).result.calculations[0]!.aggregates[1] = aggregate(3, { outcome: 'search-ai-failed' });
+    const totals = dayTotals(day);
+    expect(totals.outcomes).toContainEqual({ outcome: 'search-ai-failed', count: 1 });
+    expect(totals.outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      reason: 'timeout',
+      count: 2,
+    });
   });
 
   it('prints the figures the owner reads, and never a reply body', () => {
@@ -308,6 +348,37 @@ describe("a day's totals from the replies (spec C6)", () => {
         void ((
           day.outcomes as { result: { calculations: { aggregates: unknown[] }[] } }
         ).result.calculations[0]!.aggregates[0] = aggregate(1, { outcome: 'ai', visitor: 'x' })),
+    ],
+    [
+      'a group key that is not a string',
+      (day) =>
+        void Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[0]!, {
+          groupKey: 1,
+        }),
+    ],
+    [
+      'more reason lines for an outcome than the outcome has',
+      (day) =>
+        void (at(day, 'reasons').result.calculations[0]!.aggregates[0] = aggregate(3, {
+          outcome: 'search-ai-failed',
+          reason: 'timeout',
+        })),
+    ],
+    [
+      'a reason line for an outcome the day does not hold',
+      (day) =>
+        void (at(day, 'limits').result.calculations[0]!.aggregates[0] = aggregate(1, {
+          outcome: 'refused-data',
+          limit: 'minute',
+        })),
+    ],
+    [
+      'a reason line with no reason',
+      (day) =>
+        void (at(day, 'reasons').result.calculations[0]!.aggregates[0] = aggregate(2, {
+          outcome: 'search-ai-failed',
+          reason: '',
+        })),
     ],
     [
       'a reply at the group limit, possibly cut off',

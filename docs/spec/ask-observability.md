@@ -118,6 +118,19 @@ zeros, its sample intervals 0 too, which the first check refused as sampled. An 
 with a count of 0 now reads as no events. Grouped replies with data, `usage.neurons` and the
 comparison with the gateway's cost wait for a deployed day.
 
+**First deployed day (C10's second half, #548), read 2026-11-08 in structure and counts,
+never in content:** both days were refused. Two differences, both fixed. Every grouped
+aggregate carries a **`groupKey`** string beside `groups`, which the schema does not list.
+And **grouped by several keys, a query counts only the lines carrying all of them**:
+`outcome`, `reason` and `limit` at once answered no aggregate for 2026-11-07, while
+`outcome` alone answered 4,323 lines. So outcomes are now three queries, eight in all:
+`outcomes` on `outcome` alone, and `reasons` and `limits`, each requiring its key, giving
+the detail; an outcome's lines with no detail stay a plain count, and detail outnumbering
+its outcome is refused. Every spending line that day carried `neurons`. **Open:**
+2026-11-07's `health-up` count came back with a sample interval of 1.002 though
+`head_sampling_rate` is 1, every other count at exactly 1, so that day is still refused
+as sampled.
+
 **Records, only when asked.** With `--record` it also writes one OpenMetrics record
 per day to `.trend/local/<day>-ask.prom`, where `<day>` is the UTC midnight that
 starts it, in unix seconds. `pnpm trend:sync` already imports every `.trend/local/`
@@ -140,7 +153,7 @@ constant with its change date: 3 days before 2026-12-01, 7 from then. A day
 - its start is **later than** now minus the retention, so the oldest, partly aged-out
   day is skipped;
 - it has **no file** already: a day is never rewritten;
-- all six queries were accepted, and each reply passed the shape check and the
+- all eight queries were accepted, and each reply passed the shape check and the
   group-limit check.
 
 So the owner runs it at least every 2 days now, and every 6 from December 1. A
