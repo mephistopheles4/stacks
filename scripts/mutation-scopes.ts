@@ -2,11 +2,11 @@
  * One mutation run, scored per declared scope.
  *
  *     pnpm mutation:run          # produces artifacts/stryker/current/mutation.json
- *     pnpm mutation:score        # this file: turns that into nine numbers
+ *     pnpm mutation:score        # this file: turns that into ten numbers
  *     pnpm mutation:score --markdown   # the nightly's job summary, as Markdown
  *
  * Stryker reports **one** score for whatever `mutate` matched, and `mutate` is a
- * flat glob list — so the run cannot tell you which of the nine declared scopes
+ * flat glob list — so the run cannot tell you which of the ten declared scopes
  * moved. That is the number the whole rollout is about, so it is computed from
  * `stryker.scopes.json` and the JSON report rather than read off a headline.
  *

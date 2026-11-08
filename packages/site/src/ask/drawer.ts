@@ -1,4 +1,6 @@
 import { trackAsk } from '../analytics/events.ts';
+import { NOTICE_LINK_SELECTOR } from '../notice/links.ts';
+import { noticeIsOpen } from '../notice/open.ts';
 import { onHeld, requestPickUp } from './bridge.ts';
 import { answerWith, askLibrary, type AskResult } from './client.ts';
 import { createOutsideClick, escapeTakenBy, type CloseReason } from './close.ts';
@@ -85,6 +87,10 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   window.addEventListener(
     'keydown',
     (event) => {
+      // A notice open over the shelf takes this Escape (notice-modals.md N8). Both tests,
+      // because the modal's listener may run before or after this one: after, it is still
+      // open; before, it has closed and marked the key handled.
+      if (noticeIsOpen(document) || event.defaultPrevented) return;
       if (!escapeTakenBy(open, event.key)) return;
       event.preventDefault();
       hide('escape');
@@ -93,8 +99,13 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   );
 
   const outside = createOutsideClick();
+  // A link to a notice counts as inside (N9): opening Attribution from the shelf with the
+  // drawer open must leave the drawer open.
   const inside = (target: EventTarget | null): boolean =>
-    target instanceof Node && (panel.contains(target) || launcher.contains(target));
+    target instanceof Node &&
+    (panel.contains(target) ||
+      launcher.contains(target) ||
+      (target instanceof Element && target.closest(NOTICE_LINK_SELECTOR) !== null));
   document.addEventListener(
     'pointerdown',
     (event) => {
@@ -105,6 +116,13 @@ export function mountAsk(ui: AskElements): { open(): void; close(reason: CloseRe
   document.addEventListener(
     'pointerup',
     (event) => {
+      // With a notice open the press is the modal's: its backdrop closes on `click`, which
+      // follows this, so the drawer always sees the modal still open.
+      if (noticeIsOpen(document)) {
+        // Let the press end here, so it cannot count toward a later click.
+        outside.up(event.clientX, event.clientY, true);
+        return;
+      }
       if (open && outside.up(event.clientX, event.clientY, inside(event.target))) {
         // The click closed the drawer and that is all it does: the shelf sees it
         // marked, and does not put a held book back.

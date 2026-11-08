@@ -5,7 +5,8 @@ import { analyticsOn } from '../analytics/on.ts';
 import AnalyticsStart from './AnalyticsStart.astro';
 
 // A page of notice text: the shelf's palette, no canvas, and `noindex`. Shared by `/attribution`
-// and `/privacy`, so the two are one layout and one style and cannot drift.
+// and `/privacy`, so the two are one layout and cannot drift. The text and its type are the
+// notice components', `AttributionNotice` and `PrivacyNotice`, which the modal over the shelf uses too.
 //
 // Deliberately **no canvas**: this is a page of legal text, and a WebGL scene
 // behind it would be the most prominent element on a page whose entire purpose
@@ -60,41 +61,21 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
   body.notice {
     margin: 0;
     background: #1a1613;
-    color: #f2e8dc;
-    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-    line-height: 1.6;
   }
 
+  /*
+    Layout only. The type the notice is read in (size, colour, headings, links) is
+    `NoticeBody`'s, shared with the modal over the shelf (docs/spec/notice-modals.md N12): a rule
+    here would out-rank it on this page alone and the two would drift.
+  */
   body.notice main {
-    max-width: 34rem;
+    max-width: 40rem;
     margin: 0 auto;
     padding: clamp(2rem, 8vw, 5rem) clamp(1rem, 4vw, 2.5rem);
   }
 
-  body.notice h1 {
-    font-family:
-      'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
-    font-size: clamp(1.5rem, 4vw, 2.25rem);
-    font-weight: 500;
-    letter-spacing: -0.02em;
-  }
-
-  body.notice h2 {
-    margin-top: 2rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #c9b8a4;
-  }
-
-  body.notice p {
-    color: #a89684;
-  }
-
-  body.notice a {
-    color: #c9b8a4;
-  }
-
-  body.notice .back {
+  /* `main` in the selector lifts it over `NoticeBody`'s paragraph margin (0,2,1). */
+  body.notice main .back {
     margin-top: 3rem;
   }
 </style>

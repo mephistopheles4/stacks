@@ -1,68 +1,19 @@
 ---
+import AttributionNotice from '../components/AttributionNotice.astro';
 import NoticePage from '../components/NoticePage.astro';
 
-// The site's second page, and its first legal-notice surface. The layout, the `noindex` and the
-// style are `NoticePage`'s, shared with `/privacy`.
+// The site's second page, and its first legal-notice surface. The layout and the `noindex` are
+// `NoticePage`'s; the text and its type are `AttributionNotice`'s, shared with the modal over
+// the shelf (docs/spec/notice-modals.md).
 ---
 
 <NoticePage title="Attribution — Stacks" description="Where this shelf's book data comes from.">
-      <h1>Attribution</h1>
-
-      <p>
-        Book data on this shelf comes from four catalogues. Nothing here is
-        affiliated with any of them.
-      </p>
-
-      <h2>Google</h2>
-      <p>
-        Book data from Google Books. The <em>powered by Google</em> graphic is
-        displayed on the shelf itself, and every book Google contributed to
-        carries a link back to its Google Books page.
-      </p>
-
-      <h2>Apple</h2>
-      <!--
-        ⚠️ **Two sentences, where #106 decided one — and the condition it
-        attached is what fired.**
-
-        §7.1's governing sentence is "List only the trademarks actually used in
-        your materials." Its three published variants are all scoped to the
-        *badge*; the card locked the **icon**, for which Apple publishes no
-        variant, so #106 dropped the Apple-logo sentence — and wrote the
-        condition out in as many words: *"If the vendored icon artwork turns out
-        to carry the Apple logo, that sentence returns; that is a check on the
-        asset, not a reopened decision."*
-
-        The mark that shipped is the Apple logo silhouette. So it returns.
-      -->
-      <p>
-        The Apple logo is a trademark of Apple Inc., registered in the U.S. and
-        other countries. Apple Books is a service mark of Apple Inc.
-      </p>
-
-      <h2>Ask the library</h2>
-      <p>
-        How the Ask the library box treats your questions, and how this site counts visits, is on the
-        <a href="/privacy">privacy page</a>.
-      </p>
-
-      <h2>Credits</h2>
-      <!--
-        Manners rather than compliance: neither Open Library nor O'Reilly
-        requires attribution that any source read has found. O'Reilly is named
-        although its mark is never rendered — it is a contributor the vault
-        records, and a credits line is prose rather than a link, so the 403 its
-        URL returns does not reach it.
-      -->
-      <p>
-        Book metadata and cover art from Open Library, Google Books, Apple Books
-        and O&rsquo;Reilly.
-      </p>
-
-      <!--
-        The site has no navigation, no header link and nothing that has ever gone
-        anywhere, so a browser back button is not a way back for someone who
-        arrived here directly.
-      -->
-      <p class="back"><a href="/">Back to the shelf</a></p>
+  <AttributionNotice>
+    <!--
+      The site has no navigation, no header link and nothing that has ever gone
+      anywhere, so a browser back button is not a way back for someone who
+      arrived here directly.
+    -->
+    <p class="back"><a href="/">Back to the shelf</a></p>
+  </AttributionNotice>
 </NoticePage>

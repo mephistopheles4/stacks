@@ -94,11 +94,11 @@ for (const row of rows) {
   );
 }
 
-// ⚠️ The nine scope rows do not sum to the tree row, and that is deliberate: a
+// ⚠️ The ten scope rows do not sum to the tree row, and that is deliberate: a
 // clone spanning two scopes is counted by both, because a clone is a relation
 // and a relation does not partition. See ADR-0072.
 console.log(
-  '\nThe nine scope rows do not sum to a repository total — a cross-scope clone is counted\n' +
+  '\nThe ten scope rows do not sum to a repository total — a cross-scope clone is counted\n' +
     'by both scopes it touches. The whole-tree row is the one nothing can shrink.',
 );
 

@@ -43,6 +43,16 @@ export function isShareable(site: URL | undefined): boolean {
   return site !== undefined;
 }
 
+/**
+ * What a notice's text (`components/AttributionNotice.astro`, `PrivacyNotice.astro`) is given when it
+ * sits in the modal: an id for its heading, which the dialog's `aria-labelledby` names, and the
+ * `tabindex` that lets a swap focus that heading. The pages pass neither.
+ */
+export interface NoticeHeadingProps {
+  readonly headingId?: string;
+  readonly tabindex?: number;
+}
+
 /** What a notice page (`components/NoticePage.astro`) is given: its title and its meta description. */
 export interface NoticeProps {
   readonly title: string;

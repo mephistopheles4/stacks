@@ -126,6 +126,15 @@ of its own it costs nothing.
 footer and no scroll, so a modal is in-page machinery on a page whose chrome is
 otherwise inert, and a new Astro page is the shape the constraint already names.
 
+**Revised 2026-11-08 ([#536](https://github.com/mephistopheles4/stacks/issues/536),
+[ADR-0146](../adr/0146-the-notices-open-in-one-modal-over-the-shelf.md)): the route stays and a
+modal is added on top.** The shelf's Attribution link now opens the same notice in a native
+`<dialog>` over the shelf, because a visitor who leaves the shelf loses a held book and the Ask
+conversation, which lives in a page variable. `/attribution` is unchanged as a page, `noindex`
+and working without script; the link is still a plain link, and a failure to open the modal
+leaves it to navigate. The text is one copy, shared by the page and the modal
+(`docs/spec/notice-modals.md`).
+
 ---
 
 ## 3. Apple's credit line — and why it is one sentence, not two
@@ -188,6 +197,12 @@ phone is the same — and an occluded *paragraph* is hidden text where an occlud
 **The basis that holds:** *occluded by a dismissible, non-modal overlay is not
 the same as conditionally rendered.* The element is in the DOM and displayed on
 load; the sheet is one gesture from dismissal and swaps rather than stacks.
+
+**The basis above does not cover a modal.** The word *non-modal* describes the card's sheet, and
+it is not widened to the notice modal (#536). The modal case is accepted separately, as residual
+R6 of `notice-modals.md` (the lead's decision 302), on these grounds: the graphic is in the DOM
+and displayed on load, the modal is one gesture from dismissal (its close button, Escape, a click
+on the backdrop), and while it is open the page behind it, the graphic with it, is inert.
 
 ⚠️ **The residual, stated rather than smoothed:** while a card is open on a
 phone, **no Google attribution is on screen at all**. The graphic is occluded and

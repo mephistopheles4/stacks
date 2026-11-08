@@ -1,0 +1,64 @@
+---
+// The type a notice is read in (docs/spec/notice-modals.md N12), for the two direct pages and
+// for the modal over the shelf, so the one text is drawn alike in both.
+//
+// An Astro scoped style cannot reach text that arrives through a slot, so the rules below go
+// through `:global()` under this component's own class. That also lifts them above a host
+// page's global rules: `.notice-body :global(p)` is 0,2,1 where `NoticePage`'s old
+// `body.notice p` was 0,1,2. The shelf page's own global `h1` reaches the modal's heading too,
+// so every property it sets is declared here as well, and nothing is left to it.
+//
+// Markup and styles only: the sizes and colours are what `smoke-render`'s notice cell reads
+// (18px, 7:1), and this file is where they live.
+---
+
+<div class="notice-body"><slot /></div>
+
+<style>
+  .notice-body {
+    color: #c9b8a4;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+
+  .notice-body :global(h1) {
+    margin: 0 0 1.25rem;
+    color: #f2e8dc;
+    font-family:
+      'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  .notice-body :global(h2) {
+    margin: 2rem 0 0.25rem;
+    color: #e0d2c0;
+    font-family: inherit;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: normal;
+  }
+
+  .notice-body :global(p) {
+    max-width: 65ch;
+    margin: 0 0 1rem;
+    color: #c9b8a4;
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+
+  .notice-body :global(a) {
+    color: #e8dccd;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .notice-body :global(a:hover),
+  .notice-body :global(a:focus-visible) {
+    color: #fff4e6;
+  }
+</style>

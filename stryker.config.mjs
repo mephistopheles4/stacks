@@ -11,8 +11,8 @@ import { readFileSync } from 'node:fs';
  * on every pull request (G70, docs/commands.md), so a change here that breaks
  * the suite inside the sandbox turns `gates` red.
  *
- * The nine scopes and their exclusions live in `stryker.scopes.json`, because
- * a flat `mutate` array cannot say which of nine populations a glob belongs to
+ * The ten scopes and their exclusions live in `stryker.scopes.json`, because
+ * a flat `mutate` array cannot say which of ten populations a glob belongs to
  * and every exclusion owes a named mechanism (or, for one dated case, the exception of ADR-0134). `mutate` is derived from it below.
  */
 
