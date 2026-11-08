@@ -99,13 +99,23 @@ export function judgeAnalyticsCalls(walk: AnalyticsWalk): string[] {
   return failures;
 }
 
-/** Requests to any host other than the page itself, for C11's count of zero. */
+/**
+ * The Ask drawer's Turnstile script host. A build with `PUBLIC_TURNSTILE_SITE_KEY`
+ * set loads it whatever analytics says, and `deploy:site` builds the gates with
+ * the real `.env`, so counting it failed every deploy since #562. C11 asks
+ * whether analytics adds a host; this one predates analytics. Matched as the
+ * exact host, so a subdomain, a look-alike or another port still counts.
+ */
+const TURNSTILE_HOST = 'challenges.cloudflare.com';
+
+/** Requests to any host other than the page itself and Turnstile's, for C11's count of zero. */
 export function foreignRequests(urls: readonly string[], pageOrigin: string): string[] {
   const home = new URL(pageOrigin).host;
   return urls.filter((url) => {
     if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:'))
       return false;
-    return new URL(url).host !== home;
+    const { host } = new URL(url);
+    return host !== home && host !== TURNSTILE_HOST;
   });
 }
 
