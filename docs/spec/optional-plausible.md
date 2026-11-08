@@ -119,6 +119,11 @@ export function attempted(): readonly { name: string; book?: string }[];
 export function scrubUrl(href: string): string;
 ```
 
+> **Amended by [ADR-0139](../adr/0139-optional-plausible-direct-to-plausible-io.md):** as built,
+> `startAnalytics(where)` takes no `domain` parameter; it reads the build literal, so Rollup can
+> fold the off branch, and `startWith(where, domain)` is the seam a test passes its own through.
+> `init` leaves `customProperties` unset, because an empty object adds an empty `p` to every request.
+
 - **The tracker is loaded by a dynamic `import()` inside `if (domain)`,** where `domain`
   is the argument or the build literal.
 - **`attempted()` records each call** to `trackBook` or `trackAsk`, by name and `book`, in
@@ -224,6 +229,14 @@ export function scrubUrl(href: string): string;
   `{analyticsOn && <AnalyticsStart />}`, with `analyticsOn` read from S3's literal through
   `analytics/on.ts`, never `switch.ts` (S3). The build session confirms that Astro emits
   no script for a component that is not rendered; S5's clause checks it.
+
+> **Amended by [ADR-0139](../adr/0139-optional-plausible-direct-to-plausible-io.md):** the
+> Plausible paragraph below also says "how long they stay and how far they scroll", because
+> the pinned tracker sends an engagement request and has no option to stop it. The page's
+> meta description and the `/attribution` sentence that points to it say the page covers how
+> the site counts visits. The two `{analyticsOn && ...}` conditionals are a recorded exception
+> to the no-logic-in-`.astro` rule.
+
 - **`/privacy`** gains two paragraphs, the Plausible one as `components/PlausibleNotice.astro`
   under the same condition. One template expression reading a typed value is the shape
   `Ask.astro`'s `data-site-key` already uses. The wording, to be kept plain:

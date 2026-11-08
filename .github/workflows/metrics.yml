@@ -57,7 +57,7 @@
 # population silently gone.
 #
 # ⚠️ The duplication names are on the MERGE list too, and jscpd is the reason
-# it is affordable: the ten runs it needs take seconds, against the Stryker run's
+# it is affordable: the eleven runs it needs take seconds, against the Stryker run's
 # hour. Duplication is also the measure a per-pull-request reading is worth most
 # for — a clone arrives in one diff.
 #

@@ -348,7 +348,7 @@ export function countsFrom(functions: readonly PerFunction[]): Counts | null {
  *
  * The whole of what the emitter needs, once per scope. `files` is the tree —
  * `sourceFiles()` from `scope-check.ts`, walked once and handed to every scope,
- * rather than eight walks.
+ * rather than nine walks.
  */
 export async function countPopulation(
   scope: Scope,

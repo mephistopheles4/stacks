@@ -91,7 +91,7 @@ describe('G47 — the counters are asserted against something', () => {
     expectFound(tree, 'TypeScript files swept for suppression blocks', 150);
   });
 
-  it('sweeps the whole tree, not the eight scopes — test code included', () => {
+  it('sweeps the whole tree, not the nine scopes — test code included', () => {
     // ⚠️ The population that is flattest for complexity is the loudest for
     // duplication: #239 measured every one of 1931 test functions at McCabe 10
     // or below, while #232 measured `gates/` moving 4 → 119 clones across one

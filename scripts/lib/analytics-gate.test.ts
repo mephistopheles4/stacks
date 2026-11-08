@@ -109,7 +109,7 @@ describe('foreignRequests', () => {
   });
 });
 
-describe('the gate scripts strip the switch from the build they start (S5, C13)', () => {
+describe('the gate scripts name gateBuildEnv at the calls that start a build (S5, C13), read from source', () => {
   const read = (path: string): string => readFileSync(new URL(path, import.meta.url), 'utf8');
 
   it('finds a build call that passes the parent environment through', () => {
@@ -125,7 +125,7 @@ describe('the gate scripts strip the switch from the build they start (S5, C13)'
     expect(callsMissing(source, 'runShell(', 'gateBuildEnv(')).toEqual([]);
   });
 
-  it('holds smoke-render.ts to it: every child gets the stripped environment', () => {
+  it('holds smoke-render.ts to it: env comes from gateBuildEnv and every spawn call lists env', () => {
     const source = read('../smoke-render.ts');
     expect(source).toContain('env: NodeJS.ProcessEnv = gateBuildEnv(process.env)');
     expect(callsMissing(source, 'spawn(', 'env,')).toEqual([]);

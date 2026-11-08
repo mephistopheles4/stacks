@@ -6,7 +6,8 @@
 Amends [ADR-0065](./0065-the-csp-is-generated-not-written.md) and
 [ADR-0128](./0128-the-csp-admits-turnstile-and-nothing-else.md), which kept
 `connect-src 'self'`, and [ADR-0053](./0053-stryker-measures-eight-declared-scopes.md)'s eight
-mutation scopes.
+mutation scopes. It also makes [ADR-0072](./0072-a-clone-is-a-relation-between-two-places.md)'s
+count of duplication populations out of date: nine scopes now, so ten populations with the tree.
 
 ## Decision
 
@@ -112,4 +113,5 @@ module, and a second use is a reason to amend the rule.
   the request transform for event names and properties (the tracker's tagged-class listener is
   always on); a warning in `deploy:site` when the site name is not the production host; a
   narrower off-build scan that skips the data files; a catch around the tracker's `init`. None
-  is a security finding under the rules file.
+  is a security finding: none names an attacker in this project's threat model, and none
+  touches authentication, cryptography or a data migration.

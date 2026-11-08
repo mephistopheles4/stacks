@@ -294,7 +294,7 @@ async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> 
  * The four counts over each of the two duplication populations, or the eight
  * names failed.
  *
- * ⚠️ **Ten jscpd runs, and each one is there for a reason the others cannot
+ * ⚠️ **Eleven jscpd runs, and each one is there for a reason the others cannot
  * cover.** One over the **union** of the nine populations, because a clone is
  * a relation between two places and nine separate runs are structurally blind
  * to a clone spanning two scopes — that run is where every scope's clone count

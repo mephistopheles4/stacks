@@ -477,8 +477,10 @@ export function cspDirectives(analytics: 'on' | 'off'): ReadonlyMap<string, read
 
 /**
  * What an off build must never hold: the tracker's host name. A pattern and not
- * a substring test, because this is a scan for a trace in files, never a check
- * of a URL against an allowlist.
+ * a `.includes` call, because CodeQL reads a URL-like literal passed to
+ * `.includes` as a host check done by substring
+ * (js/incomplete-url-substring-sanitization). This is a scan for a trace in
+ * files, never a check of a URL against an allowlist.
  */
 const TRACKER_TRACE = /plausible\.io/;
 

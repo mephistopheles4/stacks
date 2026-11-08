@@ -671,7 +671,7 @@ export interface AllCounts {
  * `complexityFactsOf`'s own comment makes about living in `lib/`. This is the
  * measurement; the two callers are a record and a print.
  *
- * ⚠️ **Ten jscpd runs, and each is there for something the others cannot do.**
+ * ⚠️ **Eleven jscpd runs, and each is there for something the others cannot do.**
  * One over the **union**, because a clone is a relation between two places and
  * nine separate runs are structurally blind to one spanning two scopes — that
  * run is where every clone count and duplicated-line count comes from. Nine
@@ -765,7 +765,7 @@ export const TREE_POPULATION = 'whole-tree';
  * §5). `CAPPED_SERIES` in `floors.ts` is calibrated under `fixtureHash` and
  * keyed on the nine declared mutation scopes; a duplication number is produced
  * under `duplicationHash`, and three of these six carry no `scope=` label at
- * all. So they are capped here, keyed on this file's nine populations, and
+ * all. So they are capped here, keyed on this file's ten populations (the nine scopes and the tree), and
  * `parseCaps` in `floors.ts` keeps rejecting every one of them.
  *
  * **Split by population, not listed once**, because a tree series under a scope

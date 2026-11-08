@@ -42,7 +42,7 @@ import {
   type Scope,
 } from './mutation-score.ts';
 
-/** A scope with no exclusions, which is what five of the eight real ones are. */
+/** A scope with no exclusions, which is what six of the nine real ones are. */
 function scope(name: string, glob: string, exclusions: Scope['exclusions'] = []): Scope {
   return { name, glob, exclusions };
 }
