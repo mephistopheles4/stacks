@@ -7,7 +7,7 @@ crypto or data migration), but it opens a new flow from every visitor's browser 
 third party and widens the page's CSP. There is no `docs/threat-model.md`, so the
 sensitive list decides what counts as a security finding. Written on 2026-11-07 from a
 grilling through an eagle-eye box, whose accepted set is S2. Base: `ca372c4`.
-Revision 2, after the first lens round (four lenses), which left five questions for the owner in S16. **Nothing here is built. Not signed off.**
+Revision 3: the owner answered S16 on 2026-11-07, relayed by the lead (decision 74). **Nothing here is built. Not signed off.**
 
 ## S1. Objective
 
@@ -43,7 +43,7 @@ Accepted on 2026-11-07, each a row of the box.
 | Where events go | Straight to `https://plausible.io`, from the tracker bundled from npm |
 | How G20 holds the CSP | Two exact shapes: off is today's policy; on adds `https://plausible.io` to `connect-src` and nothing else |
 | What the URL may carry | Only the campaign parameters Plausible reads. Every other query parameter is dropped |
-| Which events | `Book Picked Up`, `Book Opened`, `Ask Opened`, `Ask Sent` |
+| Which events | `Book Picked Up`, `Book Opened`, `Ask Opened`, and `Ask Sent`, which S16 Q4 leaves out of the build until the owner gives a reason |
 | What a book event carries | One property, `book`: the book's public id, the id in `notes/<id>.json` |
 | What `Ask Sent` carries | No property |
 | Where it starts | Only when `location.hostname` is exactly `stacks.aymandiab.com` |
@@ -53,8 +53,9 @@ Accepted on 2026-11-07, each a row of the box.
 
 **`Ask Sent` is a change of scope.** #562 put Ask usage out of scope, because
 [#541](https://github.com/mephistopheles4/stacks/issues/541) counts it from the Worker's
-logs. The owner added it in the box and has not yet said why; that is S16's
-Q4. It carries nothing about the question.
+logs. The owner added it in the box and has not yet said why, so by S16 Q4 it is
+**left out of the build** unless the owner gives a reason before the build starts. It
+would carry nothing about the question.
 
 **Rejected in the box, with the reason kept there:** a self-hosted Plausible (the first
 server this project would run), a Stacks counter on Workers Analytics Engine (close to
@@ -128,18 +129,18 @@ export function scrubUrl(href: string): string;
   signature.
 - **Plausible's own options:** `autoCapturePageviews` on, `bindToWindow` **off** (no
   `window.plausible` for other script on the page to call), file downloads off, hash-based
-  routing off, and `outboundLinks` per S16 Q1 (**proposed, not yet decided: off**). Every
+  routing off, and `outboundLinks` **off** (S16 Q1). Every
   other option is named in the module with its value, so a default is never relied on.
   The tagged-events listener that the npm build compiles in reads `plausible-event-*`
   class names; no class on the site carries that prefix, and none is built from data.
-- **A failed import** (blocked, offline): **proposed, not yet decided** (S13, a hardening
-  trade-off). The proposal is a catch that leaves the module never started, so every
-  event stays a no-op and nothing reaches the console as an unhandled rejection.
+- **A failed import** (blocked, offline) is caught (S16 Q5). The module stays never
+  started, every event stays a no-op, and nothing reaches the console as an unhandled
+  rejection.
 - The dependency is `@plausible-analytics/tracker`, pinned exact in
   `packages/site/package.json`, as `gsap` is, and subject to the release-age window
   (G67). The install is the owner's to confirm (S15). The build session confirms, against
-  the pinned version, `bindToWindow`, the tagged listener, the outbound `url` property and
-  that the transform reaches every request type; the ADR in S9 records it.
+  the pinned version, `bindToWindow`, the tagged listener, that `outboundLinks` off sends
+  no outbound event, and that the transform reaches every request type; the ADR in S9 records it.
 
 ## S5. The CSP and G20
 
@@ -151,7 +152,8 @@ export function scrubUrl(href: string): string;
   account, and the request names its site in its own body. A CSP source cannot name an
   account. So in an on build, code running in the page could send data to a Plausible site
   someone else owns. The remaining controls are the exact pin, the release-age window and
-  review. This widens a control ADR-0065 and ADR-0128 wrote down, so it is S16 Q2.
+  review. This widens a control ADR-0065 and ADR-0128 wrote down. The owner accepted it
+  (S16 Q2), and the ADR records it.
 - `astro.config.mjs` builds the `connect-src` entry from S3's result. The comment above it
   says why the second shape exists and links the ADR.
 - **G20 (`public-build-artifact`) takes the switch as an argument and never reads the
@@ -180,7 +182,7 @@ export function scrubUrl(href: string): string;
 | `Book Picked Up` | Once each time a book lands in the hand, from a shelf click or a chat link. A book caught on its way back and landing again counts again. A chat link to the book already in the hand lands nothing and counts nothing | `book` | The `landed` effect in `shelf/pickup.ts`, which both paths share through the state machine |
 | `Book Opened` | Once per opening that reaches open at rest | `book` | The `opened` effect in `shelf/pickup.ts` |
 | `Ask Opened` | Each time the drawer goes from shut to open | none | `show()` in `ask/drawer.ts`, after its early return |
-| `Ask Sent` | Each question sent with non-empty text, before the token is asked for. **Built only if S16 Q4 is answered** | none | The top of `ask()` in `ask/drawer.ts`, after the empty-text return |
+| `Ask Sent` | **Not built** unless the owner gives a reason before the build (S16 Q4). Then: each question sent with non-empty text, before the token is asked for | none | The top of `ask()` in `ask/drawer.ts`, after the empty-text return |
 
 - The page view is the tracker's own, once per page load. A pickup calls
   `history.pushState` with the same path; the build session confirms the pinned tracker
@@ -189,8 +191,8 @@ export function scrubUrl(href: string): string;
   setting, not the hold time, not the inspectors. Invariant 2 is untouched: no event reads
   a note, a `notes/<id>.json` file or the held page's text.
 - **The goals** the owner creates in the Plausible site, by these exact names, are the
-  events built, and `Outbound Link: Click` only if S16 Q1 turns it on. `docs/commands.md`
-  lists them.
+  events built. There is no `Outbound Link: Click` goal, since outbound links are off.
+  `docs/commands.md` lists them.
 
 ## S7. The pages
 
@@ -210,9 +212,9 @@ export function scrubUrl(href: string): string;
     through this site's own address."*
   - On builds: *"Plausible Analytics counts page views, where visitors came from, their
     country and device, and these actions: picking a book up, opening it, opening Ask the
-    library [and sending a question]. It records which book, never what you ask. It sets no
-    cookies; it sees your address and browser, and keeps only a hash of them that changes
-    every day."* The bracketed part follows S16 Q4; a sentence on link clicks follows S16 Q1.
+    library. It records which book, never what you ask. It sets no cookies; it sees your
+    address and browser, and keeps only a hash of them that changes every day."* If `Ask
+    Sent` is built (S16 Q4), "and sending a question" joins the list.
 - **S1's "same site as today" has one exception:** the Cloudflare paragraph is added to
   `/privacy` in every build, because the beacon is live today and the page omits it.
 
@@ -240,7 +242,7 @@ export function scrubUrl(href: string): string;
   `plausible.io`. It amends ADR-0065 and ADR-0128, which kept `connect-src 'self'`. It
   records:
   - the dependency, and the pinned version's checked behaviour (S4);
-  - the second processor, and what the on shape admits (S5, and S16 Q2's answer);
+  - the second processor, and what the on shape admits, accepted by the owner (S5, S16 Q2);
   - why not a proxy, a self-hosted Plausible, Workers Analytics Engine or a tag manager;
   - why this is not #119's beacon: #119 rejected a counter Stacks would build to watch an
     invariant; this is product analytics, off by default, with nothing derived from note
@@ -266,20 +268,21 @@ Written first, each backing a claim in S11.
 - `analytics/events.test.ts`, with the tracker replaced by a fake: `scrubUrl` keeps exactly
   the seven campaign parameters and drops the rest and the fragment; `startAnalytics` never
   imports the tracker off `PRODUCTION_HOST` or with the literal empty; `trackBook` drops a
-  malformed id and keeps a well-formed one; events before start are dropped.
+  malformed id and keeps a well-formed one; events before start are dropped; a rejected
+  import leaves the module unstarted, with every event a no-op and no unhandled rejection.
 - **The real tracker, network stubbed** (C7): one test imports the pinned package, stubs
   `fetch` and `navigator.sendBeacon` with `vi.stubGlobal` (G21's escape hatch), sets a
   production `location` carrying `?debug={…}&utm_source=x#frag` and a referrer with a query,
   then drives a page view, an engagement flush and a custom event, and asserts `u`, `r` and
-  the props of every captured payload. If outbound links are on, it drives a click too and
-  asserts its `url`. A tracker update that changes what it sends turns this red.
+  the props of every captured payload. It also clicks an outbound link and asserts that no
+  request follows. A tracker update that changes what it sends turns this red.
 - `PRODUCTION_HOST === WIDGET_DOMAIN`, in a gate test that may import both.
 - `gates/public-build-artifact.test.ts`: the two planted CSP defects and the planted
   `plausible.io` string and notice-page script of S5, each firing `csp` alone.
 - `shelf/pickup.ts` and `ask/drawer.ts`, through their existing tests with a spy on the
   module: one `Book Picked Up` per landing from each path, none for a chat link to the book
   in hand, one `Book Opened` per opening, one `Ask Opened` per shut-to-open, one `Ask Sent`
-  per non-empty send (if built) and none for an empty one.
+  per non-empty send (only if S16 Q4 brings it back) and none for an empty one.
 - **One real on run on the host:** `PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com pnpm
   smoke:render`. It serves from localhost, so the tracker never starts. `smoke-render.ts`
   gains a request-host listener that counts requests to any host other than the page's own,
@@ -297,8 +300,8 @@ Written first, each backing a claim in S11.
 | C5 | A value of `PUBLIC_PLAUSIBLE_DOMAIN` outside `^[a-z0-9.-]+$` fails the build and `deploy:site`, and neither message contains the value | Safety |
 | C6 | The tracker is imported only on `stacks.aymandiab.com`, and never with the switch off | Functional |
 | C7 | Every request the real tracker makes carries a `u` and `r` with no query parameter outside the seven and no fragment, and no property outside C8's | Security |
-| C8 | Each built event fires as S6 says, once per action, from both pickup paths; the only property is `book` holding an id that matches `BOOK_ID` (and, if S16 Q1 turns outbound links on, a scrubbed `url` on `Outbound Link: Click`); no page view comes from a pickup | Functional |
-| C9 | `/privacy` names Cloudflare Web Analytics in every build and Plausible only in an on build, in S7's words as settled by S16 | Interaction |
+| C8 | Each built event fires as S6 says, once per action, from both pickup paths; the only property is `book` holding an id that matches `BOOK_ID`; a click on an outbound link sends nothing; no page view comes from a pickup | Functional |
+| C9 | `/privacy` names Cloudflare Web Analytics in every build and Plausible only in an on build, in S7's words | Interaction |
 | C10 | `deploy:site` prints the analytics line in every mode, proceeds in either state, and exits non-zero naming both shapes when a `current` live index's `connect-src` differs from the built shape | Reliability |
 | C11 | The on run of S10 passes `pnpm smoke:render` with zero CSP violations and zero requests to another host | Reliability |
 | C12 | `athanor run`, `athanor run lint`, `athanor run build`, `athanor run smoke`, `pnpm lint:md`, `pnpm format:check` and `pnpm gate:public` are green | Maintainability |
@@ -324,13 +327,13 @@ The repo names no business driver, so the owner's stated reasons decide.
 
 | Pull | Side taken | Driver |
 | --- | --- | --- |
-| Counting more visits against a CSP that never changes | Direct: fewer counted (ad blockers), an extra origin when on, open to any Plausible account (S16 Q2) | Matches the setup the owner already runs; no edge route to own |
+| Counting more visits against a CSP that never changes | Direct: fewer counted (ad blockers), an extra origin when on, open to any Plausible account (accepted, S16 Q2) | Matches the setup the owner already runs; no edge route to own |
 | One CSP shape against an off build that names nothing it does not use | Two shapes, with G20 taking the state as an argument | The owner's "optional", and #562's claim that an off build adds no CSP source |
-| What a book event carries | The public id. It is the title's slug plus a short hash (`idFor` in `packages/core/src/library.ts`), so the dashboard shows titles either way, and a title edit splits a book's counts either way (S16 Q3) | Same value the site already publishes in `notes/<id>.json` |
-| `Ask Sent` against #541's scope line | Built only once the owner gives a reason (S16 Q4) | The owner's choice in the box |
-| **Hardening, limit 0, Reliability:** a catch on the tracker's `import()` | Proposed, not yet decided | An accepted-risk candidate; not built unasked |
-| **Hardening, limit 0, Security:** mapping any path outside the three pages to one value in `scrubUrl` | Proposed, not yet decided | An accepted-risk candidate; matters only if Pages serves the shelf at unknown paths |
-| **Hardening, limit 0, Security:** Plausible's hostname allowlist, set in the owner's account | Proposed, not yet decided | An accepted-risk candidate; partly blocks forged events |
+| What a book event carries | The public id, kept by the owner (S16 Q3). It is the title's slug plus a short hash (`idFor` in `packages/core/src/library.ts`), so the dashboard shows titles either way, and a title edit splits a book's counts either way | Same value the site already publishes in `notes/<id>.json` |
+| `Ask Sent` against #541's scope line | Left out unless the owner gives a reason before the build (S16 Q4) | The owner's answer |
+| **Hardening, limit 0, Reliability:** a catch on the tracker's `import()` | Built (S16 Q5) | The owner asked for it |
+| **Hardening, limit 0, Security:** mapping any path outside the three pages to one value in `scrubUrl` | Not built; an accepted risk (S16 Q5) | Matters only if Pages serves the shelf at unknown paths |
+| **Hardening, limit 0, Security:** Plausible's hostname allowlist, set in the owner's account | Not set; an accepted risk (S16 Q5) | It would only partly block forged events |
 
 ## S14. Residuals and rollback
 
@@ -338,7 +341,7 @@ The repo names no business driver, so the owner's stated reasons decide.
 - **Anyone can forge events** for `stacks.aymandiab.com`, with any referrer, campaign tag or
   `book` value: Plausible's endpoint takes unauthenticated requests, and the host check runs
   in the visitor's browser. The dashboard is not trusted data.
-- **What the on shape admits** (S5): any Plausible account. See S16 Q2.
+- **What the on shape admits** (S5): any Plausible account. Accepted by the owner (S16 Q2).
 - **A book marked private after it was published** keeps its past events, under its
   title-derived id, in Plausible until the owner resets the site's stats there.
 - **Plausible's own processing** (a hashed address and user agent with a salt rotated
@@ -354,7 +357,8 @@ The repo names no business driver, so the owner's stated reasons decide.
 
 ## S15. Needs a human
 
-- **Before the build session starts:** answer S16.
+- **Before the build session starts:** give the reason for `Ask Sent` if it should be built
+  (S16 Q4); otherwise it is left out.
 - **When the build session reaches the install:** confirm the `@plausible-analytics/tracker`
   install and its pinned version in chat. (Owner: installs are the owner's.)
 - **Before the first on deploy:** create the Plausible site `stacks.aymandiab.com` and the
@@ -364,27 +368,22 @@ The repo names no business driver, so the owner's stated reasons decide.
 - **After the first on deploy:** open the live shelf with no ad blocker, pick a book up and
   open it, and see the events in the dashboard. (Owner.)
 
-## S16. The owner's open questions
+## S16. The owner's answers
 
-Each comes from the first lens round on this spec, 2026-11-07, and blocks sign-off.
+Raised by the first lens round on 2026-11-07, and answered by the owner the same day
+("Yes, all four", to the lead's "Take my picks on all four waiting decisions?",
+decision 74), relayed to this session by the lead.
 
-- **Q1. Outbound links.** Plausible's outbound-link option sends a fifth event,
-  `Outbound Link: Click`, with the clicked link's full URL. The held book's provider links
-  carry the title and author (Open Library's search fallback) or an ISBN. That is outside
-  S2's four events and one property. **Proposed: off.** The alternative is a fifth event,
-  its `url` cut to origin and path, named on `/privacy` and in C8.
-- **Q2. What `connect-src https://plausible.io` admits.** Every Plausible account, not only
-  the owner's (S5). It is a widening of the control ADR-0065 and ADR-0128 kept, with no
-  structural fix short of the proxy the box rejected. **Proposed: accept it, recorded in the
-  ADR and S14.**
-- **Q3. The `book` property.** The public id is the title's slug plus a short hash, so it
-  shows the title and splits on a title edit; S13's first draft said the reverse. **Proposed:
-  keep the id**, since it is what the site already publishes. The alternatives are the title
-  itself, or no property.
-- **Q4. Why `Ask Sent`?** #562 put Ask usage out of scope because #541 already counts it
-  from the Worker's logs. The owner added the event in the box on 2026-11-07 and has not yet
-  given a reason. **Proposed: the build leaves it out unless the reason is given before the
-  build starts;** the reason then goes in the ADR.
-- **Q5. The three hardening candidates in S13:** a catch on the import, a path allowlist in
-  `scrubUrl`, and Plausible's hostname allowlist. **Proposed: the catch only**, because a
-  blocked tracker is the common case the spec itself expects.
+- **Q1. Outbound links: off.** Plausible's outbound-link option would send a fifth event
+  with the clicked link's full URL, which for the held book's provider links carries the
+  title and author or an ISBN. There is no `Outbound Link: Click` goal.
+- **Q2. What `connect-src https://plausible.io` admits: accepted.** Every Plausible
+  account, not only the owner's (S5). The ADR and S14 record it.
+- **Q3. The `book` property: the public id, kept.** It is the title's slug plus a short
+  hash, so it shows the title and splits on a title edit.
+- **Q4. `Ask Sent`: left out of the build** unless the owner gives a reason before the
+  build starts. #562 put Ask usage out of scope because #541 already counts it from the
+  Worker's logs. If the reason comes, the event returns as S6 describes and the reason goes
+  in the ADR.
+- **Q5. Hardening: the catch on the import only.** The path allowlist in `scrubUrl` and
+  Plausible's hostname allowlist are accepted risks (S13).
