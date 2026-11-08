@@ -1546,6 +1546,10 @@ async function turnOne(
           performance.now = () =>
             Math.min(realNow.call(performance), base + stepped * (1000 / 60));
           try {
+            // One held frame first: GSAP's root was last set at the shelf's last
+            // draw, and a stall before \`base\` would land unheld in the return's
+            // first step. Drawn once at \`base\`, the book still rests closed.
+            await new Promise((resolve) => requestAnimationFrame(resolve));
             window.__shelf.putBack();
             for (let frame = 0; frame < 600; frame += 1) {
               const moving = window.__shelf.current();

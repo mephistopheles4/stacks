@@ -795,6 +795,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   const hooks = {
     holdsCamera: (): boolean => lifted.size > 0,
     draw: (drawShelf: () => void): void => {
+      // smoke:render's return check holds `performance.now()` to step this (#576).
       engine.updateRoot(performance.now() / 1000);
       // GSAP wakes its own ticker on import and whenever a timeline is made,
       // and that ticker runs a requestAnimationFrame loop of its own until it
