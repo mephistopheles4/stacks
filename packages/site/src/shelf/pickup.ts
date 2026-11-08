@@ -59,6 +59,7 @@ import { loadThoughts } from './notes.ts';
 import { paperMaterial, sheetGeometry } from './gutter-sheet.ts';
 import { openSpread, type OpenSpread } from './open-spread.ts';
 import { bezier, openAngle, schedule, textOpacity } from './pickup-motion.ts';
+import { noticeIsOpen } from '../notice/open.ts';
 import { createPickupState, type PickupState, type Track } from './pickup-state.ts';
 import { buildTrack, engine, type Timeline } from './pickup-track.ts';
 import type { TunablePickup, TunerReading } from './pickup-tuner.ts';
@@ -953,10 +954,12 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     (target instanceof Node && controls.root.contains(target));
 
   document.addEventListener('keydown', (event) => {
+    // A notice open over the shelf owns every key (notice-modals.md N8): the whole handler
+    // stands down, not only Escape, or an arrow key would turn the book behind the modal.
+    if (noticeIsOpen(document) || event.defaultPrevented) return;
     if (event.key === 'Escape') {
       // An open Ask the library drawer took this Escape (it listens first, on
       // the window): it closes and the book stays held.
-      if (event.defaultPrevented) return;
       state.putBack();
       return;
     }

@@ -54,9 +54,12 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
     </div>
     <p class="ask-fine">
       This is an AI answering from my notes. It can be wrong.
-      <a href="/privacy" target="_blank" rel="noopener"
-        >Privacy<span class="ask-sr"> (opens in a new tab)</span></a
-      >
+      <!--
+        Opens the privacy notice in the modal over the shelf (docs/spec/notice-modals.md N6).
+        `target="_blank" rel="noopener"` stays as the failure fallback: if the modal cannot open,
+        the page opens in a new tab and the conversation, which lives in this page, survives.
+      -->
+      <a href="/privacy" target="_blank" rel="noopener" aria-haspopup="dialog">Privacy</a>
     </p>
   </form>
 

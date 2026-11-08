@@ -316,6 +316,9 @@ async function main(): Promise<void> {
       const noticeModal = await timed('G35 notice modal (#536)', () =>
         checkNoticeModal(browser, origin, notices.types),
       );
+      const noticeOver = await timed('G35 notice over the drawer (#536)', () =>
+        checkNoticeOverDrawer(browser, origin),
+      );
 
       report({
         skipped: pullRequest ? SKIPPED_ON_PULL_REQUESTS : undefined,
@@ -342,6 +345,7 @@ async function main(): Promise<void> {
         analytics,
         notices,
         noticeModal,
+        noticeOver,
       });
     } finally {
       await browser.close();
@@ -4994,6 +4998,7 @@ function report(result: {
   analytics: TunerChecked;
   notices: LinesAndFailures;
   noticeModal: LinesAndFailures;
+  noticeOver: LinesAndFailures;
 }): void {
   const {
     skipped,
@@ -5020,6 +5025,7 @@ function report(result: {
     analytics,
     notices,
     noticeModal,
+    noticeOver,
   } = result;
   const failures: string[] = [
     ...fallback.failures,
@@ -5131,6 +5137,8 @@ function report(result: {
   for (const line of notices.lines) console.log(`  ${line}`);
   console.log('the notice modal over the shelf (#536)');
   for (const line of noticeModal.lines) console.log(`  ${line}`);
+  console.log('a notice over the Ask drawer and a held book (#536)');
+  for (const line of noticeOver.lines) console.log(`  ${line}`);
   console.log('the hint, the X and the brand off the book (#553)');
   for (const line of overlap.lines) console.log(`  ${line}`);
   console.log(
@@ -5203,6 +5211,7 @@ function report(result: {
     ...drawerCells.failures,
     ...notices.failures,
     ...noticeModal.failures,
+    ...noticeOver.failures,
     ...overlap.failures,
     ...lost,
   );
@@ -5850,6 +5859,197 @@ async function checkNoticeModal(
     }
   }
   return { lines, failures };
+}
+
+/** What C1 to C3 say must not change behind the modal, as one comparable string. */
+const READ_BEHIND = `(() => {
+  const h = window.__shelf.held();
+  return JSON.stringify({
+    drawer: document.getElementById('ask-launcher').getAttribute('aria-expanded'),
+    title: h?.title ?? null,
+    phase: h?.phase ?? null,
+    opened: h?.opened ?? null,
+    yaw: h?.turn.yaw ?? null,
+    pitch: h?.turn.pitch ?? null,
+    thread: document.getElementById('ask-thread').textContent,
+  });
+})()`;
+
+const NOTICE_OPEN = `document.getElementById('notice-dialog').open`;
+
+/** The two links that open a notice, and which panel each shows. */
+const NOTICE_OPENERS = [
+  {
+    name: 'the shelf link',
+    selector: '.pattr-link[href="/attribution"]',
+    panel: 'notice-attribution',
+  },
+  { name: 'the drawer link', selector: '#ask-panel a[href="/privacy"]', panel: 'notice-privacy' },
+] as const;
+
+/**
+ * G35, a notice opened over a held book and an open drawer (#536, `notice-modals.md` C1, C2 and
+ * C3), from each of the two links, at 1280x800: the conversation, the drawer, the held book and
+ * its turn survive the open and the close; a click on a spine, the empty shelf and the drawer's
+ * outside area reaches nothing (the backdrop closes the modal and that is all it does); a click
+ * on the notice's own text does nothing; the arrows with focus on `body` turn no book; one
+ * Escape closes the modal alone, leaving the drawer open and the book held, and the next one is
+ * the drawer's; the drawer link opens no new tab; and nothing navigated.
+ */
+async function checkNoticeOverDrawer(browser: Browser, origin: string): Promise<LinesAndFailures> {
+  const failures: string[] = [];
+  const lines: string[] = [];
+  for (const opener of NOTICE_OPENERS) {
+    const where = `notice over the drawer, from ${opener.name}`;
+    const context = await browser.createBrowserContext();
+    try {
+      const page = await context.newPage();
+      await page.setViewport({ width: 1280, height: 800 });
+      await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+      const say = (what: string, ok: boolean): void => {
+        if (!ok) failures.push(`${where}: ${what}`);
+      };
+
+      // G35's order: hold a book, open the drawer over it, ask. The offline build has no
+      // Turnstile key, so the thread ends on the unavailable reply, which is enough to read.
+      if (!(await holdClosed(page, 3, `the book for ${where}`))) {
+        failures.push(`${where}: no book came to rest held`);
+        continue;
+      }
+      await openDrawer(page);
+      await page.type('#ask-input', 'What is on the shelf?');
+      await page.click('#ask-send');
+      const answered = await searchFor(
+        page,
+        `(() => { const t = document.getElementById('ask-thread').textContent ?? ''; return t.includes('What is on the shelf?') && !t.includes('Looking through the shelf') && t.length > 40; })()`,
+        8000,
+      );
+      say('the question never got a reply in the thread', answered);
+
+      await page.evaluate('window.__noticeSentinel = 11');
+      let navigations = 0;
+      page.on('framenavigated', (frame) => {
+        if (frame === page.mainFrame()) navigations += 1;
+      });
+      const tabsBefore = (await browser.pages()).length;
+      const before = (await page.evaluate(READ_BEHIND)) as string;
+      const reopen = async (): Promise<boolean> => {
+        try {
+          await page.click(opener.selector);
+        } catch {
+          // The link is not there to click: a drawer that closed took its own link with it.
+          return false;
+        }
+        return searchFor(page, NOTICE_OPEN, 2000);
+      };
+      const unchanged = async (what: string): Promise<void> => {
+        say(
+          `${what} changed the drawer, the book, its turn or the thread`,
+          (await page.evaluate(READ_BEHIND)) === before,
+        );
+      };
+
+      // C1: open, close by the X, and everything is as it was.
+      const firstOpen = await reopen();
+      say(`a click on ${opener.name} did not open the modal`, firstOpen);
+      if (!firstOpen) {
+        // The link did what a plain link does: a new tab, or a navigation that ended this page.
+        const tabs = (await browser.pages()).length;
+        say(`the link opened ${String(tabs - tabsBefore)} new tab(s) instead`, tabs === tabsBefore);
+        say(`the page navigated ${String(navigations)} time(s) instead`, navigations === 0);
+        continue;
+      }
+      say(
+        'the wrong panel is shown',
+        (await page.evaluate(
+          `[...document.querySelectorAll('#notice-dialog section')].filter((s) => !s.hidden).map((s) => s.id).join()`,
+        )) === opener.panel,
+      );
+      await unchanged('opening the notice');
+      await page.click('#notice-close');
+      say('the Close button did not close the modal', !(await page.evaluate(NOTICE_OPEN)));
+      await unchanged('closing the notice');
+
+      // C3: clicks behind the modal. Each lands on the backdrop, which closes the modal and
+      // does nothing else; the notice's own text does not close it.
+      // The notice is centred and 42rem wide, so the margins left and right of it are backdrop:
+      // the shelf's bookcase on the left, the drawer's panel on the right, and the corner by the
+      // brand. A held book stands behind the notice itself, which its own text answers below.
+      const targets = [
+        { name: 'a click on the shelf beside the notice', at: { x: 100, y: 400 } },
+        { name: 'a click on the corner by the brand', at: { x: 60, y: 60 } },
+        { name: 'a click on the drawer panel beside the notice', at: { x: 1150, y: 400 } },
+      ];
+      for (const target of targets) {
+        if (!(await reopen())) {
+          failures.push(`${where}: the modal did not reopen before ${target.name}`);
+          continue;
+        }
+        await page.mouse.click(target.at.x, target.at.y);
+        say(
+          `${target.name} on the backdrop did not close the modal`,
+          !(await page.evaluate(NOTICE_OPEN)),
+        );
+        await unchanged(target.name);
+      }
+
+      // C3, the notice's own text: a click does nothing.
+      if (await reopen()) {
+        await page.click(`#${opener.panel} p`);
+        say(
+          'a click on the notice text closed the modal',
+          (await page.evaluate(NOTICE_OPEN)) === true,
+        );
+        await unchanged('a click on the notice text');
+
+        // C3, the arrows with focus on `body`: no turn of the closed book behind the modal.
+        await page.evaluate('document.activeElement?.blur()');
+        for (const key of ['Home', 'ArrowRight', 'ArrowDown'] as const) {
+          await page.keyboard.press(key);
+        }
+        await unchanged('the arrow keys');
+        say('the arrows closed the modal', (await page.evaluate(NOTICE_OPEN)) === true);
+
+        // C2: one Escape closes the modal alone.
+        await page.keyboard.press('Escape');
+        say('Escape did not close the modal', !(await page.evaluate(NOTICE_OPEN)));
+        await unchanged('the one Escape');
+      } else {
+        failures.push(`${where}: the modal did not reopen for the text and key cells`);
+      }
+
+      // And the next Escape is the drawer's, with the book still held.
+      await page.keyboard.press('Escape');
+      await settleAfterEscape(page);
+      const after = JSON.parse((await page.evaluate(READ_BEHIND)) as string) as {
+        drawer: string;
+        phase: string;
+      };
+      say(`the second Escape left the drawer ${after.drawer}`, after.drawer === 'false');
+      say('the second Escape put the book back', after.phase === 'held');
+
+      say(`the page navigated ${String(navigations)} time(s)`, navigations === 0);
+      say(
+        'the window sentinel did not survive',
+        (await page.evaluate('window.__noticeSentinel')) === 11,
+      );
+      say('a new tab opened', (await browser.pages()).length === tabsBefore);
+      lines.push(
+        `${opener.name.padEnd(15)} opens over the drawer and a held book; conversation, drawer, book and turn unchanged by open, close, 3 backdrop clicks, text click, arrows, Escape; ${String(navigations)} navigations`,
+      );
+    } finally {
+      await context.close();
+    }
+  }
+  return { lines, failures };
+}
+
+/** A beat for a wrong second reaction to an Escape to register (an absence wait, K1). */
+async function settleAfterEscape(page: Page): Promise<void> {
+  await page.evaluate(
+    `new Promise((resolve) => setTimeout(resolve, ${String(PUT_BACK_CHANCE_MS)}))`,
+  );
 }
 
 /** Total gzip size of the built site scripts, for the pull request record of on versus off. */

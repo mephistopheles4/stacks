@@ -15,6 +15,12 @@ const NOTICE_HREFS: Readonly<Record<string, NoticeName>> = {
   '/privacy': 'privacy',
 };
 
+/**
+ * The links `noticeFor` can answer for, as a selector: what the drawer counts as inside itself
+ * (N9), so opening a notice from the shelf with the drawer open does not close the drawer.
+ */
+export const NOTICE_LINK_SELECTOR = 'a[href="/attribution"], a[href="/privacy"]';
+
 /** The parts of a click this decision reads. */
 export interface ClickRead {
   readonly button: number;
