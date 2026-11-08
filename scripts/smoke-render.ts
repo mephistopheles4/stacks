@@ -4924,12 +4924,19 @@ async function checkAnalyticsCalls(
     const attempted = async (): Promise<Attempt[]> =>
       (await page.evaluate('window.__shelf.attempted().slice()')) as Attempt[];
     const toggle = async (expanded: boolean): Promise<void> => {
-      // Open with the launcher, shut with the panel's own button: an open panel covers the launcher.
+      // Open with the launcher, shut with the panel's own button: an open panel covers
+      // the launcher. Each waits for the slide to end, because a button mid-slide has
+      // no clickable point.
       await page.click(expanded ? '#ask-launcher' : '#ask-close');
       await until(
         page,
         `document.getElementById('ask-launcher').getAttribute('aria-expanded') === '${String(expanded)}'`,
         `the drawer to be ${expanded ? 'open' : 'shut'}`,
+      );
+      await until(
+        page,
+        `(() => { const panel = document.getElementById('ask-panel'); return !panel.classList.contains('is-entering') && !panel.classList.contains('is-leaving'); })()`,
+        'the drawer to finish sliding',
       );
     };
 
