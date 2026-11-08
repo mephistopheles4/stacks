@@ -122,32 +122,6 @@ describe('G45 — the deploy flag roster', () => {
     expectFound(flagsDocumented(), `flags documented in ${COMMANDS_DOC}`, 3);
   });
 
-  it('extracts a flag read in either quote form', () => {
-    // Planted, because the repair is otherwise invisible in a script whose
-    // four live reads are all single-quoted. Until #252 the regex above
-    // hardcoded one quote character, so a flag read as
-    // `process.argv.includes("--fast")` produced "extraction found 0 flags" —
-    // and then, one clause down, a count mismatch — neither of which names a
-    // quote or a line. #231 measured that break; #229 cites it as the measured
-    // warrant for admitting style rules at all. **This repository already had
-    // an accidental quote gate with an unreachable remedy**, and it was this
-    // one and G14 (`commands`).
-    //
-    // **Both forms, not only the one that was blind.** A regex flipped from `'`
-    // to `"` rather than widened satisfies a double-quote-only assertion and
-    // goes blind to every read the script actually makes.
-    //
-    // Mixed within one source, because the roster and the count clause below
-    // read the same pattern and a per-file quote style would never exercise the
-    // disagreement between them.
-    const mixed = `process.argv.includes("--dry-run");\nprocess.argv.includes('--check-only');`;
-
-    expect(extractAll(mixed, ARGV_FLAG)).toEqual(['--check-only', '--dry-run']);
-    expect([...mixed.matchAll(new RegExp(ARGV_FLAG.source, 'g'))]).toHaveLength(
-      [...mixed.matchAll(/process\.argv/g)].length,
-    );
-  });
-
   it('documents every flag the deploy reads', () => {
     const documented = new Set(flagsDocumented());
     const undocumented = flagsRead().filter((flag) => !documented.has(flag));

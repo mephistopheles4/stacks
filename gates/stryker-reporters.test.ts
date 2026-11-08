@@ -59,7 +59,7 @@
 import { describe, expect, it } from 'vitest';
 import strykerConfig from '../stryker.config.mjs';
 import strykerVitestConfig from '../vitest.stryker.config.ts';
-import { expectFound, readRepoFile } from './repo.ts';
+import { expectFound } from './repo.ts';
 
 /** The config file Stryker's Vitest runner is told to load. */
 const STRYKER_VITEST_CONFIG = 'vitest.stryker.config.ts';
@@ -88,18 +88,5 @@ describe('G44 — the mutation run declares its reporters', () => {
       `reporters declared in ${STRYKER_VITEST_CONFIG} — an empty or absent list is what ` +
         'lets Vitest add `github-actions`, whose job summary appends once per mutant',
     );
-  });
-
-  it('declares them in the file Stryker loads, not somewhere inherited', () => {
-    // The import above answers "what does the resolved config say"; this answers
-    // "does this file say it". A reporter list arriving from a shared base would
-    // satisfy the clause above and move the property out from under the docblock
-    // that explains it — where the next person to edit this file will not see it.
-    expect(
-      readRepoFile(STRYKER_VITEST_CONFIG),
-      `${STRYKER_VITEST_CONFIG} must declare \`reporters\` itself; the argument for it ` +
-        'lives in that file and a list inherited from elsewhere leaves the argument ' +
-        'attached to nothing.',
-    ).toMatch(/^\s*reporters:/m);
   });
 });

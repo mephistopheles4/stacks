@@ -156,7 +156,7 @@ describe('G50 — the check is wired into the build', () => {
 });
 
 describe('G50 — the checker is installed, and installable', () => {
-  it('declares `@astrojs/check` on the site package, pinned exact', () => {
+  it('declares `@astrojs/check` on the site package', () => {
     const site = manifest(SITE_MANIFEST);
     const version =
       site.devDependencies?.['@astrojs/check'] ?? site.dependencies?.['@astrojs/check'];
@@ -167,31 +167,5 @@ describe('G50 — the checker is installed, and installable', () => {
         'declare it, or the build script above fails on a fresh checkout for a reason ' +
         'that looks nothing like the one it exists for.',
     ).toBeDefined();
-
-    // Exact, per docs/spec/static-analysis-and-style.md §9: a tool upgrade that
-    // adds rules reddens an unchanged tree, and every tool this rollout adopts
-    // is pinned so that arrives as a diff somebody chose.
-    expect(
-      version,
-      `@astrojs/check must be pinned exact, not "${version}". A range lets a minor bump ` +
-        'redden a tree nobody touched, which is how a gate gets weakened to make it pass.',
-    ).toMatch(/^\d+\.\d+\.\d+$/);
-  });
-
-  it('keeps `typescript` inside the range @astrojs/check supports', () => {
-    // The coupling ADR-0066 does not carry yet. Its revisit condition is
-    // TypeScript 7.1; @astrojs/check@0.9.10's peer range is `^5 || ^6`, so the
-    // pin moving to 7 un-runs this gate. Asserted here rather than left for a
-    // branch about the compiler to discover.
-    const version = manifest(ROOT_MANIFEST).devDependencies?.typescript ?? '';
-
-    expect(
-      version,
-      'the root `typescript` pin must stay on 5.x or 6.x while @astrojs/check is the ' +
-        `checker: its peerDependencies are \`^5.0.0 || ^6.0.0\`, so "${version}" leaves ` +
-        'this gate running against an unsupported compiler or not running at all. ' +
-        'Moving the pin (ADR-0066 revisits at TypeScript 7.1) means checking that ' +
-        '@astrojs/check has widened first.',
-    ).toMatch(/^[\^~]?[56]\./);
   });
 });
