@@ -680,6 +680,13 @@ does import. `--mutate` replaces the exclusions, so the command reproduces a
 break an exclusion has since hidden. The guard admits the form, and a full run
 (`stryker run` with neither `--mutate` nor `--incremental`) stays refused.
 
+⚠️ **The scoped command confirms a break and cannot confirm a fix.** `--mutate`
+overrides the scope's exclusions, so it stays red after the exclusion fix (it
+fails at a head where the file is already excluded), and after leaving the spec
+out of the dry run it most likely answers `No tests were executed`, which also
+exits red. The fix is confirmed by the pull request's own `mutation-dry-run`
+job, which is the unscoped dry run an agent cannot run.
+
 **The usual fixes** differ in what they move:
 
 - **Read the file differently.** A spec that reads a script as text asserts on
