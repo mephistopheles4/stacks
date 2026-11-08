@@ -26,10 +26,12 @@ import type { BookMetadata, MetadataSource } from './types.ts';
  * Governs `title`, `author`, `isbn` and `publisher`.
  *
  * It describes what the code already did rather than changing it: Open Library
- * is the primary, Google completes its gaps, O'Reilly answers for the books
- * neither has, and Apple is asked last. The *ask*-order is unchanged — O'Reilly
- * is still only consulted when neither of the first two found the book, which is
- * a quota decision with a far larger blast radius than this table.
+ * is the primary, Google completes its gaps, and Apple is asked last.
+ *
+ * `oreilly` stays in the order as an inert name: the provider was removed
+ * (ADR-0147), nothing asks it, and no record carries it as a source now. The
+ * entry holds its place so that G31's table and the `absent-only` gate keep
+ * their shape.
  */
 export const DEFAULT_ORDER: readonly MetadataSource[] = [
   'open-library',
@@ -64,8 +66,8 @@ export const FIELD_ORDER: Readonly<Partial<Record<MergedField, readonly Metadata
    */
   subjects: ['google-books', 'apple-books', 'oreilly', 'open-library'],
   /**
-   * Open Library has none at all. O'Reilly only *has* a record when it is an
-   * O'Reilly book, where its own copy is authoritative.
+   * Open Library has none at all. `oreilly` leads, though no provider supplies
+   * it now (ADR-0147): the entry is inert.
    */
   description: ['oreilly', 'google-books', 'apple-books'],
 };
