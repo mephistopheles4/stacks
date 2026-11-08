@@ -89,14 +89,14 @@ describe('parsePhoneArgs', () => {
       shot: false,
       gpuinfo: false,
       pickups: undefined,
-      examine: undefined,
+      turn: undefined,
     });
   });
 
-  it('takes --examine as the seconds to keep turning a held book', () => {
-    expect(parsePhoneArgs(['--examine', '60']).examine).toBe(60);
-    expect(() => parsePhoneArgs(['--examine', '0'])).toThrow(/--examine needs a whole number/);
-    expect(() => parsePhoneArgs(['--examine'])).toThrow(/--examine needs a value/);
+  it('takes --turn as the seconds to keep turning a held book', () => {
+    expect(parsePhoneArgs(['--turn', '60']).turn).toBe(60);
+    expect(() => parsePhoneArgs(['--turn', '0'])).toThrow(/--turn needs a whole number/);
+    expect(() => parsePhoneArgs(['--turn'])).toThrow(/--turn needs a value/);
   });
 
   it('takes --pickups as a count of books for the loop hook on the shelf to pick up and put back', () => {

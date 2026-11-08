@@ -109,6 +109,12 @@ declare global {
        * read. Nothing while the hand is empty.
        */
       held(): HeldReading | undefined;
+      /**
+       * The latest book in motion, whatever its phase, with its timeline's own
+       * progress: the one reading that outlives `held()` while a book goes back,
+       * for the gate to see the return play (#553, C5). Read-only.
+       */
+      track(): ReturnType<Pickup['tunable']['state']>;
       /** Picks up the book at this index, as a click on it would. */
       pickUp(index: number): void;
       /** Opens the book in hand, as the Open button would: a gate need not aim at it. */
@@ -533,6 +539,7 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind, pickup?: Pic
     projectBook: (index) => handle.projectBook(index),
     stats: () => handle.stats(),
     held: () => pickup?.held(),
+    track: () => pickup?.tunable.state(),
     pickUp: (index) => {
       pickup?.pickUp(index);
     },

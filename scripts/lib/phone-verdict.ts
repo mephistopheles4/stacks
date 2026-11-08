@@ -47,12 +47,12 @@ export interface PhoneOptions {
    */
   readonly pickups: number | undefined;
   /**
-   * Seconds to keep turning a held book in the examining view once the page is
-   * ready (#418, ADR-0109): a real tap opens it, the phone's own back key leaves
-   * it, and a drag turns it for this long while the context is watched.
-   * Undefined runs none.
+   * Seconds to keep turning a held book at its closed rest once the page is ready
+   * (#553): a book is held, turned, opened by a real tap, closed by its control
+   * and turned again, the phone's own back key puts it back, and a drag turns it
+   * for this long while the context is watched. Undefined runs none.
    */
-  readonly examine: number | undefined;
+  readonly turn: number | undefined;
 }
 
 const FLAGS_WITH_VALUES = [
@@ -64,7 +64,7 @@ const FLAGS_WITH_VALUES = [
   'adb',
   'port',
   'pickups',
-  'examine',
+  'turn',
 ] as const;
 const SWITCHES = ['keep', 'shot', 'gpuinfo', 'matrix'] as const;
 
@@ -128,7 +128,7 @@ export function parsePhoneArgs(argv: readonly string[]): PhoneOptions {
     shot: switches.has('shot'),
     gpuinfo: switches.has('gpuinfo'),
     pickups: values.has('pickups') ? number(values.get('pickups') ?? '', '--pickups') : undefined,
-    examine: values.has('examine') ? number(values.get('examine') ?? '', '--examine') : undefined,
+    turn: values.has('turn') ? number(values.get('turn') ?? '', '--turn') : undefined,
   };
 }
 

@@ -19,9 +19,10 @@
  *     --shot             save a screenshot beside the result
  *     --pickups <n>      once the page is ready, pick up and put back n books through
  *                        the shelf's loop hook, and report each held cover's upload
- *     --examine <s>      once the page is ready, hold a book, open the examining view
- *                        with a real tap, leave it with the phone's own back key, open
- *                        it again and turn the book for s seconds (#418)
+ *     --turn <s>         once the page is ready, hold a book closed, turn it with a touch
+ *                        drag, open it with a real tap, close it with the page's control,
+ *                        turn it again for s seconds, and put it back with the phone's own
+ *                        back key (#553)
  *
  * **Not a `pnpm` script, deliberately**: it needs adb and a phone with USB
  * debugging on, which no CI runner and few contributors have, and a documented
@@ -272,15 +273,19 @@ function startPickups(rounds: number): string {
   })()`;
 }
 
-/** What the examining drive saw on the phone, kept apart from the context's own verdict. */
-interface ExamineReading {
+/** What the turning drive saw on the phone, kept apart from the context's own verdict. */
+interface TurnReading {
   readonly held: boolean;
-  /** A real tap on the page's control opened the examining view. */
-  readonly viewOpened: boolean;
-  /** The phone's back key left the view with the book still held. */
-  readonly backLeftBookHeld: boolean;
-  /** …or emptied the hand instead (a back that went to history, not to the dialog). */
-  readonly backEmptiedHand: boolean;
+  /** A touch drag on the closed book changed its turn. */
+  readonly turnedClosed: boolean;
+  /** A real tap on the book opened it. */
+  readonly tapOpened: boolean;
+  /** A real tap on the close control returned it to the closed rest. */
+  readonly closedByControl: boolean;
+  /** …and a drag turned it again from there. */
+  readonly turnedAgain: boolean;
+  /** The phone's back key put the book back and emptied the hand. */
+  readonly backPutBookBack: boolean;
   /** Seconds spent turning, and how many drags were sent. */
   readonly turnedForS: number;
   readonly drags: number;
@@ -291,158 +296,150 @@ interface ExamineReading {
 
 const HELD_NOW = `(() => {
   const h = window.__shelf?.held?.();
-  return JSON.stringify(h === undefined ? null : { examining: h.examining, phase: h.phase, opened: h.opened, yaw: h.turn.yaw });
+  return JSON.stringify(h === undefined ? null : { phase: h.phase, opened: h.opened, yaw: h.turn.yaw, screen: h.screen });
 })()`;
 
+interface HeldNow {
+  phase: string;
+  opened: boolean;
+  yaw: number;
+  screen: { left: number; top: number; right: number; bottom: number };
+}
+
 /**
- * The examining view on the phone itself (#418, spec S12): a held book, a tap
- * that is a real user activation, the phone's back key, and a minute of
- * dragging — with the context watched beside it by `watch`. Everything read
- * comes off `window.__shelf`; nothing is written to the page.
+ * The closed book on the phone itself (#553): a held book turned by a touch drag
+ * at the closed rest, opened by a real tap, closed by the page's control, turned
+ * again for `seconds`, and put back by the phone's own back key — with the context
+ * watched beside it by `watch`. Everything read comes off `window.__shelf`;
+ * nothing is written to the page.
  */
-async function examineOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<ExamineReading> {
+async function turnOnPhone(adb: Adb, cdp: Cdp, seconds: number): Promise<TurnReading> {
   const notes: string[] = [];
-  const read = async (): Promise<{
-    examining: boolean;
-    phase: string;
-    opened: boolean;
-    yaw: number;
-  } | null> =>
-    parse<{ examining: boolean; phase: string; opened: boolean; yaw: number } | null>(
-      await cdp.evaluate(HELD_NOW),
-    ) ?? null;
+  const read = async (): Promise<HeldNow | null> =>
+    parse<HeldNow | null>(await cdp.evaluate(HELD_NOW)) ?? null;
   const tap = async (x: number, y: number): Promise<void> => {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
     await sleep(60);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   };
-  const control = async (): Promise<{ x: number; y: number } | undefined> => {
+  const drag = async (w: number, h: number, direction: number): Promise<void> => {
+    const x0 = w / 2 - 80 * direction;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: x0, y: h / 2 }],
+    });
+    for (let step = 1; step <= 8; step += 1) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: x0 + (160 * direction * step) / 8, y: h / 2 + 10 * step }],
+      });
+      await sleep(16);
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const closeControl = async (): Promise<{ x: number; y: number } | undefined> => {
     const value = await cdp.evaluate(`(() => {
-      const el = document.querySelector('.held-page-right .held-examine');
+      const el = document.querySelector('.held-close');
       if (!el) return null;
-      el.scrollIntoView({ block: 'center' });
       const r = el.getBoundingClientRect();
       return JSON.stringify({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
     })()`);
     return parse<{ x: number; y: number }>(value);
   };
+  const waitFor = async (ok: (now: HeldNow | null) => boolean, ms: number): Promise<boolean> => {
+    const from = Date.now();
+    while (!ok(await read())) {
+      if (Date.now() - from > ms) return false;
+      await sleep(250);
+    }
+    return true;
+  };
+  const stopped = (reached: Partial<TurnReading>, note: string): TurnReading => ({
+    held: false,
+    turnedClosed: false,
+    tapOpened: false,
+    closedByControl: false,
+    turnedAgain: false,
+    backPutBookBack: false,
+    turnedForS: 0,
+    drags: 0,
+    yaw: undefined,
+    notes: [note],
+    ...reached,
+  });
 
   const waitingFrom = Date.now();
   while ((await cdp.evaluate('window.__shelf?.ready === true')) !== true) {
     // A shelf that never boots (a refused or lost context) must not hold the run
     // open: `runOne` awaits this after the watch, and would never write its result.
-    if (Date.now() - waitingFrom > 60_000) {
-      return {
-        held: false,
-        viewOpened: false,
-        backLeftBookHeld: false,
-        backEmptiedHand: false,
-        turnedForS: 0,
-        drags: 0,
-        yaw: undefined,
-        notes: ['the shelf never said it was ready'],
-      };
-    }
+    if (Date.now() - waitingFrom > 60_000) return stopped({}, 'the shelf never said it was ready');
     await sleep(500);
   }
   await cdp.evaluate('window.__shelf.pickUp(3)');
-  const heldAt = Date.now();
-  while ((await read())?.phase !== 'held') {
-    if (Date.now() - heldAt > 15_000) {
-      return {
-        held: false,
-        viewOpened: false,
-        backLeftBookHeld: false,
-        backEmptiedHand: false,
-        turnedForS: 0,
-        drags: 0,
-        yaw: undefined,
-        notes: ['the book never reached the held state'],
-      };
-    }
-    await sleep(250);
+  const closedRest = (now: HeldNow | null): boolean => now?.phase === 'held' && !now.opened;
+  if (!(await waitFor(closedRest, 15_000))) {
+    return stopped({}, 'the book never reached the closed rest');
   }
-  // The book rests closed in the hand (#531). Held a moment so the closed rest is
-  // seen on the phone, then opened through the shelf's hook (a tap on the book is
-  // G35's to cover, not this drive's): the examine control is on a page that is
-  // hidden until the book is open.
+  const size = parse<{ w: number; h: number }>(
+    await cdp.evaluate('JSON.stringify({ w: innerWidth, h: innerHeight })'),
+  );
+  const w = size?.w ?? 400;
+  const h = size?.h ?? 800;
+
+  // The closed rest: a drag turns the book from the moment it lands.
   await sleep(1500);
-  await cdp.evaluate('window.__shelf.open()');
-  const openedAt = Date.now();
-  while ((await read())?.opened !== true) {
-    if (Date.now() - openedAt > 15_000) {
-      return {
-        held: true,
-        viewOpened: false,
-        backLeftBookHeld: false,
-        backEmptiedHand: false,
-        turnedForS: 0,
-        drags: 0,
-        yaw: undefined,
-        notes: ['the closed book never opened'],
-      };
-    }
-    await sleep(250);
+  const yawBefore = (await read())?.yaw ?? 0;
+  await drag(w, h, 1);
+  await sleep(300);
+  const turnedClosed = Math.abs(((await read())?.yaw ?? 0) - yawBefore) > 1;
+  if (!turnedClosed) notes.push('a touch drag did not turn the closed book');
+
+  // A real tap on the book opens it.
+  const at = await read();
+  if (at !== null) {
+    await tap((at.screen.left + at.screen.right) / 2, (at.screen.top + at.screen.bottom) / 2);
   }
+  const tapOpened = await waitFor((now) => now?.opened === true, 8_000);
+  if (!tapOpened) notes.push('a tap on the closed book did not open it');
   await sleep(1500);
 
-  const at = await control();
-  if (at === undefined) notes.push('the page had no examine control');
-  else await tap(at.x, at.y);
-  await sleep(1500);
-  const viewOpened = (await read())?.examining === true;
+  // The page's own control closes it to the closed rest.
+  const control = await closeControl();
+  if (control === undefined) notes.push('the open page had no close control');
+  else await tap(control.x, control.y);
+  const closedByControl = await waitFor(closedRest, 8_000);
+  if (!closedByControl) notes.push('the close control did not return the book to the closed rest');
 
-  // The phone's own back key: Chrome routes it to a modal dialog's close watcher.
+  // Turned again from there, for the seconds asked.
+  let drags = 0;
+  const startedTurning = Date.now();
+  let direction = 1;
+  const yawStart = (await read())?.yaw ?? 0;
+  while (Date.now() - startedTurning < seconds * 1000) {
+    await drag(w, h, direction);
+    drags += 1;
+    direction = -direction;
+    await sleep(120);
+  }
+  const yaw = (await read())?.yaw;
+  const turnedAgain = yaw !== undefined && Math.abs(yaw - yawStart) > 1;
+
+  // The phone's own back key now puts the book back: the pickup's history entry
+  // is the one it steps off, and no dialog stands in front of it.
   adb('shell', 'input', 'keyevent', 'KEYCODE_BACK');
   await sleep(1500);
-  const afterBack = await read();
-  const backLeftBookHeld = afterBack !== null && !afterBack.examining;
-  const backEmptiedHand = afterBack === null;
-  if (backEmptiedHand) notes.push('back emptied the hand: it was taken as history, not as a close');
-
-  let drags = 0;
-  let yaw: number | undefined;
-  const startedTurning = Date.now();
-  if (!backEmptiedHand) {
-    await sleep(800);
-    const again = await control();
-    if (again !== undefined) await tap(again.x, again.y);
-    await sleep(1200);
-    const size = parse<{ w: number; h: number }>(
-      await cdp.evaluate('JSON.stringify({ w: innerWidth, h: innerHeight })'),
-    );
-    const w = size?.w ?? 400;
-    const h = size?.h ?? 800;
-    let direction = 1;
-    while (Date.now() - startedTurning < seconds * 1000) {
-      const x0 = w / 2 - 80 * direction;
-      await cdp.send('Input.dispatchTouchEvent', {
-        type: 'touchStart',
-        touchPoints: [{ x: x0, y: h / 2 }],
-      });
-      for (let step = 1; step <= 8; step += 1) {
-        await cdp.send('Input.dispatchTouchEvent', {
-          type: 'touchMove',
-          touchPoints: [{ x: x0 + (160 * direction * step) / 8, y: h / 2 + 10 * step }],
-        });
-        await sleep(16);
-      }
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-      drags += 1;
-      direction = -direction;
-      await sleep(120);
-    }
-    yaw = (await read())?.yaw;
-    // One level out, then put the book back, so the page is as it was.
-    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK');
-    await sleep(1200);
+  const backPutBookBack = (await read()) === null;
+  if (!backPutBookBack) {
+    notes.push('back left the book in hand');
     await cdp.evaluate('window.__shelf.putBack()');
   }
   return {
     held: true,
-    viewOpened,
-    backLeftBookHeld,
-    backEmptiedHand,
+    turnedClosed,
+    tapOpened,
+    closedByControl,
+    turnedAgain,
+    backPutBookBack,
     turnedForS: Math.round((Date.now() - startedTurning) / 1000),
     drags,
     yaw,
@@ -555,15 +552,14 @@ async function runOne(
     await cdp.send('Page.navigate', { url });
     if (options.pickups !== undefined) await cdp.evaluate(startPickups(options.pickups));
     const driving =
-      options.examine === undefined
+      options.turn === undefined
         ? undefined
-        : examineOnPhone(adb, cdp, options.examine).catch((error: unknown) => ({
+        : turnOnPhone(adb, cdp, options.turn).catch((error: unknown) => ({
             error: error instanceof Error ? error.message : String(error),
           }));
-    const waitS =
-      options.examine === undefined ? run.waitS : Math.max(run.waitS, options.examine + 45);
+    const waitS = options.turn === undefined ? run.waitS : Math.max(run.waitS, options.turn + 45);
     const observation = await watch(adb, cdp, waitS, started);
-    const examined = await driving;
+    const turned = await driving;
     const read = parse<Read>(await cdp.evaluate(READ));
     const elapsedS = (Date.now() - started) / 1000;
 
@@ -610,7 +606,7 @@ async function runOne(
           elapsedS,
           profile: read?.profile ?? null,
           pickups: read?.pickups ?? null,
-          examine: examined ?? null,
+          turn: turned ?? null,
           swaps: read?.swaps ?? null,
           sampling: { line: row.sampling, failures },
           console: consoleLines(cdp.events).slice(-60),
@@ -624,7 +620,7 @@ async function runOne(
     console.log(
       `${run.label}: ${verdict.kind} — ${verdict.reason}\n  ${row.sampling}\n  ${base}.json`,
     );
-    if (examined !== undefined) console.log(`  examining: ${JSON.stringify(examined)}`);
+    if (turned !== undefined) console.log(`  turning: ${JSON.stringify(turned)}`);
     const pickups = read?.pickups;
     if (pickups !== null && pickups !== undefined) {
       console.log(

@@ -16,19 +16,23 @@
  * names; the announcer, with put-back as the dismissal; the put-back control
  * where the close control was, now an X outside the pages; `published`
  * rendering and the collapse rules,
- * which stay unit tests in `card.test.ts`; and examining the held book (#418),
- * the enlarged cover reworked, whose Escape leaves only the view. **What is
- * new**: `location.href` unchanged after a pickup, the page hidden from sight
- * and from the accessibility tree until it fades in, the spread's three
- * numbers, and examining's closed board, turn, exits, focus and emptied hand.
- * `checkSheet` retired with the sheet.
+ * which stay unit tests in `card.test.ts`; and turning the held book (#418, and
+ * since #553 at the closed rest it landed on, with no dialog), closed again by
+ * the open book's two controls. **What is new**: `location.href` unchanged
+ * after a pickup, the page hidden from sight and from the accessibility tree
+ * until it fades in, the spread's three numbers, and the closed board, the
+ * turn, every way out, focus and the emptied hand. `checkSheet` retired with the
+ * sheet.
  */
 
 /**
  * The hint the header shows while a book is closed at rest. `pickup.ts` owns
  * the string; this is the gate's own copy, so a change to either is a red build.
  */
-export const CLOSED_HINT = 'Click the book to open it';
+export const CLOSED_HINT = 'Drag to turn it · click to open';
+
+/** What the hint reads with an empty hand, which the page's template ships. */
+export const TEMPLATE_HINT = 'Drag to look around · click a book';
 
 /** The closed book at rest, read before anything opened it. */
 export interface ClosedRead {
@@ -276,28 +280,37 @@ function putDownFailures(after: PutDown, how: string): string[] {
 }
 
 /**
- * Examining the held book: the page's control closes it in the hand, it turns,
- * and leaving it leaves *only* it (#418, spec S9). Read from the page and the
- * scene by `checkViewer`, judged here so each clause is a unit test that was
- * planted red first.
+ * What closing the open book by one of its two controls left (#553, S3 and S5):
+ * the book is back at the closed rest it landed on, with its pages hidden, focus
+ * on the X, and a key still turns it.
  */
-export interface ViewerRead {
-  /** The page's control opened the dialog. */
-  readonly opened: boolean;
-  /** The open dialog's accessible name carries the held book's title. */
-  readonly namedForBook: boolean;
-  /**
-   * The front board's angle to the page block once examining is at rest, in
-   * degrees, or nothing when it never read. Closed is 0°, within
-   * `CLOSED_TOLERANCE_DEG` — read from the scene, so a dialog that opened over
-   * a book still open cannot vouch for itself.
-   */
-  readonly closedAngle: number | undefined;
-  readonly escapeClosedViewer: boolean;
-  /** One Escape leaves the view and keeps the book held (§3.5, check 9). */
-  readonly heldAfterEscape: boolean;
-  /** …and the page shows again once the book has opened at rest. */
-  readonly pageVisibleAfterEscape: boolean;
+export interface CloseRead {
+  /** The front board's angle to the page block once the close is at rest, or nothing if it never read. */
+  readonly boardAngle: number | undefined;
+  /** `held()` reports phase `held` and not opened: the state a pickup lands on. */
+  readonly atClosedRest: boolean;
+  /** Both pages hidden by `visibility`, from sight and from the accessibility tree. */
+  readonly pagesHidden: boolean;
+  /** Focus is on the X (`#held-put-back`), not dropped to `<body>`. */
+  readonly focusOnX: boolean;
+  /** An arrow key, pressed then, changed the turn: the book is turnable again. */
+  readonly turnable: boolean;
+}
+
+/**
+ * Turning the closed book, and closing the open one (#553): read from the page
+ * and the scene by `checkTurn`, judged here so each clause is a unit test that
+ * was planted red first.
+ */
+export interface TurnRead {
+  /** No `<dialog>` on the page and no button named "Back to the page": the modal view went in #553. */
+  readonly noDialog: boolean;
+  /** The X's description, the text its `aria-describedby` names. */
+  readonly xDescription: string;
+  /** The close control by the title (`.held-close`), pressed by the keyboard from the open book. */
+  readonly closeButton: CloseRead;
+  /** The close control at the foot of the right page (`.held-turn-over`), pressed by the keyboard. */
+  readonly turnOverButton: CloseRead;
   /**
    * The held copy `library.json` names for this book's cover, or nothing for a
    * book with none. Read from `library.json` rather than from the page, so a
@@ -314,8 +327,8 @@ export interface ViewerRead {
    */
   readonly withoutHeld: { readonly showedOwn: boolean } | undefined;
   /**
-   * With every request for the held copy refused, whether examining still opened
-   * and the book wore the shelf copy rather than nothing — a browser holding a
+   * With every request for the held copy refused, whether the book still opened
+   * and closed and wore the shelf copy rather than nothing — a browser holding a
    * `library.json` from before a copy was taken down (#416).
    */
   readonly fellBack: boolean;
@@ -325,116 +338,165 @@ export interface ViewerRead {
    * CodeQL's `js/xss-through-dom`).
    */
   readonly pathInPage: boolean;
-  /** A drag across and down changed yaw and pitch, and pitch stayed within ±75°. */
+  /** A drag on the canvas turned the book in yaw and pitch, and pitch stayed within ±75°. */
   readonly turned: boolean;
   /** Home squared the book, then one ArrowRight changed its yaw by 15°. */
   readonly keyTurned: boolean;
-  /** A tap anywhere on the view left it, the book still held and the page showing. */
-  readonly leftByTap: boolean;
-  /** "Back to the page", pressed by the keyboard, did the same. */
-  readonly leftByButton: boolean;
-  /** Under reduced motion the book was closed, and open again, within a few frames. */
+  /** A tap on the turned book opened it, and it came to rest square. */
+  readonly tapOpensSquare: boolean;
+  /** Escape put the book back from the closed rest. */
+  readonly escapeFromClosed: boolean;
+  /** …from the open book. */
+  readonly escapeFromOpen: boolean;
+  /** …and with a close in flight. */
+  readonly escapeMidClose: boolean;
+  /** Under reduced motion the close was a cut: at the closed rest in the same call. */
   readonly reducedCuts: boolean;
-  /** No cover was requested between the view opening and leaving it. */
+  /** No cover was requested while the book turned, opened and closed. */
   readonly fetchedNothing: boolean;
-  /**
-   * A book with no cover, examined: its control was there, the book closed and
-   * the view left. Nothing when no such book was reached (S7).
-   */
-  readonly coverlessOpens: boolean | undefined;
-  /** …and that book arrived closed, its board at 0° ±0.5° read from the scene (C1). */
+  /** A book with no cover arrived closed, its board at 0° ±0.5° read from the scene. Nothing when none was reached. */
   readonly coverlessArrivesClosed: boolean | undefined;
-  /** Focus was inside the dialog while it was open (`showModal` moves it in). */
-  readonly focusInside: boolean;
-  /** After Escape, once at rest, focus was on the page's control. */
-  readonly focusReturned: boolean;
-  /** `history.back()` while examining closed the dialog and emptied the hand. */
-  readonly emptiedCloses: boolean;
+  /** …and that book opened and closed by its control. Nothing when none was reached. */
+  readonly coverlessCloses: boolean | undefined;
+  /** `history.back()` with a close in flight emptied the hand and the book settled. */
+  readonly backMidClose: boolean;
+  /**
+   * A put-back right after a close, sampled once a frame from the pickup's own
+   * timeline (C5): its progress at the closed rest, and every value it then read
+   * until the book was home. Nothing when no close was reached.
+   */
+  readonly returned: { readonly rest: number; readonly frames: readonly number[] } | undefined;
 }
 
 /** How far from 0° the front board may lie and the book still read as closed. */
 export const CLOSED_TOLERANCE_DEG = 0.5;
 
-export function viewerFailures(read: ViewerRead | undefined): string[] {
+/** What the X's description must name, so a visitor who cannot see the hint is told. */
+const DESCRIBES: readonly (readonly [string, RegExp])[] = [
+  ['the drag', /\bdrag/i],
+  ['the arrow keys', /arrow key/i],
+  ['the click', /\bclick/i],
+];
+
+/** A progress this close to the closed rest, or to 0, is that rest and not a step on the way. */
+const PROGRESS_EPSILON = 1e-6;
+
+function closeFailures(read: CloseRead, control: string): string[] {
+  const failures: string[] = [];
+  if (read.boardAngle === undefined) {
+    failures.push(
+      `after ${control} the front board's angle never read, so the book was not seen to close`,
+    );
+  } else if (Math.abs(read.boardAngle) > CLOSED_TOLERANCE_DEG) {
+    failures.push(
+      `after ${control} the book is ${Math.abs(read.boardAngle).toFixed(1)}° off closed at rest ` +
+        '— it must come back to the closed rest a pickup lands on',
+    );
+  }
+  if (!read.atClosedRest) {
+    failures.push(`${control} did not leave the book held, closed, at rest`);
+  }
+  if (!read.pagesHidden) {
+    failures.push(`after ${control} the pages were not hidden: a closed book shows none`);
+  }
+  if (!read.focusOnX) {
+    failures.push(`after ${control} focus was not on the X: it dropped off the pages that hid`);
+  }
+  if (!read.turnable) failures.push(`after ${control} an arrow key did not turn the book`);
+  return failures;
+}
+
+/** Whether a put-back's progress, frame by frame, came down through the steps between the rest and 0. */
+function returnPlays(rest: number, frames: readonly number[]): boolean {
+  const between = frames.filter((v) => v > PROGRESS_EPSILON && v < rest - PROGRESS_EPSILON);
+  if (between.length === 0) return false;
+  // Decreasing across frames: no frame reads above the one before it.
+  return frames.every((v, i) => i === 0 || v <= (frames[i - 1] ?? v) + PROGRESS_EPSILON);
+}
+
+export function turnFailures(read: TurnRead | undefined): string[] {
   if (read === undefined) {
-    return ['no held book was examined, so the examining view was never checked'];
+    return ['no held book was turned, so the closed book was never checked'];
   }
   const failures: string[] = [];
-  if (!read.opened) failures.push("the page's control did not open the examining view");
-  if (!read.namedForBook) {
+  if (!read.noDialog) {
     failures.push(
-      'the examining dialog was not named for the book: every book would announce alike',
+      'the page has a <dialog> or a "Back to the page" button: the modal view of the closed book went in #553',
     );
   }
-  if (read.closedAngle === undefined) {
-    failures.push("the front board's angle never read, so the book was not seen to close");
-  } else if (Math.abs(read.closedAngle) > CLOSED_TOLERANCE_DEG) {
-    failures.push(
-      `the book is ${Math.abs(read.closedAngle).toFixed(1)}° off closed at rest ` +
-        `— examining turns a closed book, not an open one`,
-    );
+  for (const [what, pattern] of DESCRIBES) {
+    if (!pattern.test(read.xDescription)) {
+      failures.push(`the X's description does not name ${what}: "${read.xDescription}"`);
+    }
   }
-  if (!read.escapeClosedViewer) failures.push('Escape did not close the examining view');
-  if (!read.heldAfterEscape) {
-    failures.push(
-      'the Escape that closed the examining view also put the book back — one keystroke ' +
-        'left two surfaces',
-    );
-  }
-  if (!read.pageVisibleAfterEscape) {
-    failures.push('after Escape the page was not visible again once the book had opened');
-  }
+  failures.push(
+    ...closeFailures(read.closeButton, 'the top close control'),
+    ...closeFailures(read.turnOverButton, 'the bottom close control'),
+  );
   if (read.held === undefined) {
-    failures.push('no held book offered a held copy, so examining one was never checked');
+    failures.push('no held book offered a held copy, so turning one was never checked');
   } else if (!read.showedHeld) {
     failures.push(`the book did not wear the held copy ${read.held}`);
   }
   if (read.withoutHeld === undefined) {
-    failures.push('no book without a held copy was examined, so the other path went unseen');
+    failures.push('no book without a held copy was turned, so the other path went unseen');
   } else if (!read.withoutHeld.showedOwn) {
     failures.push('for a book with no held copy, the book did not wear the shelf copy');
   }
   if (!read.fellBack) {
-    failures.push('a held copy that failed to load left examining without the shelf copy');
+    failures.push('a held copy that failed to load left the book without the shelf copy');
   }
   if (read.pathInPage) {
     failures.push('a cover path was written into the held page — nothing offers a path to the DOM');
   }
   if (!read.turned) {
-    failures.push('a drag across the view did not turn the book in yaw and pitch, within ±75°');
+    failures.push(
+      'a drag on the canvas did not turn the closed book in yaw and pitch, within ±75°',
+    );
   }
   if (!read.keyTurned) {
     failures.push('Home did not square the book, or an arrow key did not turn the book by 15°');
   }
-  if (!read.leftByTap) {
-    failures.push('a tap on the view did not leave it with the book held and the page showing');
+  if (!read.tapOpensSquare) {
+    failures.push('a tap on the turned book did not open it, or it did not come to rest square');
   }
-  if (!read.leftByButton) {
-    failures.push('Back to the page did not leave the view with the book held');
+  if (!read.escapeFromClosed) failures.push('Escape did not put the closed book back');
+  if (!read.escapeFromOpen) failures.push('Escape did not put the open book back');
+  if (!read.escapeMidClose) {
+    failures.push('Escape did not put the book back with a close in flight');
   }
   if (!read.reducedCuts) {
-    failures.push('under reduced motion the book tweened shut or open instead of cutting');
+    failures.push('under reduced motion the close tweened instead of cutting to the closed rest');
   }
-  if (!read.fetchedNothing) failures.push('examining fetched a cover it should already have');
-  if (read.coverlessOpens === undefined) {
-    failures.push('no book without a cover was reached, so examining one was never checked');
-  } else if (!read.coverlessOpens) {
-    failures.push('a book with no cover did not close and leave the view when examined');
+  if (!read.fetchedNothing) {
+    failures.push('turning, opening and closing fetched a cover it should already have');
   }
   if (read.coverlessArrivesClosed === undefined) {
     failures.push('no book without a cover was reached, so its arrival closed was never read');
   } else if (!read.coverlessArrivesClosed) {
     failures.push('a book with no cover arrived off closed: the board must lie at 0° on arrival');
   }
-  if (!read.focusInside) failures.push('focus was not inside the dialog while it was open');
-  if (!read.focusReturned) {
-    failures.push("focus did not return to the page's control after Escape, once the page showed");
+  if (read.coverlessCloses === undefined) {
+    failures.push('no book without a cover was reached, so closing one was never checked');
+  } else if (!read.coverlessCloses) {
+    failures.push('a book with no cover did not open and close back to the closed rest');
   }
-  if (!read.emptiedCloses) {
-    failures.push('emptying the hand while examining left the view open over an empty hand');
+  if (!read.backMidClose) {
+    failures.push(
+      'the back button with a close in flight did not empty the hand and settle the book',
+    );
+  }
+  if (read.returned === undefined) {
+    failures.push('no put-back after a close was sampled, so the return was never seen to play');
+  } else if (!returnPlays(read.returned.rest, read.returned.frames)) {
+    failures.push(
+      "a put-back right after a close did not play the return: the pickup's progress took no " +
+        'step between the closed rest and 0, or rose between frames',
+    );
   }
   return failures;
 }
+
 /** Which of the three inputs did a thing: a mouse click, a touch tap, and the keyboard. */
 export interface ByInput {
   readonly mouse: boolean;
@@ -457,7 +519,20 @@ export interface ViewportControls {
   /** The X is the top element at its own centre, with the book closed and with it open. */
   readonly xOnTopClosed: boolean;
   readonly xOnTopOpen: boolean;
+  /** The X's offsets from the viewport's top and right, closed and open (#553, C3). */
+  readonly xInsetClosed: Inset;
+  readonly xInsetOpen: Inset;
 }
+
+/** The X's offsets, and what `clamp(0.75rem, 3vw, 1.5rem)` comes to at that size. */
+export interface Inset {
+  readonly top: number;
+  readonly right: number;
+  readonly expected: number;
+}
+
+/** How near the clamp the X's offsets must lie, in CSS pixels. */
+const INSET_TOLERANCE_PX = 1;
 
 /** The closed book's controls (#531, claims C4, C5, C7 to C9 and C12), read in a browser. */
 export interface ControlsRead {
@@ -482,19 +557,22 @@ export interface ControlsRead {
   readonly reducedPickupCuts: boolean;
   readonly reducedOpenCuts: boolean;
   readonly reducedPutBackCuts: boolean;
-  /** What is wrong with the X's and the arrow's markup, one sentence each. */
+  /** What is wrong with the X's markup, one sentence each. */
   readonly markup: readonly string[];
   /** `securitypolicyviolation` events across the whole drive. */
   readonly cspViolations: number;
-  /** The hint says a click opens it while closed, and is the template's once open. */
+  /** The hint says a drag turns the closed book and a click opens it. */
   readonly hintClosed: boolean;
+  /** …is hidden once the book is open. */
   readonly hintOpen: boolean;
+  /** …and is the template's again once the hand is empty. */
+  readonly hintReturns: boolean;
   /** The cursor is a pointer over the closed book, and the canvas's own after. */
   readonly cursorPointer: boolean;
   readonly cursorReset: boolean;
 }
 
-/** The smallest the X may be: 2.75rem at the 16px root, as the viewer's close button is. */
+/** The smallest the X may be: 2.75rem at the 16px root. */
 const TARGET_PX = 44;
 
 const VIEWPORT_LABEL = { desktop: '1280×800', phone: '375×812' } as const;
@@ -526,6 +604,19 @@ export function controlsFailures(read: ControlsRead | undefined): string[] {
     }
     if (!v.xOnTopOpen) {
       failures.push(`at ${at} the X is not the top element at its centre with the book open`);
+    }
+    for (const [state, inset] of [
+      ['closed', v.xInsetClosed],
+      ['open', v.xInsetOpen],
+    ] as const) {
+      for (const side of ['top', 'right'] as const) {
+        if (Math.abs(inset[side] - inset.expected) > INSET_TOLERANCE_PX) {
+          failures.push(
+            `at ${at} the X's ${side} offset is ${inset[side].toFixed(1)}px with the book ${state}, ` +
+              `not clamp(0.75rem, 3vw, 1.5rem) = ${inset.expected.toFixed(1)}px`,
+          );
+        }
+      }
     }
   }
   if (read.xName.length === 0) failures.push('the X has no accessible name');
@@ -559,8 +650,12 @@ export function controlsFailures(read: ControlsRead | undefined): string[] {
       `${String(read.cspViolations)} CSP violations while driving the closed book's controls`,
     );
   }
-  if (!read.hintClosed) failures.push('the hint does not say a click opens the closed book');
-  if (!read.hintOpen) failures.push("the hint is not the template's once the book is open");
+  if (!read.hintClosed) {
+    failures.push('the hint does not say a drag turns the closed book and a click opens it');
+  }
+  if (!read.hintOpen) failures.push('the hint is not hidden once the book is open');
+  if (!read.hintReturns)
+    failures.push("the hint is not the template's again once the hand is empty");
   if (!read.cursorPointer) failures.push('the cursor is not a pointer over the closed book');
   if (!read.cursorReset) failures.push("the cursor is not the canvas's own once the book is open");
   return failures;
@@ -741,6 +836,112 @@ export function atRestFailures(read: AtRestRead): string[] {
     failures.push('the links row was in reach unscrolled, so the planted Thoughts are too short');
   } else if (!read.inReachScrolled) {
     failures.push('the links row never came into reach by scrolling');
+  }
+  return failures;
+}
+
+/** A rectangle on screen, in CSS pixels from the viewport's top left. */
+export interface Box {
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+}
+
+/** A box as «left,top to right,bottom», for a failure line. */
+function show(box: Box): string {
+  return `${box.left.toFixed(0)},${box.top.toFixed(0)} to ${box.right.toFixed(0)},${box.bottom.toFixed(0)}`;
+}
+
+/** Whether two boxes share any area: touching edges do not meet. */
+export function meets(a: Box, b: Box): boolean {
+  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+}
+
+/** The open framing of one book at one size (#553, C6). */
+export interface OpenFraming {
+  /** The hint is hidden: it would lie over the pages. */
+  readonly hintHidden: boolean;
+  readonly x: Box;
+  readonly brand: Box;
+  readonly launcher: Box;
+  /** The pages' rects. The left is nothing where the framing builds none, as on a phone. */
+  readonly left: Box | undefined;
+  readonly right: Box;
+}
+
+/** The closed framing of one book at one size, square or at the pitch limit (#553, C6). */
+export interface ClosedFraming {
+  readonly hint: Box;
+  readonly x: Box;
+  readonly launcher: Box;
+  /** `held().screen`: where the book stands. */
+  readonly book: Box;
+}
+
+/** One book at one size: the open framing, and the closed one square and at the pitch limit. */
+export interface OverlapRead {
+  /** For the failure line: «1280×800, the tallest book». */
+  readonly label: string;
+  readonly open: OpenFraming;
+  readonly square: ClosedFraming;
+  readonly tilted: ClosedFraming;
+}
+
+/**
+ * How many readings `checkOverlap` takes: four sizes, the tallest book and then
+ * the thickest. One short is a red line, so a size that dropped out cannot pass
+ * as a smaller table.
+ */
+export const OVERLAP_READS = 8;
+
+export function overlapFailures(reads: readonly OverlapRead[]): string[] {
+  const failures: string[] = [];
+  if (reads.length !== OVERLAP_READS) {
+    failures.push(
+      `${String(reads.length)} of the ${String(OVERLAP_READS)} overlap readings were taken`,
+    );
+  }
+  for (const read of reads) {
+    const at = read.label;
+    const { open } = read;
+    if (!open.hintHidden) failures.push(`${at}: the hint is showing over the open book`);
+    for (const [name, page] of [
+      ['left', open.left],
+      ['right', open.right],
+    ] as const) {
+      if (page === undefined) continue;
+      if (meets(open.x, page))
+        failures.push(
+          `${at}: the X (${show(open.x)}) meets the open book's ${name} page (${show(page)})`,
+        );
+      if (meets(open.brand, page)) {
+        failures.push(
+          `${at}: the brand (${show(open.brand)}) meets the open book's ${name} page (${show(page)})`,
+        );
+      }
+    }
+    if (meets(open.x, open.launcher)) {
+      failures.push(`${at}: the X meets the Ask launcher with the book open`);
+    }
+    for (const [how, closed] of [
+      ['square', read.square],
+      ['at the pitch limit', read.tilted],
+    ] as const) {
+      if (meets(closed.hint, closed.book)) {
+        failures.push(
+          `${at}: the hint (${show(closed.hint)}) meets the closed book (${show(closed.book)}), ${how}`,
+        );
+      }
+      if (meets(closed.x, closed.book)) {
+        failures.push(
+          `${at}: the X (${show(closed.x)}) meets the closed book (${show(closed.book)}), ${how}`,
+        );
+      }
+      if (meets(closed.x, closed.launcher)) {
+        failures.push(`${at}: the X meets the Ask launcher with the book closed, ${how}`);
+      }
+    }
   }
   return failures;
 }

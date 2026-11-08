@@ -5,18 +5,28 @@ import {
   controlsFailures,
   drawerFailures,
   lostFailures,
+  meets,
+  OVERLAP_READS,
+  overlapFailures,
   phoneFailures,
   pickupFailures,
   spreadFailures,
-  viewerFailures,
+  TEMPLATE_HINT,
+  turnFailures,
   type AtRestRead,
+  type Box,
+  type CloseRead,
+  type ClosedFraming,
   type ClosedRead,
   type ControlsRead,
+  type Inset,
   type LostCase,
+  type OpenFraming,
+  type OverlapRead,
   type PhoneRead,
   type PickupRead,
   type SpreadRead,
-  type ViewerRead,
+  type TurnRead,
   type ViewportControls,
 } from './pickup-gate.ts';
 
@@ -141,7 +151,8 @@ describe('pickupFailures, the closed book (#531)', () => {
     ['a book that arrived open', { opened: true }, /arrived open/],
     ['pages showing on a closed book', { pagesHidden: false }, /pages are not hidden/],
     ['an X off screen', { xOnScreen: false }, /X is not on screen/],
-    ['a hint that does not say a click opens it', { hint: 'Drag to look around' }, /hint/],
+    ['a hint that does not say the book turns and opens', { hint: 'Drag to look around' }, /hint/],
+    ['the old hint, that says only a click', { hint: 'Click the book to open it' }, /hint/],
     ['no Open button', { openName: '' }, /Open button/],
     ['an Open button named for another book', { openName: 'Open Paper Ledger' }, /Open button/],
   ])('fails on %s', (_name, patch, message) => {
@@ -150,7 +161,7 @@ describe('pickupFailures, the closed book (#531)', () => {
     );
   });
 
-  it('judges the board within the same half degree as the examined book', () => {
+  it('judges the board within the same half degree as a closed book at rest', () => {
     expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: 0.5 } })).toEqual([]);
     expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: 0.51 } }).length).toBe(1);
     expect(pickupFailures({ ...good, closed: { ...closed, boardAngle: -0.51 } }).length).toBe(1);
@@ -171,50 +182,20 @@ describe('pickupFailures, the closed book (#531)', () => {
   });
 });
 
-describe('viewerFailures, the coverless book on arrival (#531, C1)', () => {
-  it('fails when a book with no cover arrives off closed, and when none was reached', () => {
-    const base = {
-      opened: true,
-      namedForBook: true,
-      closedAngle: 0,
-      escapeClosedViewer: true,
-      heldAfterEscape: true,
-      pageVisibleAfterEscape: true,
-      held: '/h.jpg',
-      showedHeld: true,
-      withoutHeld: { showedOwn: true },
-      fellBack: true,
-      pathInPage: false,
-      turned: true,
-      keyTurned: true,
-      leftByTap: true,
-      leftByButton: true,
-      reducedCuts: true,
-      fetchedNothing: true,
-      coverlessOpens: true,
-      coverlessArrivesClosed: true,
-      focusInside: true,
-      focusReturned: true,
-      emptiedCloses: true,
-    } satisfies ViewerRead;
-    expect(viewerFailures(base)).toEqual([]);
-    expect(viewerFailures({ ...base, coverlessArrivesClosed: false }).join('\n')).toMatch(
-      /with no cover arrived off closed/,
-    );
-    expect(viewerFailures({ ...base, coverlessArrivesClosed: undefined }).join('\n')).toMatch(
-      /no book without a cover was reached/,
-    );
-  });
-});
-
-describe('viewerFailures', () => {
-  const viewer: ViewerRead = {
-    opened: true,
-    namedForBook: true,
-    closedAngle: 0.1,
-    escapeClosedViewer: true,
-    heldAfterEscape: true,
-    pageVisibleAfterEscape: true,
+describe('turnFailures — the closed book that turns, and closes again (#553)', () => {
+  const closes: CloseRead = {
+    boardAngle: 0.1,
+    atClosedRest: true,
+    pagesHidden: true,
+    focusOnX: true,
+    turnable: true,
+  };
+  const turn: TurnRead = {
+    noDialog: true,
+    xDescription:
+      'Drag the closed book, or use the arrow keys, to turn it. Click it, or use Open, to open it.',
+    closeButton: closes,
+    turnOverButton: closes,
     held: '/held-covers/a.jpg',
     showedHeld: true,
     withoutHeld: { showedOwn: true },
@@ -222,30 +203,44 @@ describe('viewerFailures', () => {
     pathInPage: false,
     turned: true,
     keyTurned: true,
-    focusInside: true,
-    focusReturned: true,
-    leftByTap: true,
-    leftByButton: true,
+    tapOpensSquare: true,
+    escapeFromClosed: true,
+    escapeFromOpen: true,
+    escapeMidClose: true,
     reducedCuts: true,
     fetchedNothing: true,
-    coverlessOpens: true,
     coverlessArrivesClosed: true,
-    emptiedCloses: true,
+    coverlessCloses: true,
+    backMidClose: true,
+    returned: { rest: 0.4, frames: [0.4, 0.31, 0.2, 0.08, 0] },
   };
 
-  it('passes a view that closes the book, turns it and leaves with it still held', () => {
-    expect(viewerFailures(viewer)).toEqual([]);
+  it('passes a book that turns, opens square, closes by both controls and goes home', () => {
+    expect(turnFailures(turn)).toEqual([]);
   });
 
-  it.each<[string, Partial<ViewerRead>, RegExp]>([
-    ['a view that never opened', { opened: false }, /did not open/],
-    ['a dialog not named for the book', { namedForBook: false }, /not named for the book/],
-    ['a book left open at 12°', { closedAngle: 12 }, /12\.0° off closed/],
-    ['a book left open the other way', { closedAngle: -3 }, /3\.0° off closed/],
-    ['a board angle never read', { closedAngle: undefined }, /never read/],
-    ['an Escape that did nothing', { escapeClosedViewer: false }, /did not close/],
-    ['an Escape that took the book too', { heldAfterEscape: false }, /also put the book back/],
-    ['a page still hidden after Escape', { pageVisibleAfterEscape: false }, /page was not visible/],
+  it('fails when no book was reached at all', () => {
+    expect(turnFailures(undefined)).toHaveLength(1);
+  });
+
+  it.each<[string, Partial<TurnRead>, RegExp]>([
+    ['a dialog left on the page', { noDialog: false }, /<dialog>/],
+    [
+      'an X that does not say the drag',
+      { xDescription: 'Click it, or use the arrow keys.' },
+      /the drag/,
+    ],
+    [
+      'an X that does not say the arrow keys',
+      { xDescription: 'Drag it. Click it to open it.' },
+      /the arrow keys/,
+    ],
+    [
+      'an X that does not say the click',
+      { xDescription: 'Drag it, or use the arrow keys.' },
+      /the click/,
+    ],
+    ['an X with no description at all', { xDescription: '' }, /does not name/],
     [
       'the shelf copy worn when a held copy exists',
       { showedHeld: false },
@@ -260,37 +255,81 @@ describe('viewerFailures', () => {
     ],
     ['no fallback when the held copy fails', { fellBack: false }, /failed to load/],
     ['a cover path written into the page', { pathInPage: true }, /written into the held page/],
-    ['a drag that turned nothing', { turned: false }, /drag across the view did not turn/],
+    ['a drag that turned nothing', { turned: false }, /drag on the canvas did not turn/],
     [
       'an arrow key that did not turn 15°',
       { keyTurned: false },
       /arrow key did not turn the book by 15°/,
     ],
-    ['focus left outside the dialog', { focusInside: false }, /focus was not inside/],
-    ['focus lost after Escape', { focusReturned: false }, /focus did not return/],
-    ['a tap that did not leave', { leftByTap: false }, /tap on the view did not leave/],
-    ['a button that did not leave', { leftByButton: false }, /Back to the page did not leave/],
-    ['motion that tweens under reduced motion', { reducedCuts: false }, /reduced motion/],
-    ['a fetch while examining', { fetchedNothing: false }, /fetched a cover/],
-    ['no book without a cover reached', { coverlessOpens: undefined }, /no book without a cover/],
-    ['a coverless book that did not examine', { coverlessOpens: false }, /with no cover did not/],
-    ['a book 0.51° off closed', { closedAngle: 0.51 }, /0\.5° off closed/],
+    ['a tap that did not open it square', { tapOpensSquare: false }, /tap on the turned book/],
+    ['an Escape that left the closed book', { escapeFromClosed: false }, /closed book back/],
+    ['an Escape that left the open book', { escapeFromOpen: false }, /open book back/],
+    ['an Escape that did nothing mid-close', { escapeMidClose: false }, /close in flight/],
+    ['a close that tweens under reduced motion', { reducedCuts: false }, /reduced motion/],
+    ['a fetch while turning', { fetchedNothing: false }, /fetched a cover/],
     [
-      'a hand emptied with the view left open',
-      { emptiedCloses: false },
-      /left the view open over an empty hand/,
+      'no book without a cover reached on arrival',
+      { coverlessArrivesClosed: undefined },
+      /no book without a cover was reached, so its arrival/,
     ],
+    [
+      'a coverless book that arrived off closed',
+      { coverlessArrivesClosed: false },
+      /with no cover arrived off closed/,
+    ],
+    [
+      'no book without a cover reached to close',
+      { coverlessCloses: undefined },
+      /so closing one was never checked/,
+    ],
+    ['a coverless book that did not close', { coverlessCloses: false }, /with no cover did not/],
+    [
+      'a back button mid-close that left the hand full',
+      { backMidClose: false },
+      /back button with a close in flight/,
+    ],
+    ['no return sampled', { returned: undefined }, /return was never seen/],
   ])('fails on %s', (_name, patch, message) => {
-    expect(viewerFailures({ ...viewer, ...patch }).join('\n')).toMatch(message);
+    expect(turnFailures({ ...turn, ...patch }).join('\n')).toMatch(message);
+  });
+
+  it.each<[string, Partial<CloseRead>, RegExp]>([
+    ['a board left open at 12°', { boardAngle: 12 }, /12\.0° off closed/],
+    ['a board hinged the other way', { boardAngle: -3 }, /3\.0° off closed/],
+    ['a board angle never read', { boardAngle: undefined }, /never read/],
+    ['a board 0.51° off closed', { boardAngle: 0.51 }, /0\.5° off closed/],
+    ['a book not at the closed rest', { atClosedRest: false }, /held, closed, at rest/],
+    ['pages still showing', { pagesHidden: false }, /pages were not hidden/],
+    ['focus dropped off the pages', { focusOnX: false }, /focus was not on the X/],
+    ['a closed book no key turns', { turnable: false }, /arrow key did not turn the book/],
+  ])('fails each control on %s', (_name, patch, message) => {
+    for (const [key, control] of [
+      ['closeButton', 'the top close control'],
+      ['turnOverButton', 'the bottom close control'],
+    ] as const) {
+      const failures = turnFailures({ ...turn, [key]: { ...closes, ...patch } }).join('\n');
+      expect(failures).toMatch(message);
+      expect(failures).toContain(control);
+    }
   });
 
   it('passes a book exactly at the closed tolerance, either way', () => {
-    expect(viewerFailures({ ...viewer, closedAngle: 0.5 })).toEqual([]);
-    expect(viewerFailures({ ...viewer, closedAngle: -0.5 })).toEqual([]);
+    expect(turnFailures({ ...turn, closeButton: { ...closes, boardAngle: 0.5 } })).toEqual([]);
+    expect(turnFailures({ ...turn, turnOverButton: { ...closes, boardAngle: -0.5 } })).toEqual([]);
   });
 
-  it('fails when no viewer was reached at all', () => {
-    expect(viewerFailures(undefined)).toHaveLength(1);
+  it.each<[string, { rest: number; frames: number[] }]>([
+    ['a return that cut straight home', { rest: 0.4, frames: [0.4, 0] }],
+    ['a return that never moved', { rest: 0.4, frames: [0.4, 0.4, 0.4] }],
+    ['a return that rose on the way', { rest: 0.4, frames: [0.4, 0.2, 0.3, 0] }],
+    ['a return that only read the end', { rest: 0.4, frames: [0] }],
+    ['a return with no frames', { rest: 0.4, frames: [] }],
+  ])('fails %s', (_name, returned) => {
+    expect(turnFailures({ ...turn, returned }).join('\n')).toMatch(/did not play the return/);
+  });
+
+  it('passes a return that took a single step between the rest and 0', () => {
+    expect(turnFailures({ ...turn, returned: { rest: 0.4, frames: [0.4, 0.15, 0] } })).toEqual([]);
   });
 });
 describe('phoneFailures', () => {
@@ -425,6 +464,8 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
     xOverlaps: [],
     xOnTopClosed: true,
     xOnTopOpen: true,
+    xInsetClosed: { top: 24, right: 24, expected: 24 },
+    xInsetOpen: { top: 24, right: 24, expected: 24 },
   };
   const goodControls: ControlsRead = {
     desktop: viewport,
@@ -444,6 +485,7 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
     cspViolations: 0,
     hintClosed: true,
     hintOpen: true,
+    hintReturns: true,
     cursorPointer: true,
     cursorReset: true,
   };
@@ -454,6 +496,20 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
 
   it('says nothing was read when nothing was', () => {
     expect(controlsFailures(undefined)).toHaveLength(1);
+  });
+
+  it('holds the X to the clamp within a pixel, and no further', () => {
+    const edge = (inset: Inset): ControlsRead => ({
+      ...goodControls,
+      desktop: { ...viewport, xInsetClosed: inset, xInsetOpen: inset },
+    });
+    expect(controlsFailures(edge({ top: 25, right: 23, expected: 24 }))).toEqual([]);
+    expect(controlsFailures(edge({ top: 25.1, right: 24, expected: 24 }))).toHaveLength(2);
+    expect(controlsFailures(edge({ top: 24, right: 22.9, expected: 24 }))).toHaveLength(2);
+  });
+
+  it('keeps the template hint the gate compares against', () => {
+    expect(TEMPLATE_HINT).toBe('Drag to look around · click a book');
   });
 
   it.each<[string, Partial<ControlsRead>, RegExp]>([
@@ -490,8 +546,13 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
     ],
     ['markup built wrongly', { markup: ['the X has a style attribute'] }, /style attribute/],
     ['a CSP violation', { cspViolations: 2 }, /2 CSP violations/],
-    ['a hint that never changed', { hintClosed: false }, /hint/],
-    ['a hint stuck after opening', { hintOpen: false }, /hint/],
+    ['a hint that never changed', { hintClosed: false }, /drag turns the closed book/],
+    [
+      'a hint still showing over the open book',
+      { hintOpen: false },
+      /not hidden once the book is open/,
+    ],
+    ['a hint stuck after the hand emptied', { hintReturns: false }, /template's again/],
     ['no pointer cursor over the book', { cursorPointer: false }, /cursor/],
     ['a cursor left behind', { cursorReset: false }, /cursor/],
   ])('fails on %s', (_name, patch, message) => {
@@ -526,6 +587,16 @@ describe('controlsFailures — the closed book and its controls (#531)', () => {
       /not the top element.*closed/,
     ],
     ['an X under an open page', { xOnTopOpen: false }, /not the top element.*open/],
+    [
+      'an X 3px too low with the book closed',
+      { xInsetClosed: { top: 27, right: 24, expected: 24 } },
+      /top offset is 27\.0px with the book closed/,
+    ],
+    [
+      'an X 2px off the right with the book open',
+      { xInsetOpen: { top: 24, right: 22, expected: 24 } },
+      /right offset is 22\.0px with the book open/,
+    ],
   ])('fails at either size on %s', (_name, patch, message) => {
     for (const where of ['desktop', 'phone'] as const) {
       const failures = controlsFailures({
@@ -610,4 +681,123 @@ describe('lostFailures — a lost context with a book held (#531, C15)', () => {
   it('fails when the loss was never driven', () => {
     expect(lostFailures(undefined)).toHaveLength(1);
   });
+});
+
+describe('overlapFailures — the hint, the X and the brand off the book (#553, C6)', () => {
+  const open: OpenFraming = {
+    hintHidden: true,
+    x: { left: 1200, top: 24, right: 1244, bottom: 68 },
+    brand: { left: 24, top: 24, right: 120, bottom: 60 },
+    launcher: { left: 1200, top: 700, right: 1256, bottom: 756 },
+    left: { left: 180, top: 120, right: 620, bottom: 700 },
+    right: { left: 640, top: 120, right: 1080, bottom: 700 },
+  };
+  const closed: ClosedFraming = {
+    hint: { left: 24, top: 70, right: 300, bottom: 90 },
+    x: open.x,
+    launcher: open.launcher,
+    book: { left: 400, top: 150, right: 880, bottom: 700 },
+  };
+  const read = (label = '1280×800, the tallest book'): OverlapRead => ({
+    label,
+    open,
+    square: closed,
+    tilted: closed,
+  });
+  const reads = Array.from({ length: OVERLAP_READS }, () => read());
+
+  it('passes a book whose pages, hint and X keep apart', () => {
+    expect(overlapFailures(reads)).toEqual([]);
+  });
+
+  it('fails when a size dropped out, so a gap cannot pass as a smaller table', () => {
+    expect(overlapFailures(reads.slice(1)).join('\n')).toMatch(/7 of the 8 overlap readings/);
+    expect(overlapFailures([]).join('\n')).toMatch(/0 of the 8/);
+  });
+
+  it('judges two boxes that share an edge as apart, and any overlap as meeting', () => {
+    const a: Box = { left: 0, top: 0, right: 10, bottom: 10 };
+    expect(meets(a, { left: 10, top: 0, right: 20, bottom: 10 })).toBe(false);
+    expect(meets(a, { left: 9.9, top: 0, right: 20, bottom: 10 })).toBe(true);
+    expect(meets(a, { left: 0, top: 10, right: 10, bottom: 20 })).toBe(false);
+    expect(meets(a, { left: 0, top: 9.9, right: 10, bottom: 20 })).toBe(true);
+  });
+
+  const one = (patch: Partial<OverlapRead>): string[] =>
+    overlapFailures([{ ...read('375×812, the thickest book'), ...patch }, ...reads.slice(1)]);
+
+  it.each<[string, Partial<OpenFraming>, RegExp]>([
+    [
+      'a hint showing over the open book',
+      { hintHidden: false },
+      /hint is showing over the open book/,
+    ],
+    [
+      'the X on the left page',
+      { x: { left: 600, top: 130, right: 650, bottom: 174 } },
+      /X \(.*\) meets the open book's left page/,
+    ],
+    [
+      'the X on the right page',
+      { x: { left: 1060, top: 130, right: 1110, bottom: 174 } },
+      /X \(.*\) meets the open book's right page/,
+    ],
+    [
+      'the brand on the left page',
+      { brand: { left: 150, top: 130, right: 200, bottom: 160 } },
+      /brand \(.*\) meets the open book's left page/,
+    ],
+    [
+      'the brand on the right page',
+      { brand: { left: 700, top: 130, right: 760, bottom: 160 } },
+      /brand \(.*\) meets the open book's right page/,
+    ],
+    [
+      'the X on the launcher',
+      { launcher: { ...open.launcher, top: 40 } },
+      /X meets the Ask launcher with the book open/,
+    ],
+  ])('fails the open framing on %s', (_name, patch, message) => {
+    const failures = one({ open: { ...open, ...patch } }).join('\n');
+    expect(failures).toMatch(message);
+    expect(failures).toContain('375×812, the thickest book');
+  });
+
+  it('judges a phone, whose left page is not built, on the right page alone', () => {
+    expect(one({ open: { ...open, left: undefined } })).toEqual([]);
+    const brand = { left: 700, top: 130, right: 760, bottom: 160 };
+    expect(one({ open: { ...open, left: undefined, brand } }).join('\n')).toMatch(
+      /brand \(.*\) meets the open book's right page/,
+    );
+  });
+
+  it.each<[string, Partial<ClosedFraming>, RegExp]>([
+    [
+      'the hint on the book',
+      { hint: { left: 390, top: 140, right: 500, bottom: 160 } },
+      /hint \(.*\) meets the closed book/,
+    ],
+    [
+      'the X on the book',
+      { x: { left: 860, top: 160, right: 900, bottom: 204 } },
+      /X \(.*\) meets the closed book/,
+    ],
+    [
+      'the X on the launcher',
+      { launcher: { ...closed.launcher, top: 40 } },
+      /X meets the Ask launcher with the book closed/,
+    ],
+  ])(
+    'fails the closed framing on %s, square and at the pitch limit alike',
+    (_n, patch, message) => {
+      for (const [key, how] of [
+        ['square', 'square'],
+        ['tilted', 'at the pitch limit'],
+      ] as const) {
+        const failures = one({ [key]: { ...closed, ...patch } }).join('\n');
+        expect(failures).toMatch(message);
+        expect(failures).toContain(how);
+      }
+    },
+  );
 });
