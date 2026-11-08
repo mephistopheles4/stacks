@@ -179,6 +179,10 @@ the mobile crash appeared to deploy while phones kept crashing. The build check
 waits out edge propagation before complaining, since a deploy is not live the
 instant wrangler returns.
 
+It also compares the live page's `connect-src` with the shape the build
+produced, and a difference fails the run; the Analytics switch that changes
+that shape is described in [Analytics](#analytics) below.
+
 **Both checks read the HTTP status before the body, and say "refused" rather
 than guessing.** Bot protection answers a non-browser client with a *challenge
 page*, which is HTML carrying no build stamp and a content-length of its own —
@@ -760,7 +764,7 @@ report short of a commit or out of order.
 **Two populations, and they do not add up.** The nine declared scopes, and
 whole-tree TypeScript. A clone is a relation between two places, so a clone
 whose halves sit in two scopes is counted by **both** — the nine rows are
-deliberately not a partition of the ninth. The whole-tree row exists because a
+deliberately not a partition of the tenth. The whole-tree row exists because a
 scope list is structurally blind to exactly that clone, and because `gates/` is
 read by no scope at all. See
 [ADR-0072](adr/0072-a-clone-is-a-relation-between-two-places.md).

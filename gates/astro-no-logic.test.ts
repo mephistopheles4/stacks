@@ -11,7 +11,7 @@
  * remedy nobody built; landing the checker closed it the other way instead.
  *
  * **What holds now is coverage, not typechecking.** `.astro` sits outside
- * **one** scope list, which both counters read: all eight globs in
+ * **one** scope list, which both counters read: all nine globs in
  * `stryker.scopes.json` end `*.ts`, and `scripts/lib/complexity.ts`'s
  * `populationOf` takes its population from those same globs minus
  * `*.test.ts`. So a function in an `.astro` file is typechecked and still

@@ -64,7 +64,11 @@ describe('the real tracker, behind the module', () => {
     expect(names).toContain('Ask Opened');
     expect(names).toContain('engagement');
 
+    const KEYS = ['n', 'v', 'u', 'd', 'r', 'p', 'sd', 'e'];
     for (const body of bodies) {
+      // No field the module did not name, so a tracker update that adds one fails here.
+      for (const key of Object.keys(body)) expect(KEYS).toContain(key);
+      if (body.p !== undefined) expect(Object.keys(body.p)).toEqual(['book']);
       const url = new URL(body.u);
       expect(url.hash).toBe('');
       for (const key of url.searchParams.keys()) expect(ALLOWED).toContain(key);

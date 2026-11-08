@@ -166,7 +166,7 @@ it with no provenance at all.
   a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
   frontmatter **is** typechecked, by `astro check` inside `pnpm build` (G50,
   `astro-types`); the rule stands on a different footing. **Logic in an `.astro`
-  file is counted by nothing**: all eight globs in `stryker.scopes.json` end
+  file is counted by nothing**: all nine globs in `stryker.scopes.json` end
   `*.ts` and the complexity populations are those same globs, so a function
   there earns no mutation score and no complexity series. Anything with a type
   or a branch lives in a `.ts` file, where the counters can see it.

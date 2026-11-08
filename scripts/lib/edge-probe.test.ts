@@ -15,6 +15,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  connectSrcMatches,
   connectSrcOf,
   describeStaleCover,
   probeBuild,
@@ -78,6 +79,15 @@ describe('connectSrcOf', () => {
   it('is undefined when the page has no policy or no connect-src', () => {
     expect(connectSrcOf(page(STAMP))).toBeUndefined();
     expect(connectSrcOf(policy("default-src 'none';"))).toBeUndefined();
+  });
+
+  it('matches the built shape in any order, and never a missing or different one', () => {
+    const on = ["'self'", 'https://plausible.io'];
+    expect(connectSrcMatches(['https://plausible.io', "'self'"], on)).toBe(true);
+    expect(connectSrcMatches(["'self'"], on)).toBe(false);
+    expect(connectSrcMatches(on, ["'self'"])).toBe(false);
+    expect(connectSrcMatches(["'self'", 'https://other.example'], on)).toBe(false);
+    expect(connectSrcMatches(undefined, ["'self'"])).toBe(false);
   });
 
   it('rides along on a current answer, and only there', async () => {

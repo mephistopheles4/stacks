@@ -116,16 +116,16 @@ export const TREND_SERIES = [
   // See docs/spec/static-analysis-and-style.md §5 and ADR-0072.
   {
     name: 'duplication-clones',
-    help: 'Clones found, over the eight declared scopes. A clone spanning two is counted by both.',
+    help: 'Clones found, over the nine declared scopes. A clone spanning two is counted by both.',
   },
-  { name: 'duplication-lines', help: 'Duplicated lines, over the eight declared scopes.' },
+  { name: 'duplication-lines', help: 'Duplicated lines, over the nine declared scopes.' },
   {
     name: 'duplication-ignored-lines',
-    help: 'Lines inside a jscpd suppression block, over the eight declared scopes.',
+    help: 'Lines inside a jscpd suppression block, over the nine declared scopes.',
   },
   {
     name: 'duplication-total-lines',
-    help: 'Lines scanned, over the eight declared scopes — the denominator the other three are read against.',
+    help: 'Lines scanned, over the nine declared scopes — the denominator the other three are read against.',
   },
   { name: 'duplication-tree-clones', help: 'Clones found, whole-tree TypeScript.' },
   { name: 'duplication-tree-lines', help: 'Duplicated lines, whole-tree TypeScript.' },
@@ -250,7 +250,7 @@ export function complexityFactsOf(counted: ReadonlyMap<string, Counts | null> | 
     facts.push({ scope, ...counts });
   }
 
-  // An empty map is not a healthy run either. Eight scopes are declared, so
+  // An empty map is not a healthy run either. Nine scopes are declared, so
   // nothing to walk is a broken declaration wearing the shape of a clean pass.
   if (facts.length === 0) return { failed: COMPLEXITY_SERIES };
 
@@ -399,7 +399,7 @@ export function duplicationFactsOf(counted: AllCounts | undefined): {
     scopes.push({ scope, ...counts });
   }
 
-  // An empty map is not a healthy run either. Eight scopes are declared, so
+  // An empty map is not a healthy run either. Nine scopes are declared, so
   // nothing to walk is a broken declaration wearing the shape of a clean pass.
   if (scopes.length === 0) return { failed: DUPLICATION_SERIES };
 
@@ -495,7 +495,7 @@ export interface RunFacts {
   /**
    * The four counts per declared population, or absent when any of them failed.
    *
-   * ⚠️ **Present means all eight scopes are here**, which `mutationScore` does
+   * ⚠️ **Present means all nine scopes are here**, which `mutationScore` does
    * not promise: a scope with no mutants emits no score sample, while a
    * population with no function fails the whole set. Read
    * `complexityFactsOf` for why, and rely on it — the reading half does.
@@ -505,7 +505,7 @@ export interface RunFacts {
    * The four counts over each of the two duplication populations, or absent
    * when any of the eight failed.
    *
-   * ⚠️ **Present means all eight scopes *and* the tree are here.** Read
+   * ⚠️ **Present means all nine scopes *and* the tree are here.** Read
    * `duplicationFactsOf` for why, and rely on it — the renderer below does.
    */
   duplication?: DuplicationFacts;

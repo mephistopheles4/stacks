@@ -49,7 +49,7 @@
  * ⚠️ **It reads the real tree and *does* run inside Stryker's dry run**, unlike
  * G47, which `vitest.stryker.config.ts` excludes. Both files it reads —
  * `stryker.floors.json` and `stryker.config.mjs` — are matched by no `mutate`
- * glob, since all eight end `*.ts`, so the sandbox holds them uninstrumented and
+ * glob, since all nine end `*.ts`, so the sandbox holds them uninstrumented and
  * byte-identical to the checkout. G47's exclusion is about a gate asserting
  * counts over *rewritten source*; this asserts a hash over two files no mutant
  * can reach, and it reads two files rather than sweeping a tree, so neither the

@@ -28,8 +28,8 @@ carrying one property, `book`, the public id in `notes/<id>.json`, and `Ask Open
 
 `https://plausible.io` takes events for every Plausible account, and the request names its
 site in its own body. A CSP source cannot name an account, so in an on build, code running in
-the page could send data to a Plausible site someone else owns. What remains is the exact pin,
-the release-age window and review. **The owner accepted this** (spec S16 Q2). Plausible's
+the page could send data to a Plausible site someone else owns. The controls that remain are the
+exact pin, the release-age window and review. **The owner accepted this** (spec S16 Q2). Plausible's
 hostname allowlist in the owner's account would only partly block forged events and is not
 set (accepted, S13).
 
@@ -82,3 +82,12 @@ which amends ADR-0053's eight (spec X4).
   id, in Plausible until the owner resets the site's stats there.
 - Rollback: unset the variable and run `deploy:site`. Earlier Pages deployments keep the
   tracker at their own addresses until they are deleted.
+- An off build's `script-src` carries one hash that the build before this change did not: the
+  SHA-256 of an empty string, on every page. It is most likely the notice-page start script
+  collapsing to nothing when the switch is off (no off page holds an inline script, and the
+  on build has no such hash). It allows no code to run, and G20 compares directives without
+  their hashes, so the gate cannot see it. Recorded rather than removed; the cause has not
+  been isolated.
+- The tracker's `customProperties` is left unset on purpose. Setting it to an empty object
+  makes every request carry an empty `p`, which `tracker.test.ts` would then have to
+  allow; the default sends no `p` at all.

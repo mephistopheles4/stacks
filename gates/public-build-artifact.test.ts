@@ -1109,6 +1109,10 @@ describe('G20 — every rule goes red', () => {
     await expectOnly('csp', async () => {
       await writeIndex(indexHtml({ csp: cspMeta({ connectSrc: "'self' https://plausible.io" }) }));
     });
+    // The off trace clause also fires on this page, because the planted policy
+    // names the host. The policy check is the claim here, so it must fire too.
+    const messages = (await inspect()).problems.map((problem) => problem.message);
+    expect(messages.some((message) => message.includes('connect-src'))).toBe(true);
   });
 
   it('csp: the on shape with anything more than plausible.io is refused (C3)', async () => {

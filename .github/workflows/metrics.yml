@@ -285,9 +285,9 @@ jobs:
       - name: commit the record
         run: pnpm metrics:commit
 
-      # The per-mutant detail behind the eight scores. The runner is torn down at
+      # The per-mutant detail behind the nine scores. The runner is torn down at
       # the end of the job and `artifacts/` goes with it, so without this a night's
-      # survivors exist only as eight numbers. Uploaded as-is, a truncated report
+      # survivors exist only as nine numbers. Uploaded as-is, a truncated report
       # included: whatever reached disk is the evidence.
       #
       # ⚠️ After `commit the record`, not before `emit`. `emit` and the commit

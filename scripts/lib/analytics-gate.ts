@@ -1,14 +1,17 @@
 /**
- * The analytics half of `pnpm smoke:render`, as pure functions: what a build's
- * child process may inherit, and how to judge the events the shelf asked for
+ * What `pnpm gate:public` and `pnpm smoke:render` share about analytics, as pure
+ * functions: what a gate's build child may inherit (both gates), and how
+ * `smoke:render` judges the events the shelf asked for
  * (docs/spec/optional-plausible.md S5, S10, C8).
  *
  * The browser steps stay in `smoke-render.ts`; this holds the judgement, so a
  * wrong call count is a failure a test has watched.
  */
-import { PRODUCTION_HOST } from '../../packages/site/src/analytics/events.ts';
+import { PRODUCTION_HOST, type Attempt } from '../../packages/site/src/analytics/events.ts';
 import { SWITCH_VARIABLE } from '../../packages/site/src/analytics/switch.ts';
 import { BOOK_ID } from '../../packages/site/src/shelf/notes.ts';
+
+export type { Attempt };
 
 /**
  * The environment a gate hands its build child.
@@ -22,11 +25,6 @@ import { BOOK_ID } from '../../packages/site/src/shelf/notes.ts';
 export function gateBuildEnv(parent: NodeJS.ProcessEnv, analyticsOn = false): NodeJS.ProcessEnv {
   const { [SWITCH_VARIABLE]: _removed, ...rest } = parent;
   return analyticsOn ? { ...rest, [SWITCH_VARIABLE]: PRODUCTION_HOST } : rest;
-}
-
-export interface Attempt {
-  readonly name: string;
-  readonly book?: string;
 }
 
 /** `window.__shelf.attempted()` after each step of the browser walk, cumulative. */

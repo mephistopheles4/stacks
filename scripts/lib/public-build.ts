@@ -476,6 +476,13 @@ export function cspDirectives(analytics: 'on' | 'off'): ReadonlyMap<string, read
 }
 
 /**
+ * What an off build must never hold: the tracker's host name. A pattern and not
+ * a substring test, because this is a scan for a trace in files, never a check
+ * of a URL against an allowlist.
+ */
+const TRACKER_TRACE = /plausible\.io/;
+
+/**
  * Framing, denied twice, because a `<meta>` CSP cannot deny it at all.
  *
  * Browsers ignore `frame-ancestors` in a meta tag, so it lives in `_headers` as
@@ -930,7 +937,7 @@ export async function inspectPublicBuild(
   if (options.analytics === 'off') {
     for (const file of walk(dir)) {
       if (!TEXTUAL.has(extname(file))) continue;
-      if (readFileSync(file, 'utf8').includes('plausible.io')) {
+      if (TRACKER_TRACE.test(readFileSync(file, 'utf8'))) {
         fail(
           'csp',
           `${posix(relative(dir, file))} names plausible.io in a build made with analytics off — ` +

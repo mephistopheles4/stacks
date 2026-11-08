@@ -1,5 +1,5 @@
 import type { Library, LibraryBook } from '@stacks/core';
-import { attempted } from '../analytics/events.ts';
+import { attempted, type Attempt } from '../analytics/events.ts';
 import { onPickUpRequest } from '../ask/bridge.ts';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountBookViewer, type BookViewerElements } from './book-viewer.ts';
@@ -102,7 +102,7 @@ declare global {
        * can count call sites with the tracker never started
        * (docs/spec/optional-plausible.md S4, C8). It never leaves the page.
        */
-      attempted(): readonly { name: string; book?: string }[];
+      attempted(): readonly Attempt[];
       /**
        * What the renderer is holding, so the gate can report what a change cost.
        *

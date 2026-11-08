@@ -4,7 +4,9 @@
  *
  * **The name is vendor-neutral on purpose.** A shared chunk named after the
  * vendor can be matched by an ad blocker's filter list, which would stop the
- * shelf booting in an off build too.
+ * shelf booting in an off build too. The tracker's own lazy chunk may carry the
+ * vendor's name: only an on build loads it, and a blocked import leaves every
+ * event a no-op.
  *
  * **Off means absent.** `startAnalytics` branches on the build literal, which
  * Rollup folds, so in an off build `startWith` is unreferenced and the dynamic
@@ -33,9 +35,15 @@ export type AskEvent = 'Ask Opened';
 
 type Track = (name: string, options: { props?: { book: string } }) => void;
 
+/** One event the shelf asked for, sent or not. */
+export interface Attempt {
+  name: string;
+  book?: string;
+}
+
 let track: Track | undefined;
 let started = false;
-const log: { name: string; book?: string }[] = [];
+const attempts: Attempt[] = [];
 const LOG_CAP = 200;
 
 /** The page URL or referrer with only the campaign parameters, and no fragment. */
@@ -67,6 +75,7 @@ export function startWith(where: Location, domain: string): void {
     (tracker) => {
       tracker.init({
         domain,
+        endpoint: 'https://plausible.io/api/event',
         autoCapturePageviews: true,
         bindToWindow: false,
         fileDownloads: false,
@@ -89,8 +98,8 @@ export function startWith(where: Location, domain: string): void {
   );
 }
 
-function remember(entry: { name: string; book?: string }): void {
-  if (log.length < LOG_CAP) log.push(entry);
+function remember(entry: Attempt): void {
+  if (attempts.length < LOG_CAP) attempts.push(entry);
 }
 
 /** Send one book event. A property is the id and nothing else. */
@@ -106,6 +115,6 @@ export function trackAsk(name: AskEvent): void {
 }
 
 /** Every event asked for since load, sent or not, for `window.__shelf`. */
-export function attempted(): readonly { name: string; book?: string }[] {
-  return log;
+export function attempted(): readonly Attempt[] {
+  return attempts;
 }

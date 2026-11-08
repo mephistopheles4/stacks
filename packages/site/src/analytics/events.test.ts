@@ -56,15 +56,17 @@ describe('startAnalytics', () => {
     expect(init).not.toHaveBeenCalled();
   });
 
-  it.each(['localhost', 'stacks-abc.pages.dev', 'stacks.aymandiab.com.evil.test'])(
-    'never imports the tracker on %s',
-    async (hostname) => {
-      const { startWith } = await load();
-      startWith({ hostname } as Location, 'stacks.aymandiab.com');
-      await settle();
-      expect(init).not.toHaveBeenCalled();
-    },
-  );
+  it.each([
+    'localhost',
+    'stacks-abc.pages.dev',
+    'stacks.aymandiab.com.evil.test',
+    'x.stacks.aymandiab.com',
+  ])('never imports the tracker on %s', async (hostname) => {
+    const { startWith } = await load();
+    startWith({ hostname } as Location, 'stacks.aymandiab.com');
+    await settle();
+    expect(init).not.toHaveBeenCalled();
+  });
 
   it('starts once on the production host with every option named', async () => {
     const { startWith } = await load();
@@ -81,6 +83,8 @@ describe('startAnalytics', () => {
       outboundLinks: false,
       formSubmissions: false,
       captureOnLocalhost: false,
+      logging: false,
+      endpoint: 'https://plausible.io/api/event',
     });
   });
 
@@ -122,10 +126,15 @@ describe('startAnalytics', () => {
 
 describe('events', () => {
   it('drops events before the tracker is ready, but records the attempt', async () => {
-    const { trackBook, attempted } = await load();
+    const { startWith, trackBook, attempted } = await load();
     trackBook('Book Picked Up', 'dune-abc123');
     expect(track).not.toHaveBeenCalled();
     expect(attempted()).toEqual([{ name: 'Book Picked Up', book: 'dune-abc123' }]);
+    // Starting afterwards does not replay it: an event before the tracker is
+    // ready is dropped, not queued (S10).
+    startWith(prod, 'stacks.aymandiab.com');
+    await settle();
+    expect(track).not.toHaveBeenCalled();
   });
 
   it('sends a well-formed id as the only property, and drops a malformed one', async () => {

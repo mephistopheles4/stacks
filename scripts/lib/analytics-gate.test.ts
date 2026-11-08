@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { PRODUCTION_HOST } from '../../packages/site/src/analytics/events.ts';
+import { WIDGET_DOMAIN } from './turnstile.ts';
 import {
   foreignRequests,
   gateBuildEnv,
@@ -6,6 +8,13 @@ import {
   type AnalyticsWalk,
   type Attempt,
 } from './analytics-gate.ts';
+
+describe('the production host', () => {
+  it('is the one host the Ask widget is registered for (S10)', () => {
+    // If the two drift, the tracker quietly never starts, so they are held equal.
+    expect(PRODUCTION_HOST).toBe(WIDGET_DOMAIN);
+  });
+});
 
 describe('gateBuildEnv', () => {
   it('removes the switch from a parent that holds it, and keeps the rest', () => {
@@ -65,7 +74,25 @@ describe('judgeAnalyticsCalls', () => {
   it('fails a malformed id, a missing Book Opened and a drawer counted once', () => {
     expect(judgeAnalyticsCalls(walk({ click: [picked('Bad Id!')] }))).toHaveLength(1);
     expect(judgeAnalyticsCalls(walk({ open: [] }))).toHaveLength(1);
-    expect(judgeAnalyticsCalls({ ...walk(), drawer: [ask] })).not.toEqual([]);
+    // A drawer counted once, with every later step consistent with that one entry,
+    // so only the drawer arm can fail.
+    const once = [ask, picked('dune-abc123')];
+    const onceChat = [...once, picked('emma-def456')];
+    expect(
+      judgeAnalyticsCalls({
+        drawer: [ask],
+        clicked: once,
+        chat: onceChat,
+        chatId: 'emma-def456',
+        chatAgain: onceChat,
+        opened: [...onceChat, opened('emma-def456')],
+      }),
+    ).toHaveLength(1);
+  });
+
+  it('fails a chat link or an open that names another book', () => {
+    expect(judgeAnalyticsCalls(walk({ chat: [picked('dune-abc123')] }))).toHaveLength(1);
+    expect(judgeAnalyticsCalls(walk({ open: [opened('dune-abc123')] }))).toHaveLength(1);
   });
 });
 

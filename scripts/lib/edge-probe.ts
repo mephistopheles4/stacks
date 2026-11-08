@@ -77,6 +77,23 @@ export function connectSrcOf(page: string): string[] | undefined {
   return undefined;
 }
 
+/**
+ * Whether the live policy's `connect-src` is the shape the build made: the same
+ * sources, in any order. `undefined` (no policy, or none for the directive) never
+ * matches, because a live page that states no policy is not the build
+ * (docs/spec/optional-plausible.md S8, C10).
+ */
+export function connectSrcMatches(
+  live: readonly string[] | undefined,
+  built: readonly string[],
+): boolean {
+  return (
+    live !== undefined &&
+    live.length === built.length &&
+    built.every((source) => live.includes(source))
+  );
+}
+
 export type EdgeAnswer =
   | { kind: 'current'; serving: string; connectSrc?: string[] }
   | { kind: 'stale'; serving: string | undefined }

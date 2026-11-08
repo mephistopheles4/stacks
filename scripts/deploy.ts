@@ -43,6 +43,7 @@ import {
   PROPAGATION_ATTEMPTS,
   describeStaleCover,
   probeBuild,
+  connectSrcMatches,
   connectSrcOf,
   probeCovers,
   stampMeta,
@@ -778,7 +779,9 @@ console.log(`        → ${siteUrl}  (Cloudflare Pages project "${project}")`);
 //
 // docs/spec/optional-plausible.md S8. Printed in every mode, and either state
 // proceeds: the switch is a choice, never a refusal. A malformed value is the
-// one failure, with a message that does not echo it (C5).
+// one failure here, with a message that does not echo it (C5). After the upload
+// a live `connect-src` that differs from this shape also fails the run
+// (`verifyBuildLive`, C10).
 //
 // A build reads `PUBLIC_PLAUSIBLE_DOMAIN` from `process.env` only. `--check-only`
 // builds nothing, so it reads the shape the last build gave `dist/index.html`.
@@ -789,7 +792,7 @@ if (checkOnly) {
   const lastShape = existsSync(lastIndex)
     ? connectSrcOf(readFileSync(lastIndex, 'utf8'))
     : undefined;
-  analyticsBuilt = lastShape?.includes(PLAUSIBLE_ORIGIN) === true ? 'on' : 'off';
+  analyticsBuilt = lastShape?.some((source) => source === PLAUSIBLE_ORIGIN) === true ? 'on' : 'off';
   console.log(`analytics: Plausible ${analyticsBuilt} (as last built)`);
 } else {
   let switched: ReturnType<typeof readSwitch>;
@@ -1185,11 +1188,7 @@ async function verifyBuildLive(origin: string): Promise<void> {
     // A `current` build whose live policy differs from the built shape means the
     // live site is not the build, so unlike a stale stamp this fails (S8).
     const live = answer.connectSrc;
-    const same =
-      live !== undefined &&
-      live.length === builtConnectSrc.length &&
-      builtConnectSrc.every((source) => live.includes(source));
-    if (!same) {
+    if (!connectSrcMatches(live, builtConnectSrc)) {
       fail(
         `the live connect-src is ${live === undefined ? '(none)' : live.join(' ')}, ` +
           `but this build's is ${builtConnectSrc.join(' ')} (analytics ${analyticsBuilt})`,
