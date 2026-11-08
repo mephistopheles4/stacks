@@ -7,7 +7,7 @@ crypto or data migration), but it opens a new flow from every visitor's browser 
 third party and widens the page's CSP. There is no `docs/threat-model.md`, so the
 sensitive list decides what counts as a security finding. Written on 2026-11-07 from a
 grilling through an eagle-eye box, whose accepted set is S2. Base: `ca372c4`.
-Revision 4: round 2's two spec-text highs fixed (the build literal, where C8 is proven); the owner's answers to round 2 are pending in S17. Revision 3 recorded the owner's answers to S16, relayed by the lead (decision 74). **Nothing here is built. Not signed off.**
+Revision 5: the owner answered most of S17 on 2026-11-07, relayed by the lead (decision 89); three trade-offs and the plan allowance stay open. Revision 4 fixed round 2's two spec-text highs (the build literal, where C8 is proven). Revision 3 recorded the owner's answers to S16, relayed by the lead (decision 74). **Nothing here is built. Not signed off.**
 
 ## S1. Objective
 
@@ -262,7 +262,14 @@ export function scrubUrl(href: string): string;
   - why this is not #119's beacon: #119 rejected a counter Stacks would build to watch an
     invariant; this is product analytics, off by default, with nothing derived from note
     bodies;
-  - the owner's reason for `Ask Sent`, if it is built (S16 Q4).
+  - the owner's reason for `Ask Sent`, if it is built (S16 Q4);
+  - the DOM test environment, `happy-dom`, a dev dependency used by C7's file alone (S17 X3);
+  - the ninth mutation scope, which amends ADR-0053's eight (S17 X4).
+- **`stryker.scopes.json`:** a ninth scope, `packages/site/src/analytics`, glob
+  `packages/site/src/analytics/**/*.ts`, no exclusions, so G38 stays green and the module
+  is mutation-tested. `stryker.floors.json` gains its entry `unarmed`, like every other, and
+  `pnpm mutation:stamp` re-derives `configHash` for G56. Each document that counts "eight"
+  scopes (`AGENTS.md`, `docs/commands.md`, `docs/gates.md`) says nine in the same commit.
 - **`AGENTS.md`:** no invariant changes; the dependency note is the ADR.
 - **`docs/gates.md`:** the G20 row (the option, the two shapes, the off clause) and the G9
   row. `docs/progress.md` in the same commit.
@@ -285,7 +292,9 @@ Written first, each backing a claim in S11.
   imports the tracker off `PRODUCTION_HOST` or with the literal empty; `trackBook` drops a
   malformed id and keeps a well-formed one; events before start are dropped; a rejected
   import leaves the module unstarted, with every event a no-op and no unhandled rejection.
-- **The real tracker, network stubbed** (C7): one test imports the pinned package, stubs
+- **The real tracker, network stubbed** (C7): one test, `analytics/tracker.test.ts`, runs
+  under `// @vitest-environment happy-dom` (S17 X3; the file comment selects it, so every
+  other test keeps `node`). It imports the pinned package, stubs
   `fetch` and `navigator.sendBeacon` with `vi.stubGlobal` (G21's escape hatch), sets a
   production `location` carrying `?debug={…}&utm_source=x#frag` and a referrer with a query,
   then drives a page view, an engagement flush and a custom event, and asserts `u`, `r` and
@@ -352,7 +361,7 @@ The repo names no business driver, so the owner's stated reasons decide.
 | What a book event carries | The public id, kept by the owner (S16 Q3). It is the title's slug plus a short hash (`idFor` in `packages/core/src/library.ts`), so the dashboard shows titles either way, and a title edit splits a book's counts either way | Same value the site already publishes in `notes/<id>.json` |
 | `Ask Sent` against #541's scope line | Left out unless the owner gives a reason before the build (S16 Q4) | The owner's answer |
 | **Hardening, limit 0, Reliability:** a catch on the tracker's `import()` | Built (S16 Q5) | The owner asked for it |
-| **Hardening, limit 0, Security:** mapping any path outside the three pages to one value in `scrubUrl` | Not built; an accepted risk (S16 Q5) | Matters only if Pages serves the shelf at unknown paths |
+| **Hardening, limit 0, Security:** mapping any path outside the three pages to one value in `scrubUrl` | Not built; an accepted risk (S16 Q5), re-accepted on the corrected premise (S17 X5) | Pages serves the shelf at every unknown path (`infra/main.tf:165`), so the tracker starts there and sends that path |
 | **Hardening, limit 0, Security:** Plausible's hostname allowlist, set in the owner's account | Not set; an accepted risk (S16 Q5) | It would only partly block forged events |
 
 ## S14. Residuals and rollback
@@ -379,8 +388,8 @@ The repo names no business driver, so the owner's stated reasons decide.
 
 - **Before the build session starts:** give the reason for `Ask Sent` if it should be built
   (S16 Q4); otherwise it is left out.
-- **When the build session reaches the install:** confirm the `@plausible-analytics/tracker`
-  install and its pinned version in chat. (Owner: installs are the owner's.)
+- **When the build session reaches the installs:** confirm the `@plausible-analytics/tracker`
+  install and the `happy-dom` dev dependency, each with its pinned version, in chat. (Owner: installs are the owner's.)
 - **Before the first on deploy:** create the Plausible site `stacks.aymandiab.com` and the
   goals S6 names. (Owner.)
 - **To turn it on:** set `PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com` where `deploy:site`
@@ -392,7 +401,8 @@ The repo names no business driver, so the owner's stated reasons decide.
 
 Raised by the first lens round on 2026-11-07, and answered by the owner the same day
 ("Yes, all four", to the lead's "Take my picks on all four waiting decisions?",
-decision 74), relayed to this session by the lead.
+decision 74), relayed to this session by the lead. The owner confirmed all five answers
+as recorded here on the same day (decision 89, S17).
 
 - **Q1. Outbound links: off.** Plausible's outbound-link option would send a fifth event
   with the clicked link's full URL, which for the held book's provider links carries the
@@ -408,24 +418,27 @@ decision 74), relayed to this session by the lead.
 - **Q5. Hardening: the catch on the import only.** The path allowlist in `scrubUrl` and
   Plausible's hostname allowlist are accepted risks (S13).
 
-## S17. Round 2's questions for the owner
+## S17. Round 2's questions, and the owner's answers
 
 Raised by the final spec round on revision 3, 2026-11-07. The owner chose to keep going
-without a prototype (decision 88, via the lead). Each blocks sign-off.
+without a prototype (decision 88), then answered "Yes, your picks" to the lead's "Take my
+picks on #562's open items?" (decision 89), relayed to this session by the lead.
 
-- **X3. A DOM test environment.** The real-tracker test (C7) needs `location`,
-  `history`, `document` and `sendBeacon`; `vitest.config.ts` runs `node`, and no DOM
-  package is installed. Install one (an ADR note, the owner's install), or prove C7 another
-  way, for example in `smoke:render` with the tracker started against a stubbed host.
-- **X4. `packages/site/src/analytics/` and G38.** The new folder must be declared or
-  excluded in `stryker.scopes.json`, or G38 is red and `deploy:site` refuses.
-- **X5. The unknown-path risk, again.** Pages answers any unknown path with the shelf
-  (`infra/main.tf:165`), so the tracker starts there and sends the path. S13's "only if"
-  premise was false. Build the path allowlist in `scrubUrl`, or accept the risk knowing this.
-- **Which answers "Yes, all four" covered.** S16 records five. Confirm the fifth.
+- **X3. A DOM test environment: add one.** `happy-dom` as a dev dependency, selected by
+  C7's file alone (S10). Its install is the owner's confirm at build time (S15).
+- **X4. `packages/site/src/analytics/`: mutation-tested.** A ninth scope in
+  `stryker.scopes.json` (S9), so G38 stays green.
+- **X5. The unknown-path risk: re-accepted.** Pages serves the shelf at every unknown
+  path (`infra/main.tf:165`), so the tracker starts there and sends that path. The path
+  allowlist in `scrubUrl` stays unbuilt, accepted on that premise (S13).
+- **The five answers in S16: confirmed as recorded.**
+
+Still open, each a trade-off for the owner before sign-off:
+
+- **X6.** Nothing strips `PUBLIC_PLAUSIBLE_DOMAIN` from the gate builds' children, so a
+  value set where `deploy:site` runs reaches `gate:public` and `smoke:render` too.
+- **X7.** The on-run and C13 commands are POSIX-only, and host `pnpm test` is refused by
+  the agent guard.
+- **T1.** No guard around the track calls if the loaded tracker throws (Hardening, limit 0).
 - **The plan allowance.** On-build page views and events count against the existing
-  Plausible plan's monthly allowance. Confirm that is acceptable; S14 will say so.
-- **Trade-offs from the final round:** stripping the variable from the gate builds'
-  children and giving `smoke:render` an explicit on flag; the on-run and C13 commands for
-  PowerShell and under the agent guard; a guard around track calls if the loaded tracker
-  throws.
+  Plausible plan's monthly allowance.
