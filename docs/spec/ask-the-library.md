@@ -459,9 +459,9 @@ Markup and styles in an `.astro` component, all logic in `.ts`, per `AGENTS.md`.
   page"). The link opens the notice in a modal over the shelf (#536, [ADR-0140](../adr/0140-the-notices-open-in-one-modal-over-the-shelf.md)),
   which keeps the conversation because the page never changes; it still carries `target="_blank" rel="noopener"` as
   its fallback, so if the modal cannot open the page opens in a new tab and the conversation stays in the first one,
-  because memory lives only in the page and leaving it would end the conversation. It no longer says "(opens in a new tab)": it opens in place. The
-  page is `packages/site/src/pages/privacy.astro`, on the layout and style it shares with `/attribution`
-  (`NoticePage.astro`: no canvas, `noindex`), headed "Privacy", and says:
+  because memory lives only in the page and leaving it would end the conversation. The link drops "(opens in a new tab)", because its usual path opens the notice in place. The
+  page is `packages/site/src/pages/privacy.astro`, on the layout it shares with `/attribution`
+  (`NoticePage.astro`: no canvas, `noindex`), with the type of `NoticeBody.astro` since #536, headed "Privacy", and says:
 
   > Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs
   > when the Ask the library box opens, and a hashed address is counted for a day to limit use.

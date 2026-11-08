@@ -1,16 +1,18 @@
 ---
 import NoticeBody from './NoticeBody.astro';
+import type { NoticeHeadingProps } from '../site-meta.ts';
 
 // The one copy of the attribution notice's text (docs/spec/notice-modals.md N2), for
 // `/attribution` and for the modal over the shelf. Markup only. The way back to the shelf is
 // the page's, so the page passes it in the slot and the modal passes nothing.
 //
-// `headingId` names the heading for the dialog's `aria-labelledby`; the page needs none.
-const { headingId } = Astro.props as { headingId?: string };
+// `headingId` names the heading for the dialog's `aria-labelledby` and `tabindex` lets a swap
+// focus it; the page needs neither.
+const { headingId, tabindex } = Astro.props as NoticeHeadingProps;
 ---
 
 <NoticeBody>
-  <h1 id={headingId} tabindex={headingId === undefined ? undefined : -1}>Attribution</h1>
+  <h1 id={headingId} tabindex={tabindex}>Attribution</h1>
 
   <p>
     Book data on this shelf comes from four catalogues. Nothing here is

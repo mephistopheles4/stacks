@@ -585,7 +585,7 @@ if you assumed otherwise. Remove a worktree with `git worktree remove <path>`.
 ## `pnpm mutation:run` and `pnpm mutation:score`
 
 **`pnpm mutation:run` is a measurement, not a gate**, and nothing in `pnpm test`
-or `pnpm build` calls it. It runs Stryker over the **nine declared scopes** in
+or `pnpm build` calls it. It runs Stryker over the **ten declared scopes** in
 [`stryker.scopes.json`](../stryker.scopes.json) — minutes on a workstation — and
 `pnpm mutation:score` turns the one report into one number per scope, which is
 the granularity the whole thing exists for. Stryker's own headline is a single
@@ -761,9 +761,9 @@ gate and nothing here refuses on a number; it exits non-zero only when jscpd
 could not run at all — except under `--history`, below, which also refuses a
 report short of a commit or out of order.
 
-**Two populations, and they do not add up.** The nine declared scopes, and
+**Two populations, and they do not add up.** The ten declared scopes, and
 whole-tree TypeScript. A clone is a relation between two places, so a clone
-whose halves sit in two scopes is counted by **both** — the nine rows are
+whose halves sit in two scopes is counted by **both** — the ten rows are
 deliberately not a partition of the tenth. The whole-tree row exists because a
 scope list is structurally blind to exactly that clone, and because `gates/` is
 read by no scope at all. See
@@ -1295,7 +1295,7 @@ the figure is the script's own, the `phoneVerdict` kind and the sampling row it
 prints. The modal changes nothing about rendering (no blur, no backdrop animation,
 no new light), so the expectation is the plain run's result, and a phone that
 loses its context with a notice open is the owner's stop. It refuses the run, with
-the page's reason, if the notice does not open within ninety seconds.
+the page's reason, or after ninety seconds with no answer from the page.
 
 **Not a `pnpm` script, and that is deliberate.** It needs adb and a phone with
 USB debugging on, which no CI runner has and [`CONTRIBUTING.md`](../CONTRIBUTING.md)

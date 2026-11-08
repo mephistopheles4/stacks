@@ -6,6 +6,10 @@ describe('tabTarget: where Tab sends focus inside the modal', () => {
   it('leaves a Tab in the middle to the browser', () => {
     expect(tabTarget(4, 1, false)).toBeUndefined();
     expect(tabTarget(4, 2, true)).toBeUndefined();
+    // The ends in the other direction are the browser's too: Tab off the first control, and
+    // Shift+Tab off the last, stay inside the ring on their own.
+    expect(tabTarget(4, 0, false)).toBeUndefined();
+    expect(tabTarget(4, 3, true)).toBeUndefined();
   });
 
   it('wraps Tab on the last control to the first', () => {

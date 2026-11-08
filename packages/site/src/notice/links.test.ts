@@ -27,8 +27,8 @@ describe('noticeFor: which notice a click opens', () => {
     ['alt', { altKey: true }],
     ['the middle button', { button: 1 }],
     ['the right button', { button: 2 }],
-    ['a click something already handled', { defaultPrevented: true }],
-  ] as const)('leaves %s to the browser, so the page still opens in a new tab', (_, change) => {
+    ['a click that something already handled', { defaultPrevented: true }],
+  ] as const)('leaves %s to the browser', (_, change) => {
     expect(noticeFor('/attribution', { ...plain, ...change })).toBeUndefined();
     expect(noticeFor('/privacy', { ...plain, ...change })).toBeUndefined();
   });
@@ -43,6 +43,7 @@ describe('noticeFor: which notice a click opens', () => {
     ['the absolute form of our own address', 'http://localhost/privacy'],
     ['another path', '/privacy-policy'],
     ['the case-changed path', '/Attribution'],
+    ['a name every object inherits', 'constructor'],
   ])('is not a notice link: %s', (_, href) => {
     expect(noticeFor(href, plain)).toBeUndefined();
   });

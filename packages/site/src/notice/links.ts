@@ -3,8 +3,8 @@
  * with no DOM in it so it can be tested and the glue stays thin.
  *
  * The links stay plain links: the `href` is the page's own address, and only a plain left-click
- * on one is taken. A modified or non-primary click is the browser's, which opens the page in a
- * new tab as it always did.
+ * on one is taken. A modified or non-primary click is the browser's, as it was before the
+ * modal existed.
  */
 
 export type NoticeName = 'attribution' | 'privacy';

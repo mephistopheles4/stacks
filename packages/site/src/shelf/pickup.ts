@@ -955,11 +955,11 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
 
   document.addEventListener('keydown', (event) => {
     // A notice open over the shelf owns every key (notice-modals.md N8): the whole handler
-    // stands down, not only Escape, or an arrow key would turn the book behind the modal.
+    // stands down, not only Escape, or an arrow key would turn the book behind the modal. So
+    // does a key already handled: an open Ask the library drawer takes its Escape first (it
+    // listens on the window), closes, and the book stays held.
     if (noticeIsOpen(document) || event.defaultPrevented) return;
     if (event.key === 'Escape') {
-      // An open Ask the library drawer took this Escape (it listens first, on
-      // the window): it closes and the book stays held.
       state.putBack();
       return;
     }

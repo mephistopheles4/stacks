@@ -198,11 +198,11 @@ phone is the same — and an occluded *paragraph* is hidden text where an occlud
 the same as conditionally rendered.* The element is in the DOM and displayed on
 load; the sheet is one gesture from dismissal and swaps rather than stacks.
 
-**The notice modal (#536) is the same case with a modal overlay**, and the basis holds the same
-way: the graphic is in the DOM and displayed on load, the modal is one gesture from dismissal
-(its close button, Escape, a click on the backdrop), and while it is open the page behind it is
-inert, the graphic with it (spec residual R6, accepted by the lead). The word *non-modal* above
-described the card's sheet, and it is not widened to the dialog.
+**The basis above does not cover a modal.** The word *non-modal* describes the card's sheet, and
+it is not widened to the notice modal (#536). The modal case is accepted separately, as residual
+R6 of `notice-modals.md` (the lead's decision 302), on these grounds: the graphic is in the DOM
+and displayed on load, the modal is one gesture from dismissal (its close button, Escape, a click
+on the backdrop), and while it is open the page behind it, the graphic with it, is inert.
 
 ⚠️ **The residual, stated rather than smoothed:** while a card is open on a
 phone, **no Google attribution is on screen at all**. The graphic is occluded and

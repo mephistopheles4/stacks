@@ -13,10 +13,10 @@ import PrivacyNotice from '../components/PrivacyNotice.astro';
   <div class="notice-sheet">
     <button id="notice-close" class="notice-close" type="button">Close</button>
     <section id="notice-attribution">
-      <AttributionNotice headingId="notice-attribution-title" />
+      <AttributionNotice headingId="notice-attribution-title" tabindex={-1} />
     </section>
     <section id="notice-privacy" hidden>
-      <PrivacyNotice headingId="notice-privacy-title" />
+      <PrivacyNotice headingId="notice-privacy-title" tabindex={-1} />
     </section>
   </div>
 </dialog>

@@ -1,6 +1,7 @@
 ---
 import NoticeBody from './NoticeBody.astro';
 import PlausibleNotice from './PlausibleNotice.astro';
+import type { NoticeHeadingProps } from '../site-meta.ts';
 import { analyticsOn } from '../analytics/on.ts';
 
 // The one copy of the privacy notice's text (docs/spec/notice-modals.md N2), for `/privacy` and
@@ -10,12 +11,12 @@ import { analyticsOn } from '../analytics/on.ts';
 // states exactly what the page does in a build with analytics on and in one with it off.
 //
 // Markup only. The way back to the shelf is the page's, passed in the slot; `headingId` names
-// the heading for the dialog's `aria-labelledby`.
-const { headingId } = Astro.props as { headingId?: string };
+// the heading for the dialog's `aria-labelledby` and `tabindex` lets a swap focus it.
+const { headingId, tabindex } = Astro.props as NoticeHeadingProps;
 ---
 
 <NoticeBody>
-  <h1 id={headingId} tabindex={headingId === undefined ? undefined : -1}>Privacy</h1>
+  <h1 id={headingId} tabindex={tabindex}>Privacy</h1>
 
   <p>
     Questions pass through Cloudflare, and we don't keep them. A Cloudflare check runs when the

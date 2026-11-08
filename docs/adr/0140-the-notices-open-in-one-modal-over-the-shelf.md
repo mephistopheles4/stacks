@@ -1,14 +1,16 @@
 # ADR-0140 — The notices open in one modal over the shelf
 
 **Date:** 2026-11-08
-**Status:** accepted. The lead decided under the owner's level-3 goal (decisions 284, 298, 302,
-312 and 327), and the owner settled the type on 2026-11-08 ("18px at 7:1 or better stands").
-The spec is `docs/spec/notice-modals.md`, revision 3,
+**Status:** accepted. The lead decided it, relayed under the owner's standing goal for the
+issue (decisions 284, 298, 302 and 312, logged in the spec's section 11), and the owner settled
+the type on 2026-11-08 ("18px at 7:1 or better stands"). Each can be overridden. The spec is
+`docs/spec/notice-modals.md`, revision 3,
 [#536](https://github.com/mephistopheles4/stacks/issues/536). Amends
 [ADR-0138](./0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md)'s "no `<dialog>` on the
 page" in one respect, and
 [ADR-0139](./0139-optional-plausible-direct-to-plausible-io.md)'s count of nine mutation scopes,
-which is ten.
+which becomes ten, and so [ADR-0072](./0072-a-clone-is-a-relation-between-two-places.md)'s count
+of duplication populations, which becomes eleven with the tree.
 
 ## Decision
 
@@ -28,12 +30,14 @@ keeps both.
   The cost is that the text sits in two documents, which the public-build `privacy` rule reads
   as it reads `/privacy` (the panel `notice-privacy`).
 - **The links stay plain links.** A plain left-click on `/attribution` or `/privacy` opens the
-  modal and `preventDefault` runs only after `showModal()` has succeeded; a modified click opens
-  the page in a new tab as before, and a failure leaves the link to navigate.
+  modal and `preventDefault` runs only after `showModal()` has succeeded; a modified or
+  non-primary click is the browser's, as before, and a failure leaves the link to navigate.
 - **The drawer's Privacy link keeps `target="_blank" rel="noopener"`** as its failure fallback,
   because a fallback that navigated in place would end the chat, which is the loss this exists
   to stop. With the dialog removed, the drawer link opens a new tab and the thread stays in the
-  original one, and the shelf link navigates; G35 reads both.
+  original one, and the shelf link navigates. That was checked once, by planting it (the G35 row
+  in `docs/gates.md`), and is not a standing cell: the standing cell fails only if a tab opens
+  when the modal did not.
 - **Keys and clicks behind it reach nothing.** The drawer's Escape listener and the shelf's whole
   keydown handler return when a notice is open or the key was already handled, and the drawer's
   outside-click rule ignores a press while one is open and counts a notice link as inside.
@@ -43,8 +47,8 @@ keeps both.
   `scripts/phone-check.ts --notice attribution|privacy`.
 - **Apple's credit line stays in both places**, shown once at a time, from the one source (the
   lead's decision 284). Apple asks for it "only once in your communication or website"; it is
-  displayed once and sits in two documents. The owner can override, and an override is a return
-  to design: a fetch does not revert this.
+  displayed once and sits in two documents. The owner can override. Fetching the notice instead
+  of rendering it into the page would be a new design, not a revert of this one.
 
 ## Two checks loosened, on purpose
 
@@ -52,9 +56,11 @@ keeps both.
   examining dialog of the closed book ([ADR-0138](./0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md)),
   and a notice modal is a different thing; any other `<dialog>` still fails it.
 - **Three files in `packages/site/src/notice/` are excluded from mutation**, `modal.ts`,
-  `start.ts` and `open.ts`, with a mechanism each: browser-only glue that no in-process spec
-  has. The decisions in it live in `links.ts` and `focus.ts`, which are measured, and the glue is
-  held by G35's notice cells, planted red. The directory is the tenth mutation scope.
+  `start.ts` and `open.ts`, each with its own mechanism in `stryker.scopes.json`: the project's
+  Vitest environment is `node`, which has no `<dialog>`, and `start.ts` is imported only by an
+  `.astro` file. The choices of which click opens and where Tab goes live in `links.ts` and
+  `focus.ts`, which are measured. Four decisions stay in `modal.ts`. Two are held by `modal.test.ts` under happy-dom, each shown red against a planted break: `preventDefault` waits for `showModal()` to succeed (N4), and a press which began in the text does not close the modal (N9). Two are held by G35's notice cells, which read the label set on open and the focus restored on close, with planted breaks made by hand.
+  The tenth mutation scope is declared unarmed and has not yet been scored by a run.
 
 ## Not decided here
 

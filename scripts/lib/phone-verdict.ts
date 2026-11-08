@@ -55,7 +55,7 @@ export interface PhoneOptions {
   readonly turn: number | undefined;
   /**
    * A notice to open over the shelf before the watched window (#536, notice-modals.md C4), so
-   * the same run reads the context with and without it. `privacy` is reached by the swap inside
+   * a run with the flag can be compared with the same run without it. `privacy` is reached by the swap inside
    * the attribution notice, as a visitor reaches it. Undefined opens none.
    */
   readonly notice: NoticeChoice | undefined;

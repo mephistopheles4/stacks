@@ -1236,8 +1236,8 @@ const CLOSE_FOOT_CONTROL = '.held-page-right .held-close-foot';
 const CLOSED_AT_REST = `window.__shelf.held()?.phase === 'held' && window.__shelf.held()?.opened === false && document.querySelector('.held-open')?.hidden === false`;
 
 /**
- * No dialog anywhere on the page but the notice modal's (#536), which is a different thing from
- * the closed book's modal view that #553 retired, and what the X is described by.
+ * No dialog on the page but the notice modal's, and what the X is described by. (#536: the notice
+ * modal is a different thing from the closed book's modal view that #553 retired.)
  */
 const READ_DESCRIPTION = `(() => {
   const buttons = [...document.querySelectorAll('button')];
@@ -3971,7 +3971,7 @@ async function checkShadowReaders(
   const steadyDraws = new Map<string, number>();
 
   for (const page of SAMPLING_PAGES) {
-    const { read, errors } = await measureSampling(
+    const { read, errors, openedAt } = await measureSampling(
       browser,
       page.url(main, large),
       page.hold,
@@ -4018,13 +4018,31 @@ async function checkShadowReaders(
     lines.push(`${''.padEnd(PAGE_COLUMN)}${describeSampling(run)}`);
     failures.push(...found.map((failure) => `G61, ${page.name}: ${failure}`));
     if (s !== undefined) steadyDraws.set(page.name, s.mostSteadyDraws);
-    // C4: the modal changes nothing about rendering, so the count is its twin's.
-    const twinDraws = page.twin === undefined ? undefined : steadyDraws.get(page.twin);
-    if (s !== undefined && twinDraws !== undefined && s.mostSteadyDraws !== twinDraws) {
-      failures.push(
-        `G61, ${page.name}: ${String(s.mostSteadyDraws)} sampling draws a frame with the notice open, ` +
-          `${String(twinDraws)} without it (${page.twin ?? ''})`,
-      );
+    // C4: the modal changes nothing about rendering, so every frame drawn with it open has its
+    // twin's count. Only the frames after it opened are read: opening a dialog links no program,
+    // so the steady window above also holds the frames from before, and the largest count in it
+    // would hide a render that paused or thinned under the modal.
+    if (page.twin !== undefined) {
+      const twinDraws = steadyDraws.get(page.twin);
+      if (twinDraws === undefined) {
+        failures.push(`G61, ${page.name}: its twin "${page.twin}" has no reading to compare with`);
+      } else {
+        const withNotice = (run.snapshot?.frames ?? []).filter(
+          (bucket) => openedAt !== undefined && bucket.frame > openedAt,
+        );
+        const counts = withNotice.map((bucket) => bucket.samplingDraws);
+        if (withNotice.length < MIN_STEADY_FRAMES) {
+          failures.push(
+            `G61, ${page.name}: ${String(withNotice.length)} frames drawn with the notice open, ` +
+              `fewer than the ${String(MIN_STEADY_FRAMES)} that make a reading`,
+          );
+        } else if (Math.min(...counts) !== twinDraws || Math.max(...counts) !== twinDraws) {
+          failures.push(
+            `G61, ${page.name}: ${String(Math.min(...counts))} to ${String(Math.max(...counts))} ` +
+              `sampling draws a frame with the notice open, ${String(twinDraws)} without it (${page.twin})`,
+          );
+        }
+      }
     }
   }
 
@@ -4048,9 +4066,10 @@ async function measureSampling(
   url: string,
   hold?: 'closed' | 'open',
   notice?: 'attribution' | 'privacy',
-): Promise<{ read: SamplingRead; errors: string[] }> {
+): Promise<{ read: SamplingRead; errors: string[]; openedAt?: number }> {
   const context = await browser.createBrowserContext();
   const errors: string[] = [];
+  let openedAt: number | undefined;
   try {
     const page = await context.newPage();
     await page.setViewport(SAMPLING_VIEWPORT);
@@ -4096,8 +4115,21 @@ async function measureSampling(
         errors.push('the book held for this page never opened');
       }
     }
-    if (notice !== undefined && !(await openNoticeForSampling(page, notice))) {
-      errors.push('the notice for this page never opened');
+    if (notice !== undefined) {
+      if (await openNoticeForSampling(page, notice)) {
+        // The frame it opened on: the count is read from the frames after it.
+        openedAt = (await page.evaluate('window.__samplingHook.status().frame')) as number;
+        try {
+          await page.waitForFunction(
+            `window.__samplingHook.status().frame >= ${String(openedAt + MIN_STEADY_FRAMES + 1)}`,
+            { timeout: SETTLE_TIMEOUT_MS, polling: 100 },
+          );
+        } catch {
+          // Judged below: too few frames with the notice open is this page's failure.
+        }
+      } else {
+        errors.push('the notice for this page never opened');
+      }
     }
     try {
       await page.waitForFunction(
@@ -4107,7 +4139,8 @@ async function measureSampling(
     } catch {
       // Judged below: clause 2 says the program set never settled, with numbers.
     }
-    return { read: (await page.evaluate(READ_SAMPLING)) as SamplingRead, errors };
+    const read = (await page.evaluate(READ_SAMPLING)) as SamplingRead;
+    return openedAt === undefined ? { read, errors } : { read, errors, openedAt };
   } finally {
     await context.close();
   }
@@ -5600,7 +5633,7 @@ function contrastRatio(a: string, b: string): number {
 
 /** What is wrong with a notice's type, one sentence each; empty when it reads well. */
 function noticeTypeFailures(where: string, type: NoticeType | null): string[] {
-  if (type === null) return [`${where}: no paragraph, heading and link to read`];
+  if (type === null) return [`${where}: no paragraph or heading to read`];
   const failures: string[] = [];
   const { p } = type;
   if (p.size < NOTICE_MIN_PX) {
@@ -5745,13 +5778,15 @@ const LAST_LINE_IN_VIEW = `(() => {
   const last = [...panel.querySelectorAll('p')].at(-1);
   const box = d.getBoundingClientRect();
   const line = last.getBoundingClientRect();
-  return line.bottom <= box.bottom + 1 && line.top >= box.top;
+  // Inside the dialog's box and on the screen: a dialog taller than the screen holds its own
+  // last line in its own box and shows none of it (notice-modals.md N13).
+  return line.bottom <= box.bottom + 1 && line.top >= box.top && line.bottom <= window.innerHeight && line.top >= 0;
 })()`;
 
 /**
  * G35, the notice modal opened from the shelf's Attribution link (#536, `notice-modals.md` C1,
- * C2, C5 and the browser half of C7), with no drawer and no held book: the drawer and the held
- * book join in the next step. At both widths: focus goes in, cycles at both ends, the dialog is
+ * C2, C5 and the browser half of C7), with no drawer and no held book (`checkNoticeOverDrawer`
+ * reads the drawer and a held book). At both widths: focus goes in, cycles at both ends, the dialog is
  * named by the panel shown before and after the swap to the privacy panel, the type is the
  * pages' type, the last line of each notice scrolls into view, one Escape closes it and returns
  * focus to the link, a click on the backdrop closes it, a ctrl-click opens the page and not the
@@ -5941,16 +5976,23 @@ const NOTICE_OPENERS = [
     name: 'the shelf link',
     selector: '.pattr-link[href="/attribution"]',
     panel: 'notice-attribution',
+    title: 'Attribution',
   },
-  { name: 'the drawer link', selector: '#ask-panel a[href="/privacy"]', panel: 'notice-privacy' },
+  {
+    name: 'the drawer link',
+    selector: '#ask-panel a[href="/privacy"]',
+    panel: 'notice-privacy',
+    title: 'Privacy',
+  },
 ] as const;
 
 /**
  * G35, a notice opened over a held book and an open drawer (#536, `notice-modals.md` C1, C2 and
  * C3), from each of the two links, at 1280x800: the conversation, the drawer, the held book and
- * its turn survive the open and the close; a click on a spine, the empty shelf and the drawer's
- * outside area reaches nothing (the backdrop closes the modal and that is all it does); a click
- * on the notice's own text does nothing; the arrows with focus on `body` turn no book; one
+ * its turn survive the open and the close; the dialog's name, the focus at the open and the
+ * focus back on the opener are read from each link; a click on the shelf beside the notice, on
+ * the corner by the brand and on the drawer panel beside it reaches nothing (the backdrop closes
+ * the modal and that is all it does); a click on the notice's own text does nothing; the arrows with focus on `body` turn no book; one
  * Escape closes the modal alone, leaving the drawer open and the book held, and the next one is
  * the drawer's; the drawer link opens no new tab; and nothing navigated.
  */
@@ -6024,9 +6066,26 @@ async function checkNoticeOverDrawer(browser: Browser, origin: string): Promise<
           `[...document.querySelectorAll('#notice-dialog section')].filter((s) => !s.hidden).map((s) => s.id).join()`,
         )) === opener.panel,
       );
+      // C2 from this opener: the name is the shown panel's, focus starts on Close, and the close
+      // puts focus back on this opener and no other.
+      const opened = await dialogName(page);
+      say(
+        `the dialog's accessible name is "${opened}", not "${opener.title}"`,
+        opened === opener.title,
+      );
+      say(
+        'focus did not start on the close button',
+        (await page.evaluate(`document.activeElement?.id`)) === 'notice-close',
+      );
       await unchanged('opening the notice');
       await page.click('#notice-close');
       say('the Close button did not close the modal', !(await page.evaluate(NOTICE_OPEN)));
+      say(
+        `focus did not return to ${opener.name}`,
+        (await page.evaluate(
+          `document.activeElement === document.querySelector(${JSON.stringify(opener.selector)})`,
+        )) === true,
+      );
       await unchanged('closing the notice');
 
       // C3: clicks behind the modal. Each lands on the backdrop, which closes the modal and

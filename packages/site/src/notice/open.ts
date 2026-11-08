@@ -2,9 +2,10 @@
  * The seam between the markup, the modal and the code that must stand down while a notice is
  * open (docs/spec/notice-modals.md N8). Ids only, and one question: is a notice open.
  *
- * The drawer and the shelf both ask it before they act on a key or a pointer, so a click or an
- * arrow behind the modal reaches nothing. It reads the dialog itself rather than a flag the
- * modal keeps, so there is no second copy of the state to drift.
+ * The drawer asks it before it acts on a key or a pointer, and the shelf before it acts on a
+ * key; the modal's inert background stops the shelf's pointers. So a click or an arrow behind the
+ * modal reaches nothing. It reads the dialog itself rather than a flag the modal keeps, so there
+ * is no second copy of the state to drift.
  */
 
 export const NOTICE_DIALOG_ID = 'notice-dialog';

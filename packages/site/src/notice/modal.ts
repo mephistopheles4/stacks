@@ -11,9 +11,10 @@ const FOCUSABLE = 'button:not([disabled]), a[href]';
  * The notice modal (docs/spec/notice-modals.md N1, N4, N5, N7, N8, N9): one native `<dialog>`
  * holding both notices as panels, opened by a plain click on a link to either page.
  *
- * Browser-only glue, reached by no in-process spec; `focus.ts` and `links.ts` hold the decisions
- * and `smoke-render`'s notice cells hold this. Every failure here is the same safe state: the
- * link is left alone and navigates, as it did before the modal existed.
+ * Browser-only glue. `focus.ts` and `links.ts` hold the decisions about which click opens and
+ * where Tab goes; `modal.test.ts` (happy-dom) holds the two that stay here, N4 and N9, and
+ * `smoke-render`'s notice cells hold the rest in a real browser. Every failure here is the same
+ * safe state: the link is left alone and navigates, as it did before the modal existed.
  */
 export function mountNotices(doc: Document, win: Window): void {
   const dialog = doc.getElementById(NOTICE_DIALOG_ID);
