@@ -33,8 +33,8 @@ view where it could be turned. The owner found that awkward and asked for it gon
   swaps.
 - **The X moves to the top right**, where the dialog's back arrow sat. Under the
   logo it lay over the open book's left page. The hint is hidden while a book is
-  open (#553: it was drawn across the page), reads "Drag to turn it · click to
-  open" at the closed rest, and is the shelf's again when the hand empties.
+  open (#553: it was drawn across the page), reads "Drag to turn it" over "click to
+  open", two short lines that stay clear of the book at every width, at the closed rest, and is the shelf's again when the hand empties.
 - **On a phone the close control stays in view** while the Thoughts scroll,
   held at the top of the right page by `position: sticky`. A control that
   scrolled away would make the reader scroll past the Thoughts to close the

@@ -428,7 +428,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   // ---- the controls outside the pages ------------------------------------------
 
   const hintText = controls.hint.textContent;
-  const CLOSED_HINT = 'Drag to turn it · click to open';
+  // Two lines, so it stays clear of the book at every width (#553).
+  const CLOSED_HINT = 'Drag to turn it\nclick to open';
   /** A chat link's pickup in flight, so focus can move to Open when it lands. */
   let chatPickup: string | undefined;
   /** The open began from the controls: a screen reader or a keyboard asked for it. */

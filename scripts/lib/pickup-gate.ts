@@ -29,7 +29,7 @@
  * The hint the header shows while a book is closed at rest. `pickup.ts` owns
  * the string; this is the gate's own copy, so a change to either is a red build.
  */
-export const CLOSED_HINT = 'Drag to turn it · click to open';
+export const CLOSED_HINT = 'Drag to turn it\nclick to open';
 
 /** What the hint reads with an empty hand, which the page's template ships. */
 export const TEMPLATE_HINT = 'Drag to look around · click a book';
