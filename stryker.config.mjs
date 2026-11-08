@@ -3,9 +3,13 @@ import { readFileSync } from 'node:fs';
 /**
  * Stryker, configured for this stack. Spec: docs/spec/mutation-scoring.md §§1-5.
  *
- * Nothing here is gated and nothing here goes red. This is the measurement
- * instrument the rest of the mutation rollout consumes; `pnpm mutation:score`
- * turns one run into a number per declared scope.
+ * Nothing here is gated and nothing here goes red, **for the mutation run**.
+ * This is the measurement instrument the rest of the mutation rollout
+ * consumes; `pnpm mutation:score` turns one run into a number per declared
+ * scope. ⚠️ **Its dry run is a merge check**: the `mutation-dry-run` job in
+ * `.github/workflows/gates.yml` runs `stryker run --dryRunOnly` on this config
+ * on every pull request (G70, docs/commands.md), so a change here that breaks
+ * the suite inside the sandbox turns `gates` red.
  *
  * The nine scopes and their exclusions live in `stryker.scopes.json`, because
  * a flat `mutate` array cannot say which of nine populations a glob belongs to

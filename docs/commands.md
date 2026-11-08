@@ -585,7 +585,10 @@ if you assumed otherwise. Remove a worktree with `git worktree remove <path>`.
 ## `pnpm mutation:run` and `pnpm mutation:score`
 
 **`pnpm mutation:run` is a measurement, not a gate**, and nothing in `pnpm test`
-or `pnpm build` calls it. It runs Stryker over the **nine declared scopes** in
+or `pnpm build` calls it. (Its *dry run* is a gate, and a different thing: the
+`mutation-dry-run` job in `gates.yml` runs `stryker run --dryRunOnly` on every
+pull request, G70, and no mutant is tested — see
+[A red dry run on a pull request](#a-red-dry-run-on-a-pull-request-g70).) It runs Stryker over the **nine declared scopes** in
 [`stryker.scopes.json`](../stryker.scopes.json) — minutes on a workstation — and
 `pnpm mutation:score` turns the one report into one number per scope, which is
 the granularity the whole thing exists for. Stryker's own headline is a single
@@ -647,6 +650,52 @@ deploy. The `current/` in the recipe is the container's own folder, which is
 thrown away with it. ⚠️ **A scoped run on the host, under the fallback, writes
 `current/` as it always has**, so delete `artifacts/stryker/current/` after
 one, or `deploy:site` reads the partial report as the last run.
+
+### A red dry run on a pull request (G70)
+
+**The `mutation-dry-run` job runs the suite once against Stryker's instrumented
+copy of the tree, and tests no mutant.** It runs on every event `gates.yml` runs
+on, with no path filter, because a break comes from a spec that reads a file the
+sandbox rewrites, or from a Stryker or Vitest bump, and a list of paths fails
+closed on exactly the pull request it should have caught. Red means a spec
+passed `pnpm test` and failed in the sandbox; the log names it after
+`One or more tests failed in the initial test run`. The full run stays nightly.
+
+**To reproduce it without a full run**, name the file the spec reads as text
+**and a file the spec imports**, through athanor, with Stryker's output sent to
+standard output (athanor 0.1.0 brings back nothing else):
+
+```sh
+athanor run -- sh -c 'pnpm exec stryker run --dryRunOnly --concurrency 4 --mutate scripts/lib/ask-status.ts,scripts/ask-status.ts 2>&1'
+```
+
+Measured on 2026-11-08, with `scripts/ask-status.ts` instrumented: it fails in
+about three seconds on the 2026-11-07 break, naming the same spec and
+`expected '/**\n * Daily totals for the Ask the …' to match /if \(linked\) \{\s*fail\(/`.
+⚠️ **Naming the file the spec reads is not enough.** The Vitest runner narrows
+the dry run to specs *related to the mutated files*, and a spec that reads a
+script as text imports nothing from it, so `--mutate scripts/ask-status.ts`
+alone answers `No tests were found` and reproduces nothing. Add a file the spec
+does import. `--mutate` replaces the exclusions, so the command reproduces a
+break an exclusion has since hidden. The guard admits the form, and a full run
+(`stryker run` with neither `--mutate` nor `--incremental`) stays refused.
+
+**The usual fixes** differ in what they move:
+
+- **Read the file differently.** A spec that reads a script as text asserts on
+  what the sandbox rewrites. Read it from a place the sandbox does not copy, or
+  assert on behaviour. Nothing here moves.
+- **Leave the spec out of the dry run**, in `vitest.stryker.config.ts`'s
+  `exclude`, with the reason beside it. `configHash` does not move, because the
+  file is not part of the hashed config. The code the spec was the oracle for
+  reads as uncovered, so say what keeps an oracle (see that file's header).
+- **Or leave the file out of mutation**, in `stryker.scopes.json`, with a named
+  mechanism. This moves `configHash`: run `pnpm mutation:stamp`, and add the
+  renovation entry the way [#557](https://github.com/mephistopheles4/stacks/issues/557) did.
+
+**A red that a rerun clears is a flake**, and it gets an issue, not an
+exclusion. The job feeds `gates`, the one required check, so a flaky dry run
+blocks every merge, docs-only ones included; do not hide it.
 
 ### Incremental runs are fast, and they are not a score
 
