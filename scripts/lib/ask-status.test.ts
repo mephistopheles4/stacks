@@ -8,6 +8,7 @@ import {
   dayTotals,
   daysToRead,
   isLinkedWorktree,
+  parseArgs,
   printDay,
   queryBody,
   recordName,
@@ -23,9 +24,9 @@ const HOUR = 3_600_000;
 const NOV_5 = Date.UTC(2026, 10, 5);
 
 /**
- * ⚠️ **Documented shape, not captured.** Built from Cloudflare's published schema for the
- * telemetry query's `calculations` view; no reply from the live API has been seen. The
- * owner's first run (spec C10) is what proves it, and until then `ask:status` writes nothing.
+ * Cloudflare's published schema for the telemetry query's `calculations` view, corrected by
+ * the first deployed day's replies (#548, read 2026-11-08 in structure, never in content): a
+ * grouped aggregate carries a `groupKey` string beside its `groups`.
  */
 const aggregate = (value: number, groups?: Record<string, string | number | boolean>) => ({
   count: value,
@@ -34,6 +35,7 @@ const aggregate = (value: number, groups?: Record<string, string | number | bool
   value,
   ...(groups !== undefined && {
     groups: Object.entries(groups).map(([key, v]) => ({ key, value: v })),
+    groupKey: Object.values(groups).map(String).join(','),
   }),
 });
 const calc = (alias: string, aggregates: unknown[]) => ({
@@ -63,12 +65,20 @@ function fixtureDay(): Record<QueryName, unknown> {
     outcomes: reply(
       calc('lines', [
         aggregate(12, { outcome: 'ai' }),
-        aggregate(2, { outcome: 'search-ai-failed', reason: 'timeout' }),
-        aggregate(4, { outcome: 'refused-limit', limit: 'minute' }),
-        aggregate(1, { outcome: 'refused-limit', limit: 'error' }),
+        aggregate(2, { outcome: 'search-ai-failed' }),
+        aggregate(5, { outcome: 'refused-limit' }),
         aggregate(1, { outcome: 'refused-secret' }),
         aggregate(1, { outcome: 'daily-pass' }),
         aggregate(3, { outcome: 'health-down' }),
+      ]),
+    ),
+    reasons: reply(
+      calc('lines', [aggregate(2, { outcome: 'search-ai-failed', reason: 'timeout' })]),
+    ),
+    limits: reply(
+      calc('lines', [
+        aggregate(4, { outcome: 'refused-limit', limit: 'minute' }),
+        aggregate(1, { outcome: 'refused-limit', limit: 'error' }),
       ]),
     ),
     questions: reply(calc('lines', reaching), calc('neurons', neuronsByQuestion)),
@@ -119,6 +129,43 @@ describe('which days a run reads (spec S3, C7)', () => {
     expect(daysToRead(Date.UTC(2026, 11, 3) + 2 * HOUR)).not.toContain(Date.UTC(2026, 10, 30));
   });
 
+  it('reads every day by default, and only the named one with --day', () => {
+    const days = [NOV_5 - DAY, NOV_5 - 2 * DAY];
+    expect(parseArgs([], days)).toEqual({ record: false, days });
+    expect(parseArgs(['--record'], days)).toEqual({ record: true, days });
+    expect(parseArgs(['--record', '--day', '2026-11-03'], days)).toEqual({
+      record: true,
+      days: [NOV_5 - 2 * DAY],
+    });
+    expect(parseArgs(['--day', '2026-11-04'], days)).toEqual({
+      record: false,
+      days: [NOV_5 - DAY],
+    });
+  });
+
+  it('refuses a --day it cannot read, in words that quote no argument', () => {
+    // 2 March is readable, so 2026-02-30 is refused by the date check, never by the window.
+    const days = [NOV_5 - DAY, Date.UTC(2026, 2, 2)];
+    const refusals = [
+      ['--day', '2026-11-02'],
+      ['--day', '2026-11-4'],
+      ['--day', '2026-02-30'],
+      ['--day', '2026-11-CANARY'],
+      ['--day'],
+      ['--day', '2026-11-04', '--day', '2026-11-04'],
+      ['--record', '--record'],
+      ['--days', 'CANARY'],
+    ];
+    for (const args of refusals) {
+      const parsed = parseArgs(args, days);
+      expect(parsed, args.join(' ')).toHaveProperty('error');
+      expect(JSON.stringify(parsed)).not.toContain('CANARY');
+    }
+    expect(parseArgs(['--day', '2026-02-30'], days)).toEqual({
+      error: '--day takes one UTC date, as YYYY-MM-DD',
+    });
+  });
+
   it('names a day by the unix second its UTC midnight starts', () => {
     expect(recordName(NOV_5)).toBe(`${String(NOV_5 / 1000)}-ask.prom`);
     expect(recordName(NOV_5)).toMatch(/^\d+-[0-9a-z]+\.prom$/);
@@ -142,6 +189,26 @@ describe('the queries (spec S3)', () => {
         key: '$metadata.service',
         value: 'stacks-ask',
       });
+    }
+  });
+
+  it('counts outcomes over every line: grouped on outcome alone, filtered by service alone', () => {
+    const body = queryBody('outcomes', NOV_5) as {
+      parameters: { groupBys: unknown[]; filters: { key: string }[] };
+    };
+    expect(body.parameters.groupBys).toEqual([{ type: 'string', value: 'outcome' }]);
+    expect(body.parameters.filters.map((f) => f.key)).toEqual(['$metadata.service']);
+  });
+
+  it('requires every key it groups by, outcome aside, so no event is dropped unseen', () => {
+    // Measured live on 2026-11-08 (#548): grouped by outcome, reason and limit at once, a day
+    // with 4,323 lines answered no aggregate at all, since no line carries all three. Every
+    // line carries `outcome`; any other grouped key must be one the query filters on.
+    for (const name of Object.keys(QUERIES) as QueryName[]) {
+      const query = QUERIES[name];
+      for (const key of query.groupBys) {
+        if (key !== 'outcome') expect(query.exists, `${name} groups by ${key}`).toContain(key);
+      }
     }
   });
 });
@@ -168,6 +235,98 @@ describe("a day's totals from the replies (spec C6)", () => {
     expect(totals.reaching.get(30)).toBe(0);
     expect(totals.reaching.size).toBe(30);
     expect(totals.neuronsByBand).toEqual({ '1-10': 600, '11-20': 100, '21-30': 0 });
+    expect(totals.outcomes).toContainEqual({ outcome: 'refused-limit', limit: 'minute', count: 4 });
+    expect(totals.outcomes).toContainEqual({ outcome: 'refused-limit', limit: 'error', count: 1 });
+    // Every line is counted once: the detail rows replace their outcome's plain count.
+    expect(totals.outcomes.reduce((acc, o) => acc + o.count, 0)).toBe(24);
+    expect(totals.outcomes.filter((o) => o.outcome === 'refused-limit')).toHaveLength(2);
+  });
+
+  it("keeps an outcome's lines that carry no reason or limit as a plain count", () => {
+    const day = fixtureDay();
+    (
+      day.outcomes as { result: { calculations: { aggregates: unknown[] }[] } }
+    ).result.calculations[0]!.aggregates[1] = aggregate(3, { outcome: 'search-ai-failed' });
+    const totals = dayTotals(day);
+    expect(totals.outcomes).toContainEqual({ outcome: 'search-ai-failed', count: 1 });
+    expect(totals.outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      reason: 'timeout',
+      count: 2,
+    });
+  });
+
+  it('reads a sampled outcome count and marks it, in print and nowhere else', () => {
+    // Measured live on 2026-11-08 (#548): 2026-11-07's health-up count came back with a
+    // sample interval of 1.002 while every other count that day was exactly 1.
+    const day = fixtureDay();
+    Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[5]!, {
+      interval: 1.002,
+      sampleInterval: 1.002,
+    });
+    Object.assign(at(day, 'limits').result.calculations[0]!.aggregates[0]!, {
+      sampleInterval: 1.5,
+    });
+    const totals = dayTotals(day);
+    expect(totals.outcomes).toContainEqual({ outcome: 'health-down', count: 3, sampled: true });
+    expect(totals.outcomes).toContainEqual({
+      outcome: 'refused-limit',
+      limit: 'minute',
+      count: 4,
+      sampled: true,
+    });
+    expect(totals.outcomes).toContainEqual({ outcome: 'ai', count: 12 });
+    const text = printDay(NOV_5, totals).join('\n');
+    expect(text).toContain('health-down 3, sampled');
+    expect(text).toContain('refused-limit (minute) 4, sampled');
+    expect(text).toContain('daily test: pass; health-down 3, sampled');
+    expect(text).not.toMatch(/ai 12, sampled/);
+    // The record's labels stay outcome, reason and limit: no series or label is added.
+    expect(renderAskDay(totals, NOV_5 / 1000)).not.toContain('sampled');
+  });
+
+  it("marks an outcome's plain remainder sampled when its outcome count was", () => {
+    const day = fixtureDay();
+    Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[1]!, {
+      sampleInterval: 1.002,
+    });
+    expect(dayTotals(day).outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      reason: 'timeout',
+      count: 2,
+    });
+    (at(day, 'outcomes').result.calculations[0]!.aggregates[1] as { value: number }).value = 3;
+    (at(day, 'outcomes').result.calculations[0]!.aggregates[1] as { count: number }).count = 3;
+    expect(dayTotals(day).outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      count: 1,
+      sampled: true,
+    });
+  });
+
+  it('marks a sampled reason row, the remainder it leaves, and only health-down on the test line', () => {
+    const day = fixtureDay();
+    Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[1]!, {
+      value: 5,
+      count: 5,
+    });
+    Object.assign(at(day, 'reasons').result.calculations[0]!.aggregates[0]!, {
+      sampleInterval: 1.5,
+    });
+    const totals = dayTotals(day);
+    expect(totals.outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      reason: 'timeout',
+      count: 2,
+      sampled: true,
+    });
+    // 5 exact less 2 estimated is itself an estimate.
+    expect(totals.outcomes).toContainEqual({
+      outcome: 'search-ai-failed',
+      count: 3,
+      sampled: true,
+    });
+    expect(printDay(NOV_5, totals)).toContain('  daily test: pass; health-down 3');
   });
 
   it('prints the figures the owner reads, and never a reply body', () => {
@@ -308,6 +467,72 @@ describe("a day's totals from the replies (spec C6)", () => {
         void ((
           day.outcomes as { result: { calculations: { aggregates: unknown[] }[] } }
         ).result.calculations[0]!.aggregates[0] = aggregate(1, { outcome: 'ai', visitor: 'x' })),
+    ],
+    [
+      'a sampled question count',
+      (day) =>
+        void Object.assign(at(day, 'questions').result.calculations[0]!.aggregates[0]!, {
+          sampleInterval: 1.002,
+        }),
+    ],
+    [
+      'a sampled Neurons sum',
+      (day) =>
+        void Object.assign(at(day, 'metered').result.calculations[1]!.aggregates[0]!, {
+          interval: 1.002,
+        }),
+    ],
+    [
+      'a sampled cached-token sum',
+      (day) =>
+        void Object.assign(at(day, 'cached').result.calculations[1]!.aggregates[0]!, {
+          sampleInterval: 1.002,
+        }),
+    ],
+    [
+      'a sampled time',
+      (day) =>
+        void Object.assign(at(day, 'time').result.calculations[0]!.aggregates[0]!, {
+          sampleInterval: 2,
+        }),
+    ],
+    [
+      'an outcome count with a sample interval that is not a number',
+      (day) =>
+        void Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[0]!, {
+          sampleInterval: '1.002',
+        }),
+    ],
+    [
+      'a group key that is not a string',
+      (day) =>
+        void Object.assign(at(day, 'outcomes').result.calculations[0]!.aggregates[0]!, {
+          groupKey: 1,
+        }),
+    ],
+    [
+      'more reason lines for an outcome than the outcome has',
+      (day) =>
+        void (at(day, 'reasons').result.calculations[0]!.aggregates[0] = aggregate(3, {
+          outcome: 'search-ai-failed',
+          reason: 'timeout',
+        })),
+    ],
+    [
+      'a reason line for an outcome the day does not hold',
+      (day) =>
+        void (at(day, 'limits').result.calculations[0]!.aggregates[0] = aggregate(1, {
+          outcome: 'refused-data',
+          limit: 'minute',
+        })),
+    ],
+    [
+      'a reason line with no reason',
+      (day) =>
+        void (at(day, 'reasons').result.calculations[0]!.aggregates[0] = aggregate(2, {
+          outcome: 'search-ai-failed',
+          reason: '',
+        })),
     ],
     [
       'a reply at the group limit, possibly cut off',
@@ -560,6 +785,8 @@ describe('what a run writes (spec C7)', () => {
     expect(script).toContain('env: uploadEnv(process.env, loaded)');
     // Every day goes through runDays, whose prints are fixed words or printDay's totals.
     expect(script).toMatch(/await runDays\(\{/);
+    // The days come from parseArgs, so --day narrows what runDays reads.
+    expect(script).toMatch(/parseArgs\(process\.argv\.slice\(2\), daysToRead\(Date\.now\(\)\)\)/);
     expect(script).not.toMatch(/\.text\(\)|JSON\.stringify\(repl/);
   });
 });

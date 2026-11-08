@@ -243,7 +243,7 @@ pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
 pnpm deploy:ask          # the Ask the library Worker: main only   (--dry-run, --ai-off, --ai-on, --gateway <id>)
 pnpm evals:ask           # the S9 evals, live, through a test gateway   (--gateway <id>, --site <dir>)
-pnpm ask:status          # the Worker's daily totals, from Workers Logs   (--record)
+pnpm ask:status          # the Worker's daily totals, from Workers Logs   (--record, --day <date>)
 pnpm turnstile           # the Ask widget: create it once, rotate its secret later   (--create, --sync, --dry-run)
 pnpm duplication:report  # jscpd over the ten scopes and the whole tree, as a table   (--history)
 pnpm mutation:run        # Stryker over the ten declared scopes — minutes, not seconds
