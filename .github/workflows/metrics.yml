@@ -124,9 +124,10 @@ jobs:
   # deferred rather than one never noticed.
   #
   # ⚠️ One case overrides that (#580): a merge that moves `stryker.floors.json`'s
-  # `configHash` dispatches the full run itself, so `pnpm deploy:site` is not
-  # refused until the nightly for a config change that only added a scope. Every
-  # other merge stays cheap.
+  # `configHash` dispatches the full run itself, through the `dispatch-full` job
+  # below and not from this one, so `pnpm deploy:site` is not refused until the
+  # nightly for a config change that only added a scope. Every other merge stays
+  # cheap.
   merge:
     if: github.event_name == 'push'
     name: merge
@@ -134,8 +135,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-      # Only to dispatch the full run below; `gh workflow run` needs it.
-      actions: write
 
     steps:
       # The credential is *used*: this job runs `pnpm metrics:commit`, which pushes
@@ -167,38 +166,6 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-
-      # Before the suite, so a red suite still dispatches. Inputs arrive through
-      # `env:` only. A `before` that is empty, all zeros or not in the fetched
-      # history (a first push, a force-push) dispatches nothing and says why.
-      - name: dispatch the full mutation run when the config hash moved
-        env:
-          BEFORE: ${{ github.event.before }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            echo "no previous commit to compare against (before='$BEFORE'); dispatching nothing"
-            exit 0
-          fi
-          if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            echo "$BEFORE is not in the fetched history; dispatching nothing"
-            exit 0
-          fi
-          if ! git cat-file -e "$BEFORE:stryker.floors.json" 2>/dev/null; then
-            echo "stryker.floors.json does not exist at $BEFORE; dispatching nothing"
-            exit 0
-          fi
-          read_hash='let j=JSON.parse(require("fs").readFileSync(0,"utf8"));process.stdout.write(String(j.configHash))'
-          old=$(git show "$BEFORE:stryker.floors.json" | node -e "$read_hash")
-          new=$(node -e "$read_hash" < stryker.floors.json)
-          echo "configHash before: $old"
-          echo "configHash after:  $new"
-          if [ "$old" = "$new" ]; then
-            echo "the hashes match; dispatching nothing"
-            exit 0
-          fi
-          echo "the hash moved; dispatching the full mutation run"
-          gh workflow run metrics.yml --ref main
 
       # `$SECONDS` rather than `date` and `bc`: whole seconds is ample
       # resolution for a wall-clock trend, and it adds no dependency on a tool
@@ -238,6 +205,63 @@ jobs:
           echo "suite: ${{ steps.suite.outputs.status }}   emit: ${{ steps.emit.outputs.status }}"
           test "${{ steps.suite.outputs.status }}" = "0"
           test "${{ steps.emit.outputs.status }}" = "0"
+
+  # Dispatches the full mutation run when a merge moved `configHash` (#580,
+  # plan amendment, lead's decision 505).
+  #
+  # ⚠️ Its own job, and the reason is the token. `actions: write` lets whoever
+  # holds it delete caches, disable workflows and dispatch runs on other refs, so
+  # it must not sit on a job that runs repo or dependency code: `merge` runs
+  # `pnpm test` with the token already in `.git/config`. This job installs
+  # nothing and runs nothing from the repository: `git show`, the runner's own
+  # `node -e`, and `gh`. It is also why a failed dispatch cannot cost the merge
+  # record: the two jobs share nothing, and `merge` does not `needs:` this one.
+  dispatch-full:
+    if: github.event_name == 'push'
+    name: dispatch-full
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Inputs arrive through `env:` only. A `before` that is empty, all zeros or
+      # not fetchable (a first push, a force-push) dispatches nothing and says why.
+      - name: dispatch the full mutation run when the config hash moved
+        env:
+          BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "no previous commit to compare against (before='$BEFORE'); dispatching nothing"
+            exit 0
+          fi
+          if ! git fetch --no-tags --depth=1 origin "$BEFORE" 2>/dev/null \
+            || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "$BEFORE could not be fetched; dispatching nothing"
+            exit 0
+          fi
+          if ! git cat-file -e "$BEFORE:stryker.floors.json" 2>/dev/null; then
+            echo "stryker.floors.json does not exist at $BEFORE; dispatching nothing"
+            exit 0
+          fi
+          read_hash='let j=JSON.parse(require("fs").readFileSync(0,"utf8"));process.stdout.write(String(j.configHash))'
+          old=$(git show "$BEFORE:stryker.floors.json" | node -e "$read_hash")
+          new=$(node -e "$read_hash" < stryker.floors.json)
+          echo "configHash before: $old"
+          echo "configHash after:  $new"
+          if [ "$old" = "$new" ]; then
+            echo "the hashes match; dispatching nothing"
+            exit 0
+          fi
+          echo "the hash moved; dispatching the full mutation run"
+          gh workflow run metrics.yml --repo "$REPO" --ref main
 
   # The nightly half: the whole record, on a schedule or by hand.
   #
