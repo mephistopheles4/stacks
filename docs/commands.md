@@ -833,9 +833,11 @@ read by no scope at all. See
 **Whole-tree means whole-tree *TypeScript*, and the restriction is measured.**
 Over every file jscpd reports 1042 duplicated lines, **570 of them JSON this
 repository did not write** — cached provider responses and a provisioned
-dashboard. Two O'Reilly fixtures share 105 identical lines because one book comes
+dashboard. Two O'Reilly fixtures shared 105 identical lines because one book came
 back from two endpoints, and a recorded response cannot be de-duplicated without
-falsifying the fixture.
+falsifying the fixture. Those fixtures were deleted with the provider
+([ADR-0147](adr/0147-oreilly-is-removed.md)); the figures above were measured
+before that and have not been re-measured.
 
 **The thresholds are the measurement, not settings around it.** 50 tokens, 5
 lines, `mild` mode. One step looser gives 82 clones where these give 12, over the

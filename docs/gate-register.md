@@ -681,7 +681,7 @@ demonstration designed from scratch, and produced the band's result.
 | Row | Disposition | In one line |
 | --- | --- | --- |
 | G12 `shelf-order` | `repaired` | The code repair holds; the gate still quotes the sentence the repair replaced. |
-| G18 `bounded-cover-bytes` | `accepted` (time) + `gated` (membership) | The measurement says *three providers*; there have been four since 2026-08-08. |
+| G18 `bounded-cover-bytes` | `accepted` (time) + `gated` (membership) | The measurement says *three providers*; there were four from 2026-08-08 until O'Reilly was removed ([ADR-0147](adr/0147-oreilly-is-removed.md)). |
 | G24 `repo-root` | `accepted` | The load-bearing claim re-measures true. A second count in the same paragraph was wrong on arrival. |
 | G34 `enrich-convergence` | *verdict corrected* | The property is asserted, not merely commented — and `docs/gates.md`'s own row states it. |
 | G6 `site-core-imports` | `repaired` | **Two routes past the gate, and the suite, and the build. `smoke:render` is the only thing that catches them.** |
@@ -3886,7 +3886,9 @@ for its own early releases, served from
 `learning.oreilly.com/covers/urn:orm:book:<ourn>/1200w/` and downloaded through
 the same `download` in
 [`packages/core/src/covers/cache-cover.ts`](../packages/core/src/covers/cache-cover.ts).
-`COVER_SOURCES` names four providers today; the measurement covered three.
+`COVER_SOURCES` still names four providers, though the fetch has asked three
+again since O'Reilly was removed ([ADR-0147](adr/0147-oreilly-is-removed.md));
+the measurement covered three.
 
 The gap lands on the worst candidate available. That URL ends in `/1200w/` and
 carries **no file extension**, so `Content-Type` is the only pre-body signal

@@ -40,7 +40,7 @@ Two other files hold what these deliberately do not:
 | [0002](./0002-no-build-step.md) | No build step for `core` and `cli` |
 | [0003](./0003-site-import-type-only.md) | The site may only `import type` from `@stacks/core` |
 | [0004](./0004-fixtures-invented.md) | Fixtures are entirely invented, and no third-party material is ever committed |
-| [0005](./0005-three-metadata-providers.md) | Three metadata providers, in a fixed order (four since 0038) |
+| [0005](./0005-three-metadata-providers.md) | Three metadata providers, in a fixed order (four from 0038, three again since 0147) |
 | [0006](./0006-spine-colour-binding-edge.md) | Spine colour is sampled from the cover's binding edge |
 | [0007](./0007-fuzzy-book-matching.md) | Matching a book is fuzzy, not exact |
 | [0008](./0008-book-geometry.md) | A book is a case wrapped round a page block, not one painted box |
@@ -166,3 +166,4 @@ Two other files hold what these deliberately do not:
 | [0140](./0140-stay-on-pages-until-the-hostname-switch-is-tried.md) | Stay on Pages until the hostname switch is tried (answers #535) |
 | [0145](./0145-new-specs-live-on-their-issues.md) | New specs live on their issues, and the ones written before stay files |
 | [0146](./0146-the-notices-open-in-one-modal-over-the-shelf.md) | The attribution and privacy notices open in one modal over the shelf (amends 0138 and 0139) |
+| [0147](./0147-oreilly-is-removed.md) | O'Reilly is removed as a metadata provider (supersedes 0038) |

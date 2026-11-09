@@ -1,6 +1,7 @@
 # ADR-0038: O'Reilly is a fourth provider, consulted last, covers included
 
 **Status:** accepted
+**Superseded by:** [ADR-0147](0147-oreilly-is-removed.md)
 **Context:** the vault holds O'Reilly early releases the other three providers
 have never heard of
 
