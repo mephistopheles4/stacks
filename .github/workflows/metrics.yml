@@ -103,7 +103,16 @@ concurrency:
   # Never `cancel-in-progress`. Cancelling a run that has already committed
   # loses nothing, but cancelling one mid-Stryker throws away an hour of CI and
   # leaves a gap in the record that reads exactly like a dead pipe.
-  group: metrics-${{ github.ref }}
+  #
+  # ⚠️ Two groups per ref, not one (#580). GitHub keeps one *pending* run per
+  # group and cancels an older pending run when a newer one queues, so with a
+  # shared group the full run a merge dispatches would sit pending behind that
+  # merge's own run and a second push could silently replace it with a cheap
+  # merge run. Split, a pending full run is replaced only by another full run,
+  # which does the same work. Both values are non-empty, so the falsy-empty-string
+  # trap above does not apply. `scripts/commit-metrics.ts` fetches and retries a
+  # rejected push, so the two kinds running at once is safe.
+  group: metrics-${{ github.ref }}-${{ github.event_name == 'push' && 'merge' || 'full' }}
   cancel-in-progress: false
 
 jobs:
@@ -113,6 +122,11 @@ jobs:
   # nightly on the owner's CI-minute call — `mutation-run-runtime` is the series
   # that exists to say when on-merge becomes affordable, which is a decision
   # deferred rather than one never noticed.
+  #
+  # ⚠️ One case overrides that (#580): a merge that moves `stryker.floors.json`'s
+  # `configHash` dispatches the full run itself, so `pnpm deploy:site` is not
+  # refused until the nightly for a config change that only added a scope. Every
+  # other merge stays cheap.
   merge:
     if: github.event_name == 'push'
     name: merge
@@ -120,6 +134,8 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+      # Only to dispatch the full run below; `gh workflow run` needs it.
+      actions: write
 
     steps:
       # The credential is *used*: this job runs `pnpm metrics:commit`, which pushes
@@ -151,6 +167,38 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Before the suite, so a red suite still dispatches. Inputs arrive through
+      # `env:` only. A `before` that is empty, all zeros or not in the fetched
+      # history (a first push, a force-push) dispatches nothing and says why.
+      - name: dispatch the full mutation run when the config hash moved
+        env:
+          BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "no previous commit to compare against (before='$BEFORE'); dispatching nothing"
+            exit 0
+          fi
+          if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "$BEFORE is not in the fetched history; dispatching nothing"
+            exit 0
+          fi
+          if ! git cat-file -e "$BEFORE:stryker.floors.json" 2>/dev/null; then
+            echo "stryker.floors.json does not exist at $BEFORE; dispatching nothing"
+            exit 0
+          fi
+          read_hash='let j=JSON.parse(require("fs").readFileSync(0,"utf8"));process.stdout.write(String(j.configHash))'
+          old=$(git show "$BEFORE:stryker.floors.json" | node -e "$read_hash")
+          new=$(node -e "$read_hash" < stryker.floors.json)
+          echo "configHash before: $old"
+          echo "configHash after:  $new"
+          if [ "$old" = "$new" ]; then
+            echo "the hashes match; dispatching nothing"
+            exit 0
+          fi
+          echo "the hash moved; dispatching the full mutation run"
+          gh workflow run metrics.yml --ref main
 
       # `$SECONDS` rather than `date` and `bc`: whole seconds is ample
       # resolution for a wall-clock trend, and it adds no dependency on a tool

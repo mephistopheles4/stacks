@@ -2361,6 +2361,8 @@ function configurationRefusal(input: RefusalInput): string | undefined {
     '  counts as detected — so a score computed under one configuration is not a\n' +
     '  number about a floor derived under another. Nothing else is compared until\n' +
     '  these agree.\n' +
+    '    - A merge to main that moves the hash starts a full mutation run by itself\n' +
+    '      (metrics.yml dispatches it). Once it lands, run `pnpm trend:sync`, then deploy.\n' +
     '    - If the configuration change was deliberate, the floors have to be derived\n' +
     '      again from runs made under it, and re-deriving is lowering: it costs a\n' +
     `      notes line in ${FLOORS_FILE} like any other lowering.\n\n` +
