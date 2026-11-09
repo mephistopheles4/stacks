@@ -912,6 +912,8 @@ describe('floorRefusals', () => {
 
     expect(refusal).toContain('derived under a different configuration');
     expect(refusal).toContain('re-derive');
+    expect(refusal).toContain('metrics.yml dispatches it');
+    expect(refusal).toContain('pnpm trend:sync');
   });
 
   // ⚠️ Deploy is about to carry two metric refusals, and one blanket override
