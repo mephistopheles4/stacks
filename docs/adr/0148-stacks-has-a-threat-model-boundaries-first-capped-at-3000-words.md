@@ -45,9 +45,10 @@ that places each finding on a boundary first, and this file is what it reads.
   logs. I don't think we need to keep provenance at all." The history of each risk
   stays where it is, in the ADRs and logs that already hold it.
 - **Naming a control with no read.** The GitHub controls were read live and
-  posted on the pull request. The host's rule and gateway are named as declared
-  in `infra/`, with an open issue, because the Worker is not deployed and there
-  is nothing to read back yet.
+  posted on the pull request. The host's rule and gateway are named only
+  under Open issues, as declared in `infra/` and not applied, and never under
+  Controls, because the Worker is not deployed and there is nothing to read back
+  yet.
 
 ## Consequences
 

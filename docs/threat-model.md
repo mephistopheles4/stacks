@@ -197,11 +197,6 @@ reads public build output only, so invariants 1, 2 and 4 hold by structure.
 - *Repo.* The model has two read-only tools over public output, its text reaches
   the page only as `textContent`, and no question or answer is stored or logged:
   the logs hold fixed outcome codes and invocation logs are off.
-- *Host.* A WAF rate rule on `/api/chat` (10 requests in 60 seconds per address
-  and data centre, blocked 10 minutes), and an AI Gateway with authentication on,
-  logging and cache off and a spend limit of $0.09 a day, the only hard cap on
-  gateway calls. All are declared in `infra/` and read back after apply. The
-  limit does not count a call that skips the gateway.
 
 **Residual:** Ask availability can be spent; Questions reach Workers AI.
 
@@ -235,7 +230,7 @@ reads public build output only, so invariants 1, 2 and 4 hold by structure.
 - **Review rests on gates:** one maintainer merges their own pull requests with no approving review required, so the required check, CodeQL and the gates catch what that maintainer misses.
 - **Text steers a session:** an agent session reads tracker text, pull requests, fetched pages and cloned files and can be steered by them; the harness's prompts and the owner's merge hold what it may then do.
 - **Posts are public:** an issue, comment or pull request is public the moment it posts and may be cached or indexed after deletion; the posting rules and the read before posting are the only check.
-- **Ask availability can be spent:** a few addresses can use a day's AI budget or the Worker's request allowance, because the spend limit caps the bill and not availability; search keeps working, and ADR-0127 accepts it.
+- **Ask availability can be spent:** a few addresses can use a day's AI budget or the Worker's request allowance, and search keeps working; ADR-0127 accepts it.
 - **Questions reach Workers AI:** a visitor's question, the catalogue and some Thoughts go to Workers AI through the gateway, and Turnstile sees browser signals; nothing is stored here, and ADR-0127 approves the flow.
 
 ## Residual risk
@@ -261,4 +256,4 @@ quadrantChart
 
 ## Open issues
 
-- The Ask Worker's host controls are declared in `infra/` and not applied, so that boundary is open until the owner applies them and the live checks pass ([#532](https://github.com/mephistopheles4/stacks/issues/532)).
+- The Ask Worker's host controls (a WAF rate rule and an AI Gateway with a spend limit) are declared in `infra/`, not applied. No control is named for them until the owner applies them and they are read back ([#532](https://github.com/mephistopheles4/stacks/issues/532)).
