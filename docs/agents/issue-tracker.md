@@ -55,16 +55,16 @@ the new URL, whose number is `<n>`; `gh issue comment` prints a URL ending
 `head -c -1` is the one newline `--jq` adds; if the body file has CRLF line
 endings, strip them first with `tr -d '\r' < body.md`.
 
-**Six known ways to hand-roll this wrong, and three of them return HTTP 200** —
-`-f body=@reply.md` posts the literal filename, for one. They are enumerated on
-[#220](https://github.com/mephistopheles4/stacks/issues/220). The read-back is
-what catches them. Nothing here is a gate and nothing requires it.
+**Hand-rolling this has six known failure modes, and three of them return HTTP
+200** — `-f body=@reply.md` posts the literal filename, for one; they are listed
+on [#220](https://github.com/mephistopheles4/stacks/issues/220). The read-back
+is what catches them. Nothing here is a gate and nothing requires it.
 
 ## Specs
 
-A spec written since [#533](https://github.com/mephistopheles4/stacks/issues/533)
-lives on its issue, not in `docs/spec/`; the specs written before it stay files,
-as written. **This section binds every session that writes or reads a spec,
+A new spec lives on its issue, not in `docs/spec/`; the older specs stay files,
+as written ([#533](https://github.com/mephistopheles4/stacks/issues/533)).
+**This section binds every session that writes or reads a spec,
 whatever this page's opening says about being optional**; step 6 of `AGENTS.md`
 points here. Nothing in it is a gate ([`gates.md`](../gates.md#not-gated-deliberately)).
 
@@ -238,26 +238,45 @@ view shows: that half comes from the timeline, a ticket at a time.
   not restated here, per
   [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md).
 
-  ⚠️ **Dropping every assignee is the cheaper filter and the wrong one**, and it
-  is what this bullet said until the window above existed. The rule expires the
-  presumption instead of asking anyone to clean up after themselves, so nothing
-  is ever unassigned here — and a filter with no window then outlives what it
-  reads: the claim lapses, the ticket stays dropped, and an abandoned ticket
-  silently stops being offered to anyone. That is the whole cost of the cheap
-  version, and it falls on the tickets nobody is working. The price of the real
-  one is two calls per **assigned** child, which on a live map is a handful; an
-  unassigned child costs nothing extra, as it always did.
+  ⚠️ **Dropping every assignee is the cheaper filter and the wrong one.** Nothing
+  is ever unassigned here, so a filter with no window outlives what it reads: the
+  claim lapses, the ticket stays dropped, and an abandoned ticket silently stops
+  being offered to anyone. The real filter costs two calls per **assigned**
+  child, a handful on a live map; an unassigned child costs nothing extra.
 
-  ⚠️ **`--paginate` on that second query is load-bearing here, and this is the
-  bullet that says why.** Truncated, it answers `[]` — and `[]` does not read as
-  a failure, it reads as *never claimed*, which this bullet turns into **free to
-  take**. So the flag's absence fails open, on the busiest tickets, which are the
-  contested ones: this repo's own #120 answers the unpaginated query with `[]`
-  while carrying two assignments. Anyone shortening the round trips will reach
-  for it first, because it looks like the expensive part and dropping it looks
-  like it worked.
+  ⚠️ **`--paginate` on that second query is load-bearing.** Truncated, it answers
+  `[]`, which does not read as a failure but as *never claimed*, which this bullet
+  turns into **free to take**. So its absence fails open, on the busiest and most
+  contested tickets: this repo's #120 answers the unpaginated query with `[]`
+  while carrying two assignments. Do not drop it to shorten the round trips.
 - **Resolve** a ticket: post the answer as a comment, `gh issue close`, then add
   a one-line pointer to the map's *Decisions so far*.
+
+## Triage labels
+
+The five canonical roles, each label string equal to its name, all five existing
+on the repo. When a skill mentions a role (say, the AFK-ready label), use the
+string from this table.
+
+| Label | Meaning |
+| --- | --- |
+| `needs-triage` | Maintainer needs to evaluate this issue |
+| `needs-info` | Waiting on reporter for more information |
+| `ready-for-agent` | Fully specified, ready for an AFK agent |
+| `ready-for-human` | Requires human implementation |
+| `wontfix` | Will not be actioned |
+
+Recreating one is one command:
+
+```bash
+gh label create needs-triage --description "Maintainer needs to evaluate this issue" --color fef2c0
+```
+
+**The issue forms deliberately apply none of them.** `.github/ISSUE_TEMPLATE/*.yml`
+sets no `labels:` key, so a new issue arrives unlabelled and a person triages it:
+an auto-applied `needs-triage` carries no information, being true of every issue.
+Nothing here is required to file an issue or open a pull request. The
+`wayfinder:*` labels are a separate set, described above.
 
 ## Pull requests as a triage surface
 

@@ -4,7 +4,7 @@
 commissioned by [#126](https://github.com/mephistopheles4/stacks/issues/126),
 running the shape [#113](https://github.com/mephistopheles4/stacks/issues/113)
 fixed. It puts the same five questions to every numbered row in
-[`docs/gates.md`](./gates.md) and records a one-line verdict each — `clean`, or
+[`docs/gates.md`](../gates.md) and records a one-line verdict each — `clean`, or
 the shape of the exposure.
 
 ⚠️ **Read the two layers separately, because they carry different weight.** The
@@ -681,7 +681,7 @@ demonstration designed from scratch, and produced the band's result.
 | Row | Disposition | In one line |
 | --- | --- | --- |
 | G12 `shelf-order` | `repaired` | The code repair holds; the gate still quotes the sentence the repair replaced. |
-| G18 `bounded-cover-bytes` | `accepted` (time) + `gated` (membership) | The measurement says *three providers*; there were four from 2026-08-08 until O'Reilly was removed ([ADR-0147](adr/0147-oreilly-is-removed.md)). |
+| G18 `bounded-cover-bytes` | `accepted` (time) + `gated` (membership) | The measurement says *three providers*; there were four from 2026-08-08 until O'Reilly was removed ([ADR-0147](../adr/0147-oreilly-is-removed.md)). |
 | G24 `repo-root` | `accepted` | The load-bearing claim re-measures true. A second count in the same paragraph was wrong on arrival. |
 | G34 `enrich-convergence` | *verdict corrected* | The property is asserted, not merely commented — and `docs/gates.md`'s own row states it. |
 | G6 `site-core-imports` | `repaired` | **Two routes past the gate, and the suite, and the build. `smoke:render` is the only thing that catches them.** |
@@ -1288,7 +1288,7 @@ both would have cleared again.
 
 ### G1 — `adapter-boundary`
 
-**Gate:** [`gates/adapter-boundary.test.ts`](../gates/adapter-boundary.test.ts)
+**Gate:** [`gates/adapter-boundary.test.ts`](../../gates/adapter-boundary.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — exposed. The gate *is* an allowlist ("each entry justified,
@@ -1369,7 +1369,7 @@ same; `library.ts` added to `ALLOWED` fails the stale-entry check. The
 
 ### G2 — `public-build`
 
-**Gate:** [`gates/public-build.test.ts`](../gates/public-build.test.ts)
+**Gate:** [`gates/public-build.test.ts`](../../gates/public-build.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist in this row itself.
@@ -1476,7 +1476,7 @@ evidence either way.
 
 ### G3 — `bad-note`
 
-**Gate:** [`gates/bad-note.test.ts`](../gates/bad-note.test.ts)
+**Gate:** [`gates/bad-note.test.ts`](../../gates/bad-note.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -1495,7 +1495,7 @@ it.
 
 ### G4 — `hand-edited-notes`
 
-**Gate:** [`gates/hand-edited-notes.test.ts`](../gates/hand-edited-notes.test.ts)
+**Gate:** [`gates/hand-edited-notes.test.ts`](../../gates/hand-edited-notes.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -1520,7 +1520,7 @@ Ek]` replaced wholesale, discovered without a planted mutation.
 
 ### G5 — `vault-is-truth`
 
-**Gate:** [`gates/repo-hygiene.test.ts`](../gates/repo-hygiene.test.ts) (shared with G13)
+**Gate:** [`gates/repo-hygiene.test.ts`](../../gates/repo-hygiene.test.ts) (shared with G13)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -1542,7 +1542,7 @@ found.
 
 ### G13 — `no-third-party-material`
 
-**Gate:** [`gates/repo-hygiene.test.ts`](../gates/repo-hygiene.test.ts) (shared with G5)
+**Gate:** [`gates/repo-hygiene.test.ts`](../../gates/repo-hygiene.test.ts) (shared with G5)
 **Date:** 2026-08-11
 
 - **Weakening** — exposed, and this is the row `docs/gates.md` uses to explain
@@ -1615,7 +1615,7 @@ PNG copied into `fixtures/vault/Library/covers/`, and a staged `.svg` and
 
 ### G14 — `commands`
 
-**Gate:** [`gates/commands.test.ts`](../gates/commands.test.ts)
+**Gate:** [`gates/commands.test.ts`](../../gates/commands.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean.
@@ -1702,7 +1702,7 @@ prototyped.
 
 ### G6 — `site-core-imports`
 
-**Gate:** [`gates/site-core-imports.test.ts`](../gates/site-core-imports.test.ts)
+**Gate:** [`gates/site-core-imports.test.ts`](../../gates/site-core-imports.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -1844,7 +1844,7 @@ holds exactly `.`, `./shelf-order`, `./subjects`, suite 636 of 636.
 
 ### G7 — `astro-no-logic`
 
-**Gate:** [`gates/astro-no-logic.test.ts`](../gates/astro-no-logic.test.ts)
+**Gate:** [`gates/astro-no-logic.test.ts`](../../gates/astro-no-logic.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean.
@@ -2020,7 +2020,7 @@ than by line, and given no total**: the decay block above cites `:4-5` and
 `:165`, which the same commit moved, and the sweep was counted twice before
 landing and was short both times. `git grep -n -iE "astro check|@astrojs/check|not typechecked|cannot run under"`
 is the artifact; a number here would be the third one to go stale. See
-[ADR-0077](adr/0077-astro-check-is-the-checker-for-astro-files.md)
+[ADR-0077](../adr/0077-astro-check-is-the-checker-for-astro-files.md)
 and the `### G50 — \`astro-types\`` entry, whose own **Decay** verdict is this
 one's successor: the same shape of claim, this time asserted by a clause that
 reads the compiler pin.
@@ -2035,14 +2035,14 @@ the string entered `packages/site/package.json`.
 ⚠️ **And one attribution in this block was wrong before either ticket touched
 it.** It quotes *"`.astro` files are NOT typechecked (`astro check` cannot run
 under TypeScript 7 **yet**)"* as living in `CLAUDE.md`. The constitution moved
-to `AGENTS.md` on 2026-08-19 — [ADR-0056](adr/0056-the-constitution-is-agents-md.md)
+to `AGENTS.md` on 2026-08-19 — [ADR-0056](../adr/0056-the-constitution-is-agents-md.md)
 — and `AGENTS.md` is where that sentence was found and rewritten. Left in the
 quotation above so the dated reading is intact; named here so the register does
 not misdirect the next reader to a file with no invariants in it.
 
 ### G8 — `frontmatter-contract`
 
-**Gate:** [`gates/frontmatter-contract.test.ts`](../gates/frontmatter-contract.test.ts)
+**Gate:** [`gates/frontmatter-contract.test.ts`](../../gates/frontmatter-contract.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -2062,7 +2062,7 @@ described but the documented enumeration never listed."
 
 ### G9 — `env-contract`
 
-**Gate:** [`gates/env-contract.test.ts`](../gates/env-contract.test.ts)
+**Gate:** [`gates/env-contract.test.ts`](../../gates/env-contract.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -2081,7 +2081,7 @@ nowhere."
 
 ### G19 — `constitution-scoreboard`
 
-**Gate:** [`gates/constitution-scoreboard.test.ts`](../gates/constitution-scoreboard.test.ts)
+**Gate:** [`gates/constitution-scoreboard.test.ts`](../../gates/constitution-scoreboard.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean today; related to hole 1 below, but the directory
@@ -2206,7 +2206,7 @@ an allowlist.
 
 ### G29 — `doc-links`
 
-**Gate:** [`gates/doc-links.test.ts`](../gates/doc-links.test.ts)
+**Gate:** [`gates/doc-links.test.ts`](../../gates/doc-links.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -2287,7 +2287,7 @@ against; only the inline-span half was.
 
 ### G36 — `trend-layer`
 
-**Gate:** [`gates/trend-layer.test.ts`](../gates/trend-layer.test.ts)
+**Gate:** [`gates/trend-layer.test.ts`](../../gates/trend-layer.test.ts)
 **Date:** 2026-08-19
 **Triaged at landing**, per this rollout's standing rule — the five categories put
 to the row in the commit that lands it, rather than by a later pass reconstructing
@@ -2301,7 +2301,7 @@ what the author knew.
   a scope removes it from numerator and denominator together, so the score does not
   move and simply stops covering that code. Not closable here without a third
   artifact naming the four series, which is the second copy
-  [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) refuses.
+  [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md) refuses.
 - **Satisfying the letter** — **the gate is clean; one of the series it watches
   is not.** The property the row names is *the series CI writes are the series
   the table names*, and the gate asserts exactly that, in both directions, over
@@ -2369,7 +2369,7 @@ checking that box against this file would otherwise find a claim nothing support
 
 ### G37 — `agents-import`
 
-**Gate:** [`gates/agents-import.test.ts`](../gates/agents-import.test.ts)
+**Gate:** [`gates/agents-import.test.ts`](../../gates/agents-import.test.ts)
 **Date:** 2026-08-20
 
 ⚠️ **This entry is a backfill, and saying otherwise would be the failure it
@@ -2435,8 +2435,8 @@ somebody did.
 
 ### G38 — `mutation-scope`
 
-**Gate:** [`gates/mutation-scope.test.ts`](../gates/mutation-scope.test.ts) **and**
-[`scripts/deploy.ts`](../scripts/deploy.ts)
+**Gate:** [`gates/mutation-scope.test.ts`](../../gates/mutation-scope.test.ts) **and**
+[`scripts/deploy.ts`](../../scripts/deploy.ts)
 **Date:** 2026-08-19
 **Triaged at landing**, per this rollout's standing rule.
 
@@ -2599,9 +2599,9 @@ refusing path — the one that can stop a publish — is the one that was plante
 
 ### G39 — `metrics-freshness`
 
-**Gate:** [`gates/metrics-freshness.test.ts`](../gates/metrics-freshness.test.ts),
-driving [`scripts/deploy.ts`](../scripts/deploy.ts); the dated half in
-[`scripts/lib/metrics-read.test.ts`](../scripts/lib/metrics-read.test.ts)
+**Gate:** [`gates/metrics-freshness.test.ts`](../../gates/metrics-freshness.test.ts),
+driving [`scripts/deploy.ts`](../../scripts/deploy.ts); the dated half in
+[`scripts/lib/metrics-read.test.ts`](../../scripts/lib/metrics-read.test.ts)
 **Date:** 2026-08-19
 **Triaged at landing**, per this rollout's standing rule.
 
@@ -2677,7 +2677,7 @@ correct on the run you were looking at and absent on the next one**, which is no
 a state a single-invocation test can see, and it would have published against a
 local Prometheus holding nothing. Found by running the three refusals by hand and
 reading git's own two lines of output. Closed by `--refmap=`, and held by a ref
-comparison across the refusal. [ADR-0060](adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
+comparison across the refusal. [ADR-0060](../adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
 
 ⚠️ **Two branches are unobserved and named rather than implied.** The `never`
 verdict — *no record, past the bootstrap* — is planted against `judgeRecord` and
@@ -2689,7 +2689,7 @@ the right message, not that GitHub answers an anonymous one — which
 
 ### G40 — `action-pins`
 
-**Gate:** [`gates/action-pins.test.ts`](../gates/action-pins.test.ts)
+**Gate:** [`gates/action-pins.test.ts`](../../gates/action-pins.test.ts)
 **Date:** 2026-08-20
 **Triaged at landing**, per this rollout's standing rule.
 
@@ -2851,7 +2851,7 @@ the satisfying-the-letter verdict states, and it is why that verdict is
 
 ### G41 — `gate-register`
 
-**Gate:** [`gates/gate-register.test.ts`](../gates/gate-register.test.ts)
+**Gate:** [`gates/gate-register.test.ts`](../../gates/gate-register.test.ts)
 **Date:** 2026-08-20
 **Triaged at landing**, per this rollout's standing rule.
 
@@ -2986,7 +2986,7 @@ where the table row alone gave no basis.
 
 ### G30 — `library-seam`
 
-**Gate:** [`gates/library-seam.test.ts`](../gates/library-seam.test.ts)
+**Gate:** [`gates/library-seam.test.ts`](../../gates/library-seam.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — exposed, mild: `NOT_PUBLIC` (currently one entry,
@@ -3079,7 +3079,7 @@ nothing emits, and so does the `shelfSlot` key once `DERIVED` names it.
 
 ### G31 — `merge-precedence`
 
-**Gate:** [`gates/merge-precedence.test.ts`](../gates/merge-precedence.test.ts)
+**Gate:** [`gates/merge-precedence.test.ts`](../../gates/merge-precedence.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; read in `gates/merge-precedence.test.ts` — a direct
@@ -3173,7 +3173,7 @@ bypassing it in the merge, and dropping either `description` or `publisher` from
 
 ### G32 — `absent-only`
 
-**Gate:** [`gates/absent-only.test.ts`](../gates/absent-only.test.ts)
+**Gate:** [`gates/absent-only.test.ts`](../../gates/absent-only.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -3198,7 +3198,7 @@ a book that already carries a *wrong* value keeps it, correcting it by hand.
 
 ### G33 — `enrich-idempotence`
 
-**Gate:** [`gates/enrich-idempotence.test.ts`](../gates/enrich-idempotence.test.ts)
+**Gate:** [`gates/enrich-idempotence.test.ts`](../../gates/enrich-idempotence.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -3230,7 +3230,7 @@ a book that already carries a *wrong* value keeps it, correcting it by hand.
 
 ### G34 — `enrich-convergence`
 
-**Gate:** [`gates/enrich-convergence.test.ts`](../gates/enrich-convergence.test.ts)
+**Gate:** [`gates/enrich-convergence.test.ts`](../../gates/enrich-convergence.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening / satisfying the letter / routing around / vacuous green** —
@@ -3277,7 +3277,7 @@ limits, convergence".
 **Leg two — *"if the comment is ever trimmed… has no other home"* — false, and
 this is the substantive half: the property is *asserted*, not merely
 documented.** Negative caching planted at
-[`packages/core/src/metadata/http.ts`](../packages/core/src/metadata/http.ts):64
+[`packages/core/src/metadata/http.ts`](../../packages/core/src/metadata/http.ts):64
 — writing a cache entry on the `body === undefined` path — turns
 `describe('G34 — a failure is never cached, a success is cached forever')` red.
 A doc comment cannot go red; this does.
@@ -3299,7 +3299,7 @@ repo-wide. The row had no observed-red line before this pass; it has one now.
 
 ### G35 — `enhanced-card`
 
-**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts)
+**Gate:** [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no `EXEMPT`/allowlist construct found in
@@ -3439,7 +3439,7 @@ in the band.
 
 **2026-10-09 — reworded for picking a book up** ([#413](https://github.com/mephistopheles4/stacks/issues/413)). The card retired, and the row's checks moved onto the held page under spec §3.5's fates, with `location.href` unchanged and §3.6's open spread added; `checkSheet` retired with the sheet. The judging moved into `scripts/lib/pickup-gate.ts`, so every clause is planted in its spec rather than once by hand. **Observed red in the browser** with four faults planted at once and reverted after: the address carrying the book (`location.href changed on pickup`), the pages shown before the fade (`the pages were not hidden by visibility before the cover opened`), and the board resting at 165°, which reddened every one of the six measured spreads on its angle, its tilt to the camera and the left page's projected size. ⚠️ **The second pickup goes through the shelf's hook, not a click**: with a book held, the open spread covers most books' aim points, and the first run's aimed click failed for that reason alone. The click path is the first pickup's. Disposition of the rewording: `gated`.
 
-**2026-10-10 — reworked for examining the held book** ([#418](https://github.com/mephistopheles4/stacks/issues/418), [ADR-0109](adr/0109-the-held-book-is-examined-in-3d.md)). `checkViewer` now reads the view that closes the held book and turns it: the front board at 0° ±0.5° from the scene replaces the image's width, and turning, the exits, focus, reduced motion, nothing fetched, a book with no cover and the emptied hand are added. **Observed red in the browser** by planting faults in the build and reverting each: the Escape guard removed, no focus return, the closing tween off, a cut that leaves the dialog open, a static dialog name, a drag that turns nothing. ⚠️ **Two lessons the planting and the move-4 review taught.** The turning and emptied-hand readings were taken from whichever book was reported first, so a book picked second hid a failure; they are carried from the book that ran them. And the shelf-copy clause read a flag that is true for any book with no held copy, so a cover that was blank would pass: `cover` is now read off the material's texture, `none` when it carries none. Disposition of the rework: `gated`.
+**2026-10-10 — reworked for examining the held book** ([#418](https://github.com/mephistopheles4/stacks/issues/418), [ADR-0109](../adr/0109-the-held-book-is-examined-in-3d.md)). `checkViewer` now reads the view that closes the held book and turns it: the front board at 0° ±0.5° from the scene replaces the image's width, and turning, the exits, focus, reduced motion, nothing fetched, a book with no cover and the emptied hand are added. **Observed red in the browser** by planting faults in the build and reverting each: the Escape guard removed, no focus return, the closing tween off, a cut that leaves the dialog open, a static dialog name, a drag that turns nothing. ⚠️ **Two lessons the planting and the move-4 review taught.** The turning and emptied-hand readings were taken from whichever book was reported first, so a book picked second hid a failure; they are carried from the book that ran them. And the shelf-copy clause read a flag that is true for any book with no held copy, so a cover that was blank would pass: `cover` is now read off the material's texture, `none` when it carries none. Disposition of the rework: `gated`.
 
 ---
 
@@ -3447,7 +3447,7 @@ in the band.
 
 ### G10 — `cover-path`
 
-**Gate:** [`gates/cover-path.test.ts`](../gates/cover-path.test.ts) + [`packages/core/src/covers/cover-path.test.ts`](../packages/core/src/covers/cover-path.test.ts)
+**Gate:** [`gates/cover-path.test.ts`](../../gates/cover-path.test.ts) + [`packages/core/src/covers/cover-path.test.ts`](../../packages/core/src/covers/cover-path.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — exposed, mild: the caller-exemption list carries a
@@ -3531,7 +3531,7 @@ defect one directory over in `scripts/deploy.ts` each leave 636 of 636 green.
 
 ### G11 — `build-modes`
 
-**Gate:** [`gates/build-modes.test.ts`](../gates/build-modes.test.ts)
+**Gate:** [`gates/build-modes.test.ts`](../../gates/build-modes.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -3553,7 +3553,7 @@ list."
 
 ### G12 — `shelf-order`
 
-**Gate:** [`gates/shelf-order.test.ts`](../gates/shelf-order.test.ts)
+**Gate:** [`gates/shelf-order.test.ts`](../../gates/shelf-order.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening / satisfying the letter / routing around / vacuous green** —
@@ -3575,14 +3575,14 @@ G12 paragraph.
 
 **The code repair holds, and is red-capable.** `compareShelfPosition` puts
 `status === 'reading'` ahead of `shelfOrder`
-([`packages/core/src/shelf-order.ts`](../packages/core/src/shelf-order.ts):36–37),
+([`packages/core/src/shelf-order.ts`](../../packages/core/src/shelf-order.ts):36–37),
 the gate is 6 of 6 green, and deleting those two lines — the pre-repair order —
 fails **4 of 6**, including *"a newly started book leads even a fully renumbered
 shelf"*, which is the regression the row exists for. `CLAUDE.md`'s current
 sentence, *"Unset means the default order: newest finished first"*, reads true.
 
 ⚠️ **The decay is repaired in the code and still live in the row's own
-justification.** [`gates/shelf-order.test.ts`](../gates/shelf-order.test.ts):8
+justification.** [`gates/shelf-order.test.ts`](../../gates/shelf-order.test.ts):8
 presents, in the present tense and as something *"CLAUDE.md documents"*:
 
 > "Unset means the default order: reading first, then newest finished."
@@ -3612,7 +3612,7 @@ lines) fails 4 of 6. The row had no observed-red line before this pass.
 
 ### G15 — `cover-budget`
 
-**Gate:** [`gates/cover-budget.test.ts`](../gates/cover-budget.test.ts)
+**Gate:** [`gates/cover-budget.test.ts`](../../gates/cover-budget.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — exposed and current; nothing stops the two budget constants
@@ -3707,7 +3707,7 @@ vaults, 3 file-scoped vitest runs.
 
 ### G16 — `books-in-case`
 
-**Gate:** [`pnpm smoke:render`](../scripts/smoke-render.ts)
+**Gate:** [`pnpm smoke:render`](../../scripts/smoke-render.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -3735,7 +3735,7 @@ five has nothing to demonstrate and is **not deep-pass membership at all**.
 
 ### G17 — `deploy-branch`
 
-**Gate:** [`gates/deploy-branch.test.ts`](../gates/deploy-branch.test.ts)
+**Gate:** [`gates/deploy-branch.test.ts`](../../gates/deploy-branch.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; the override flags (`--any`, `--branch`, `--anybranch`,
@@ -3818,7 +3818,7 @@ the G39 entry's vacuous-green bullet.
 
 ### G18 — `bounded-cover-bytes`
 
-**Gate:** [`packages/core/src/covers/download.test.ts`](../packages/core/src/covers/download.test.ts)
+**Gate:** [`packages/core/src/covers/download.test.ts`](../../packages/core/src/covers/download.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; the magic-byte allowlist (JPEG/PNG/WebP) is a content
@@ -3885,9 +3885,9 @@ providers did on 1 August 2026"*. **O'Reilly became a fourth provider at
 for its own early releases, served from
 `learning.oreilly.com/covers/urn:orm:book:<ourn>/1200w/` and downloaded through
 the same `download` in
-[`packages/core/src/covers/cache-cover.ts`](../packages/core/src/covers/cache-cover.ts).
+[`packages/core/src/covers/cache-cover.ts`](../../packages/core/src/covers/cache-cover.ts).
 `COVER_SOURCES` still names four providers, though the fetch has asked three
-again since O'Reilly was removed ([ADR-0147](adr/0147-oreilly-is-removed.md));
+again since O'Reilly was removed ([ADR-0147](../adr/0147-oreilly-is-removed.md));
 the measurement covered three.
 
 The gap lands on the worst candidate available. That URL ends in `/1200w/` and
@@ -3913,7 +3913,7 @@ re-counted rather than trusted.
 
 ### G20 — `public-build-artifact`
 
-**Gate:** [`gates/public-build-artifact.test.ts`](../gates/public-build-artifact.test.ts)
+**Gate:** [`gates/public-build-artifact.test.ts`](../../gates/public-build-artifact.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no `EXEMPT`/allowlist construct found in
@@ -3983,7 +3983,7 @@ exit code anyone watched.
 
 ### G21 — `no-live-network`
 
-**Gate:** [`gates/no-live-network.ts`](../gates/no-live-network.ts) + [`gates/no-live-network.setup.ts`](../gates/no-live-network.setup.ts), specced by [`gates/no-live-network.test.ts`](../gates/no-live-network.test.ts)
+**Gate:** [`gates/no-live-network.ts`](../../gates/no-live-network.ts) + [`gates/no-live-network.setup.ts`](../../gates/no-live-network.setup.ts), specced by [`gates/no-live-network.test.ts`](../../gates/no-live-network.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — exposed, deliberate and named: `vi.stubGlobal` is "the
@@ -4054,7 +4054,7 @@ verdict.
 
 ### G22 — `cover-candidates`
 
-**Gate:** [`gates/cover-candidates.test.ts`](../gates/cover-candidates.test.ts) + [`packages/core/src/covers/cache-cover.test.ts`](../packages/core/src/covers/cache-cover.test.ts)
+**Gate:** [`gates/cover-candidates.test.ts`](../../gates/cover-candidates.test.ts) + [`packages/core/src/covers/cache-cover.test.ts`](../../packages/core/src/covers/cache-cover.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — exposed, historical, fixed: the caller-exemption list "had
@@ -4112,7 +4112,7 @@ importer's own composition leaves 636 of 636 green.
 
 ### G23 — `key-if-present`
 
-**Gate:** [`gates/key-if-present.test.ts`](../gates/key-if-present.test.ts) + [`packages/core/src/key-if-present.test.ts`](../packages/core/src/key-if-present.test.ts)
+**Gate:** [`gates/key-if-present.test.ts`](../../gates/key-if-present.test.ts) + [`packages/core/src/key-if-present.test.ts`](../../packages/core/src/key-if-present.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean, and explicitly by design: "no allowlist, and
@@ -4172,7 +4172,7 @@ implementation in early-return form stays green suite-wide.
 
 ### G24 — `repo-root`
 
-**Gate:** [`gates/repo-root.test.ts`](../gates/repo-root.test.ts)
+**Gate:** [`gates/repo-root.test.ts`](../../gates/repo-root.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening / satisfying the letter / routing around / vacuous green** —
@@ -4214,7 +4214,7 @@ says the `import.meta` anchor was chosen to cover it. It does.
 
 ⚠️ **A second claim in the same paragraph is wrong, and it is not decay.**
 *"`scripts/lib/` holds three other shared files"* appears in
-[`gates/repo-root.test.ts`](../gates/repo-root.test.ts):24 and in
+[`gates/repo-root.test.ts`](../../gates/repo-root.test.ts):24 and in
 `docs/gates.md` line 880. At `15fd6f1` — **the commit that wrote both
 sentences** — `scripts/lib/` held five files: `repo-root.ts` plus `git.ts`,
 `public-build.ts`, `run.ts` and `walk.ts`. Four others, not three, and `git.ts`
@@ -4242,7 +4242,7 @@ and state the property. A gate is declined for G12's reason.
 
 ### G25 — `one-usable-width`
 
-**Gate:** [`packages/site/src/shelf/shelf-width.test.ts`](../packages/site/src/shelf/shelf-width.test.ts) + [`packages/site/src/shelf/books.test.ts`](../packages/site/src/shelf/books.test.ts)
+**Gate:** [`packages/site/src/shelf/shelf-width.test.ts`](../../packages/site/src/shelf/shelf-width.test.ts) + [`packages/site/src/shelf/books.test.ts`](../../packages/site/src/shelf/books.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist in a row built entirely from geometric
@@ -4307,7 +4307,7 @@ not the suite's.
 
 ### G26 — `lookup-recall`
 
-**Gate:** [`gates/lookup-recall.test.ts`](../gates/lookup-recall.test.ts) + [`gates/recall-corpus.ts`](../gates/recall-corpus.ts)
+**Gate:** [`gates/lookup-recall.test.ts`](../../gates/lookup-recall.test.ts) + [`gates/recall-corpus.ts`](../../gates/recall-corpus.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; the corpus is data replayed through a shared
@@ -4373,7 +4373,7 @@ wrong together.
 
 ### G27 — `enrich-report`
 
-**Gate:** [`gates/enrich-report.test.ts`](../gates/enrich-report.test.ts), over [`packages/cli/src/enrich-report.ts`](../packages/cli/src/enrich-report.ts)
+**Gate:** [`gates/enrich-report.test.ts`](../../gates/enrich-report.test.ts), over [`packages/cli/src/enrich-report.ts`](../../packages/cli/src/enrich-report.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -4397,7 +4397,7 @@ books turn 'complete' and the assertion names why."
 
 ### G28 — `no-board-collisions`
 
-**Gate:** [`packages/site/src/shelf/placement.test.ts`](../packages/site/src/shelf/placement.test.ts)
+**Gate:** [`packages/site/src/shelf/placement.test.ts`](../../packages/site/src/shelf/placement.test.ts)
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist — the row walks boards geometrically
@@ -4471,7 +4471,7 @@ no non-arithmetic regression (a book skipped from the row entirely) was tried.
 
 ### G42 — `dependency-audit`
 
-**Gate:** the `audit` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml),
+**Gate:** the `audit` job in [`.github/workflows/gates.yml`](../../.github/workflows/gates.yml),
 asserted by the `action-pins` spec
 **Date:** 2026-08-20
 **Triaged at landing**, per this rollout's standing rule.
@@ -4538,7 +4538,7 @@ existing sweep at no new cost.
   ⚠️ **Corrected 2026-10-16 (#399): the decline was not the quarantine.**
   Nothing set a seven-day window then, and with the window at 0 the same named
   update still leaves 3.3.16. See
-  [the log](log/2026-10-16-the-window-that-was-not-set.md).
+  [the log](2026-10-16-the-window-that-was-not-set.md).
 
 **Observed-red line:** **two, and they are different failures.** ⚠️ **The
 distinction is the point of this row's teeth.**
@@ -4556,7 +4556,7 @@ the repair, and the two `accepted` residuals are named above.
 
 ### G43 — `ignored-mutants`
 
-**Gate:** [`gates/ignored-mutants.test.ts`](../gates/ignored-mutants.test.ts)
+**Gate:** [`gates/ignored-mutants.test.ts`](../../gates/ignored-mutants.test.ts)
 **Date:** 2026-08-19
 **Triaged at landing**, per this rollout's standing rule — and by now enforced
 rather than remembered: G41 (`gate-register`) goes red the moment a row appears
@@ -4585,7 +4585,7 @@ paragraph nobody can check.
   note-*presence* while reading as note-*quality* states a scope exceeding its
   real one, which is the exact fault this row was minted to repair. `accepted`,
   with the cost stated in
-  [ADR-0061](adr/0061-the-mutation-floor-refuses-deploy.md): the file makes an
+  [ADR-0061](../adr/0061-the-mutation-floor-refuses-deploy.md): the file makes an
   omission visible; it does not make it impossible.
 - **Satisfying the letter** — **exposed, and the exposure is the intended path
   rather than a defect.** Adding a disable directive *and* raising `ignored` in
@@ -4634,7 +4634,7 @@ paragraph nobody can check.
   override on the `root` parameter `readFloors()` and `readDeclarations()`
   already take. That is **a test seam added to a refusal path that deliberately
   has no override flag**, which is a decision with its own argument and probably
-  its own line in [ADR-0061](adr/0061-the-mutation-floor-refuses-deploy.md),
+  its own line in [ADR-0061](../adr/0061-the-mutation-floor-refuses-deploy.md),
   not a detail for whoever writes the gate to settle in passing. Found by the
   session scoped to build that gate, reading this branch rather than this entry.
 
@@ -4779,7 +4779,7 @@ report is a print, never a silence*.
 
 ### G44 — `stryker-reporters`
 
-**Gate:** [`gates/stryker-reporters.test.ts`](../gates/stryker-reporters.test.ts)
+**Gate:** [`gates/stryker-reporters.test.ts`](../../gates/stryker-reporters.test.ts)
 **Date:** 2026-08-22
 **Triaged at landing**, and by now enforced rather than remembered: G41
 (`gate-register`) is red the moment a row lands without an entry, which is how
@@ -4862,7 +4862,7 @@ put one out of reach of `pnpm test`.
 
 ### G45 — `deploy-flags`
 
-**Gate:** [`gates/deploy-flags.test.ts`](../gates/deploy-flags.test.ts)
+**Gate:** [`gates/deploy-flags.test.ts`](../../gates/deploy-flags.test.ts)
 **Date:** 2026-08-22
 **Triaged at landing**, and enforced rather than remembered: G41
 (`gate-register`) is red the moment a row lands without an entry.
@@ -4875,7 +4875,7 @@ the *entire four-gate contract* on a path that still uploaded to the live
 address, was pinned by nothing and documented nowhere for 19 of the 21 days it
 existed — 2026-08-01 to 2026-08-22, documented on the 20th. `git grep` found it in **two lines of one file, both the
 implementation** ([#152](https://github.com/mephistopheles4/stacks/issues/152)).
-The flag is deleted — [ADR-0064](adr/0064-no-flag-skips-the-deploy-gates.md) —
+The flag is deleted — [ADR-0064](../adr/0064-no-flag-skips-the-deploy-gates.md) —
 and this row is the mechanism aimed at the **roster** instead, which is the class
 rather than the instance: the next undocumented `--fast` is red the day it lands.
 
@@ -4953,7 +4953,7 @@ to cover flags it does not document.
 
 ### G46 — `lint`
 
-**Gate:** `pnpm lint` → [`eslint.lint.config.mjs`](../eslint.lint.config.mjs), run by the `style` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml)
+**Gate:** `pnpm lint` → [`eslint.lint.config.mjs`](../../eslint.lint.config.mjs), run by the `style` job in [`.github/workflows/gates.yml`](../../.github/workflows/gates.yml)
 **Date:** 2026-08-23
 **Triaged at landing.** This row post-dates all four bands, so the bullets below
 are the same five questions asked on arrival rather than a band verdict.
@@ -4978,7 +4978,7 @@ it at all.
   their `files` glob a third. **No gate here reads
   a lint config**, and the honest reason none is built is that a gate over a rule
   set needs a second copy of the rule set to hold the first against — which is
-  the duplication [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md)
+  the duplication [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md)
   refuses. `accepted`, with the reason written beside every option in the file
   and the convention stated in `docs/gates.md`'s **Not gated, deliberately**:
   *do not remove a reason without removing the option it justifies.*
@@ -5014,10 +5014,10 @@ it at all.
 - **Decay** — **it decays loudly and in the safe direction, and the mechanism is
   named.** Every verdict here moves with the TypeScript version and with
   `typescript-eslint`'s, which is the property
-  [ADR-0070](adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)
+  [ADR-0070](../adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)
   refuses for Stryker's type checker; both are pinned exact for that reason, and
   the tension is recorded in
-  [ADR-0076](adr/0076-the-linter-is-type-aware-and-pinned.md) rather than left to
+  [ADR-0076](../adr/0076-the-linter-is-type-aware-and-pinned.md) rather than left to
   be rediscovered. `accepted` — a rule set that gained a rule at a bump reports
   a **finding**, which is a red naming a file and a line, never a silent pass.
   The failure mode is an upgrade that costs a session, not one that ships a
@@ -5057,7 +5057,7 @@ count.
 
 ### G50 — `astro-types`
 
-**Gate:** `astro check`, wired by [`gates/astro-types.test.ts`](../gates/astro-types.test.ts)
+**Gate:** `astro check`, wired by [`gates/astro-types.test.ts`](../../gates/astro-types.test.ts)
 **Date:** 2026-08-23
 **Triaged at landing**, on G45's precedent: G41 (`gate-register`) is red the
 moment a row lands without an entry.
@@ -5118,7 +5118,7 @@ both are given.
   about third-party software at a version, which is the exact shape that put
   **G7** on the flagged side at the decay re-read. `@astrojs/check@0.9.10`
   declares `peerDependencies: { typescript: '^5.0.0 || ^6.0.0' }`, and
-  [ADR-0066](adr/0066-typescript-6-until-7-1.md)'s revisit condition is
+  [ADR-0066](../adr/0066-typescript-6-until-7-1.md)'s revisit condition is
   TypeScript **7.1** — so the decision that is *already scheduled* un-runs this
   gate unless the checker widens first. **Unlike G7's version of this problem,
   the claim is asserted rather than written down**: clause 4 reads the pin and
@@ -5168,7 +5168,7 @@ checker's verdict is unassertable from here and the compiler pin that makes it
 run is scheduled to move.
 
 **Named remedy for the decay verdict (not built):** when
-[ADR-0066](adr/0066-typescript-6-until-7-1.md)'s revisit happens, the peer range
+[ADR-0066](../adr/0066-typescript-6-until-7-1.md)'s revisit happens, the peer range
 of the *installed* `@astrojs/check` is readable from `pnpm-lock.yaml` and could
 be asserted against the pin, rather than the range being restated in this gate
 where it can go stale. Declined today because a lockfile read is a fifth clause
@@ -5177,7 +5177,7 @@ side.
 
 ### G48 — `markdown`
 
-**Gate:** [`gates/markdown.test.ts`](../gates/markdown.test.ts)
+**Gate:** [`gates/markdown.test.ts`](../../gates/markdown.test.ts)
 **Date:** 2026-08-23
 **Triaged at landing**, on the same enforcement as the two rows above: G41
 (`gate-register`) is red the moment a row lands without an entry.
@@ -5395,7 +5395,7 @@ would need the network G21 forbids.
 
 ### G47 — `ignored-clones`
 
-**Gate:** [`gates/ignored-clones.test.ts`](../gates/ignored-clones.test.ts)
+**Gate:** [`gates/ignored-clones.test.ts`](../../gates/ignored-clones.test.ts)
 **Date:** 2026-08-23
 **Triaged at landing**, per this rollout's standing rule and now enforced by G41
 rather than remembered.
@@ -5450,7 +5450,7 @@ code location — agreed.
   landed that *no gate, test or CI check compares its two stamps*; **G56
   (`config-hash`) compares one of them** — `configHash` — and `fixtureHash` is
   still compared by nothing at merge, declined in
-  [ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md) because a gate
+  [ADR-0079](../adr/0079-the-floors-stamp-is-compared-at-merge.md) because a gate
   over it goes red on every dependency bump. Disposition `repaired`.
 
 ⚠️ **The residual worth carrying forward is not in any of the five.** The counter
@@ -5463,7 +5463,7 @@ at once with nothing to point at.
 
 ### G49 — `format`
 
-**Gate:** the `style` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml), running `pnpm format:check`
+**Gate:** the `style` job in [`.github/workflows/gates.yml`](../../.github/workflows/gates.yml), running `pnpm format:check`
 **Date:** 2026-08-25
 **Observed-red line:** `.command('add')` hand-written as `.command("add")` in `packages/cli/src/index.ts` — `pnpm format:check` exits **1** with *"[warn] packages/cli/src/index.ts"*, against exit **0** on the clean tree immediately before and after (perturbation, with a control through the identical invocation on both sides).
 **Triaged at landing**, and enforced rather than remembered: G41
@@ -5511,7 +5511,7 @@ would have frozen the trap under a formatter that made it invisible.
   is documentation, not machinery**, and it is placed where a reader of the
   command meets it rather than only here.
 - **Decay** — **exposed, named, and it decays loudly rather than quietly.**
-  `prettier` is pinned **exact** ([ADR-0067](adr/0067-the-counters-inputs-are-pinned-exact.md)'s
+  `prettier` is pinned **exact** ([ADR-0067](../adr/0067-the-counters-inputs-are-pinned-exact.md)'s
   reason, applied to a formatter): a caret range would let a minor bump change a
   default and redden an unchanged tree on a pull request that touched none of
   the files it names. Pinned, that decay becomes a deliberate version bump with
@@ -5598,7 +5598,7 @@ records reaching the live site and killing a phone.
   raising the edge cap to admit a 2048 is the perturbation above, run in
   reverse. ⚠️ **Neither is derived from the directory's current contents**,
   which would be a floor equal to a population — the shape
-  [`docs/spec/supply-chain.md`](spec/supply-chain.md) records going wrong. Both
+  [`docs/spec/supply-chain.md`](../spec/supply-chain.md) records going wrong. Both
   are set against sheets that do not exist here yet, measured on the prototype
   branches that hold them, so the next ticket lands its own sheet without
   needing to touch this row. There is no allowlist and no skip flag.
@@ -5900,7 +5900,7 @@ worth avoiding rather than the gap it replaces.
 
 ### G56 — `config-hash`
 
-**Gate:** [`gates/config-hash.test.ts`](../gates/config-hash.test.ts)
+**Gate:** [`gates/config-hash.test.ts`](../../gates/config-hash.test.ts)
 **Date:** 2026-09-08
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -5954,11 +5954,11 @@ reasoned about.
   measured residual is the compiler**: the resolved `typescript` version is not
   in the object and cannot be, so a bump moves every score with nothing here
   saying so — which is precisely why `checkers` stays `[]`
-  ([ADR-0070](adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)).
+  ([ADR-0070](../adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)).
   ⚠️ **The second residual is `fixtureHash`, and it is declined rather than
   missed**: a gate over it goes red on every Dependabot bump and a bot cannot
   re-derive a stamp. Disposition `declined`, in
-  [ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md), and the gate's
+  [ADR-0079](../adr/0079-the-floors-stamp-is-compared-at-merge.md), and the gate's
   header says so rather than covering one stamp quietly.
 - **Vacuous green** — **gated, with four floors, and one of them was earned in
   the writing.** Two `undefined`s compare equal and `configHashOf({})` is a
@@ -5987,7 +5987,7 @@ reasoned about.
 
 ### G57 — `renovation-markers`
 
-**Gate:** [`gates/renovation-markers.test.ts`](../gates/renovation-markers.test.ts)
+**Gate:** [`gates/renovation-markers.test.ts`](../../gates/renovation-markers.test.ts)
 **Date:** 2026-09-12
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6050,11 +6050,11 @@ instead of trusting the guard, and `-ceq` is the fix.
   ESLint rules move no count, and [#342](https://github.com/mephistopheles4/stacks/pull/342)
   removed the last version trigger, so the class is smaller than it was and is
   not empty. Disposition `accepted`, in
-  [ADR-0085](adr/0085-a-renovation-is-declared-and-the-window-may-survive.md).
+  [ADR-0085](../adr/0085-a-renovation-is-declared-and-the-window-may-survive.md).
   ⚠️ **The second residual is the compiler**, inherited from G56 and unchanged:
   the resolved `typescript` version is in no stamp, so a bump moves every score
   with nothing here saying so, which is why `checkers` stays `[]`
-  ([ADR-0070](adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)).
+  ([ADR-0070](../adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)).
   Disposition `declined`.
 - **Vacuous green** — **gated, with two floors, and the second was earned in the
   writing.** Two `undefined`s compare equal, so all three stamps are shape-checked
@@ -6081,7 +6081,7 @@ instead of trusting the guard, and `-ceq` is the fix.
 
 ### G58 — `adr-index`
 
-**Gate:** [`gates/adr-index.test.ts`](../gates/adr-index.test.ts)
+**Gate:** [`gates/adr-index.test.ts`](../../gates/adr-index.test.ts)
 **Date:** 2026-09-14
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6142,7 +6142,7 @@ rather than observed once.
 
 ### G59 — `large-library-lit`
 
-**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts), judged by [`scripts/lib/large-library-lit.ts`](../scripts/lib/large-library-lit.ts)
+**Gate:** [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts), judged by [`scripts/lib/large-library-lit.ts`](../../scripts/lib/large-library-lit.ts)
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6206,7 +6206,7 @@ rasteriser in the same run, and that is why it could be expected to travel.
 
 ### G60 — `context-loss-fallback`
 
-**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkContextLossFallback`
+**Gate:** [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts) — `checkContextLossFallback`
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6311,7 +6311,7 @@ and `painted loss`.
 
 ### G61 — `one-shadow-reader`
 
-**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkShadowReaders`, over [`scripts/lib/shadow-sampling.ts`](../scripts/lib/shadow-sampling.ts) and [`scripts/lib/sampling-hook.ts`](../scripts/lib/sampling-hook.ts)
+**Gate:** [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts) — `checkShadowReaders`, over [`scripts/lib/shadow-sampling.ts`](../../scripts/lib/shadow-sampling.ts) and [`scripts/lib/sampling-hook.ts`](../../scripts/lib/sampling-hook.ts)
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6409,7 +6409,7 @@ judge's spec, so the plants are asserted on every run and not observed once.
 
 ### G62 — `ignore-expiry`
 
-**Gate:** [`gates/ignored-advisories.test.ts`](../gates/ignored-advisories.test.ts), over [`scripts/lib/ignore-ghsas.ts`](../scripts/lib/ignore-ghsas.ts)
+**Gate:** [`gates/ignored-advisories.test.ts`](../../gates/ignored-advisories.test.ts), over [`scripts/lib/ignore-ghsas.ts`](../../scripts/lib/ignore-ghsas.ts)
 **Date:** 2026-10-06
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6462,7 +6462,7 @@ reverted as separate steps, with the file's hash or `git diff` checked after.
 
 ### G63 — `ignore-fix-published`
 
-**Gate:** the `ignoreGhsas guard` step of the `audit` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml) — [`scripts/check-ignored-advisories.ts`](../scripts/check-ignored-advisories.ts), judged by [`scripts/lib/ignore-ghsas.ts`](../scripts/lib/ignore-ghsas.ts) and asserted by [`gates/ignored-advisories.test.ts`](../gates/ignored-advisories.test.ts)
+**Gate:** the `ignoreGhsas guard` step of the `audit` job in [`.github/workflows/gates.yml`](../../.github/workflows/gates.yml) — [`scripts/check-ignored-advisories.ts`](../../scripts/check-ignored-advisories.ts), judged by [`scripts/lib/ignore-ghsas.ts`](../../scripts/lib/ignore-ghsas.ts) and asserted by [`gates/ignored-advisories.test.ts`](../../gates/ignored-advisories.test.ts)
 **Date:** 2026-10-06
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6512,7 +6512,7 @@ reverted as separate steps, with the file's hash or `git diff` checked after.
 
 ### G64 — `tuner-split`
 
-**Gate:** `checkTuner` in [`scripts/smoke-render.ts`](../scripts/smoke-render.ts), run by `pnpm smoke:render`
+**Gate:** `checkTuner` in [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts), run by `pnpm smoke:render`
 **Date:** 2026-10-09
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6548,7 +6548,7 @@ read after.
 
 ### G65 — `styled-pane`
 
-**Gate:** `checkTuner` in [`scripts/smoke-render.ts`](../scripts/smoke-render.ts), run by `pnpm smoke:render`; the extractor's anchors and the page's placeholders in [`packages/site/src/shelf/tuner-css.test.ts`](../packages/site/src/shelf/tuner-css.test.ts)
+**Gate:** `checkTuner` in [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts), run by `pnpm smoke:render`; the extractor's anchors and the page's placeholders in [`packages/site/src/shelf/tuner-css.test.ts`](../../packages/site/src/shelf/tuner-css.test.ts)
 **Date:** 2026-10-09
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6591,7 +6591,7 @@ read after.
 
 ### G66 — `control-characters`
 
-**Gate:** [`gates/control-characters.test.ts`](../gates/control-characters.test.ts)
+**Gate:** [`gates/control-characters.test.ts`](../../gates/control-characters.test.ts)
 **Date:** 2026-10-16
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6620,7 +6620,7 @@ itself never ran red here.
 
 ### G67 — `release-age`
 
-**Gate:** [`gates/release-age.test.ts`](../gates/release-age.test.ts)
+**Gate:** [`gates/release-age.test.ts`](../../gates/release-age.test.ts)
 **Date:** 2026-10-16
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6664,7 +6664,7 @@ planted in the real file.
 
 ### G68 — `debug-pane-imports`
 
-**Gate:** [`gates/debug-pane-imports.test.ts`](../gates/debug-pane-imports.test.ts)
+**Gate:** [`gates/debug-pane-imports.test.ts`](../../gates/debug-pane-imports.test.ts)
 **Date:** 2026-10-21
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6692,7 +6692,7 @@ planted in the real file.
 
 ### G69 — `one-ai-call`
 
-**Gate:** [`gates/one-ai-call.test.ts`](../gates/one-ai-call.test.ts)
+**Gate:** [`gates/one-ai-call.test.ts`](../../gates/one-ai-call.test.ts)
 **Date:** 2026-11-05
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6723,7 +6723,7 @@ stayed green under both, which is the reason the gate exists.
 
 ### G70 — `mutation-dry-run`
 
-**Gate:** [`.github/workflows/gates.yml`](../.github/workflows/gates.yml), the `mutation-dry-run` job, held in the `gates` aggregator by [`gates/action-pins.test.ts`](../gates/action-pins.test.ts) (G40)
+**Gate:** [`.github/workflows/gates.yml`](../../.github/workflows/gates.yml), the `mutation-dry-run` job, held in the `gates` aggregator by [`gates/action-pins.test.ts`](../../gates/action-pins.test.ts) (G40)
 **Date:** 2026-11-08
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6734,3 +6734,17 @@ stayed green under both, which is the reason the gate exists.
 - **Routing around** — **exposed.** The remedy for a red run is to exclude the spec in `vitest.stryker.config.ts` or the file in `stryker.scopes.json`, and either turns the job green without fixing anything. That is the intended escape, so it is a reviewed diff with a reason beside it, and `docs/commands.md` says to name what keeps an oracle. Disposition `accepted`.
 - **Vacuous green** — **gated.** Stryker exits non-zero when the initial run executes no test (`No tests were executed. Stryker will exit prematurely`), which was seen on a scoped run here when only an unimported script was named. Disposition `gated`.
 - **Decay** — **exposed.** A Stryker or Vitest release that changes what a dry run does moves this job with no line of the repository changing, and that is the case it exists to catch; a flaky red blocks every merge, since the job feeds the one required check. `docs/commands.md` says a flake gets an issue and not an exclusion. Disposition `accepted`.
+
+### G71 — `doc-word-budget`
+
+**Gate:** [`gates/doc-word-budget.test.ts`](../../gates/doc-word-budget.test.ts)
+**Date:** 2026-11-12
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real files: with the ceiling for `AGENTS.md` lowered to 5,900 in the test's own `BUDGETS` table, `holds every budgeted file to its ceiling` failed with `AGENTS.md: 6051 words, budget 5900`, and the other two cases stayed green. The plant was reverted. The measuring function is also shown red on a synthetic document over its budget by a case of its own, so the red does not depend on a real file being large.
+
+- **Weakening** — **exposed.** Raising a ceiling in the test turns it green without cutting anything. That is a reviewed one-line diff, and the test's header says a ceiling raised whenever it fails is a comment. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The gate counts whitespace-separated words, so a file can stay under its ceiling while carrying history, or by moving text into a file the table does not list. It does not judge what the words say. Disposition `accepted`.
+- **Routing around** — **exposed.** Moving a file out of the table, or renaming it, drops its budget. The tracked-file clause turns a rename red, so a doc that leaves the table has to be deleted or moved deliberately. Disposition `accepted`.
+- **Vacuous green** — **gated.** The table must name at least ten files, each tracked and at least half its ceiling in words, so an emptied table, a file that became a stub or a count that undercounts fails, and the measuring function is planted red on a document over its budget and green on one inside it. Disposition `gated`.
+- **Decay** — **exposed.** The ceilings sit just above each file's size on the day they were set, so a file that is later cut hard keeps unused headroom that nothing tightens. Disposition `accepted`.

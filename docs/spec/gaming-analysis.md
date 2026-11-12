@@ -12,7 +12,7 @@ sections this spec's other pieces wrote),
 [#144](https://github.com/mephistopheles4/stacks/issues/144) and
 [#150](https://github.com/mephistopheles4/stacks/issues/150) (the decay re-reads).
 
-**Most of this piece is already built.** [`docs/gate-register.md`](../gate-register.md)
+**Most of this piece is already built.** [`docs/gate-register.md`](../log/2026-08-20-gate-register.md)
 is on `main`, all 35 rows triaged and all 25 flagged rows deep-passed. **What this
 spec owes is what remains: the correspondence gate, the `CONTRIBUTING.md` edit, and
 a roster so the register's findings reach the person writing the next remedy.**
@@ -92,7 +92,7 @@ wayfinding process serialises.**
 
 ## 2. The register, and why it is not a column
 
-**Output: [`docs/gate-register.md`](../gate-register.md), a standalone document held
+**Output: [`docs/gate-register.md`](../log/2026-08-20-gate-register.md), a standalone document held
 to the row list by a gate in both directions** — no row without an entry, no entry
 without a row.
 
@@ -274,7 +274,7 @@ the decay category arriving inside the artifact built to catalogue it.**
 ## 4. What the deep pass found
 
 **25 of 35 rows flagged, 10 clean, none unreached; every flagged row deep-passed.**
-Detail is in [`docs/gate-register.md`](../gate-register.md) and is **cited rather than
+Detail is in [`docs/gate-register.md`](../log/2026-08-20-gate-register.md) and is **cited rather than
 restated** — a second, slightly-different copy is the cost
 [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md) names. **What belongs
 here is the shape of the result and the roster of what is owed.**
@@ -431,7 +431,7 @@ of the technique rather than as one more instance.**
 | `gates/gate-register.test.ts` | **G40** — correspondence both ways between `docs/gates.md`'s numbered rows and the register's row sections; **row-side floor at 42**; **exact cardinality** and entry shape, per §2 |
 | [`docs/gates.md`](../gates.md) | **row G40 `gate-register`, *Contract seams → gates*** |
 | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) | the per-gate evidence obligation: **a new gate lands with a register entry carrying five verdicts, a disposition, a date and an observed-red line** — and *"a gate never observed failing is not yet a gate"* stops being a sentence the author remembers to write |
-| [`docs/gate-register.md`](../gate-register.md) | entries for **all seven new rows**; the merged-verdict-bullet marking from §1; **the G19 findings** — the positional status cell, the `TABLES` hole, **and gapless's blindness to top-row deletion** — in G19's own entry |
+| [`docs/gate-register.md`](../log/2026-08-20-gate-register.md) | entries for **all seven new rows**; the merged-verdict-bullet marking from §1; **the G19 findings** — the positional status cell, the `TABLES` hole, **and gapless's blindness to top-row deletion** — in G19's own entry |
 | [`docs/spec/`](.) | this file, as the roster's index |
 
 ⚠️ **G19 is not edited, and that is a disposition rather than an omission.** Every one

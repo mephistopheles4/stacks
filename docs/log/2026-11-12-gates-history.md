@@ -1,0 +1,2304 @@
+# The gates scoreboard's history, moved out of `docs/gates.md`
+
+Text cut from [`docs/gates.md`](../gates.md) on 2026-11-12 ([#585](https://github.com/mephistopheles4/stacks/issues/585)) because it tells how a row or a rule came to be rather than what holds now. Each `###` group is the original text, verbatim, of what was cut or replaced from the row or section it names; the rule it carried stays in `docs/gates.md`. A group may hold a whole paragraph even where only part of it was cut.
+
+## The moved text
+
+### Why this file exists
+
+Every rule below was already written down, in [`AGENTS.md`](../../AGENTS.md) or the
+Decision Log. A pre-publication review in July 2026 found that six of them had
+quietly stopped being true, and nothing went red:
+
+| Documented claim | Reality when checked |
+| --- | --- |
+| Decision Log: "only the basename of a `cover:` value is ever used … Tested" | true in `publish.ts`, false in `enrich.ts` |
+| progress.md: audiobook covers carry their true aspect | true under `--public`, false under `pnpm dev` |
+| `gate:public` certifies the build carries nothing private | greps text *contents*; never looks at filenames |
+| CLAUDE.md: "Unset means the default order" | unreachable after one `stacks order --renumber` |
+| Working rules: a Decision Log entry in the same commit | ~8 decisions unlogged across 18 commits |
+| progress.md: "Ten commits of work" | 18, two of them credited from before the tag |
+
+A rule nothing can fail on is a comment. The point of a row here is that it can
+go **red**, and that it has been *observed* going red at least once — the same
+standard the Phase 0 gate hardening set: *"A gate never observed failing is not
+yet a gate."*
+
+### Every row has a number and a name (sentences cut)
+
+Same convention as [`docs/adr/`](../adr/), where a record is a number *and* a name
+for the same reason.
+
+A name cannot encode absence: a deleted name leaves
+nothing behind, which is the one thing a reader of this file cannot reconstruct.
+
+That clause covers 23 of the 29 rows and self-exempts the rest without an
+allowlist.
+
+That last one is the point: a name written down in twenty files and gated in none is exactly the second copy
+[ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md) is about.
+
+Bare `G8` mentions in ordinary prose stay bare. This file is full of them and
+forcing a slug onto each would make it worse to read while protecting nothing —
+the citation idiom is what a reader actually follows.
+
+### Retiring a row (sentence cut)
+
+which is the one thing a reader of this file cannot reconstruct.
+
+### G14
+
+ ([#252](https://github.com/mephistopheles4/stacks/issues/252)) — it read one until then, which made a hand-written `.command("add")` a red naming no quote and no line
+
+### G6
+
+ ([#245](https://github.com/mephistopheles4/stacks/issues/245), the owner's answer: *keep both*)
+
+ — re-proved one probe file each on the tree #245 landed on
+
+, as [#231](https://github.com/mephistopheles4/stacks/issues/231) measured happening to G14 and G45
+
+### G7
+
+⚠️ **This row's warrant was replaced at G50, not merely narrowed.** It read *"`.astro` files are not typechecked, so nothing else can catch this"* — true until `astro check` joined `pnpm build`, and false from that commit on. What holds instead: `.astro` sits outside **one** scope list, which both counters read. All ten globs in `stryker.scopes.json` end `*.ts`, and `scripts/lib/complexity.ts`'s `populationOf` takes its population from those same globs — so logic in an `.astro` file is now typechecked and still **counted by nothing**, by neither mutation score nor complexity series, and the text scan is what stands in for that. The earlier narrowing at [ADR-0066](../adr/0066-typescript-6-until-7-1.md) — `astro check` *could not run at all* under TS 7 and then could — is the history of how this row got here
+
+### G35
+
+ — reworded for [#413](https://github.com/mephistopheles4/stacks/issues/413) and again for [#531](https://github.com/mephistopheles4/stacks/issues/531), number and slug kept (spec §3.5)
+
+*"the card opened"* was the whole assertion once, and it stayed true through a card with no reading line, links with no accessible name and an announcer that never changed. The card retired with the pickup, and its checks moved onto the held page: a
+
+ (#531):
+
+ ([#553](https://github.com/mephistopheles4/stacks/issues/553), which retired #418's examining dialog)
+
+(the owner narrowed C6 to the cells a pointer can reach on 2026-11-07, and the rule is `pickup-state.test.ts`'s)
+
+ ([#426](https://github.com/mephistopheles4/stacks/issues/426))
+
+, and were planted red once in the page too (the ticker's `sleep()` removed; the page left unscrollable at landing). `checkSheet` retired with the sheet.
+
+([#536](https://github.com/mephistopheles4/stacks/issues/536), `checkNoticePages`)
+
+ The pages measured 16 px and 6.30:1 before the change, so the cell fails on what shipped before.
+
+ Planted red once: the click handler disabled turns it red at both widths.
+
+, #536)
+
+ Planted red three ways: both of the drawer's Escape tests removed (the one-Escape step reads the drawer closed), the shelf's whole-handler guard removed (the arrows turn the book behind the modal), the drawer's pointer guard and its notice-link clause removed (opening the notice closes the drawer); and, planted once by hand and not a standing cell, with the dialog removed from the page the shelf link navigates and the drawer link opens a new tab, as `notice-modals.md` N6 says. The #553 "no `<dialog>` on the page" clause now excludes `#notice-dialog`, which is a different thing from the closed book's modal view it retired
+
+ and were planted red by hand, as the row says
+
+### G40
+
+, because `suite`, the job that runs the tests, was the one job no row asked about
+
+### G47
+
+ — measured, 34 raw lines with a 12-line block report 20
+
+: measured, jscpd honours
+
+since [#341](https://github.com/mephistopheles4/stacks/issues/341) that stamp digests
+
+ It surfaced as a 5s timeout that killed a whole nightly, and the lesson is wider than this row — **every gate not excluded there runs in the dry run**, which that file's comment denied until [#273](https://github.com/mephistopheles4/stacks/issues/273)
+
+### G56
+
+two commits changed scoring configuration and carried only half their own diff — [`738ee75`](https://github.com/mephistopheles4/stacks/commit/738ee75) and [`6478a69`](https://github.com/mephistopheles4/stacks/commit/6478a69) — and both reached `main` with every check green. ⚠️ **The drift was never silent, and *not caught* and *not noticed* are different sentences**: `floorRefusals` reads a run stamped with a different hash as evidence and refuses **whatever is armed**, because the `armed` predicate guards only the absent-hash branch — measured on `main`'s floors file with zero armed scopes, one refusal with the stale stamp and zero with the refreshed one. So the cost was never silence; it was that `pnpm deploy:site` stopped with a release in hand, three times, the last of which ([#292](https://github.com/mephistopheles4/stacks/issues/292)) blocked a deploy for two days. ⚠️ **`fixtureHash`'s *value* is deliberately not watched here and the gate says so**, G47's convention: [ADR-0079](../adr/0079-the-floors-stamp-is-compared-at-merge.md) declined it because the stamp pinned the *installed* eslint and parser versions, so a gate over it reddened on every Dependabot bump and a bot cannot re-derive a stamp. ⚠️ **That premise is gone and the conclusion stands** — [#342](https://github.com/mephistopheles4/stacks/pull/342) took the three installed versions out of the digest, so nothing here reddens on a bump any more; re-deriving `fixtureHash` still needs a full counting run, which a merge check will not do, so the value stays unwatched at merge on cost rather than on ADR-0079's reason. **G57 watches its *reason* instead**, which is what [#227](https://github.com/mephistopheles4/stacks/issues/227) asked and this row does not
+
+⚠️ **The remedy had to be built with it**: no `pnpm` command wrote the stamp, so the red would have named a hand-copied hash nothing checks until the next run — `pnpm mutation:stamp` is that command, and a clause reads `package.json` so the message cannot outlive it.
+
+### G57
+
+four calibration windows restarted in three weeks, each one individually justified in dated prose inside `stryker.floors.json`, and nothing summed them — the pattern stayed invisible until somebody asked whether the window ever fills ([#341](https://github.com/mephistopheles4/stacks/issues/341)). A stamp says *these two numbers are not comparable* and never *why*, so a reader of the trend page meets a step change and supplies their own story. ⚠️ **The deploy was the other candidate and is the one [#227](https://github.com/mephistopheles4/stacks/issues/227) question 4 warns about**: a refusal a written sentence clears is an override wearing a reason, and [ADR-0061](../adr/0061-the-mutation-floor-refuses-deploy.md) and [ADR-0068](../adr/0068-the-complexity-cap-only-falls.md) provide none on purpose. This reads the disk and needs no metrics record, which is what lets it run at merge — G56's footing. ⚠️ **It answers the question [ADR-0079](../adr/0079-the-floors-stamp-is-compared-at-merge.md) left open about `fixtureHash` and does not reopen G56's**: that record declined a gate over `fixtureHash` because the stamp pinned installed versions and reddened on every Dependabot bump, a premise [#342](https://github.com/mephistopheles4/stacks/pull/342) removed. What is watched here is the **reason**, never the value — a bot cannot re-derive a stamp and still cannot, and nothing here asks it to
+
+#341 measured seven times that a fix
+
+⚠️ **Observed red three ways**, each perturbation run and reverted: a wrong value in the floors file, a deleted entry (which also reddened the population floor), and a typo'd stamp name, which is a
+
+### G58
+
+ — four sessions each committed a `0071-*.md` on 2026-08-23, two of the fixes then collided on 0075, and every collision was resolved by sessions messaging each other rather than by any check, because nothing walked the directory at all ([#263](https://github.com/mephistopheles4/stacks/issues/263)). Gate rows were already protected here and ADR numbers were not.
+
+ ⚠️ **It landed red on `main`**: 0083, 0084 and 0085 had each merged with no index row, and the rows are added in the same change.
+
+: 0071 is missing because every session moved off it, so a gapless clause is red on the tree as it stands, and a number abandoned on a dead branch leaves a hole that filling would let a stale reference on that branch misread. **A gap is free and a duplicate is silent**, and the index's instruction said *one past the highest* — this table's rule, where a gap is fatal — so it is rewritten with the row.
+
+**It prevents none of the collisions that produced it**: each lived on an unmerged branch, and a merge-time check sees only the second to merge. It turns a silent landed collision into a late red, and it is not coordination between sessions.
+
+⚠️ **Observed red four ways**: the three unindexed records already on `main`, then a duplicate-numbered file with its row, a record with no row, and a second row for one number — each planted on disk, run and reverted, and each kept permanently as a synthetic case in the same file
+
+### Contract seams → gates (paragraphs after the table)
+
+**G13 now allows
+
+⚠️ It also caught something worth recording about how this row is *run*: a local
+`pnpm test` before `git add` passes over an untracked binary, because G13 reads
+what git tracks. The commit that added the PNG claimed a green suite truthfully
+and CI went red on the same code seconds later. Stage, then run.
+
+**G13 grew a second allowlisted directory when the README got a screenshot**,
+
+ **Observed red** by copying the screenshot to a
+second name.
+
+**The brand art went in as four filenames, not a directory**,
+
+`publish()` wrote one on every build until the designed card replaced it, so the
+way this breaks is a build quietly
+
+**Observed red three ways**: an unlisted PNG copied in beside the icons;
+`git rm --cached` on `og.png`; and the old `packages/site/public/og.png` line
+restored to `.gitignore`. The third is why that assertion reads the ignore
+
+**G8 observed red** on `shelf_order`, which the parser read and the prose
+described but the documented enumeration never listed. **G9 observed red** on
+`PORT`, read by `scripts/dev-watch.ts` and documented nowhere. Both fixed in the
+commit that added them.
+
+**The Name column arrived after the positional read had already been wrong
+once.** `invariantSourceCells` reached for `tableCells(line)[2]` — fine while
+the Invariants table had Source third, and quietly wrong the moment a column was
+inserted before it, because `[2]` on a shifted table returns a real string from
+the *Gate* cell rather than nothing. The citation check would then have asked
+the wrong column whether it mentions an invariant and kept passing. Columns are
+now found by reading the header row, and a missing header **throws naming the
+column** rather than returning `-1` and reporting "no invariant is cited" — the
+`markdownSection` argument one level further in. **Observed red both ways**, and
+the message names `Source` and `Name` respectively rather than the symptom.
+
+**G19 gates this file, which until it existed was the only unenforced thing in
+the repo.** Every gate here *mentioned* `docs/gates.md` — in a comment. Nothing
+read it. So the document whose entire job is to record which rules are
+mechanically enforced was itself a documented claim resting on somebody
+remembering, which is the exact failure the table at the top of this file lists
+six instances of.
+
+It asserts in both directions and in three dimensions: every numbered invariant
+in `AGENTS.md` is cited by some row (⬜ is an acceptable and honest answer);
+no row cites an invariant that no longer exists; every spec path named here
+resolves to a real file; every `gates/*.test.ts` appears somewhere here, so a
+gate cannot be written and left unrecorded; every row carries a status drawn
+from this file's **own key** rather than a list hardcoded in the test; row
+numbers are unique and gapless, so retiring a rule means marking it rather than
+deleting the evidence it was ever considered.
+
+**It caught itself on its first run** — `constitution-scoreboard.test.ts`
+existed and no row scored it — which is the shortest possible demonstration of
+the gap it closes. **Observed red eight ways**: a sixth invariant added with no
+row; a row citing `invariant 9`; a renamed spec path; an unscored gate file; a
+status symbol outside the key; a duplicated row number; a deleted row leaving a
+gap; and the heading `## Invariants` renamed, which throws rather than passing
+over an empty set.
+
+Every check passed the day it was written, and that is the point. The cost is
+nearly zero now and all of it is paid the first time somebody adds an invariant,
+moves a spec, or writes a gate and forgets to come back here.
+
+**And it shipped with three holes of its own, all found by review before merge.**
+This is the entry worth reading, because the gate written to stop documented
+claims from quietly becoming false was itself making three:
+
+- **A spec path was only checked if it began with `gates/`, `packages/` or
+  `scripts/`.** Every other root was invisible — including G10's
+  `covers/cover-path.test.ts`, the repo's *one real instance* of a row naming a
+  file that does not exist. That row was corrected by hand in the same commit,
+  so the gate's first act was to not catch the only thing it was there for. An
+  allowlist of directory names was the wrong shape for "does this resolve"; the
+  filesystem already answers that, and the check now asks it about any path.
+- **A gate counted as scored if its filename appeared anywhere in this file**,
+  paragraphs included. Deleting G19's own row and leaving its filename in a
+  sentence kept the suite green.
+- **A citation counted if the words "invariant N" appeared in any cell of any
+  row**, so an incidental mention in an unrelated gate's Failure-mode cell
+  satisfied "invariant 6 is protected". This one is verbatim the defect logged
+  above for G14 — *a gate that matches prose matches anything* — repeated inside
+  a file whose comments congratulate themselves on avoiding it.
+
+All three were **verified by mutation, not by reading**: each was reproduced
+green before the fix and red after. The shared lesson is one line — *anchor an
+assertion to the cell that carries the claim, not to the row and never to the
+document* — and the constitution's article numbers are now held to the same
+uniqueness-and-no-gaps rule as these row numbers, which they were not before.
+
+**G29 exists because the documentation is a graph and nothing checked its
+edges.** `AGENTS.md` routes a cold session to five files by link, every ADR
+links back here, and this file links out to the specs it scores — several
+hundred local links across the tracked Markdown, a corpus that has since roughly
+tripled. (This sentence carried the two exact figures until they were both
+false, which is the same defect the paragraphs below log against this row twice
+over. The count lives in the gate's vacuity floor, where it can go red.) Until
+G29, the *only* link-shaped claim in the repo that could go red was G19's check
+that spec paths named in scoreboard rows resolve. Everything else was a route
+that worked because nobody had moved anything yet.
+
+It was written for the split of `docs/progress.md` into `docs/log/`, which is
+precisely the change that breaks routes: 17 files' worth of narrative leaving
+one document. Writing the gate **first**, running it green against the un-split
+tree, and only then splitting is what makes the split reviewable — anything red
+afterwards is something the split broke, rather than something that may have
+been broken for months.
+
+**Observed red both ways, and one of them found a real design fault.** The
+file-existence half went red on its own accord: `docs/research/splitting-the-long-docs.md`
+describes the extraction this gate performs as `` `](./x.md)` ``, in inline
+code, and the first version read that as a route to a file that does not exist.
+Correct by the gate's own rules and wrong in substance — prose *quoting* a path
+is not a link to it, and a gate that cannot tell the difference makes
+documenting the gate an error. Fenced blocks were already blanked; inline spans
+now are too. The fragment half went red on a one-character typo planted in
+`docs/plan.md`'s link to `agents/issue-tracker.md#wayfinding-operations`, then
+reverted.
+
+**What the blanking costs was measured, not assumed.** Blanking inline code can
+in principle hide a *real* link — a line with mismatched backticks pairs the
+wrong two and swallows whatever sits between them, which would be a false green
+of exactly the kind this row exists to prevent. Measured across the tracked
+corpus by extracting with and without the pass and diffing: **the only links it
+hides are the `x.md` syntax examples in this file and in
+[`docs/research/splitting-the-long-docs.md`](../research/splitting-the-long-docs.md)** —
+prose about the gate, in inline code, which is what the pass is for. No real
+link is hidden.
+
+**A same-document link — `[x](#heading)` — is checked against its own file's
+headings, and was skipped outright until
+[#365](https://github.com/mephistopheles4/stacks/issues/365).** The skip was the
+right call while the slug was hand-kept: checked against a slug that disagreed
+with GitHub, a red in-page link steers its author to an anchor that is dead on
+the site (#361). Once `anchorsOf` became `github-slugger`, the skip was the only
+thing between a renamed heading and every in-page link to it. It has its own
+floor, just under the real count, apart from the cross-file fragment floor — a
+single combined floor would let either population fall to zero while the other
+held it up. **The first run, on 2026-09-22, rejected nothing**: every
+same-document link the tree held that day was live, and the current count lives
+in the floor. That zero was not taken on trust. A dead link planted in
+`docs/plan.md` went red through the same test, and restoring `#` to the skip
+turned both new tests red — the planted unit case and the floor.
+
+Deliberately stated without totals. The first draft of this paragraph carried
+three exact counts and **two of them were false one edit later**, because the
+commentary above added another `x.md` example and moved the numbers it was
+describing. That is the defect this file already logs against itself — *"It said
+'four' for a while after there were five"* — reproduced inside the paragraph
+congratulating the gate on measuring rather than assuming. The count belongs in
+the gate's own vacuity floor, where it can go red, and that floor is set just
+under the real number rather than at a round order-of-magnitude guess — left far
+below, most of the corpus could stop being checked in silence. Which means the
+floor is raised as the corpus grows, and was not: it sat at 180 against a corpus
+nearly three times that, a floor no longer doing the job this sentence claims.
+
+**That fragment link was the only one in the repo when this row was written, and
+it stopped being so the next day.** The claim landed in `390bb65`; `1d0548f`
+added `docs/spec/` the following morning, cross-referencing its own sections by
+anchor throughout, and the line here went on saying *only one* for the nine days
+after that — a documented claim that had quietly become false, which is the
+failure this file opens by cataloguing, sitting in the row written to catch it.
+**A prose claim about a corpus is stale one commit later, not one release
+later**, which is the argument for the floor and against this sentence ever
+carrying a number again. The fragment half is now
+exercised by a real corpus as well as by mutation, and its size is asserted by
+its own vacuity floor in `gates/doc-links.test.ts` rather than counted here: an
+exact number in this paragraph is precisely what the paragraph above rules
+against. **The slug is `github-slugger`'s — the offline reimplementation of
+GitHub's anchors that G29 follows — and no longer a hand-kept imitation of
+it.** This sentence used to say the
+imitation erred *in the safe direction*, producing a false red and never a false
+green. A slug that disagrees with GitHub has no direction: the author of the red
+link writes the anchor the gate accepts, and that anchor is dead on GitHub. See
+the 2026-09-22 entry below.
+
+### Defect gates
+
+ — for G61, the default page
+reading the shadow map for every visitor, when the loss it guards against had
+only ever happened behind `?shadows=1` —
+
+(That sentence read "except the last" until G21 was appended, which would have
+made it name the wrong row. It had already been wrong once: "the last" meant G17
+when it was written, and G18 and G20 arrived after it. A positional reference to
+a table that grows is the same species as the count in the next paragraph.)
+
+(It said "four" for a while after there were five: the kind of thing this file is
+otherwise about, counted in prose so nothing could go red. Naming the rows at
+least breaks loudly when one is renumbered — which has now happened twice, to the
+same row. The cover-preference row was written as G20, became G21 when the
+public-build inspector took that number first, and became G22 when the
+no-live-network guard took *that* one. Three branches, three sessions, and each
+time the next free number was free right up until somebody else merged: what
+number a row will carry is not knowable until it lands. Loud is the most a
+paragraph can be; nothing here goes red on it.)
+
+### G17
+
+**Two incidents, two mechanisms, one cause** — an assertion that could not hold on a CI checkout, which refused on the absent metrics mirror before reaching its sentinel ([#210](https://github.com/mephistopheles4/stacks/pull/210)); then `Test timed out in 5000ms` on `27248ab`, a cold spawn past the guard on a loaded runner ([#270](https://github.com/mephistopheles4/stacks/issues/270), which blamed the trend record's growth — on CI step 0b has no mirror to read and renders no series). A third would have been the same cause, not bad luck.
+
+**Since [#321](https://github.com/mephistopheles4/stacks/issues/321) the path has a pull-request twin**:
+
+### G20
+
+([#562](https://github.com/mephistopheles4/stacks/issues/562), [ADR-0139]
+
+([#536](https://github.com/mephistopheles4/stacks/issues/536), `notice-modals.md` C8)
+
+### G42
+
+Promoted here from a table row G19 (`constitution-scoreboard`) structurally cannot read — its `TABLES` constant names three tables and that was not one of them — where the paragraph describing it would have sat green and false the day the job was deleted
+
+### G44
+
+Measured: 5 appends / 923 bytes over a four-mutant scope, **1054k over the real ~5900**, past the 1024k GitHub accepts.
+
+, reached a third time
+
+### G45
+
+`--skip-gates` skipped the whole four-gate contract on a path that still uploaded, and for **19 of the 21 days it existed** lived in **two lines of one file, both the implementation** — not in `AGENTS.md`, not in `docs/`, not in the command's own usage text.
+
+⚠️ **The mechanism existed and was aimed one flag to the left**: G17 pins which spellings override the *branch* guard, while the override that cleared the *contract* was pinned by nothing
+
+That pattern reads either quote form, planted both ways ([#252](https://github.com/mephistopheles4/stacks/issues/252)) — it read one until then, so a double-quoted read emptied the roster *and* broke the count clause, neither red naming a quote.
+
+### G46
+
+ESLint has run here since the complexity counter landed and **was not a linter**: one rule at a threshold nothing can satisfy, so its report is a population and never a verdict. Nothing read the source for a defect the compiler does not catch — `tsc --noEmit` passes on all 33 findings this reported on arrival, across 19 files, and 9 of them are in `scene.ts`, which sits outside every mutation scope and every complexity scope.
+
+ — measured on [#233](https://github.com/mephistopheles4/stacks/issues/233), **in none of the five presets**, and left off when this row landed. [#245](https://github.com/mephistopheles4/stacks/issues/245) answered *keep both* and enabled them for the site package only;
+
+### G48
+
+Three live defects existed that 45 gates could not see: a six-cell row in a five-column table whose `✅` did not render, a dead same-document anchor `gates/doc-links.test.ts` structurally could not reach then because it skipped every target starting with `#` (since [#365](https://github.com/mephistopheles4/stacks/issues/365) it checks them, and MD051 stays for a wrongly cased `[x](#Title)`, which G29 accepts and MD051 refuses), and a duplicate heading in the file G41 extracts **by heading**.
+
+at default rules a fix pass changed 55 files, corrupted 11 issue references, stripped a documented separator from 16 code spans and renumbered a verbatim quotation — with all 1055 tests green throughout
+
+### G49
+
+Nothing did, and the cost was not cosmetic: G14 and G45 extracted with a regex that hardcoded a single quote, so the tree already had an **accidental quote gate** whose red read *extraction found 0 CLI subcommands* and named no quote. Repaired in [#252](https://github.com/mephistopheles4/stacks/issues/252) before this landed, deliberately — adopting first would have frozen the trap under a formatter that made it invisible.
+
+**It reads 91 files and is blind to four**
+
+under [#229](https://github.com/mephistopheles4/stacks/issues/229)'s reach test
+
+### G50
+
+was read by no gate and typechecked by nothing. Measured: `absoluteUrl(42, Astro.site)` planted in `index.astro` passed `pnpm typecheck`, passed G7 five of five, passed `pnpm build`, and shipped `content="42"` into **two** meta tags of `dist/index.html`
+
+G40's stated limit and G44's, reached again
+
+### G51
+
+and **46 pairs of their faces shared a plane while overlapping in the other two axes** on a four-row case — the condition
+
+⚠️ **The 16 pairs the backboard takes part in flickered on `main` and the other 30 did not**, because the backboard is a second material in a second colour while every other woodwork face carries the identical flat one — so a texture does not cause this, **it reveals it**, and all 46 become visible at once the moment one lands.
+
+⚠️ **Fixing the pair somebody points at leaves 36 of them**: on [#284](https://github.com/mephistopheles4/stacks/issues/284) a first pass shortened the planks in `x`, cleared 10, and left every backboard pair *and* the plank front and back faces at `z = ±0.36`; the second report arrived minutes later ([#296](https://github.com/mephistopheles4/stacks/issues/296), [#301](https://github.com/mephistopheles4/stacks/issues/301))
+
+G40's and G44's stated limit reached again
+
+ ⚠️ #296's own pair table sums to **48** against the 46 it states everywhere else; the arithmetic is right and that table's fourth row is not
+
+### G52
+
+so the shelf's *furniture* was unmeasured from the moment it stopped being flat colour.
+
+That arithmetic is what G15's own row records reaching the live site and killing a phone, on the one asset class it does not read.
+
+both are set against the sheets tickets [#304](https://github.com/mephistopheles4/stacks/issues/304) and [#306](https://github.com/mephistopheles4/stacks/issues/306) will add, measured on their prototype branches, so a later ticket lands its sheet without relitigating this number
+
+⚠️ **Every one, not the woodwork's**: a default page fetches two, since [#304](https://github.com/mephistopheles4/stacks/issues/304) made the backboard's a constant,
+
+### G53
+
+⚠️ **This row asserts nothing until a menu exists, which is why it lands with one and not before**: while the woodwork wore a single hard-coded sheet there was structurally one download and no way to have two, so the guarantee was a tautology. With [#306](https://github.com/mephistopheles4/stacks/issues/306)'s roster in place a fourth entry wired eagerly
+
+before the first frame, 1.0 MB at 512 and 4.0 MB at 1024, per sheet held, which is the arithmetic G15's row records reaching the live site and killing a phone
+
+go back to [#281](https://github.com/mephistopheles4/stacks/issues/281)'s four species
+
+### G54
+
+⚠️ **Map [#280](https://github.com/mephistopheles4/stacks/issues/280) earned this row three times, and not one of the three was a change anybody made.** [#284](https://github.com/mephistopheles4/stacks/issues/284)'s arm matrix built every URL as a fixed base plus a per-arm tail, so `woodRes=1024&woodRes=512` arrived and `URLSearchParams.get` returns the **first** — the arm meant to render 512 rendered 1024 and the pair differenced to **0.000% at every rung, worst delta 0**. [#298](https://github.com/mephistopheles4/stacks/issues/298)'s `woodVary` guard read an *absent* parameter as `0` against its own documented default of `1`, because `last()` returns `null` and `Number(null)` is `0` rather than `NaN`, so every render that branch ever took was unvaried. [#297](https://github.com/mephistopheles4/stacks/issues/297)'s fibre was bound at 90° to the figure it sat on and every whole-frame number it produced sat in the normal range. **A query string is an assumption until something states what came out of it** — and unlike the look, which [#282](https://github.com/mephistopheles4/stacks/issues/282) settled is the owner's verdict on a live build and never a number, that is machine-checkable
+
+gained a fifth category to carry it
+
+and none of the three defects above ever changed — they were wrong from the first frame.
+
+is precisely what let `woodVary` hide
+
+sees, rosewood's 7.68 against sapele's 1.6 —
+
+, [#495](https://github.com/mephistopheles4/stacks/issues/495))
+
+has been a loop over that model since [#496](https://github.com/mephistopheles4/stacks/issues/496), and
+
+, whose own read-back convention stays on the prototype branches; making that permanent is a separate ticket
+
+### G55
+
+ — and measured twice, 2026-08-26 and 2026-09-03, **nothing anywhere in `.github/` read either**: no title check, no `commitlint`, no `husky`. The convention held on review attention alone, 58 of 58 subjects since [ADR-0057](../adr/0057-the-pull-request-title-is-the-commit-subject.md), so turning the refusal on reddens nothing retroactively.
+
+, and that is the finding rather than a preference
+
+ — the implementer's judgement on a case [#289](https://github.com/mephistopheles4/stacks/issues/289) did not reach, flagged so it can be struck rather than inherited.** The brief says flatly *"A body missing either protected question fails"* and never mentions the bot; deleting
+
+, and the parse's reach was proved by editing the prose and watching this go red
+
+, and it did not until CodeRabbit measured it on [#320](https://github.com/mephistopheles4/stacks/pull/320): comments were stripped from a section's *contents* but not before the heading was searched for, so a body carrying both protected questions inside one `<!-- … -->` — rendering as nothing at all, no heading for a reviewer to notice was unanswered — passed, and a fenced one did the same. The stripping runs first now, and a fence
+
+⚠️ **That clause's first version was a confident zero**: it anchored `run:` at an indentation neither of the file's two step shapes uses, cleared its own floor of eight, and reported nothing against the hazard planted in the very step this row is about.
+
+stated limit reached again; that
+
+on [#320](https://github.com/mephistopheles4/stacks/pull/320) rather than in a test — the same commit red then green, with no push between, and the two runs named in the register entry
+
+### G59
+
+A 273-book library was **a black page with every gate green** ([#383](https://github.com/mephistopheles4/stacks/issues/383)): the fog range was two world-unit constants while the camera backs off with the bookcase, so 17 shelves framed at 36 sat wholly past the far edge of 30 and every book drew as the room colour. Nothing failed — `smoke:render` counted books and colours on a 50-book shelf the fog never reached, and no check looked at a tall bookcase at all.
+
+and 240 books before the fix — which the owner called very dark — at 0.15
+
+### G60
+
+ The old path resumed it: three re-links the same programs on a restore, and on the Pixel 10 Pro XL two restores ~1.15 s after a loss died again after 3,088 and 3,474 more sampling draws ([#381](https://github.com/mephistopheles4/stacks/issues/381), [ADR-0091](../adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
+
+. That last one is the page the Pixel ended on after every real loss: the new canvas refused, the old one kept so the sentence had somewhere to go, and Chrome painting it opaque white over the whole page, mean brightness 235 of 255 with the wordmark nearly gone. Back on the phone with the notice hiding the canvas, the same real loss left the page dark, 27 of 255 against 235 from the old build, one run each (
+
+, where adopting the halted shelf used to clear both
+
+ — before, it halted on the shader sentence and wrote nothing, so every load died the same way
+
+— measured, and deliberate
+
+### G61
+
+, [#531](https://github.com/mephistopheles4/stacks/issues/531)
+
+([#381](https://github.com/mephistopheles4/stacks/issues/381), [ADR-0088]
+
+([#536](https://github.com/mephistopheles4/stacks/issues/536), `notice-modals.md`'s C4)
+
+### G62
+
+, and the register records a 31-day-old entry planted in the real file going red
+
+### G63
+
+it ignored nothing and wrote `auditConfig: {}` into `pnpm-workspace.yaml` on 2026-10-06
+
+### G64
+
+#376 measured a plain CSS import in the lazy module hoisted onto every page
+
+### G65
+
+, which is the red this row first showed
+
+### G66
+
+**Three shipped with every gate green** — in this file and `pickup.ts`, fixed in [#417](https://github.com/mephistopheles4/stacks/pull/417), and in `scripts/lib/ignore-ghsas.ts`, fixed with this row ([#426](https://github.com/mephistopheles4/stacks/issues/426)) — because nothing read bytes a renderer hides.
+
+### G67
+
+The repository called it seven days by default for two months while nothing set it, and pnpm 11.18.0's own window measured under two days ([#399](https://github.com/mephistopheles4/stacks/issues/399)). 
+
+**Three of the four side doors #449's review left open are held too** ([#459](https://github.com/mephistopheles4/stacks/issues/459); the fourth, a cooldown on the github-actions Dependabot entry, is not gated, like the npm entry's). Door 1 is the first and the lockfile rule; door 2 is the trust-policy rules, the stale-exclude rule and the chromium-bidi rule; door 3 is the wrangler rule: 
+
+that was measured on #399, where `pnpm config get` read 10080
+
+ ([#532](https://github.com/mephistopheles4/stacks/issues/532))
+
+### G68
+
+ ([#488](https://github.com/mephistopheles4/stacks/issues/488))
+
+### G69
+
+([#532](https://github.com/mephistopheles4/stacks/issues/532), `docs/spec/ask-the-library.md`
+
+### G70
+
+(#558; the 2026-11-07 break was `scripts/ask-status.ts`, read as source text by its spec, and the 2026-09-22 and 2026-09-25 breaks were of the same kind)
+
+is the owner's call (#558, T2)
+
+observed it red ([#569](https://github.com/mephistopheles4/stacks/pull/569), run 42505624828)
+
+### G21
+
+**G21 is the first row here written for a rule that two files already claimed
+was true.** `AGENTS.md`'s Phase 1 gate says "use cached API fixtures, no live
+calls in tests"; `packages/core/src/covers/download.test.ts` opens by stating
+"No test makes a live call". Both were prose, and for months both were false —
+`packages/core/src/enrich.test.ts` downloaded a real cover from
+`covers.openlibrary.org` on every run. That is the table at the top of this file
+acquiring a seventh entry, found the way the other six were: by somebody
+looking, not by anything going red.
+
+**Nothing could have gone red, because the test passed.** Its assertions never
+look at the cover, so offline it filled `isbn` and `pages` and passed, and
+online it filled the cover too and passed. The only symptom was ~1.3s against
+5ms for its siblings, which reads as an outlier rather than as a network call —
+until a loaded CI runner turned it into an intermittent timeout at a quarter of
+vitest's 5s cap, which is how it was finally noticed.
+
+**Recording the attempt is the whole design, and the throwing is not.** The
+obvious guard — replace `fetch` with one that throws — does not work here, and
+it does not fail loudly enough to tell you so. `download` wraps its fetch in
+`catch { return undefined }`, deliberately, because a missing cover must not
+stop a book being logged; so the refusal is swallowed, the cover is dropped, and
+every assertion still passes. Measured against the pre-fix `enrich.test.ts`: a
+throw-only guard reported **7 passed** in 51ms. It would have removed the
+symptom, left the test still calling the network, and made the defect
+permanently invisible. So the guard records each attempt and asserts in an
+`afterEach`, where no `try/catch` in the code under test can reach it. The throw
+stays — it keeps the call off the wire and lands the error near its cause — but
+it is not what makes this gate red.
+
+**Observed red** by restoring the pre-fix `enrich.test.ts`: one test fails,
+naming the URL and the stub that fixes it, and only that test, because the
+record is cleared per test rather than accumulating into every test after it.
+
+**And its own spec was vacuous first, found by mutation rather than by reading.**
+The guard and its installation were one file, so the spec — which must import
+the module to compare against `guardedFetch` — installed the guard by importing
+it. Deleting `setupFiles` from `vitest.config.ts` left all seven checks green:
+the assertion that the gate was wired up was satisfied by the act of asking.
+Splitting installation into `no-live-network.setup.ts` makes
+`globalThis.fetch === guardedFetch` true only if the setup file ran; the same
+mutation now fails four of seven, and one of the four spends 1.2s fetching a
+real cover from `archive.org`, which is the absence demonstrating itself. This
+is the same lesson as G19's three holes — *anchor the assertion to the thing
+that carries the claim* — arrived at from the opposite direction, and it is the
+reason a gate is not finished when it passes.
+
+### G17 (second group)
+
+**G17 is the first row here written for a defect that has not happened**, because
+the change that would cause it is the change that shipped with it. Until
+worktrees there was one checkout, so "am I on the right branch" answered itself
+by standing somewhere. Now there can be four, on four branches, and all of them
+read the same `.env` — so all of them hold SITE_URL and can publish to the live
+domain with a command that looks identical from every one.
+
+**Both directions are asserted unconditionally**, which took a second attempt.
+The first version read the branch the suite happened to be on and returned
+early when it was `main` — so CI, which runs on `pull_request` and is therefore
+never on `main`, would only ever exercise the refusal, while the owner, who
+mostly is, would run a gate that quietly asserted nothing. Strongest where it
+never runs, inert where it matters. Now `GIT_DIR` points the child's git at a
+scratch repository sitting on a known branch: the script is real, the guard is
+real, git really resolves the branch, and only *which checkout is being asked
+about* is controlled. One test deliberately omits that redirection, so
+something still proves the guard is wired to the actual repository.
+
+Two mutations, because a positive check cannot detect a missing guard on its
+own. Deleting the guard fails four of seven. Inverting the comparison — refuse
+`main`, allow everything else — fails six, including "lets main through", which
+is what proves that one is not vacuous. Among the casualties either way is the
+check that `--any`, `--branch`, `--anybranch` and `--any_branch` do *not* work
+as the override: an escape hatch you can stumble into is not one.
+
+### G18
+
+**G18 is the second row written for a defect that has not happened**, and the
+first written because somebody outside the project looked. A pre-publication
+review — an external assistant asked whether the repo was ready to go public —
+named the cover download as the clearest remaining technical gap. It was right,
+and it was reading [`SECURITY.md`](../../SECURITY.md), which had disclosed the same
+thing by name for weeks. Disclosing a gap is not the same as gating it, and a
+threat model that lists a hole indefinitely is a comment, exactly like an
+ungated rule.
+
+`download` fetched a URL that came out of a third-party API response and handed
+the bytes to `sharp`, a native decoder, with no timeout, no size limit, and no
+check that they were an image at all — `arrayBuffer()` buffers whatever arrives,
+however much of it arrives. Now: a 15s abort, a 20 MB cap counted **as the body
+streams** rather than believed from `Content-Length`, and a magic-byte allowlist
+of JPEG, PNG and WebP. The allowlist matters more than the cap. `sharp` also
+decodes SVG, which is not an image but a document with its own parser and its
+own rules about external references, and nothing here has any reason to hand a
+provider's response to that.
+
+**Observed red at six of fourteen** by restoring the old four-line `download`
+and re-running. The streaming case is the one to note: it did not merely fail,
+it ran for **31 seconds** first, consuming a response that advertised 4 KB and
+never ended. That is the defect demonstrating itself — the cap is a limit only
+because something counts, and `Content-Length` is a claim like any other.
+
+One test failed on arrival for the opposite reason, and it was the instrument
+rather than the code: a default `ReadableStream` pulls once the moment it is
+constructed, so "the body was never read" was measuring the test's own
+scaffolding. At `highWaterMark: 0` nothing is pulled until something reads.
+
+**Every case here stubs `fetch`, so the checks were also run once against the
+live providers** — which is the failure mode a gate made of stubs cannot see. A
+tightened `Content-Type` check refuses covers *silently*, because `cacheCover`
+treats every failure as "no cover" by design, so a provider answering
+`application/octet-stream` would have meant books quietly logged bare with
+nothing going red. All three answer properly: Open Library `image/jpeg`
+(40 KB, `ffd8ffe0`), Google Books `image/png` (`89504e47` — note the endpoint
+serves PNG whatever the URL suggests), Apple `image/jpeg` (171 KB, `ffd8ffe0`).
+Largest is 0.8% of the cap. This is a measurement with a shelf life: it says
+what the three providers did on 1 August 2026, not what they must do.
+
+### G22
+
+**G22 is the third row written for a defect that has not happened**, and the one
+whose first draft was wrong in a way worth recording, because the mistake is the
+one this file exists to catch.
+
+Which cover URL to try first — `coverUrlLarge` before `coverUrl` — was written
+out three times, in `add-book.ts`, `enrich.ts` and the importer. All three
+agreed, which is exactly where G10 started: one rule, two implementations,
+agreeing until one didn't. The difference is what failure looks like. G10's
+second copy crashed a path on Windows; this one is **silent**. Reverse the pair
+and a cover still downloads, `cover_source` is still correct for the bytes kept,
+and the shelf is quietly worse.
+
+So the row was written structural: `coverUrlLarge` may be named only inside
+`packages/core/src/metadata/`, where the field is produced and where
+`coverUrls()` ranks it, and every module calling `cacheCover` must get its list
+from there. **Observed red** by adding a fourth module naming the pair, and again
+in reverse by the `routes every cover download` assertion, which is what stops
+the first half being satisfied by a caller that simply stops downloading covers.
+Both directions matter for the reason G17 records: a positive check cannot detect
+a missing one.
+
+**And that gated the wrong half.** The row claimed "one cover-preference rule,
+one implementation" while asserting only the second clause. Reversing
+`coverUrls` — the exact defect described two paragraphs up — left all 290 tests
+green, because no structural check can see which way round two elements of a
+tuple are. The prose had even argued the point away: *nothing about it is wrong
+except the choice, so nothing but a structural check can catch it.* That was true
+of three scattered copies and false the moment they became one function.
+Consolidating the rule is what made it cheaply assertable, and the draft carried
+over a justification from before the consolidation it was shipping with.
+
+Caught by review, then confirmed by mutation rather than by reading. The
+preference is now pinned in `covers/cache-cover.test.ts`, asserted **through the
+downloader** — that the large URL is the one actually fetched first — rather than
+on the tuple, because what is worth protecting is which bytes reach the shelf.
+Reversing `coverUrls` now fails one test, by name.
+
+The lesson generalises past this row: **a structural gate proves there is one
+implementation and says nothing about whether it is right.** Any row here
+promising "one rule, one implementation" needs the first clause asserted
+somewhere too. G10's does — `covers/cover-path.test.ts` is exactly that half,
+which is why that row names two files. G22's row named two files while one of
+them tested something adjacent.
+
+That adjacent thing was worth having anyway, and is the rest of
+`cache-cover.test.ts`. `blank.test.ts` and `download.test.ts` each proved one
+step of `cacheCover` in isolation; nothing proved the *order* they run in — which
+candidate wins, what happens when none is cover-shaped, and which URL the
+recorded `source` is taken from. That was exercised only incidentally, through
+`add-book.test.ts` and `enrich.test.ts`, where a change in preference would still
+leave a cover on disk and every assertion green.
+
+Three further weaknesses in the first draft, from the same review, each an
+instance of a failure mode already logged in this file:
+
+- the exemption list for the caller check had **no stale-entry assertion**, which
+  ADR-0022 requires and G10 has. A file on it was exempt permanently, so
+  `index.ts` growing a real `cacheCover` call would never have been noticed. The
+  first fix for this did not work either, and the reason is worth keeping: it
+  asked whether each exempt file still *defines or re-exports* `cacheCover`,
+  which `index.ts` does forever — so a file could re-export it **and** call it
+  and still sail through both checks, which is precisely the case the exemption
+  exists to make impossible. The mutation that found it is the one the first
+  round did not run: not "a file that stopped needing its exemption" but "a file
+  that still qualifies for it and calls anyway". The check now strips the one
+  `cacheCover(` that is a definition and asserts no call site remains;
+- the `coverUrlLarge` sweep had **nothing anchoring the symbol**. `expectFound`
+  guarded the file walk, not the string — so renaming the field would have left
+  the assertion sweeping for something that no longer existed and passing over an
+  empty set;
+- both halves matched **raw file text, comments included**. A caller that
+  hand-ordered its candidates needed only to mention `coverUrls()` in a comment
+  to look compliant. Verbatim the G14 and G19 defect — *a gate that matches prose
+  matches anything* — for the third time, in a file whose commentary on the first
+  two is directly above. Blanking comments then reintroduced the same shape one
+  level down: `//` inside `https://covers.openlibrary.org/…` is not a comment,
+  and treating it as one would have hidden real code from the sweep. The
+  stripper skips `//` preceded by a colon and says in its own docstring that it
+  is not a parser and does not know a `//` inside a string literal from one
+  starting a comment.
+
+### G16
+
+**G16 observed red at 0.0203** — about 0.5cm at shelf scale — by deleting the
+clearance and re-running. It exists because the owner found the same defect twice
+by eye, on a phone: a leaning book's bottom corner driven into the face-out book
+beside it, and a row's first book driven into the case's own side.
+
+Nothing in the layout could have caught it. The cursor advances by a book's
+*thickness*, and a book rotated about its centre is wider than that — so
+re-checking the arithmetic would only have repeated its assumption. G16 measures
+`Box3.setFromObject` against the case's real inner faces instead, which is the
+same argument that put `gate:public` on the built folder rather than on
+`library.json`: measure the artifact, not the code that produced it.
+
+### G10
+
+**G10 observed red** on `enrich.ts`, which shadowed `node:path`'s `basename`
+with a `/`-only split, so `..\..\x.png` traversed on Windows — the platform this
+project runs on — under a comment saying it could not. The structural half then
+found a *third* copy of the rule in `obsidian-adapter.ts`'s wikilink embed.
+
+### G15
+
+**G15 is the first defect found by a user rather than by a gate**, and it is the
+one that took the site down. The shelf loaded on a phone, drew, and then the tab
+died; reloading gave a blank page. Thirty-one covers shipped at whatever size the
+provider supplied — 8.4 MB on the wire, which looks entirely reasonable, and
+**314 MB once decoded into GPU textures**, which is not. Every one is uploaded
+before the first frame.
+
+Nothing in the suite could have seen it. `gate:public` reads the *contents* of
+*text* files, so it opens no JPEG; `smoke:render` screenshots a desktop GL
+context with gigabytes of headroom, which is exactly why the bug was invisible
+here and fatal on a phone. The size of what shipped was measured by nothing.
+
+### G15 (phone-crash and shadow narrative, after the Defect gates table)
+
+**G15 is green and the crash is not fixed.** The owner has since reproduced it on
+multiple phones in private tabs, with the compressed covers confirmed arriving.
+That does not make the gate wrong — shipping 314 MB of texture was a real defect
+and this holds it fixed — but it does mean the row protects *a* property of the
+build rather than *the* cause of the crash, and reading a green G15 as "phones
+are fine" is exactly the mistake this scoreboard exists to prevent. The cause is
+still unmeasured; see `docs/progress.md`. G15 also counts only cover files, so
+the ~22 MB of per-book spine `CanvasTexture`s is outside every budget here.
+
+**And the bisect has since put it further out of reach.** The shelf loses its
+context on the owner's phone with *five* books — 632 triangles, 11 textures — so
+the cost that matters is fixed and paid before a book is drawn. No budget over
+what ships can see that, because it is a property of the renderer's own setup:
+the multisampled framebuffer, the shadow map, the pixel ratio. G15 remains worth
+having and remains unable to catch this. **The rule protected by nothing here is
+"the shelf survives on a real phone"**, and nothing in this repo can assert it —
+`smoke:render` screenshots a desktop GL context with gigabytes of headroom, which
+is the same blindness that let G15's defect ship. The current substitute is a
+person with a phone and four query parameters, which is honest rather than good.
+
+The probes found it: **the shadow pass**, with antialiasing and pixel ratio 2
+both left on — and then found that *every* real-time configuration fails, down to
+one where nothing is drawn into the map. The shelf now paints its shadows instead
+of rasterising them, which removes the dependency rather than tuning it.
+
+> ⚠️ **2026-09-25: no longer the default.** The paragraph above is August's. In
+> September five programs reading the map died where the bookcase's alone, in 2
+> draws, survived — why is still not known — and real-time shadows
+> became the default for every visitor with only the bookcase reading the map
+> ([ADR-0090](../adr/0090-real-time-shadows-are-the-default.md)). Painting is the
+> fallback a device takes after a lost context. G61 (`one-shadow-reader`)
+> gates the configuration that survived.
+
+Note what none of that was: a gate. Five rounds of diagnosis happened on a phone,
+by hand, because `smoke:render` screenshots a desktop GL context with gigabytes of
+headroom and cannot fail the way a phone does. **"The shelf survives on real
+hardware" is still protected by nothing**, and the substitute is still a person
+with a device — now with `?debug`, `?books=N` and the renderer switches to make
+that person's time cheap, which is the most this repo can honestly offer.
+
+> ⚠️ **2026-09-25: still true, and narrower.** G61 now gates the *configuration*
+> the phone survived — how many programs read the shadow map, and in how many
+> draws — on a desktop, because three builds the programs in JavaScript. Survival is
+> still a person with a device; `scripts/phone-check.ts` makes that person's run
+> repeatable. And every visitor now holds the 2048² shadow target, 32 MB
+> measured, which is outside G15's number — its own comment names the shadow
+> map as outside it — and moves no budget here.
+
+### G11
+
+**G11 was reframed after checking its premise.** A review read the missing
+`coverAspect` on a local build as a rendering bug; tracing `dev-watch.ts` shows
+the dev flow runs `--public`, so nothing renders a local build and nothing was
+broken. What was missing is that the difference between the two modes was never
+written down or checked. The gate now pins exactly which keys may differ, and was
+observed red by removing one entry from that list.
+
+### G12
+
+**G12's design question was resolved by the owner: a book you are reading wins.**
+Two documented rules collided — a numbered book beat an unnumbered one before
+status was considered, and `--renumber` numbers *every* shelved book, so after
+one run "unset means reading first" described a state the vault could no longer
+be in and the next book picked up sorted behind all thirty-one. Status now sorts
+ahead of `shelf_order`. `--renumber` keeps its purpose: the pins still order
+themselves among the finished books.
+
+### G4
+
+**G4 was red on arrival**, on a defect nothing had reported. `updateBook`'s
+"scalars only" rule recognised a block list (`tags:` then indented `- ` lines)
+but not a flow collection on one line, so `author: [Marisol Vane, Tomas Ek]` was
+replaced wholesale. Reachable, not theoretical: `asString` returns undefined for
+an array, so a two-author note parses as *authorless*, which is exactly what
+sends `stacks enrich` to look an author up and overwrite the list — silent data
+loss in a hand-edited note, which is the thing invariant 5 exists to prevent.
+
+### G2
+
+**G2 was red on the orphan-cover assertion**, which is the one that mattered:
+the staging folder was additive, so a real-vault build followed by either gate —
+both stage the *fixture* vault into the same folder — left every real cover in
+place under a filename slugged from a real book title, while `gate:public`
+reported the build clean. It reads text-file contents; these are JPEGs. Proven
+by disabling the prune and watching the gate fail. Two further leaks closed with
+it: wishlist books shipped in `library.json` though nothing displayed them, and
+a `cover:` could be protocol-relative or absolute `http`, so a hand-edited note
+could have a visitor's browser fetch from a third party.
+
+### G20 (second group)
+
+**G20 exists because two implementations of one rule drifted, and the drift ran
+the wrong way.** "Is this folder safe to publish?" had been answered twice
+against the same `dist/` — once by `gate:public` and once by `deploy:site`'s
+pre-flight — and neither was a superset of the other. The gate checked that
+`_headers` makes `/covers/*` revalidate; the deploy checked only that the file
+existed, which is the precise gap that let the fix for the mobile crash reach an
+origin nobody could see. The gate checked that every `og:image` *and*
+`twitter:image` is absolute; the deploy checked for one substring, so a page
+having lost its `og:image` entirely would have passed. **The weaker half was on
+the only one of the two that publishes anything.** Neither script knew the other
+existed, which is why nothing went red for however long that was true.
+
+`scripts/lib/public-build.ts` is now the one implementation and both are
+callers, which changes nothing about the deliberate separation: the gates still
+stage fixtures and still run first, the real build still runs last, and
+`gate:public` still says nothing about the folder about to go on the internet.
+Two calls, not two implementations.
+
+**It is the first gate here cheap enough to observe every rule go red.** The
+module builds nothing — it is handed a directory — so the gate assembles a
+synthetic `dist/` in a temp folder, plants one defect, and asserts that defect
+fires that rule *and no other*. No build, no network, milliseconds. A final
+assertion holds the rule list to the defects: a rule with nothing that
+produces it fails the build, so this gate cannot quietly come to cover
+all but one. That is the thing the seven text-matching gates here cannot do.
+
+Mutations, each observed. Restoring the deploy's weak `_headers` check fails
+exactly one test — the one that names that divergence. Adding a rule with no
+planted defect fails the completeness assertion by name. Making the reporter a
+no-op fails all but the two clean-baseline tests, which is what proves the
+baseline is not itself doing the work.
+
+**And then review found the gate was watching the wrong shape, which is the
+entry worth reading here.** The `_headers` rule had been carried over verbatim
+as *find `/covers/*`, then look ahead for a `Cache-Control` with `max-age=0`* —
+a lazy scan that does not stop at the end of a block. The real `_headers` has an
+`/og.png` block directly after `/covers/*` carrying exactly that directive, so
+deleting the covers block's own `Cache-Control` line left the rule green.
+G20 had observed it red, but against a `_headers` containing nothing *but* the
+covers block: a shape this repo has never had, and the one shape in which the
+bug is invisible. **A defect the gate plants must be a defect the file could
+actually have.** The file is now parsed into blocks and the covers block is read
+by name; planting the realistic shape against the old scan reports *no problems
+at all*, which is how it was confirmed.
+
+Two more the same review found, both the same species — one rule that two
+implementations had each kept half of, and neither half noticed:
+
+- **The share image.** `gate:public` required the URL absolute against the
+  origin; `deploy:site` required the literal `<origin>/og.png`. The merged rule
+  had kept only the first, so `<origin>/hero.png` passed — a file no build ever
+  wrote. It is now the whole URL, and it is *two* rules rather than one, because
+  `--check-only` has to excuse a SITE_URL mismatch without also excusing a page
+  that lost its share tag altogether.
+- **The canary.** Owned by the module now, where it was an independent literal
+  in the gate script and in G2 — a canary that drifts between where it is
+  planted and where it is looked for leaves both halves passing.
+
+**One check deliberately stayed in `deploy.ts`**: that no fixture book is in the
+
+That check was two hardcoded titles, and **one of the two had never matched
+anything**: `Compilers for the Impatient` carries a subtitle in its frontmatter,
+so only `The Tidal Engine` was ever really compared. It now reads the fixture
+vault through `ObsidianAdapter` — the same parser the build uses, which is both
+invariant 4 and the only way to get it right, since a note's filename is not its
+title for five of the twelve fixtures. An empty list refuses the deploy outright
+rather than passing over nothing.
+
+### G1, G3, G6, G7
+
+**G1, G3, G6 and G7 were green on arrival** and were each proven red-capable by
+perturbation: an `fs` import added to `scene.ts`, a stale entry added to the
+allowlist, the missing-title branch downgraded to `not-a-book`, an inline
+`import { type X }`, and an arrow function in an `.astro` script.
+
+### G23
+
+**G23 is the first row here that was red against the defect itself**, with no
+mutation involved. Every other row was written after its defect had been fixed,
+or for one that had not happened, so each had to be perturbed to be believed.
+This one named all six offending files on its first run — a stronger form of
+"written to fail first" than the phrase usually gets to mean, and available only
+because the gate was written before the consolidation rather than beside it.
+
+The defect: `keyIfPresent` existed **six times under three names** — `maybe` in
+four files, `optional` in `frontmatter.ts`, `pick` in `library.ts` — with
+byte-identical bodies. This is G10's shape again, with one aggravation that is
+the actual lesson. **The copies were not discoverable from each other.** Each
+author checked for an existing helper, searched the name they had in mind, found
+nothing, and wrote it. Grepping `maybe` returns four of six and reads like a
+small local habit rather than a repo-wide rule with two aliases; the
+architecture review that catalogued this codebase's duplication and produced six
+candidates did not list this one, for exactly that reason.
+
+**So the gate matches what the body returns and never what the function is
+called.** An identifier check is the obvious construction and would have been
+satisfied by all six on the day it was written — three times over, once per
+name. The anchor is `return <ident> === undefined ? {}`: absent in, nothing out,
+which is what makes this helper itself.
+
+**Its limit is the shape rather than the behaviour, and that is a choice with a
+name on it.** Two rewrites return `{}` for an absent value and escape — an early
+return, and an expression-bodied arrow — both checked rather than assumed.
+Widening to catch the early return would flag `covers/cover-keys.ts:31`, which is
+that line exactly and is not a copy of anything. So the options were a narrow
+anchor with a stated gap or a broad one carrying a standing exemption for a file
+that has done nothing wrong, and ADR-0022's maintenance cost falls on the second.
+The gap is stated here instead: the anchor catches the shape all six copies took,
+which is the shape copy-paste produces.
+
+Two things that fell out of choosing the return statement as the anchor, both
+better than the alternatives they replaced:
+
+- **The seventeen inline `...(x === undefined ? {} : { k: x })` spreads need no
+  exemption.** They contain the same text and are not copies of anything — each
+  is one decision at one call site. A spread has no `return`, so the anchor
+  separates them by construction. That means no allowlist, and therefore no
+  allowlist entry that can go stale, which is the maintenance ADR-0022 requires
+  of every structural gate that does have one.
+- **`packages/site/` is not exempt either**, though the site cannot value-import
+  `@stacks/core` (G6). A copy appearing there goes red, and the fix is to
+  promote the owner to a pure subpath beside `@stacks/core/shelf-order`. An
+  actionable red beats a blind spot, and this is the first structural gate here
+  to have no exempt list at all.
+
+**The vacuity anchor is the assertion this row needs most**, for a reason worth
+stating generally: *every clause of this gate is phrased as an absence*, and an
+absence is satisfied for free the moment the pattern stops matching anything. So
+the gate asserts the owner still matches before asserting nothing else does.
+**Observed red** by changing the owner to return `Object.create(null)` instead
+of `{}` — the body stops being the thing described, and the clause says so by
+name rather than quietly greening the other three.
+
+The reformatting case turned out not to be the threat it looked like. `\s`
+matches newlines, so a ternary split across three lines is still matched, and
+**a copy that arrives reformatted is still caught** — verified by mutation, not
+by reading the regex. That is a happier result than the one first written here,
+and the correction is worth keeping: the anchor is robust to layout and brittle
+only to the behaviour changing, which is the right way round.
+
+The permissive half is asserted too, for G17's reason: *a positive check cannot
+detect a missing one*. "No file defines its own" is satisfied perfectly by a
+repo where every caller has gone back to writing the key unconditionally, so the
+gate also requires the helper to have seven callers. That is the same clause G22
+needed and for the same reason, arrived at independently both times, which
+suggests it belongs in any row promising "one rule, one implementation".
+
+**And that clause first passed the mutation it was written to fail**, which is
+the entry here worth reading. The floor was set to six — the number of files
+that had carried a copy — and reverting one caller left six still calling it, so
+the gate stayed green through exactly the regression it describes. The cause was
+an overcount rather than a wrong constant: the sweep counted
+`key-if-present.test.ts`, which names the helper on every line and *uses* it for
+nothing. A spec is not a caller. **An inflated floor is slack, and slack in a
+floor is indistinguishable from the defect it is meant to stop** — the general
+form of a rule this file already has for allowlists, applied to a number.
+
+**Observed red**, the rest by mutation: a seventh copy under a seventh name
+(`perhaps`); the same copy with its ternary split across lines, confirming the
+anchor is layout-proof; a copy in `packages/site/`, confirming the no-exemption
+choice produces the actionable red it was chosen for; a caller reverting to a
+bare `{ key: value }`; and that same revert with `keyIfPresent(` left behind in
+a comment, which does not rescue it, because the shared `codeOf` blanks comments
+before anything is counted. That last one is the defect this file has now logged
+under G14, G19 and G22 — and is why `codeOf` moved into `gates/repo.ts` rather
+than being written a second time inside a change about not writing things a
+second time.
+
+**What this row does not gate.** `FrontmatterChanges` inverts the rule this
+helper embodies: near `updateBook`, `undefined` *removes* a key from a note in
+the owner's vault, so the ordinary absent-is-harmless reflex writes to somebody's
+files. That is real and stated in `CONTEXT.md` under **Removal** — but it has no
+gate here, because it has no live instance either: all three `updateBook`
+callers build their changes from literals or guarded assignment, and none of the
+27 spreads is anywhere near one. `enrich.ts` additionally cannot express a
+removal at all, since its accumulator is typed `Record<string, string | number>`
+and needs a cast to widen. Gating a hazard nothing can currently reach would be
+a rule nothing can fail on, which is what this file is against.
+
+### G24
+
+**G24 is the fourth "one rule, one implementation" row**, after G10, G22 and
+G23, and the first whose *stated benefit turned out to be false*. That is the
+part worth keeping.
+
+The issue that produced it argued two things. The first was real: eight scripts
+each worked out where the repo starts, in four spellings, and the `.cmd`-shim /
+DEP0190 comment had been written three times. The second was that a shared
+harness would shrink the surface G1's allowlist has to cover — offered as "the
+second-order benefit and probably the more durable one".
+
+**It is not a benefit at all, and this file had already recorded the
+experiment.** G1 allowlists files that import `fs`. Of the three things proposed
+for the harness, only `walk` touched `fs` — and `walk` had already been
+extracted, which *grew* the allowlist by one: `scripts/lib/walk.ts` earned an
+entry while `check-public-build.ts` kept its own, still needing `readFileSync`.
+`REPO_ROOT` is `node:path` and `run` is `node:child_process`; neither can ever
+appear on that list. The consolidation shipped here changes G1's allowlist by
+exactly nothing.
+
+The general form: **a duplication argument that reaches for a second, indirect
+benefit is usually reaching because the first one felt too small.** The first
+one was enough. What the sweep did find is better than the claim it replaced —
+`dev-watch.ts` and `smoke-render.ts` were both passing an args array alongside
+`shell: true`, the exact shape the two scripts with the comment wrote a
+paragraph each about avoiding. So the platform knowledge was not duplicated and
+agreeing; it was written in three places and *absent from the two that also
+needed it*, which is the strongest available argument for one home and is not
+the argument the issue made.
+
+**The gate can anchor on a name where G23 could not**, and the reason is
+structural rather than lucky: a module cannot reach its own location without
+`import.meta`, so `import.meta.(url|dirname|filename)` catches every spelling
+including the `new URL('..', import.meta.url)` form nobody here has written yet.
+G23 had to match a returned *shape* because its helper had three names; this one
+has no name to hide behind.
+
+**One owner rather than a directory**, on G1's own argument against
+directory-level permissions: `scripts/lib/` holds three other shared files and
+none of them has any business deriving a root either. A permission granted to a
+folder collects whatever later lands in it.
+
+**Observed red** on the sweep by restoring `join(dirname(fileURLToPath(
+import.meta.url)), '..')` in `smoke-render.ts`, and on the control by pointing
+`OWNER` at a file that derives nothing. **And G19 caught the missing scoreboard
+row before any of it was committed** — the new gate file existed, no row named
+it, and the build went red on the row above this one. That is the third time a
+gate has caught the paperwork for a change that was not about it.
+
+### G25 — one usable width
+
+**The most-copied rule in this file's history had five copies, not three.** The
+issue that produced this row named three answers to "how wide is a shelf":
+`toRows` packed into `SHELF.width - padding * 2 - LEAN_ALLOWANCE`, the placement
+cursor ran flush from `-SHELF.width / 2`, and `leanThatFits` measured slack
+against the full width. Settling it found two more, and both were bigger than
+the argument:
+
+- **the packer charged `footprint + 0.008` a book** where the cursor spends
+  `+ 0.002` shelved or `+ 0.016` face-out. Across a twenty-seven book row that
+  is **0.162** — as much as the whole `padding * 2 + LEAN_ALLOWANCE` reserve the
+  issue was about, and nobody had noticed it at all.
+- **`leanThatFits` counted angle changes by `faceOut` alone**, blind to the
+  upright book after a year gap that the cursor pays clearance for. Latent,
+  because it never bound: measured across a 120-book library it returned 0.72,
+  1.26, 1.12 and 1.00 radians against a `MAX_LEAN` of 0.062. It had never done
+  anything in its life, which is exactly why nothing noticed it was wrong.
+
+A full row was leaving 0.374 of bare wood at its right end. That decomposes as
+0.17 of declared reserve, 0.162 of the charging error, ~0.10 of wrap
+granularity, less ~0.06 of clearance — one of the four on purpose. See
+[ADR-0031](../adr/0031-one-usable-width.md).
+
+**The row asserts an inequality, not an equality, and that is the interesting
+part.** The packer must charge `swayOf(height, MAX_LEAN)` because the real lean
+comes from `leanFor`, which needs the row index, which is not known until the
+wrap this figure decides has happened. So it is conservative by construction:
+
+```text
+right edge = -W/2 + spent  ≤  -W/2 + charged  ≤  -W/2 + USABLE_WIDTH
+```
+
+Asserting only the left half passes on a packer that charges the whole shelf for
+every book, so the excess is bounded too. Naming the slop is what stops the row
+from recording the disagreement instead of closing it.
+
+**The bound has three terms now, and the third one is charged where the earlier
+two said nothing was owed.** It was one maximal swing per angle change; propping
+a book across a year gap added a maximal prop per gap, and then the parallel
+push added one per *book*:
+
+The third is the one that had no precedent, and it is a correction to a belief
+this row was built on: *"neighbours at the same angle stay parallel and never
+collide"*. True of the boards, false of the books — a book tilted about its middle
+stands on a base swung `sway` off its footprint, and `sway` scales with height, so
+a tall book followed by a short one had its low corner 2.3mm inside its
+neighbour's board on the live shelf. Every clearance before it was charged where
+the angle *changed*, on the belief that nothing was owed where it did not.
+
+⚠️ **The bound for it was written wrong first, in the way this row exists to
+catch.** The first version *called* `parallelPushOf` — the function it was
+bounding — with the same arguments and the same trailing term, so that part of the
+excess assertion could not fail for any value of the charge. Same defect as the
+`toRows`-asks-`toRows` version below, in the same file, three years of lessons
+later. It is `WORST_PARALLEL_PUSH` now: re-derived from the geometry against
+`THICKEST_SPINE` and the height band, constants the charge cannot move.
+
+**The row names two files, and the second one nearly re-introduced the defect.**
+`books.test.ts` asserts the capacity rule from the packer's side and wrote the
+fold over `shelfCost` out by hand to do it — a second copy of the sum, inside
+the commit whose entire subject is that this sum had five copies. It became
+`rowCost`, stated once and called from both.
+
+⚠️ **`books.test.ts` no longer makes that claim, and the paragraph above stopped
+describing it before this line was added.** Its assertion asks `rowExtent`, which
+is the packer's own predicate — so it catches a packer that stops wrapping and
+nothing finer, and it says so in place. `rowCost` came here with `shelfCost` and
+is called from one file now, not two. Naming both
+files here is the other half: an assertion this row depends on, sitting in a
+file the scoreboard did not point at, is one that can be weakened without
+anything noticing — which is the failure mode at the top of this file, not a
+tidiness complaint.
+
+**One assertion here was wrong twice, in opposite directions, and the second
+version passed everything.** "One more book would not have fitted" first priced
+the candidate *without* its year gap — but `toRows` turned that book away
+carrying `YEAR_GAP` and the clearance an upright book pays, so the assertion was
+stronger than anything the packer promises. It passed by 0.02 where the
+guarantee allows 0.09: green today, red on a correct packer the day a book gets
+thinner.
+
+The fix for that was worse. Handing the row's books back to `toRows` with one
+more appended, and requiring two rows, prices the candidate perfectly — because
+it asks the same function that made the decision. **It passed with the packer
+mutated to wrap at nine tenths of the shelf.** A deterministic function always
+agrees with itself, so the assertion could not fail for any packing rule
+whatever, and nothing about it looked vacuous: it named a real invariant, ran on
+every fixture, and reported green.
+
+What works is pricing the candidate from the packer's own exported rules —
+`yearOf`, `YEAR_GAP`, `shelfCost` — and comparing against `USABLE_WIDTH`, which
+the packer does not get a vote on. That catches a wrap 0.15 early, where the
+first version would have been caught by nothing and the second by less.
+
+The lesson is the one this file keeps relearning from a new angle: **a gate must
+compare against something the code under test cannot move.** G21's version was a
+guard whose throw got swallowed by a `catch`; this one was an assertion whose
+judge was the defendant.
+
+**Observed red, eight ways**, each a mutation of the line it covers: dropping
+the clearance charge, inflating it forty-fold, adding a hair to every book's
+cost, packing past `USABLE_WIDTH`, wrapping early, starting the cursor clear of
+the upright, folding the reserve into the usable width, and tuning the reserve
+below the swing it has to absorb. The third one matters more than it looks —
+it is the only mutation caught by the row that asserts exactness on a row which
+changes angle nowhere, and without that case a constant over-charge hides inside
+the bound.
+
+**It does not replace G16, and the two failed differently here.** Everything in
+this row asserts what the placements *claim*; G16 measures `Box3.setFromObject`
+against the case's real inner faces on a rendered scene. It reported
+`case overflow 0.0012` before this change and after it — which is `SKIN`, the
+hair by which a printed cover floats above its board, not slop — so the density
+moved by three books a row while the containment residual did not move at all.
+That is the shape of evidence a unit test cannot produce.
+
+### The estimate is gone; the model stayed and changed sides
+
+⚠️ **Everything above this heading describes a packer that no longer exists.**
+`toRows` used to charge `shelfCost` and wrap on the estimate. It runs the cursor
+and wraps on the answer — [ADR-0042](../adr/0042-the-packer-runs-the-placer.md).
+The conservatism the inequality above *bounds* was, all along, shelf left empty:
+**0.09 to 0.13 a row on the live shelf**, and on one row it turned away a book
+that needed 0.163 from 0.170 of real room.
+
+**The bound was documented as unavoidable and was not.** The reason given —
+"the real lean comes from `leanFor`, which needs the row index, which is not
+known until the wrap this figure decides has happened" — is true of the book's
+*other* possible home, the head of the next row, and false of the row being
+offered it. `leanFor(rowIndex, position, id)` is determined by its arguments,
+and both indices are fixed at pack time: rows finalise in order, so the row being
+filled is `rows.length` and the candidate's place in it is `current.length`. The
+circularity was in the sentence, not in the code, and it survived two rewrites of
+this row because the row asserted the bound was *sound* and never asked whether
+it was *needed*.
+
+**`shelfCost` and `rowCost` moved into `shelf-width.test.ts` rather than dying
+with the estimate**, and the direction of the inequality is why. Deleting them
+would have left nothing bounding what the *cursor* spends against numbers the
+cursor cannot move, and the obvious replacement — restating capacity as
+`rowExtent` — is the defendant-as-judge defect three paragraphs up, committed a
+third time. So the model changed standing: it decides nothing and bounds
+everything, and being loose costs nothing now that no row wraps on it.
+
+⚠️ **That number was a floor, and it had to become a ceiling.** It began as the
+next book's footprint plus its gap plus a separator — "an absolute minimum",
+written on the reasoning that leaving out every clearance made the claim safer.
+It does the opposite. The assertion is `room < need`, so a need stated too small
+turns a *correct* packer red: a book rejected **because of** the clearance it
+would have paid leaves room above such a floor. That is the same error this row
+already records twice, committed a third time, in the same file, one commit
+later — and it was green on all six fixtures, which is exactly how the other two
+looked. Two independent read-only reviews found it from opposite sides: one that
+the floor was too small to be sound, one that charging `YEAR_GAP` in full made it
+too large by up to 0.088 at a propped boundary. It is `separator + gap +
+footprint + WORST_CLEARANCE` now, every term at its worst, and the separator is
+taken from the book the cursor is *leaving* rather than the one it is arriving
+at — reading it off `next` understated the cost by 0.014 for every face-out book
+followed by a spine.
+
+⚠️⚠️ **And then `WORST_CLEARANCE` itself was `MAX_LEAN` where it had to be
+`MAX_PROP_LEAN` — this row's own oldest mistake, made a fourth time, three
+paragraphs after writing it down.** The angle-change branch spends
+`Math.max(sway, left.sway)`, and `left.lean` is a *run* lean: a run that begins
+on a book propped across a year gap hands that angle to every spine behind it. So
+the swing reachable there is `swayOf(MAX_HEIGHT, MAX_PROP_LEAN)` = 0.1175 against
+the 0.0263 `MAX_LEAN` allows, and the ceiling was under half the real worst case.
+
+**It was green on all five fixtures, and on the owner's own shelf by 0.0023.**
+An independent verifier swept cover aspect, page count and face-out position
+against the shipped `paperbackRatio` — 5,940 configurations — and found 375 that
+fail. The margin, `min(ceiling − trueNeed)` over every boundary:
+
+| library | `MAX_LEAN` | `MAX_PROP_LEAN` |
+| --- | --- | --- |
+| `mixed` | +0.0518 | +0.1399 |
+| `alternating` | +0.0347 | +0.1227 |
+| the owner's real vault | **+0.0023** | +0.0904 |
+| `squareCoverAfterProp` | **−0.0388** | +0.0493 |
+
+`squareCoverAfterProp` is a fixture now — every book its own year so every run
+inherits a prop angle, and one face-out book with an audiobook's square cover
+landing against it at 11.9°. **The packer is correct on it**: it turned the next
+book away by 0.00023, both decision assertions pass, and only the outcome one
+went red. That is what makes this an unsoundness rather than a caught defect.
+Observed red with `MAX_LEAN` restored and green with `MAX_PROP_LEAN`, so the
+constant cannot quietly go back.
+
+The detection floor is unchanged at 0.005 green / 0.0055 red — it belongs to the
+cost model, which does not read `WORST_CLEARANCE`.
+
+**Observed red, and the detection floors are measured, not assumed.** Bisected on
+`cursor += entry.thickness + TOUCHING + δ`, the shelved branch:
+
+| δ | verdict | caught by |
+| --- | --- | --- |
+| 0.005 | green | — |
+| **0.0055** | **red** | `never spends more than the model allows` (`mixed`) |
+
+The face-out branch catches **any** over-spend — δ = 0.00001 is red on the
+exactness case, which is exact to the bit. Also red: the angle-change clearance
+doubled (×2 is enough), and the packer wrapping at nine tenths of the band, which
+turns `packs every row tight` red — the mutation the vacuous version survived.
+Control green throughout.
+
+⚠️ **This row said 0.0003 first, and buying that number was the defect above.**
+The sharp floor belonged to the outcome assertion while it was unsound; making it
+sound cost the sharpness, and the honest floor is now the cost model's 0.0055.
+Before that, the row claimed the moved model caught a hair-sized cursor
+over-spend — a misreading of "adding a hair to every book's cost" further up,
+which is a hair added to the *charge*, not to the *spend*. Three numbers, three
+corrections, none of them from running the suite: the suite was green for all
+three. **A detection floor that is written down is a gate; one that is assumed is
+what this row exists to prevent.** Do not restate these in either direction
+without re-running the bisection.
+
+**The one thing this row now carries alone.** Clearance is charged to the *left*
+of the book that leans, where the angle changes, so the last book of a row has
+nothing on its right to charge and its swing is paid for by `SHELF.endReserve`
+and by nothing else. That was `LEAN_ALLOWANCE`'s job before it was folded in.
+The assertion `endReserve ≥ swayOf(MAX_HEIGHT, MAX_PROP_LEAN)` is the one to read
+before tuning that number, and it is why the reserve is not merely aesthetic.
+
+⚠️ **It said `MAX_LEAN` there, and stayed green for a whole change after that
+stopped bounding anything.** `MAX_LEAN` is the steepest a book slumps *of its own
+accord* — 3.5°. A book propped across a year gap leans four times further, and a
+run inherits the prop angle, so the last book of a row can carry it. The reserve
+was sized for a swing of 0.03 against an actual worst of 0.117, and the gate that
+exists to notice compared it against the constant that had stopped applying. **A
+scoreboard row does not protect an invariant; the assertion does, and only while
+it still names the right number.** The row is `endReserve = 0.12` now, bounded
+above as well as below so the reserve cannot quietly grow to paper over a defect
+instead.
+
+### G28 — no book's board passes through its neighbour's
+
+**Three gates were watching this file and none of them could see a book inside
+another book.** G16 measures `Box3.setFromObject` against the case's real inner
+faces — two books can intersect each other happily well inside those. G25 works
+in *footprints*, the untilted slab a book would occupy, which is the right
+coordinate for the cursor's budget and precisely the wrong one for this question:
+two neighbours can have disjoint footprints and still intersect, and overlapping
+footprints and not, which is why a run packs flush. And `placement.test.ts`'s own
+flushness assertion used three books of *identical height*, where the defect is
+identically zero.
+
+So 509 tests, four of them about this file's spacing, a render gate, and the
+thing that found it was the owner looking at a close-up. Three collisions, all
+real: 8mm and 18mm where a propped book measured its reach to its neighbour's
+*footprint* rather than to its corners, and 2.3mm between any tall book and a
+shorter one in the same run, which predates propping by as long as there have
+been runs.
+
+The row walks the actual boards — the minimum horizontal air between every
+neighbouring pair over the heights they share, across a ninety-book fixture with
+dense year changes and mixed face-out books. Both edges are straight lines, so
+the minimum sits at an end of the shared range and there is no step size to be
+wrong about.
+
+**Bounded above as well as below, and the first version was not.** Asserting only
+`gap ≥ 0` pins the direction that reads as one book inside another and leaves the
+mirror direction — a slot of missing book — entirely free. They are one error with
+two signs: a tall book followed by a short one closes too much, a short one
+followed by a tall one opens too much, and the same correction fixes both. Clamped
+at zero, it fixed half an error and called the collision closed. Two spines of one
+run owe each other `TOUCHING` and nothing else, so that is what the row asserts.
+
+⚠️ **It was wrong first, in the way that flatters the code it tests.** Its corner
+heights used `height / 2` for the centre, which is true only of a book that is not
+leaning — the real centre is `(h/2)cos θ + (t/2)sin θ`. For two parallel books the
+gap is the same at every height, so the wrong height still reads a plausible gap:
+off by `(δ_left − δ_right)·tan θ`, or 0.26mm, which looks exactly like a placer
+that is nearly right. The placer was exact to 1e-17. An independent re-derivation
+of the same quantity is what settled it, and the moral is this file's own, from
+the other side: **a check that disagrees with the code is not automatically the
+one that is right.** G25's version of the lesson is a judge who was the defendant;
+this is a judge who was simply wrong, and reached for the same gavel.
+
+**Observed red, four ways**: measuring the prop's reach to the footprint rather
+than the corners, adding the neighbour's lean in the corner case as well as the
+board case, clamping the parallel push at zero, and dropping it altogether.
+
+### G38 — one row, two surfaces
+
+**No column of this file says which surface a row runs on**, and `mutation-scope`
+is the first row that needs one: it is a `pnpm test` assertion *and* a
+`pnpm deploy:site` refusal under one slug. Said here rather than found later.
+
+**The split is by available evidence, not by taste.** Everything the disk can
+answer is a **declaration fault** and lands at merge, in two seconds, in front of
+whoever caused it — **seven kinds**: a declared scope whose directory is gone, a
+source directory in neither the declared nor the excluded list, an exclusion
+carrying no mechanism, two scopes claiming one file, a glob matching nothing, an
+exclusion naming a file that has moved, and a directory that is declared *and*
+excluded at once. The last two go beyond the six the ticket lists and say so
+where they are written: they are *"exists on disk"* and *"no overlap"* applied to
+the second list, which the ticket's wording covers for scopes only.
+
+**An eighth check answers a different question**, and it is why *"a `mutate`
+change"* belongs on the merge side at all: `stryker.config.mjs` **derives**
+`mutate` from `stryker.scopes.json`, so the declaration the seven clauses just
+checked is not necessarily the one Stryker runs. The gate imports the real config
+and compares. Without it, an edit to the derivation — dropping a scope, adding a
+negation, losing the test-file negation that once let 2,665 mutations of the test
+suite into a score — leaves every clause above green and empties a scope
+silently. **Found in review of the pull request that landed this row**, against a
+sentence claiming every structural cause was already covered.
+
+⚠️ **Asked of the tally, never of the score.** An empty denominator produces
+100% arithmetically, which is indistinguishable from a scope that is genuinely
+perfect. `total === 0` is the only reading that separates them — and it is also
+the only reading that survives what Stryker actually does, **measured rather than
+guessed**: a zero-mutant scope is **omitted from the report entirely**, so there
+is no number to compare at all.
+
+⚠️ **The residual, stated rather than found later: the deploy half reads a
+snapshot and nothing there knows how old it is.** A legitimate scope change made
+after the last local run reads exactly like a scope that stopped producing
+mutants. The refusal names `pnpm mutation:run` for that case; staleness itself
+belongs to the next row in this rollout, which reads the record's own timestamps.
+
+**Observed red, six ways** — five structural, one at deploy. See
+[`docs/log/2026-08-20-gate-register.md`](2026-08-20-gate-register.md), the G38 entry, which carries the
+plants and what each one printed.
+
+### G39 — the row that could not live in `pnpm test`
+
+**Per-series, and the cost of that is stated rather than discovered.** Eight
+series written by different things on different clocks; an aggregate bound cannot
+see one of them going quiet while a working merge pipeline keeps the newest row
+minutes old. **Absent and stale are one verdict**, entailed rather than newly
+decided — *"the newest sample is older than 3 days"* is undefined for a series
+with no samples, and a series that never emitted is precisely the failure this
+exists to expose. That is what makes the check **parse samples**: `#121` designed
+it to read a filename, which was cheap and exactly right for the aggregate bound
+it was written against, and a filename cannot say which series a run emitted.
+
+⚠️ **The number is G39 and every plan for this rollout said G38.** Row numbers
+are derived from landing order, and `agents-import` (G37) landed between the two
+tickets that pre-allocated them — so `mutation-scope` took G38 and this row moved
+by one. Recorded rather than quietly corrected: this file's own line is why —
+*"G19 is a stable identifier and tells you nothing"* — and every pre-allocated
+number on this rollout's source map has now been wrong.
+
+⚠️ **What the gate cannot plant is the calendar.** The dated bootstrap expires on
+a day and the deploy has no way to be told what day it is, so *prints at 2 days,
+refuses at 4* is observed against the judgement itself in
+`scripts/lib/metrics-read.test.ts`. What the gate asserts is that the script
+agrees with that judgement **today** — a wiring assertion that cannot expire,
+where an assertion of *does not refuse* would have been a green that quietly
+became false three days after the spine landed.
+
+**Observed red, five ways.** See [`docs/log/2026-08-20-gate-register.md`](2026-08-20-gate-register.md), the
+G39 entry.
+
+⚠️ **The calendar it could not plant went off in G17 instead.** The paragraph
+above was written for G39's own assertions, and G17 (`deploy-branch`) sat one
+check *before* the sentinel both files share — a scratch repository with no
+record at all was fine for three days as the dated bootstrap, and on day three
+(2026-08-22) it was a stale one. Four rows went red on `main`, on every open
+pull request, and on the nightly — which runs the suite before it emits a
+record, so the run whose record would have cleared the refusal was the one
+that could not write it. Nothing in the diff that landed that day touched
+either file; Dependabot's bumps were the first to show it. The fix is G39's
+own idiom applied upstream: `repoOn` now plants a fresh four-series nightly at
+`refs/remotes/origin/metrics`, so a run that crosses the branch guard reaches
+the vault refusal and not the freshness one. The lesson is general — **a test
+whose sentinel lies past a dated check inherits that check's calendar**, and
+every fixture on the path has to satisfy the checks it does not mean to test.
+
+⚠️ **That fixed seven of G17's eight rows, and the eighth was invisible until
+`main` was red on its own.** The last row reads the **real** checkout rather
+than a scratch one — which is the only evidence the guard is wired to anything
+— so it is the one place a record cannot be planted, and no `actions/checkout`
+carries the mirrored `refs/remotes/origin/metrics` that G39's check reads. On
+`main` it therefore refused on the record and never reached the vault at all.
+**No pull request could have caught it**: CI on `pull_request` is never on
+`main`, so that branch of the row does not execute, and the fix's own pull
+request was green while the merge that followed was red. The repair moves the
+sentinel *upstream* of every environment-dependent check, to the step-0b line
+printed unconditionally once the guard has allowed the run. Two lessons, and
+the second is the sharper one: **a sentinel must sit upstream of every check
+the environment decides**, and **a row whose two directions run in different CI
+events is only half-observed by the event you are looking at.**
+
+### G2 in full — the public build gate
+
+The five below are what G2 added to `gate:public`. Since G20 they are no longer
+*in* `gate:public`: rules 2–5 apply to any built folder, so they live in
+`scripts/lib/public-build.ts` and `deploy:site` applies the same ones to the
+real build. What stays in the script is the half that is about the *source* —
+planting the canary in a fixture vault and refusing to run without it — plus
+building from it. G2 itself is unchanged and still asserts against `publish()`'s
+output, which is a different claim: G2 proves the filter *works*, the artifact
+rules prove it *ran*.
+
+The existing `gate:public` is a good gate that cannot see three things. It greps
+the *contents* of *text* files for three known-bad patterns. So a private value
+in a permitted field passes by construction, and a filename is never read at all.
+
+(rule 1)
+
+1. **No note bodies.** The existing canary, plus a second one planted as a
+   frontmatter *value*. The gate fails if either canary is missing from the
+   fixture vault, so it still cannot pass vacuously.
+
+   ⚠️ **True here and false one caller along.** Since G20 this rule is shared
+   with `deploy:site`, which runs it over the **real** `dist/` — where the
+
+(rule 2)
+2. **Provenance — no orphan covers.** Every file in `<assets>/covers/` must be
+   referenced by a book in the `library.json` shipped beside it. `copyCovers`
+   never prunes, so a real-vault build followed by a fixture-vault gate run
+   leaves real covers behind, each filename a slug of a real title, while the
+   gate reports green. This assertion is also what makes cover filenames safe in
+   general: a cover named after a book already in the index reveals nothing. It
+   only leaked because it was an orphan.
+
+(rule 3)
+3. **Only books you own, and only books you meant to publish.** Wishlist books
+   were filtered at render but serialised into `library.json` — the page said
+   you owned them and the data disagreed. `private: true` books are held back
+   too, for a different reason: the shelf is published by a pipeline that never
+   asks again, so this is the per-book way to say no. The fixture vault carries
+   one of each and the gate asserts that it does, because an assertion about a
+   property no fixture exhibits passes however the code behaves.
+
+(rule 4)
+4. **Same-origin covers.** A `cover:` value may currently be protocol-relative
+   or absolute `http`, so a hand-edited or imported note can make a visitor's
+   browser hit a third-party host.
+
+(rule 5)
+5. **The link preview works.** `og:image` and `twitter:image` must be absolute
+   against `SITE_URL`. They were relative for the project's whole life, which
+   means the share card — size-checked by this same gate, 1200×630 — would have
+   shown nothing to anyone the shelf was sent to. That is
+   the brief's success metric, so the gate now builds with an origin and checks
+   what a scraper would fetch. Observed red by restoring the relative URL.
+
+### The Thoughts split, armed before the extractor exists
+
+Step 1 of [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+([#410](https://github.com/mephistopheles4/stacks/issues/410)), on
+[#367](https://github.com/mephistopheles4/stacks/issues/367)'s decisions. A
+note's `## Thoughts` ships as `notes/<id>.json`, and **the gate landed first**,
+so the extractor was written against a gate rather than the other way round.
+Step 2 ([#411](https://github.com/mephistopheles4/stacks/issues/411)) armed the
+presence half and rewrote G2's row text to the split; no row was added. What
+step 1 landed comes first, in the past tense, then step 2.
+
+**Step 1, the gate:**
+
+- **The presence half landed as `it.fails`**, vitest's alias for the
+  `test.fails` the spec names, in a public and a local build. It read the split
+  book's `notes/<id>.json` and required the ship phrase in it. With no extractor
+  there was no file, so it was recorded as an expected failure on every run, and
+  the extractor was to turn it red by itself. Nothing relied on somebody
+  remembering to arm it.
+- **`it.fails` passes on any failure**, so one armed test and a vacuity guard
+  stood beside it, and still do. The test: the split book ships with an id in
+  both builds. The guard: each planted case is still in the fixtures, and the
+  books whose case is about the section — the split, the embed, the unclosed
+  fence, no Thoughts — are books a public build ships, so none of them can go
+  quiet by turning private. Measured on #367: a `test.fails` reading a deleted
+  fixture reports an expected failure.
+- **The absence half was armed from the start**, in both builds: the canary is
+  in no staged file at all, not only `library.json`; `library.json` carries no
+  sentence of any planted Thoughts section; and `notes/` holds nothing but the
+  split book's file. That last one is a single allowlist for five cases —
+  private, wishlist, an embed, an unclosed fence, no Thoughts — because a
+  filtered book has no id in a public `library.json` to look a file up by. It
+  held trivially until step 2 wrote files.
+- **Two rules joined the shared inspector, planted under G20.** `orphan-note`,
+  in step 1 reading one direction: a file under `notes/` must be named `<id>.json`
+  for a book in the `library.json` beside it — `orphan-cover`'s shape, firing on
+  real bytes where the canary cannot. `notes-shape`: every file is exactly
+  `{ "paragraphs": string[] }`, non-empty, every string non-empty, at most
+  40,000 bytes counted in bytes, and free of a URL scheme. Its messages count a
+  file's keys and never name them, so a writer that keyed a file by its prose
+  cannot print the prose. ⚠️ **The scheme check names four schemes, not any
+  `word:`** — `://`, `file:`, `obsidian:`, `mailto:`, in any case — because a
+  rule that refuses "Note: …" gets switched off; G20 holds that near miss clean.
+
+Observed red in step 1, each by a plant reverted before commit. Writing a valid
+notes file for the split book turned both `it.fails` red with *Expect test to
+fail*, which is the arming. A notes file for the private book reddened the
+allowlist in both builds; a canary written into a staged file reddened the
+absence check; the ship phrase appended to `library.json` reddened its check,
+and so did one sentence of another book's Thoughts; an empty `library.json`
+reddened the precondition. Each guard went red on its own fixture plant: the
+ship phrase removed, the private book's canary removed, the embed removed, the
+fence closed, a Thoughts section added to the no-Thoughts note, and the embed
+book marked private. In G20 the new plants were red before the rules existed,
+and the completeness assertion now holds both rules to a plant. Review then
+added three: a five-character ending other than `.json`, `file:` and
+`obsidian:` without slashes, and a key made of prose; each went red against the
+defect it names.
+
+**Step 2, the extractor**, paid what step 1 left owed on #410:
+
+- **`it.fails` is `it`**, in both builds, and the file must be exactly
+  `{ paragraphs }`. Wiring the notes stage turned both red with *Expect test to
+  fail* before the flip, which is the arming.
+- **The rest of the `split` row.** In a copy of the fixture vault, a build after
+  the section is withheld, and again after it is removed, leaves no file for the
+  book and no `thoughts` mark. Observed red with the stage wired and no prune:
+  the stale file stayed, named for a book still listed.
+- **`orphan-note` reads both directions** through `thoughts: true`: every file
+  is named for a marked book, every marked book has its file — read even when
+  there is no `notes/` folder at all — and a mark that is anything but `true` is
+  refused unquoted, since the key trace reads names and never values. G20
+  plants all four, the bad mark on a book with no file so no other clause can
+  answer for it; the clean synthetic build gained a marked book and a
+  `/notes/*` block, and every G20 case went red until the inspector learned the
+  key.
+- **`headers` requires a revalidating `/notes/*` block**, beside `/covers/*`,
+  planted under G20 both absent and stale.
+- **`notes-shape` refuses a hidden-text marker** — `%%`, `<!`, `<?`,
+  `-->` or `--!>`, and since the allowlist any tag start — by the owner's decision on #411, from #410's review, widened
+  to `<!` and `<?` by #411's own review. The extractor withholds any section
+  holding one, so this refuses nothing a correct build ships; it is the byte
+  cap's reasoning applied to hidden text. G20 plants seven forms, each red
+  before its clause, and the message never quotes what it found. Bare home
+  paths and "File:" prose were left as the spec has them, since either would
+  move the extractor too.
+- **The private duplicate** — same title, same ISBN, so the same id — is a
+  `publish()` unit test in both builds: only a book `isPublishable` admits is
+  ever read, and an id two publishable books share gets no file at all.
+- **`gate:public`** refuses to run unless a fixture note carries the ship
+  phrase inside `## Thoughts` with the canary below the section, and fails
+  unless the phrase reaches a file under `dist/notes/`. Observed red twice: the
+  split fixture's heading renamed, and the stage made to write nothing.
+- **G5** holds `packages/site/public/notes/` ignored; observed red before the
+  `.gitignore` line. **G11** names `thoughts` as a documented difference: the
+  plain local index stages nothing, so it marks nothing; `orphan-note`'s
+  bad-mark clause is what watches the value. **G30** traces the key with the
+  stage's mark set, so it cannot pass by the key never appearing.
+
+**Step 2's review**, the move-4 lenses on #415, reproduced a leak through a
+public build: a lone CR, or a Unicode line separator on the `## Notes` line,
+hid the heading from the scan, and the private remainder shipped. The owner
+chose to keep going; the extractor's unit tests now hold each fix below, every
+one observed red against the reviewed code before it passed.
+
+- **A line ending other than LF or CRLF anywhere in the body withholds the
+  section** — a lone CR, U+2028 or U+2029 — rather than teach every pattern a
+  second line ending. The `## About` writer turns each into LF before it
+  disarms, so the line it disarms is the line the extractor reads.
+- **More shapes withhold the whole section:** raw HTML by its start alone
+  (`<` and a letter, `/`, `!` or `?`, so a tag split across lines and the
+  declaration, CDATA and processing-instruction forms count); raw HTML anywhere
+  above the section; any image (`![`), reference-style and shortcut included; a
+  fenced block whose info string is not plain text, since Obsidian's `query`,
+  Dataview, Tasks or Mermaid may render it rather than show it; and a setext
+  underline inside a fence, which a fence opened in a list item lets through.
+- **The `## About` writer** turns `<`, `>` and `%%` into entities, so a
+  description cannot land a live comment or HTML block, and finds `## Notes` in
+  the body only, at level 2, outside fences.
+- **An unreadable note costs its own Thoughts, never the build** (invariant 3),
+  with a warning naming it; `publish()` reports a count of notes files, which
+  `stacks build --public` prints.
+- **The notes stage has a switch**, `PUBLISH_THOUGHTS` in `publish.ts`, which is
+  spec §4's undo: off, it reads nothing and still prunes. See
+  [`docs/commands.md`](../commands.md).
+
+**Step 2's second review round** found a new shape again, so the owner chose
+an allowlist ([ADR-0106](../adr/0106-thoughts-ship-only-plain-prose.md)): a
+section ships only plain prose, and any other shape withholds it. Round 2
+reproduced a link definition inside a quote or list item — hidden in reading
+view — reaching a staged file, and found query blocks nested in callouts.
+
+- **The allowlist.** Any quote or callout, any indented line, any code fence or
+  backtick, `]:` anywhere, a table, or two unescaped `$` withholds the section.
+  Twenty-one extractor tests, each with the canary where a misread would leak
+  it, went red against the round-2 code.
+- **The gates follow the switch**, so the takedown deploy can run: G2's
+  presence and mark tests and `gate:public`'s presence check read
+  `PUBLISH_THOUGHTS`, and their switched-off twins assert that nothing ships.
+  Observed: with the constant set to `false`, `pnpm test`'s publish gates and
+  `pnpm gate:public` passed. A G2 case drives the off path through
+  `publish()`'s `publishThoughts` option whatever the constant says.
+- **`notes-shape` refuses any tag start** beside the comment markers, and a file
+  that is not byte for byte what the writer emits, which a repeated key would
+  otherwise hide behind. Three G20 plants went red against the round-2
+  inspector; two more pin the revalidate rule against the two mutants round 2
+  left alive, each observed killing its mutant.
+
+**Step 2, rebuilt on a CommonMark parser.** Round 3 found 13 more leaks in the
+allowlist's own reading of lines, and the owner adopted a parser
+([ADR-0107](../adr/0107-thoughts-are-read-by-a-commonmark-parser.md)). No row
+moved; the gates above hold the new extractor as they held the old one.
+
+- **Spec §3.1.4's named cases**, N1 to N67, are extractor unit tests (with N17,
+  N58 and N66 through the adapter, N60 under G20, N65 and N67 beside the
+  parser). Each extractor case was observed red against a stub that threw,
+  before the parser-backed version replaced the hand one.
+- **`notes-shape` mirrors the extractor's output check** (N60): two `$`, `![`,
+  `^[`, `::`, a control character, Unicode tag characters and a near-miss
+  heading, in its own list beside `HIDDEN_MARKER`, never a shared import. Ten
+  G20 plants, one test each, went red before the list existed and again with
+  it emptied, and a near-miss control holds a single `$`, a `#tag` and a lone
+  colon clean.
+- **An escaped mark the strip restores** (`\<div`, `<\!--`, `--\>`) withholds
+  at extraction, so a build of such a note writes no file for the inspector to
+  refuse (N52); G2 builds each, and each went red with the output check
+  removed.
+- **Two tests hold the parser itself.** One runs the extractor and the
+  `## About` writer's lookup in a fresh Node under `--conditions=development`
+  and sees every section withheld and no `## Notes` found, each red with its
+  load check disabled. The other resolves the 32 packages of `micromark`'s
+  closure from `core` and compares each version with a committed list, red
+  with one version moved.
+- **Round 3's test gaps outside the extractor.** `gate:public`'s presence
+  verdict is `notesPresence` in the inspector's module, so the takedown
+  branch's refusal — stage off, a file left — has a test, red with the refusal
+  removed. G20 asserts every Thoughts rule's message in words, since an empty
+  message passed "never quoted" trivially; red with two messages emptied. The
+  shared-id warning's test requires both note paths, red with them dropped.
+- **Round 4 of move 4 on #415.** The twin gains bare near-miss hashes and a
+  setext underline carrying an invisible character, beside the extractor's
+  N70; two G20 plants went red before it did. Every N60 plant now asserts its
+  mark in words, red with one description blanked, and the clean control holds
+  line breaks, a tab and accented letters, red under a twin that read any of
+  them as a control. New extractor and writer cases N68 to N74, and the
+  boundary rows integrity-lens asked for, were each seen red: the new rules
+  against the code before them, the rest by planting the defect each guards.
+- **Round 5 of move 4 on #415.** The twin's near-miss underline gains its `=`
+  half behind a zero-width space and with a no-break space inside, and its
+  control range gains U+009F. Each G20 plant went red under the mutant
+  integrity-lens found surviving: U+009F under the C1 range cut to `< 0x9f`,
+  the `=` rows under the `=` run narrowed to `[^=…]` and under the lead class
+  negated. The clean control now holds prose with a no-break space beside
+  dashes. G2's switched-off build now asserts no note is read. New cases N75
+  to N79 went red against the code before them, and the extractor and disarm
+  rows integrity-lens asked for went red with the defect each guards planted,
+  fifteen plants in all.
+- **Round 6 of move 4 on #415.** The twin's clean control gains the
+  extractor's own control lines — prose running into dashes beside a no-break
+  space, an `=` behind a zero-width space with a word after it — so the twins
+  are held alike; each line went red under the widening integrity-lens found
+  surviving in that twin. New cases N80 to N85 went red against the code
+  before them, and the `About` writer's five refusals each assert their own
+  warning words.
+- **#424, the writer simplified.** G2 plants an invented, quoted description
+  under a demoted `### About` in an existing fixture note, the canary inside
+  the quote, with a vacuity check on the plant; unquoted, with its heading
+  deleted, the same text turned `gate:public` red on `note-body`. New cases
+  N86 to N90 and N92 to N94 went red against the code before them; N91, which
+  tests a catch that already existed, went red with `publish()` made to print
+  the error, and N92's decoded-trace check has a control that finds the canary
+  in a parse's trace. The writer now
+  refuses four writes, each asserting its own warning words; N82's shapes
+  moved under N76 as a test of the quote, where the heading rows went red with
+  the quote switched off. Move 4's first round added N88's Obsidian-mark rows,
+  each red against the code before them.
+
+### The held tier, gated before it is staged
+
+Step 3 of [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+([#412](https://github.com/mephistopheles4/stacks/issues/412)) stages a 1200px
+copy of every published cover over the shelf's 512px into `held-covers/`, named
+by `heldCover` in `library.json`. A second, larger published file per book is
+"anything published", so the checks landed first and were watched red before a
+line of staging existed. No new row: the inspector rules ride G20, the rest
+extends `gate:public` and G5.
+
+- **Three rules join the shared inspector, planted under G20.** `orphan-held`,
+  `orphan-cover`'s twin: every file under `held-covers/` is named by a shipped
+  book's `heldCover` — a private book's copy, a wishlist book's, or one a build
+  of another vault left, is named for a title, so its filename alone leaks the
+  title. `held-oversize`: no file over 1200px on its long edge. `held-metadata`:
+  no file carrying EXIF, XMP, IPTC, PNG text or a Photoshop block, and none
+  sharp cannot read. ⚠️ **No direction from book to file**, unlike
+  `orphan-note`: a `heldCover` with no file costs a 404 and the enlarged view
+  falls back to the shelf's copy, so it leaks nothing.
+- **The inspector is async now**, for `held-oversize` and `held-metadata`:
+  sharp reads pixels and metadata and has no synchronous API. They had to stay
+  in the one inspector rather than a helper only the gate calls, because the
+  owner's photographed covers exist only in a real build, and `deploy:site` is
+  the only caller that reads one
+  ([ADR-0028](../adr/0028-one-inspector-for-the-public-build.md)). ⚠️ **sharp is
+  imported inside `inspectHeld`, never at the top of the module**: `deploy.ts`
+  imports the inspector on every run, and a static import pushed G17's five
+  spawns past vitest's five-second timeout — the third such timeout G17's row
+  predicts, from the same cause.
+- **`foreign-cover` learns `heldCover`**: one same-origin segment under
+  `held-covers/`, and stricter than `cover` by one clause — a segment of only
+  dots is refused, since `held-covers/..` is one segment that resolves to the
+  root. **`unknown-key` learns the key**, and G30 names it beside the other
+  three. **`headers` requires a revalidating `/held-covers/*` block**: images
+  take Pages' four-hour default, so a cover taken down would linger that long.
+- **`gate:public` refuses to run** unless the fixture vault holds a published
+  cover over 1200px, a published cover over 512px carrying EXIF and XMP, and a
+  cover over 512px on the private book and on the wishlist book — read through
+  the adapter. After the build it requires a held copy, named by its book, for
+  every published cover over 512px, and none for the two held back.
+- **G5** holds `packages/site/public/held-covers/` ignored. It landed as
+  `it.fails` and went red with *Expect test to fail* when the `.gitignore` line
+  arrived with the stage, which is the arming; it is `it` now.
+
+**The fixtures moved for it.** `signal-and-sediment.png` is now 800x1200 with
+an invented EXIF and XMP chunk planted by `scripts/make-fixture-covers.ts`: over
+the shelf cap and inside the held one, which is the size #377 would have copied
+byte for byte, so it is the one case that tells a re-encode from a copy. The
+private and wishlist fixtures each gained a 1400x2100 cover. The book count does
+not move.
+
+Observed red before any staging code: `gate:public` failed with *no held copy
+staged and named* for both published covers over 512px; G20's clean build went
+red on `headers` before the `/held-covers/*` block existed, and red on
+`unknown-key` with `heldCover` out of `DERIVED_KEYS`; `held-covers/..` passed
+`foreign-cover` until the dot-segment clause. Each `held-metadata` plant is
+first shown to carry EXIF or XMP through the reader the rule uses, so a plant
+sharp silently dropped cannot pass as a rule that works.
+
+**Then the stage.** `publish()` stages a held copy through the shelf stage's
+own `shelved` list — so `publish()`'s local mode stages one for every book it
+shelves, private and wishlist included, and a public build for none of them; a
+plain `stacks build` never runs the publisher — of each
+cover whose vault file is over 512px. Every copy is **re-encoded, never copied**,
+turned upright first: a phone stores a portrait photo landscape and tags it, and
+dropping the tag without applying it would ship the cover on its side.
+`heldCover` names each copy in `library.json`, and `held-covers/` is pruned to
+exactly this build's copies under the covers' rule. The card hands the held
+path to the enlarged-cover viewer, which shows it.
+
+- **`publish()` unit tests**, in both builds: the cap with proportions kept, a
+  cover between the two caps re-encoded at its own size with EXIF and XMP gone,
+  the orientation applied, nothing for a cover inside 512px or one missing or
+  unreadable, and a climbing path landed as its basename. Public builds stage
+  nothing for the private or wishlist book; `publish()`'s local mode stages
+  both. Two prunes —
+  the book made private, the cover shrunk — and the not-ours and files-only
+  guards. All red before the stage existed, except the absences, which held
+  vacuously; removing `rotate()` reddens the orientation case.
+- **G11** names `heldCover` as a documented difference, as it does `thoughts`:
+  the plain local index stages no held copy, so it names none. Observed red
+  first, naming the key on the stage's first fixture run.
+- **G15** asserts it never sees the held copies: a fixture build that really
+  staged some leaves no folder inside `covers/`.
+- **G35's viewer check** walks the 50-book shelf for a book with a held copy,
+  and fails if none has one or the enlarged view shows anything else (round 1
+  below made it read `library.json` and check both of the viewer's paths).
+- `gate:public` passed against the real build once the stage landed, with the
+  same output that was red before it.
+
+**The filter, observed red.** The public-build absence held vacuously before the
+stage existed, so it was reddened on purpose: staging from every book rather
+than `shelved` failed the private-and-wishlist test and a prune test, and failed
+`gate:public` at its inspection step, where `orphan-held` named both held-back
+covers before the step-5 filter check could run. A held folder nested inside
+`covers/` failed G15's sibling check, and a viewer reading the thumbnail failed
+G35's with *held copy NOT SHOWN*. Each mutation was reverted.
+
+**The held stage has a switch**, `PUBLISH_HELD_COVERS` in `publish.ts`, on the
+notes stage's pattern: `false` stages no copy and names none but still prunes,
+so the next build empties `held-covers/` and the next deploy takes every copy off
+the site (spec §4). `gate:public`'s held checks follow it, and switched off they
+require that no copy and no `heldCover` ships, so the takedown deploy passes its
+own gate. A `publish()` test drives the off path through an option, red before
+the switch existed; `gate:public` was run with each switch off and passed. ⚠️
+**Wiring the two switches together found a hole**: with `PUBLISH_THOUGHTS` off,
+`gate:public` exited before its held checks ran. It no longer exits early.
+
+**Round 1 of move 4 on #416** tightened four checks, each planted red first:
+
+- **`foreign-cover` judges the held segment decoded**, as a browser does
+  before it resolves it: `held-covers/%2e%2e` is the site root and `%2F` a
+  second segment, and a segment that does not decode is refused. The plants
+  gained a foreign host in front of a well-formed `held-covers/a.png`,
+  `javascript:alert(1)`, an empty segment, the encoded dots, slashes and
+  backslashes, a broken escape, and a list holding a good path. Each clause of
+  `isSameOriginHeld` was removed in turn and reddened them, except the type
+  check, whose absence crashes on the list rather than passing it.
+- **`held-metadata` reads IPTC, PNG text and a Photoshop block** as well as
+  EXIF and XMP: any of them can name a place or a person. A JPEG with an IPTC
+  City and a PNG with a `tEXt` chunk, spliced in by `plantedCover` in
+  `packages/core/src/test-support.ts`, each fired the rule alone and went
+  green with its kind unread. A Photoshop block is refused by reading only,
+  since nothing here can write one.
+- **`held-oversize` reads a cap of its own**, `HELD_EDGE_CAP`, rather than the
+  stage's `HELD_COVER_EDGE`: a check that imported the stage's constant would
+  rise with it. A test holds the two equal, red with either moved.
+- **Every held rule's message, and the inspector's held observation, is
+  pinned in words**, as the notes rules' are: each went red with its text
+  blanked, and the observation with its condition forced true.
+- **G35's viewer check reads `library.json`**, not the card: the held copy it
+  expects is the one `library.json` names for the card's own cover, and a
+  second book with no held copy must open on its own file. The lookup is keyed
+  by `cover`, so a card whose own image is not the shelf copy finds no book
+  with a held copy at all. Four plants went red under it: a viewer ignoring the
+  held copy, a card offering its shelf path as held, a card loading the held
+  copy as its own image (found no book), and a viewer losing its own path. A
+  separate "the card's image is under `covers/`" check was written and taken
+  out again: keyed by `cover`, it could never fail.
+- **`publish()` gained four held cases**: a 600x900 cover stays 600x900, a
+  400x700 cover gets a copy, IPTC and PNG text are dropped, and a cover that
+  measures but cannot be written leaves no file and names no copy. Each went
+  red under its defect: enlargement allowed, the short edge read, and the
+  catch rethrowing.
+
+**Round 2, the security pair on the fix diff only**, found the fixes holding
+and three smaller gaps, each taken:
+
+- **`isSameOriginHeld` refuses a space, a C0 control or DEL** anywhere in the
+  segment: a URL parser drops tabs and line breaks anywhere and spaces and
+  controls at the end, so `.` tab `.` resolves as `..`. Six plants, literal and
+  encoded; red with the clause removed.
+- **`held-metadata` names the five kinds it reads** in its observation and its
+  comment, rather than claiming all metadata: sharp reports no JPEG comment
+  segment, no bytes after the image's end and no gain map, so the re-encode is
+  what keeps those off the site, and an allowlist of known-safe segments is
+  left to #425 with the shelf tier's own gap.
+- **The takedown steps cover one book too**: making a book private, or
+  replacing its cover, leaves its held copy on every earlier deployment, and
+  this project has no access policy on them.
+
+**CodeQL's `js/xss-through-dom`** fired on the viewer reading the card's
+`data-held` attribute into an image's `src`. By the three questions below it is
+not a security boundary — the path is held to `held-covers/` by
+`foreign-cover`, the page's CSP admits images from `'self'` only, and an image
+source runs no script — but it was worth changing for the third: the card
+wrote a path into the page only so the viewer could read it back. The control
+now hands its paths and alt text over in memory (`offerCover`, on the held
+book's page since the card retired in #413), and a held copy that fails to load
+falls back to the shelf copy instead of a broken image. **Since #418** ([ADR-0109](../adr/0109-the-held-book-is-examined-in-3d.md))
+no path reaches the page at all: the control examined the book (#418), and
+`offerCover` went. Since #553 that view is gone too.
+
+### Where cover art may go
+
+**Provenance is now recorded** — `cover_source` in the frontmatter contract,
+derived from the URL that was actually downloaded rather than from whichever
+provider answered the metadata lookup, because those routinely differ and it is
+the bytes whose terms apply.
+
+**The backfill is done and the policy is decided.** `stacks covers --backfill`
+recorded provenance on all 31 books in the owner's vault, inferred from image
+dimensions rather than re-fetched — Open Library's `-L.jpg` caps at 500px, which
+is an unmistakable signature, and the Apple rewrite produces 778–2400px.
+
+The measurement decided the policy: **25 Apple, 6 Open Library, 0 Google.**
+Re-hosting Open Library art only would have meant six covers and twenty-five
+generated spines — trading away precisely the cover quality Apple was added for.
+So a public build ships every cover it has, knowingly, and honours takedown
+requests. That is a decision rather than an oversight, and it is written down in
+[`docs/adr/`](../adr/) with the reasoning and with the alternative
+that would satisfy Apple's terms if it ever matters.
+
+### ## G42 — the dependency audit, and the hatch to reach for second
+
+**This section was `## CI-only gates`, and the table became the row.** Nothing
+here is deleted: mark-never-delete governs **rows**, and that table was never
+scored — it held one line, and `gates/constitution-scoreboard.test.ts` names
+three tables, none of which was it. So the audit gate lived in a table G19
+**structurally cannot see**: no row number, no slug, no status, no
+correspondence asserted in either direction. **Delete the `audit` job tomorrow
+and the aggregator's `needs:` breaks loudly — while the paragraph describing it
+sat here green and false.** Same resolution this file already uses for G2, G25
+and G28.
+
+⚠️ **Promotion alone would have been visibility, not enforcement.**
+`specPathsNamed()` only existence-checks `.ts` paths and G42 names no spec file,
+so the row as first written was one nothing can fail on — the ✅ would have
+stood through the job's deletion. The teeth are in `gates/action-pins.test.ts`,
+which reads the same workflow it was already sweeping: **the job exists, it runs
+`pnpm audit --audit-level=high`, and the `gates` aggregator lists it in `needs:`
+and tests its `result` against `success`.** ⚠️ **That is also the observed-red
+line the row actually lacked**: 2026-08-08 records the job going red on an
+advisory, never the row going red on the job disappearing, and those are
+different failures.
+
+**Reach for that hatch second, and only after checking whether a fix exists.**
+The gate failed on 2026-08-08 for two advisories that both *had* patches, and
+one of them still would not install: pnpm 11 quarantines newly published
+versions for seven days (`minimumReleaseAge`), so `pnpm update nanoid` reported
+success and left the tree on the vulnerable version. A silent decline is the
+dangerous shape here — the command that looks like it remediated the advisory is
+the one that did nothing. An explicit `overrides` entry is honoured where
+auto-resolution is not, so the fix was to name the version, not to ignore the
+GHSA. An `ignoreGhsas` entry there would have suppressed a solvable problem for
+seven days and outlived its reason, which is exactly what the rule above warns
+about.
+
+⚠️ **Corrected 2026-10-16 ([#399](https://github.com/mephistopheles4/stacks/issues/399)),
+and kept rather than deleted: the paragraph above has the mechanism wrong.**
+Nothing set `minimumReleaseAge` in August, and pnpm 11.18.0's own window was
+under two days, not seven. Replayed on the August lockfile with the window set to
+0, `pnpm update nanoid` still left 3.3.16, so the named update never reached that
+transitive copy, and the window was not the cause. The lesson about a silent
+decline stands. The hatch does not: now that G67 holds the window at seven days,
+an override naming a version inside it **fails**, and the route for a security
+fix inside the window is a `minimumReleaseAgeExclude` entry beside the override.
+See [the log](2026-10-16-the-window-that-was-not-set.md).
+
+**An entry that is there at all is held by G62 and G63.** An ignore used to be ended by a comment asking someone to remove it. Now each entry's trailing comment carries a date that a test reads (it expires after 30 days), and the `audit` job fails once npm publishes a stable version outside the advisory's affected range. Both exist because pnpm audit reads the tree, and a stale ignore is a config line it has been told to skip. See [ADR-0095](../adr/0095-a-comment-carries-the-date-and-an-ignore-expires-in-30-days.md).
+
+### ## G61 — the configuration that survived, not survival
+
+**Why a desktop can see the phone's programs.** three assembles every program
+in JavaScript — the prefix, the chunks, the defines, and which materials share
+one — so the GPU compiles what it is handed. The shadow define is keyed on the
+renderer, so a desktop and a phone with the same settings get the same source.
+Measured: in all 24 runs of the ceiling round the phone's counts equalled the
+desktop's. The one thing a driver decides is whether a declared sampler is
+*active*, so every program is classified twice — an active shadow sampler, or
+any sampler named like a shadow map, by GL; a declared `*ShadowMap` sampler
+with `USE_SHADOWMAP` still defined at the end of the source, by the text — and
+a disagreement is red. Neither alone is enough: the source reading is what
+does not depend on the backend, and GL is what keeps a text match honest.
+
+**Why the budget is 4.** The bookcase makes 2, the shape measured to survive,
+and 2 are left for a member that one day needs a mesh of its own. It was first
+written as a third of an edge: one program sampling alone — the books' boards,
+standing in for the bookcase's wood, which never went past 11 — held 11 draws a
+frame in every run and 12 in three of three, and 13 died twice at frame 134.
+⚠️ **That edge did not generalise.** A re-check on the
+shipped build compiled the map back into a spine program beside the
+bookcase's — 2 programs, 53 sampling draws a frame — and it held 120 s, with
+the fetch run and without, while `?receivers=all` died on the same build. So
+nobody knows where the edge is, and 4 is a pin on what survived, not a margin
+under anything. `BUDGET` carries the citations. **A red is not answered by
+raising it**, which is G15's rule: find the program that started sampling, then
+run `scripts/phone-check.ts` on a phone.
+
+**Why a control.** A hook that sees nothing passes every clause about
+"at most", so `?receivers=all` — every book reading the map, the configuration
+that died at frame 8 — is measured through the identical hook and judge on
+every run, and the gate fails unless it comes back red on programs *and* on
+draws. It measured 5 programs and 302 sampling draws a frame on the 50-book
+fixture when this landed.
+
+**Settled** means two things, and it meant only the first until
+[#385](https://github.com/mephistopheles4/stacks/issues/385): nothing has
+linked since, and **the set of programs reading the map has not changed since**.
+The woodwork and the backboard compile to the same program, so the first sheet
+to decode links the mapped one and the second switches to it with nothing
+linked. The two programs draw together for the whole gap between the decodes,
+which is as long as the network makes it — about 120 frames with one sheet held
+back 600 ms — and a cutoff on links alone judged all of them as steady. Undelayed
+on a workstation, both sheets land in one frame, which is why it failed once in
+a day of green runs. The hook records the last change of readers beside the last
+link, so what the gate waits on and what it judges by are one rule.
+
+**Measured `tsx` behaviour the hook depends on.** `tsx` compiles with esbuild's
+`keepNames`, so a function serialised with `toString()` calls a module-level
+`__name` helper the page does not have — the bare hook throws `__name is not
+defined`. The source the page gets defines it in a block of its own. A stale
+shim throws before the hook reports itself, and clause 1 says so; the Vitest
+spec cannot prove this half, because Vitest's transform need not inject the
+helper. ⚠️ **Stryker does the same thing, harder**: it rewrites every mutant
+site in the body into a call to a module-level `stryMutAct_*` helper, and a
+spec that ran the serialised string failed the mutation run's dry run on it.
+So the behaviour is specced by calling the function, which Stryker can mutate,
+and the string has a spec of its own that `vitest.stryker.config.ts` leaves out.
+
+- **Only default settings are measured.** `flat`, the one other wood species
+  measured, is two sampling programs at one draw each (when ADR-0088 landed),
+  and `?shadowtype`, `?shadowmap` and anything set from the panel are not run.
+
+### ## Trends
+
+⚠️ **The cognitive four are published *beside* the cyclomatic four and never
+instead of them.** The two measures agree broadly and diverge really — #230
+measured 1105 scored pairs at Pearson r 0.9159 with 54 inversions — and
+`resolveSettings` scores cyclomatic 17 and cognitive **0**, because every `?.`
+link is a branch to one measure and nothing at all to the other. A replacement
+makes a 17-branch function invisible.
+[ADR-0073](../adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md).
+
+⚠️ **`cognitive-functions` is a different denominator, not a copy of
+`complexity-functions`, and the spec has to say so or two implementations
+produce different numbers.** #230 measured 1105 against 1114; re-measured at
+adoption it was 1124 against 1133. **The gap of nine is the invariant, not
+either total** — the totals grow with the tree. It has two causes, both
+silences, and they are not the same silence.
+
+✅ **`cognitive-max` joined `CAPPED_SERIES` on 2026-09-21**
+([#269](https://github.com/mephistopheles4/stacks/issues/269)), disarmed in all
+eight scopes, once 28 nightlies carried the family (across three
+`fixtureHash` stamps; 9 under the current one): `countedIn` went 98 → 79
+records rather than to zero, and the newest counted run did not change. The six
+duplication caps landed disarmed in `jscpd.floors.json` under `duplicationHash`,
+and `parseCaps` still rejects every one of their names. The paragraph below is
+the constraint that wait honoured, and it still binds the next name anyone adds.
+
+⚠️ **No cognitive name was in `CAPPED_SERIES` until then, and that was a code
+constraint rather than a caution.** `countedIn` filters to rows where **every** member of
+that set has samples, so adding `cognitive-max` before records carry that family
+makes it return nothing at all.
+
+⚠️ **The four complexity counts are read side by side, and no ratio is offered
+because none survived the measurement.** The prototype put every candidate
+statistic through two games on this repo's own worst function — a mechanical
+three-way split, and thirty trivial functions appended beside it — and every
+ratio hid one game or the other. Counts hide neither:
+
+⚠️ **They are written on *both* events**, so a movement is attributable to a
+single pull request rather than to a night's worth of them. **They are not the
+first** — `gate-suite-runtime` has been on both since the spine landed, and the
+`Cadence` cell above said `nightly` until this rollout read it, believed it, and
+wrote the claim down. Both are corrected here, because **G36 reads only the
+`Trend` column**: every other cell in this table is prose nothing holds, which
+is worth knowing before trusting one. A merge record now carries **seventeen**
+series — the suite runtime, four `complexity-*`, eight `duplication-*` and four
+`cognitive-*` —
+and **still does not read as a scored one** — `scoresOf` stays
+mutation-specific, or every push would be paired against a nightly in the
+deploy's delta.
+
+⚠️ **Duplication takes eight rows because a clone is a relation between two
+places, and a relation does not partition into scopes.** [...] Whole-tree means whole-tree *TypeScript*, and the restriction
+was measured rather than argued — over every file jscpd reports 1042 duplicated
+lines, **570 of them JSON this repository did not write**, including two O'Reilly
+fixtures sharing 105 identical lines because one book returns from two endpoints.
+A recorded response cannot be de-duplicated without falsifying the fixture. Counts
+and never a ratio, for the reason the four complexity rows give.
+
+⚠️ **`duplication-ignored-lines` counts what the source declares, not what
+jscpd removed, and the two are different numbers.** Measured at fourteen live
+lines and a three-line block, varying only what follows the closing directive:
+with the block ending the file jscpd removes 5; with a blank line or a comment
+after it, 6; **with one line of code after it, 0**. A suppression block in the
+middle of a file does nothing, silently. Every earlier measurement of the feature
+— this repository's and [#237](https://github.com/mephistopheles4/stacks/issues/237)'s
+alike — put the block at the end of a file, so all of them agreed and all of them
+were the special case. The counter records the block anyway, [...]
+
+⚠️ **Adding these eight names widened `GATED_SERIES`, so the first
+`pnpm deploy:site` after this lands refuses until a CI run writes a record
+carrying them.** That is inherent to adding any series — the pipe genuinely has
+not delivered the new one yet — and it fails in the safe direction, refusing to
+publish rather than publishing against an instrument that is partly dark.
+
+⚠️ **No duplication name joins `CAPPED_SERIES`, and that is a live
+constraint rather than an oversight.** Six of the eight are to be capped, but
+`countedIn` filters to records where **every** member of that roster has samples,
+keyed on the whole set on purpose — so a name added before twenty records carry
+its samples makes it return **nothing**. ⚠️ **The damage is to the reading
+rather than to the window**, which is the opposite of what this paragraph said
+when it landed: `capCalibration` takes its window from `streakOf`, which reads
+`ok` and the fixture hash and never the counts, so the window does not move. What
+does is `scripts/deploy.ts`'s `newestCount` — it goes `undefined`, **every cap
+line prints `null`**, and `countedElsewhere` cannot fire without a `countedRun`,
+so the counting-rule refusal disarms itself. Blind caps and a dead guard, with
+nothing red. That step is
+[#258](https://github.com/mephistopheles4/stacks/issues/258).
+
+⚠️ **`live-exclusions` cannot move yet, and that is written here rather than
+discovered from a flat line.**
+
+**`metrics-freshness` has landed, and it is G39** — the deploy-side refusal, per
+series, at `pnpm deploy:site`. The column above named the mechanism and not a
+number while the row did not exist, which is what kept it out of the
+pre-allocation trap: **the number it would have carried was G38**. Row numbers
+are derived from landing order, `agents-import` landed between the two tickets
+that guessed, and every pre-allocated number on this rollout's source map has
+been wrong — including one allocated twice, five seconds apart, by two sessions
+from the same map. The number went in when the row did.
+
+⚠️ **Surface D's row is in that store and is deliberately not a trend.** [...] The eight
+rows above are the whole of what the record carries as a trend, and the
+staleness bound the deploy-side check will apply covers all eight; D is reported
+and never refused.
+
+### Triaging a CodeQL finding
+
+pull request can land, not after. The first batch was 12 alerts, all rated
+**high**, of which one was a real bug — a ratio worth expecting rather than
+being surprised by.
+
+⚠️ **This paragraph said the opposite for two days, and nothing could go red.**
+It read *"CodeQL reports alongside the gates rather than blocking a merge"* —
+made false by `6cbb380`, the commit titled *"CodeQL becomes a second required
+gate, and the five claims that made false"*. That commit went looking for
+exactly this, corrected five claims elsewhere, and never touched the one file
+whose job is recording what is enforced. **Nothing in a clone can check it**:
+the ruleset lives outside the tree, and a gate that asked GitHub would need the
+network, which G21 (`no-live-network`) forbids for the whole suite. So this
+claim belongs to the last row of *"Not gated, deliberately"* — relied upon and
+unverifiable — and the only available mitigation is that it now says so instead
+of stating it flatly.
+
+2. **If it is in a gate, is the real question vacuity?** A rule complaining that
+   an extractor's regex is approximate is asking "what if it matches nothing" —
+   which this repo already answers with `expectFound`. `js/bad-tag-filter` fired
+   on `SCRIPT_BLOCK` in `gates/astro-no-logic.test.ts`; the miss it warns about
+   throws at line 135, whose comment named that exact scenario years before
+   CodeQL saw it. Fixing it properly means an HTML parser dependency, in the
+   gates layer, for a file format that is not HTML, to protect against a
+   first-party commit. Dismissed as used-in-tests. **The tempting half-fix —
+   tweaking the regex until the alert clears while it stays just as
+   approximate — is the worst outcome available**, because it buys the
+   appearance of a fix.
+3. **Is it worth fixing anyway, for a reason that is not security?** Usually
+   yes, and this is where the value has actually been. `js/polynomial-redos` on
+   `safeFilename` was real: bounding the input fixed the backtracking *and* a
+   truncation bug nobody had noticed, where the 120-character cap ran after the
+   trailing-dot strip and could put a dot back on the end of a Windows filename.
+   The nine `js/incomplete-url-substring-sanitization` hits were test-only and
+   still worth fixing, because `url.includes('googleapis.com')` does not assert
+   what the test claims to assert.
+
+**A dismissal carries its reasoning in the dismissal comment**, not only here —
+the next person meets the alert, not this file. And a fix earns a test that goes
+red against the old code like any other: both `safeFilename` tests were observed
+red, and the ReDoS one was **green on its first draft** at 60k dots, because the
+cost is quadratic and that size lands under its own threshold. It was measured
+and raised to 200k. A test written against a defect it cannot reproduce is the
+oldest failure in this file.
+
+### Not gated, deliberately
+
+| | Why |
+| --- | --- |
+| Changed-lines coverage floor | Not a gate at any surface: it fails [#112](https://github.com/mephistopheles4/stacks/issues/112)'s Clause B, which is surface-independent, and a trend has no threshold to be a floor. Worse than absent besides — Vitest 4 dropped `coverage.all`, so a pull request adding a wholly untested module scores **100%**, green in exactly the case it exists to catch. Reversal on the grounds that AI now writes the diffs was raised and refused in [#117](https://github.com/mephistopheles4/stacks/issues/117): an AI asked to satisfy a diff-local floor writes tests that execute the lines it just wrote, which is the row above with volume behind it. The original reason — *"one contributor; it would be noise"* — is no longer why. |
+
+| **Mutation testing (Stryker)** | *Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green.* ⚠️ **Revisited 2026-08-11: condition met, and the cost estimate in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a trend; see [Trends](../gates.md#trends). Still not gated: the number never goes red.** |
+
+| **An `.editorconfig` file** | **Refused on measurement, not on preference.** The four things such a file states are indentation, charset, trailing whitespace and a final newline; measured across every `.ts` and `.md` file in the tree, this repository holds **0 files with a leading tab, 0 with trailing whitespace and 0 missing a final newline**. A gate built on it is green on day one and cannot go red for any file that exists — which is not the same as worthless (it steers a newcomer's editor) but is exactly what disqualifies it as a gate. It does not *fail* [`gate-or-trend.md`](../spec/gate-or-trend.md)'s routing; it has nothing to route. ⚠️ **And adding one later is not free, because Prettier reads it.** Measured: with no `prettier.config.mjs` present, `max_line_length = 60` set Prettier's print width and `indent_size = 4` set its indentation; with the config present the config's keys win, **but only the keys it sets** — `indent_size` still applied, because nothing shadowed it. The two files merge key by key, so an unshadowed `.editorconfig` key silently steers the formatter and becomes a second place to look when its output surprises somebody. [#236](https://github.com/mephistopheles4/stacks/issues/236) |
+
+| **A link is about what it claims to be about** | G29 checks that a link *resolves*, which is not the same question. #166 moved the invariants to `AGENTS.md` and left `CLAUDE.md` as a stub, so eight links reading `[invariant 1](CLAUDE.md)` across five files still resolved perfectly — at a file with no invariants in it, and G29 stayed green throughout. They were repointed by hand. Not gated because "this link is about what it says" is a judgement, and a gate that made it would be a gate that matches prose, which `docs/gates.md` has twice learned matches anything. |
+
+| **A branch name follows the convention** ([ADR-0057](../adr/0057-the-pull-request-title-is-the-commit-subject.md)) | ⚠️ **The commit-subject half of this row is gone, gated as G55 (`pr-conventions`) on 2026-09-03, and what it argued is kept here because the argument was half right.** It put [`gate-or-trend.md`](../spec/gate-or-trend.md)'s **Clause A** — *does its red have a named, reachable remedy?* — and answered that the remedy splits by who hit it: a rename for the maintainer, and for a stranger a red build over something that is not a defect in their change, against `CONTRIBUTING.md`'s promise that a contributor with no agent skills installed passes every gate. **Clause A asks whether the remedy is *reachable*, not who typed the fault.** Anybody with write access can edit any pull request title or body, including on a pull request from a fork, in one click and with no push from its author — so nobody is stranded by that red. That is what separates it from the dead pipe [`trend-layer.md`](../spec/trend-layer.md) §4 disposed of, which a contributor could not clear at all; the precedent was cited correctly and the case was not the same one. **The surface concession this row made was right and is what G55 is built on**: the repository squash-merges with `squash_merge_commit_title: PR_TITLE`, so the only string worth checking is the pull request title on `pull_request` — never `commit-msg`, which lints a message the squash throws away. **What stays ungated is the branch name, and it is disqualified on coverage rather than visibility.** An earlier draft of this row claimed CI cannot see a branch name at all; `gates.yml` runs on `pull_request`, so `github.head_ref` carries it, exactly as the same event carries the title — the two halves of one sentence disagreed and a review caught it. What actually disqualifies it: `head_ref` exists **only on a pull request**, so a branch that never opens one is never checked, and the branches a harness names are deleted by the squash that merges them. A check firing on some branches and reading as covering all of them is the shape this file's [*Why this file exists*](#why-this-file-exists) is a list of. |
+
+| **The linter's own config** (`eslint.lint.config.mjs`) | G46 gates the tree and nothing gates the rule set. Four options are tuned so that four documented repository idioms stop being reported — measured, and each carries its reason in the file — and each is a place a rule can be widened again later, or switched off, in a diff that reads as configuration rather than as a weakening. ⚠️ **G6's two opt-in rules are exposed the same way** ([#245](https://github.com/mephistopheles4/stacks/issues/245)): deleting either, or narrowing its `files` glob, silently removes one of G6's two checks — which is why G6 itself was kept. No gate here reads a lint config, and building one would mean a second copy of the rule set for the first to be held against. What stands in its place is the comment convention: **do not remove a reason without removing the option it justifies.** Recorded on [#233](https://github.com/mephistopheles4/stacks/issues/233) as debt 5 and not solved. ⚠️ **A second linter joined this row on 2026-09-03 rather than earning its own**: `zizmor`'s `--min-severity=low` and its two `# zizmor: ignore[artipacked]` comments in `metrics.yml` are three more places an analysis can be narrowed later, and G55 (`pr-conventions`) asserts only that the tool runs and is pinned exact. One rule about two linters, and a second row would be the duplication the rest of this file spends itself refusing ([ADR-0082](../adr/0082-zizmor-lints-the-workflows.md)). |
+
+| **Test-code complexity as a series or a population** | **Refused on measurement, and the measurement is the deliverable.** No test function in this repository exceeds McCabe 10 — the maximum across all **1931** of them is exactly 10, and four fifths score 1 — so `complexity-mass-over-10` is **identically zero** for every candidate test population and `complexity-max` is a flat line. Those are precisely the two counts the spec caps, dead on arrival. ⚠️ **The cognitive half is narrower than it first reads and the claim is limited accordingly**: `cognitive-mass-over-15` is identically zero for any test population — nothing there comes near 15 — but `cognitive-max` is **not**, because at threshold `0` any test helper with a `for` or an `if` scores at least 1. So adopting cognitive complexity does not reopen this, and the reason is the over-the-cut count rather than both counts. ⚠️ **The gates are not special**, which answers the fog item this question inherited: gate test code is indistinguishable from package test code — mean 1.42 against 1.41, max 9 against 10. ⚠️ **One configuration survives and nothing rules it out**, recorded because only an *argued* edge stands against it: one population of all test files, the two volume counts, uncapped, read at the deploy, behind a second declaration list and its own ADR. [#239](https://github.com/mephistopheles4/stacks/issues/239) |
+
+| **Markdown line length (MD013)** | **1540 findings, 76% of everything markdownlint reports here, and no auto-fix at any limit.** Refused as part of G48 (`markdown`) rather than left unmentioned, because the rule most people would expect in a Markdown rule set is the one this repo cannot have. **No limit rescues it**: the longest Markdown line in the tree is **2048 characters** and it is a table row in [`adr/0016-painted-shadows.md`](../adr/0016-painted-shadows.md); this file has one at 2025. A table row does not wrap. 1008 lines exceed 100 characters and 416 exceed 200, so even a limit near 200 leaves 416 hand edits *and* still cannot pass the tables. ⚠️ **The rule is off in `.markdownlint.jsonc` and this row is the reason**, so a later session that turns it back on meets the measurement before the 1540 reds. [#235](https://github.com/mephistopheles4/stacks/issues/235) |
+
+| **Claiming an issue before working it** (the rule in `AGENTS.md`'s *Working rules for agents*) | A claim is a property of the tracker and of wall-clock time, not of the tree: a spec asserting it would go red for a contributor who never touched an issue, which is the metrics-freshness rejection in [`docs/spec/trend-layer.md`](../spec/trend-layer.md) §4 — *a stranger paying for your dead pipe is not a gate; it is a tax*. Reading it in CI needs the network anyway, and **G21 forbids that for the whole suite**. **The mechanism is the assignee plus a one-hour window, and both halves were chosen knowing the assignee is not a lock** — every session here authenticates as the same account, so a ticket was once claimed twice five seconds apart, and no check on the tracker could have told those two apart. It was kept because it is the only signal that renders in GitHub's own UI and that the frontier query already reads; a claim *comment* or a `claimed` label buy filterability and add a second thing to remove on abandonment, which is the state nobody cleans up. The window is the reading half and needs no cleanup: an assignment older than an hour stops being presumed live on its own. So this is an advisory recorded where a person will see it, not a lock — and the real protection remains naming the issue when a session is launched. |
+
+| **Prose posted to GitHub is safe for a GitHub body** (a posting helper, retired by ADR-0115) | **Refused on measurement, and the measurement is that there is nothing in the tree to check.** Six ways to post a body wrong are recorded on [#220](https://github.com/mephistopheles4/stacks/issues/220), three returning HTTP 200; the worst is prose hard-wrapped at 80 columns, which posts perfectly, round-trips byte-identical and still renders as ragged broken lines because a body enables hard line breaks. A gate over the repository's own GitHub-facing files was put and rejected: `.github/pull_request_template.md` is 2722 characters of which **473 render** — the rest is HTML comment — and what renders is six headings and four checkbox items with **no prose paragraph at all**; both issue forms already write each description as one long line. **The risk lives entirely in bodies that never touch the repository**, so such a gate is green on arrival and cannot go red for anything that exists, which is the `.editorconfig` disqualification two rows up. No tool in this repository stands in its place (ADR-0115). |
+
+| **A mutation score is never built from reused verdicts** | **Held by a fresh checkout, not by a check.** Stryker's `--incremental` is not score-neutral — a fixture edit left three verdicts a full run on the identical tree contradicts ([`log/2026-09-22-incremental-is-not-score-neutral.md`](2026-09-22-incremental-is-not-score-neutral.md), [#347](https://github.com/mephistopheles4/stacks/issues/347)) — and a command-line flag never reaches `configHash`, because `configHashOf` reads only the object `stryker.config.mjs` exports. Writing it *into* that file is gated: `incremental` and `incrementalFile` are not in `SCORE_NEUTRAL_OPTIONS`, so the stamp moves and G56 (`config-hash`) refuses. What keeps it out of the trend store otherwise is that `metrics.yml` runs plain `pnpm mutation:run` on a new runner caching only the pnpm store, so no previous results file exists to reuse. ⚠️ **A change to CI caching that carried `artifacts/` or `reports/` between nightlies would break that with every gate still green.** Not gated because the check would read a workflow file for the absence of a cache key — a prose-matching gate over YAML, and green on arrival. |
+
+| **The git hooks, and anything they check** (`.husky/pre-commit`, `.husky/pre-push`) | **Refused because gating them would make them a second contract**, which is the one thing [ADR-0083](../adr/0083-hooks-arrive-with-pnpm-install.md) exists to prevent. ⚠️ **They arrive unasked** — `husky` is a devDependency and `prepare` is a lifecycle script, so `pnpm install` wires them for every contributor — which is exactly why the *promise* has to stay one-directional: `CONTRIBUTING.md` guarantees that a contributor whose hook is broken, skipped or absent passes every gate, and a gate over the hook would retract that guarantee. **Every check inside them already refuses in CI** — `pnpm lint` and `pnpm format:check` in the `style` job, G56 (`config-hash`) at merge — so the layer buys latency and *no new coverage*, which is stated here rather than left to be inferred from a green build. ⚠️ **`--no-verify` skips both and is supported, not a loophole**: nothing here is a guarantee, so nothing here needs to be unskippable. ⚠️ **A gate over the hook's own text was considered and refused too** — it would assert that a file says what it says, which is the vacuous green this file catalogues, and a hook nobody has installed still passes it |
+
+| **The shelf survives on real hardware** | **It needs a device, and CI has none.** Two separate phone failures shipped past every gate here — 314 MB of texture in August, and a driver that loses the context when too much of the scene reads the shadow map — because `smoke:render` renders on a desktop with gigabytes of headroom. G15 (`cover-budget`) now gates the first cause and G61 (`one-shadow-reader`) the one configuration measured to survive the second, on one driver, and neither is survival: another GPU could fail differently with both green. `scripts/phone-check.ts` runs the page on a USB-attached Android phone and gives the same verdict every time, and it is a tool run by hand rather than a `pnpm` script — adb and a phone are not something [`CONTRIBUTING.md`](../../CONTRIBUTING.md) can ask of a contributor, a precedent the retired `gh-post.ts` set. Run it before merging anything that touches shadows, materials, lights, the bookcase's geometry or three |
+
+| **An agent runs the suite through athanor** (the agent guard, [ADR-0123](../adr/0123-a-hook-holds-agents-to-athanor.md)) | **A local nudge that shows a skip, not a control, and nothing in CI can read it.** `scripts/agent-test-guard.ts` runs as a Claude Code `PreToolUse` hook from `.claude/settings.json` and refuses the host runs that have an `athanor run` equivalent while athanor works, and a full mutation run always; its decision, in `scripts/lib/agent-test-guard.ts`, is tested in-process by `scripts/lib/agent-test-guard.test.ts` and its probe by `scripts/agent-test-guard-hook.test.ts`, which is what holds the code. What no test can hold is that a session obeys it: the hook sees only the text of a call, so a launcher it does not know, a script that calls `pnpm test` inside itself, or another agent's harness passes untouched, and a fault in the hook is silence by design, because a guard that failed closed would stop all work in the repo. ⚠️ **It is no control against running a branch's code on the host**: a checked-out branch's own version of the script is the one that runs, and `pnpm test` would run that branch's code anyway — the owner decided against a security review of it on 2026-10-24. |
+
+| **Where a new spec lives** (a comment on its issue, [#533](https://github.com/mephistopheles4/stacks/issues/533), [ADR-0145](../adr/0145-new-specs-live-on-their-issues.md)) | **A spec on the tracker is read over the network and no gate holds it.** The one mapping from a spec to its location is its row in [`docs/spec/README.md`](../spec/README.md), and an issue link is not a file, so `doc-links` (G29) cannot resolve it and G21 (`no-live-network`) forbids a gate that asked GitHub. The rule that only the owner's account counts, and that a revision's comment is never edited, is a written convention in [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md#specs): nothing reads a comment's author or its edit history in a clone. Accepted: a cold session without the network learns from the README row what exists and where it stands, but not the full text. Not gated because the check would read the tracker, which is the claim row's reason above |
+
+| **The survivor record keeps arriving** | **Nothing watches, by the owner's choice.** The nightly's `record the survivors` step is warn-only ([`docs/spec/survivor-record.md`](../spec/survivor-record.md) §S4.5, [ADR-0117](../adr/0117-survivors-are-matched-by-content-and-recorded-on-their-own-orphan-branch.md)): a failure to write or push the record leaves the night's verdict alone, and the one signal that it stopped is the summary line, which names the reason or the step that failed. It is not a trend, because G36 holds the `## Trends` table to emitted series in both directions and a record file is a set, not a series; it is not a gate, because a good night turned red by a secondary record is the cost the owner declined. ⚠️ **A record that stops arriving shows only as a gap on the `survivors` branch and a *not recorded* line on that night's run page.** C9 (`scripts/commit-metrics.test.ts`) and the pure record tests hold the code; the first real nightly after merge is the end-to-end check, and no live run is forced to fail, because forcing one would also write a failed night to `metrics`. Not gated because the check would read a branch the nightly writes for the absence of a night, which a pull request's gates cannot see |
+
+### What building these gates taught
+
+Carried over from the Decision Log when the decisions themselves moved to
+[`docs/adr/`](../adr/). These are not decisions — they are what went wrong while
+writing the things above, which is the part most likely to go wrong again.
+
+- **2026-11-08** — **A pull request now runs Stryker's dry run, and the two entries below that say it never does are history.** The 2026-09-22 and 2026-09-25 entries record specs that passed every pull-request check and failed the nightly's dry run, and both name the fix as `pnpm exec stryker run --dryRunOnly` run by hand before pushing. The 2026-11-07 nightly failed the same way (`scripts/ask-status.ts` read as source text) and [#557](https://github.com/mephistopheles4/stacks/issues/557) excluded the two scripts known to be read so. [#558](https://github.com/mephistopheles4/stacks/issues/558) turned the by-hand check into a job (G70, `mutation-dry-run`). ⚠️ **Those entries stay as written**: they were true when written, and their lesson, that a spec which reads a file the sandbox rewrites passes `pnpm test` and fails here, is the reason the job has no path filter.
+
+- **2026-09-25** — **The model a gate's budget was derived from fit every run, and the first run built to break it did.** G61's budget was written as a third of a measured edge — one sampling program held 12 draws a frame and died at 13, and a second program lowered that — and a dozen places in the tree stated it as the mechanism. A re-check built to falsify it compiled the shadow fetch back into one book program on the shipped build: 2 programs, 53 sampling draws a frame, 120 s at 60 fps in each of two runs, one with the fetch run and one without, while `?receivers=all` died on the same build and in the same session. So the edge was a property of the program it was measured on, not of a count, and the budget is now a pin on the configuration that survived. ⚠️ **A number measured on one configuration is a fact about that configuration**: the 12 and the 13 were never wrong, and stating them as the rule was. Run the falsifier before writing the rule down.
+
+- **2026-09-25** — **A link stood in for a change, and a program cache means a change needs no link.** G61 judged "exactly one reader" over the frames after the last link, on the reasoning that a sheet decoding relinks. The first sheet does. The second switches its material to the program the first one linked, and nothing links, so on the one run where the two decodes fell in different frames the frames between them were steady and red ([#385](https://github.com/mephistopheles4/stacks/issues/385)). Holding one sheet back 600 ms made it 4 of 4, which is what turned a one-in-a-day flake into a reproduction worth fixing against. The settle now also ends at the last change in which programs sample. ⚠️ **A proxy for the event you mean holds only while every path to the event goes through the proxy**: measure the event itself when you can, and when a flake is rare, slow the race down until it is not.
+
+- **2026-09-25** — **G61's first plant found a defect in G61.** Taking the books' `receiveShadows` call out went red as it should, and also said the 300-book page's books had *stopped casting* — which the plant does not do. The page had run past the hook's 4,000-frame cap before it was read, the cap dropped frames from the front, and frame 0, the only frame the shadow pass draws in, went with them. The hook now keeps its first frames and records the last link outright, and a spec runs 4,100 frames to pin both. ⚠️ **A cap that drops the oldest record drops the one the gate was reading**, and a green run would never have shown it: the unplanted page happened to be read before the cap filled.
+
+- **2026-09-25** — **A flag named after a mechanism is not the mechanism, and a capped count is not an uncapped one.** `receiveShadow = false` reads as "this mesh does not read the shadow map" and does nothing of the kind in three 0.185 — the define is keyed on the renderer, so the sampler stays compiled — and the phone died with it exactly as without it. And a hook that capped the sampling draws at 12 by skipping the rest died where an uncapped 12 lived, on the same draw stream. Both are why G61 counts what was compiled and drawn rather than what a flag or a cap says.
+
+- **2026-09-25** — **Two tools rewrite a function you serialise, and each broke a different run.** `tsx` compiles with esbuild's `keepNames`, so `fn.toString()` carries calls to a module-level `__name` helper, and a page that evaluates it throws `__name is not defined`; Vitest's transform need not do the same, so a spec of the serialised hook passed while the gate's page would have thrown. The shim is in the source string, and the gate's first clause notices it going stale. Then **Stryker** rewrote the same body into calls to `stryMutAct_*`, and that spec — green under `pnpm test` — failed the mutation run's dry run, which no pull request runs; it was found by running `pnpm exec stryker run --dryRunOnly` before pushing, not by any gate. ⚠️ **Code shipped as a string is code three toolchains transform differently**: spec its behaviour by calling it, and its serialisation separately.
+
+- **2026-09-22** — **G29's heading slug disagreed with GitHub on 228 of the repo's 1241 headings, and its own comment said that could only ever cause a false red.** The hand-kept slug collapsed a run of spaces into one hyphen, trimmed, and stripped `_` as emphasis; `github-slugger` does none of those, so `### Incremental runs — fast, and not a score` is `#incremental-runs--fast-and-not-a-score` on GitHub and G29 accepted only the single-hyphen form. The comment's reasoning held for one link and failed for the next one: a red link is fixed by writing the anchor the gate accepts, so every divergence was a false green one edit later, and the red was what steered the author there. Six links in `docs/spec/README.md` had already made that trip — green under G29, dead on GitHub. [#361](https://github.com/mephistopheles4/stacks/issues/361) replaced the imitation with the library itself ([ADR-0086](../adr/0086-g29-slugs-with-github-slugger.md)) and planted the em-dash, underscore, emoji, arrow and repeated-heading cases as permanent tests, each watched red against the old slug first. **An approximation of someone else's algorithm has no safe direction when the approximation's output is what the author types next.**
+
+- **2026-09-22** — **A test pinned a fixture's line number, passed `pnpm test` and every pull-request check, and took down the next nightly's mutation run.** [#357](https://github.com/mephistopheles4/stacks/issues/357)'s two specs asserted the refusal names `fixtures/complexity/suppressed.ts:21`. Stryker's sandbox inserts `// @ts-nocheck` and a blank line into its copy of that fixture, so ESLint reported line 23 there, the dry run failed, and Stryker aborted before testing a mutant — no report, so every mutation series went missing from that night's record. Both specs now read the line from the file ESLint lints. ⚠️ **Pull-request CI never runs Stryker**, so the first place a spec meets the sandbox is the nightly; `pnpm exec stryker run --dryRunOnly` is the minute-long check that would have caught it. It is the same trap `vitest.stryker.config.ts` already records for specs that read the real tree: **the sandbox is not the checkout, and a spec that reads a file reads the sandbox's copy.**
+
+- **2026-09-03** — **A rename whose ticket stated that no gate reads the module name was reddened by G29, through a link inside a decision record nothing was allowed to edit.** [#294](https://github.com/mephistopheles4/stacks/issues/294) renamed `packages/site/src/shelf/case.ts` to `bookcase.ts` and said in the same breath that four decision records naming the old file are not edited and that **no gate reads the module name**, so nothing goes red on its own. **G29 (`doc-links`) reads it.** `withoutCode` blanks inline code spans and *then* extracts `](target)`, so ADR-0029's ``[`packages/site/src/shelf/case.ts`](../../../packages/site/src/shelf/case.ts)`` is still a link once its text has been blanked out — and its target had moved. The ticket's two halves then contradicted each other, naming the same file as one that must not change and as one a green build depends on. Resolved by retargeting **the href alone** and leaving the rendered text byte for byte: a route is not reasoning, so `AGENTS.md`'s verbatim rule survives, and a moved file is precisely the failure G29's own docstring says it exists for. ⚠️ **The general shape is a gate that reads a *path* where a ticket was reasoning about a *name*.** Any rename can redden a document nobody meant to touch, and the place it surfaces is the ticket's own list of files that must not change.
+
+- **2026-09-03** — **The residual search that cleared that rename was narrower than the class it was checking, and returned a confident zero.** It looked for `rowsForCase`, `'./case.ts'` and `shelf/case.ts` — the three forms the name takes in an *import* — and a bare ``case.ts`` inside a comment is a fourth. One survived, in `gates/coplanar-faces.test.ts`, present tense, 192 lines below that file's own import of the renamed module, and it was found by review rather than by anything that runs. ⚠️ **The obvious wider pattern is the trap on the other side**: a plain `case.ts` search matches `bookcase.ts` and manufactures false residue, so the honest pattern is `(?<!book)case\.ts`, and it needs the same run over `docs/` — where twelve mentions stay by design — as its positive control. Comments are invisible to `typecheck` and no gate reads a line width, so both defects this rename shipped were in the half nothing here can see.
+
+- **2026-08-23** — **Adding a trend series reddens four things that are not the trend layer, because a freshness bound derived from a list grows with the list.** `GATED_SERIES` is `TREND_SERIES.map(...)`, and `judgeRecord` treats *no sample at all* and *a stale sample* as the same verdict — correctly, since both mean nobody can read that number. So four cognitive names were, from the instant they were declared, four names `pnpm deploy:site` demanded a fresh sample of. Three record fixtures had to grow the same way, and — the one nobody would predict — **G17 (`deploy-branch`)**, whose four assertions were suddenly observing a *freshness* refusal instead of the branch guard they exist to test. ⚠️ **Every one failed loudly and none failed informatively**: the message names the stale series, which reads as *the pipe is broken* rather than *your fixture is out of date*. The shape is **a derived list used as an expectation by fixtures that build their records by hand** — the derivation keeps the production path honest and leaves every hand-built fixture behind. Independently hit by the duplication work on the same day, which is what makes it structural rather than one session's slip.
+
+- **2026-08-23** — **A test whose name states a property and whose body checks something weaker is worse than no test, and this repo shipped one in a pull request whose own documentation lectures about it.** `scores a declared population and gets a smaller denominator than the cyclomatic one` asserted `population.length > 0` and nothing else — no comparison, no inequality — so a regression in `cognitivePopulationOf` would have stayed green forever behind a name and a comment that both claimed otherwise. Caught by CodeRabbit, not by the author and not by a two-axis review that had already read the file. ⚠️ **The tell is available without running anything**: the assertion mentions one quantity where the name mentions two. `expectFound` exists because an *extraction* that matches nothing reads as health; this is the same failure one level up, where an *assertion* that compares nothing reads as coverage. The repair asserts both halves — that the cognitive population is smaller, and that the difference equals the never-visited nodes exactly — and was verified by planting the regression and watching it go red.
+
+- **2026-08-23** — **A gate caught a use of `import.meta.url` that was not what it was looking for, and it was right to.** G24 (`repo-root`) sweeps `scripts/` for `import\.meta\.(url|dirname|filename)` and flagged `createRequire(import.meta.url)` in the cognitive counter — which resolves a *package*, not the repo root, so on its face a false positive. It is not one. The gate's own comment says a rule matching prose matches anything, which is why it matches code and cannot read intent; and the fix it forced — `createRequire(join(REPO_ROOT, 'package.json'))` — is **more correct than the code it rejected**, because the plugin is a dependency of the *root* `package.json`. **The temptation to widen `DERIVATION` with an exception was the wrong move available**, and it was available.
+
+- **2026-08-22** — **A hardcoded column width does not overflow, it swallows the gap.** The staleness refusal padded each series name to 22 characters, which was the longest name that existed when it was written. `complexity-mass-over-10` is 23, and `pad` returns an over-long string unchanged — so the refusal printed `complexity-mass-over-10no sample at all in the 1 newest record(s) read`, running the name straight into its own explanation in the one message a refusal is read from. Nothing went red: every assertion used `toContain`, and the substrings were all still there. Found by reading the output of a test that passed. The width is now measured from the names being printed, as `renderPanel` one function up already did, and a spec plants a name longer than the old constant. **The general shape is a constant derived from today's data and then frozen** — the same class as the counts in prose this file has two other rows about, with the twist that a formatting constant is invisible to every assertion that checks for content.
+
+- **2026-07-31** — **The render gate builds and serves `dist/` itself** rather than driving the dev server. Waiting on a subprocess to announce itself on stdout is a race that hangs instead of failing, and a gate that can hang is worse than one that can fail. It also means the gate screenshots what actually ships.
+
+- **2026-07-31** — The gate's pixel probe waits two `requestAnimationFrame`s before `readPixels`. Without it the drawing buffer has already been cleared, and the gate reports a blank shelf that is in fact rendering correctly — it did exactly that once.
+
+- **2026-08-01** — **G14 had a false negative, found by the next command added.** It searched CLAUDE.md's Commands section for `\bname\b`, so a new `covers` command passed as documented because `status`'s description reads "covers still missing". Now anchored to the start of a line, where the block actually puts a command name. A gate that matches prose matches anything — and this one was written *in* the phase about documented claims quietly ceasing to be true.
+
+- **2026-08-01** — **G1 caught both halves of this change without being asked**, which is what the reverse-assert is for: `scripts/worktree.ts` arrived importing `fs` with no allowlist entry, and `scripts/dev-watch.ts` stopped importing it, making its standing exception spent. One line added, one removed. A list that only grew would have kept the second.
+
+- **2026-08-01** — **G17's first version was strongest where it never ran and inert where it mattered.** It read whichever branch the suite happened to be on and returned early when that was `main` — so CI, which runs on `pull_request` and is therefore never on `main`, exercised only the refusal, while the owner, who mostly is on `main`, ran a gate that quietly asserted nothing. A silent `return` that reads as coverage is the vacuous-green trap `expectFound` exists for, written into a gate in the phase about exactly that. Fixed with `GIT_DIR`, which points the child's git at a scratch repository on a known branch: the script is real, the guard is real, git really resolves the branch, and the only thing controlled is *which checkout is being asked about*. One test omits the redirection on purpose, so something still proves the guard is wired to the real repository. Two mutations rather than one, because a positive check cannot detect a missing guard: deleting the guard fails four of seven, inverting it fails six — including "lets main through", which is what makes that direction non-vacuous.
+
+- **2026-08-01** — **The `.env` probe file is named per process, because the test writes into the *main* checkout.** That is the point of the fallback and it makes the file a shared resource the moment two worktrees run `pnpm test` at once: one suite's `afterEach` deletes the file the other is mid-way through reading, and it presents as a flaky assertion rather than as a collision. Exactly the render gate's fixed-port defect one layer down, and worth stating twice because the first instance was found by reasoning and this one by being asked the same question again.
+
+- **2026-08-01** — **README's status line was wrong for months and nothing could go red.** It said "Phase 0 (scaffold). The shelf renders, and it is empty" while all five phases were tagged, the tool ran against a real vault and the site was deployed — the same defect class G14 gates one file over, and the first thing a visitor would have read. `docs/progress.md`'s "Current state" table was stale the same way, saying the last green gate was G15 and that the mobile crash was unfixed, fifty lines above a narrative recording it closed; that one is worse, because CLAUDE.md sends every reader there first. **G14 covers CLAUDE.md's command lists, not README's**, and README's table had drifted to missing four scripts and five CLI commands. Filled in and pointed at the gated list rather than gated itself — a second gated copy of the same lists is a thing to keep in sync, and the owner should decide whether that trade is worth it.
+
+- **2026-08-01** — **The README fix introduced the defect the README fix was about, and it was caught in review.** The new status section claimed "269 tests across 34 files" — a hardcoded count, in the one file with no gate, inside the commit whose other half is about documented claims quietly ceasing to be true. The next test anyone adds makes it false and nothing goes red. Identical in shape to the "It said 'four' for a while after there were five" note already sitting in `gates.md`. Removed rather than gated: pointing at the scoreboard says the same thing and cannot rot. Worth logging because the mistake was made *while writing about the mistake*, which is the strongest argument in this repo for why review is not optional and why numbers belong in gate output rather than in prose.
+
+- **2026-08-06** — **Twenty-five gates, and not one of them asked whether the thing worked.** Every row above checks a *contract*: which frontmatter keys exist, what the public build ships, that the packer and the placer agree, that no test touches the network. Issue #63 was none of those. The metadata lookup refused five books in the real vault as "not the same book" while Google was holding three of them, and the whole scoreboard stayed green, because **recall is not a contract and nothing was watching it**. The gap is a category, not an oversight: contracts are cheap to gate because both sides are in the repo, and recall is not, because the right answer lives at a provider. That is exactly why it went unwatched for so long, and it is not a reason to leave it unwatched. G26 is the first row here whose expected answers — 255, 368, 262 — are facts about the world rather than about this code.
+
+- **2026-08-06** — **The corpus pins the refusals as hard as the finds, and that is not symmetry for its own sake.** The bug immediately before this one went the other way: a matcher accepting *Emotional Intelligence 2.0* for *The New Emotional Intelligence*, recorded in #62 with the instruction *"do not loosen it"*. A recall gate that only asserted positives would be passed by a matcher that says yes to everything — so the cheapest way to make G26 green would have been to reintroduce the defect it sits next to. Two of the five corpus entries exist to make that route red.
+
+- **2026-08-06** — **The issue's own root-cause list was 3 for 4, and the trace is what separated them.** Two causes were real and provable from source. A third — a filter or a `undefined` return reordering candidates — was written up as needing investigation, and did not exist: Google simply ranks the wrong book first, and the one filter that fired removed a genuine study guide. The issue reached that hypothesis by probing the API with a *shorter query than the code sends*, which returns different rankings. Worth logging because the wrong lead was the most specific-sounding item in the report, and a session that trusted it would have gone hunting through `looksDerivative` for a bug that was never there.
+
+- **2026-08-06** — **One `break` did two jobs badly, and the shape of the code is what hid it.** `stacks enrich` printed `6 with gaps` and then `would fill 3, 2 left alone` — five books out of six — because `enrichBook` returned `complete` for two situations that are not the same thing (*nothing was missing*, and *something was missing and none of it could be filled*), and a `case 'complete': break;` that did neither looked exactly like one that did both. G27 asserts the claim rather than the branch: every book the header counted appears in one line and one total, and no book with a gap comes back "nothing was missing". **The fix is structural rather than careful** — `reportEntry` returns a book's line *and* its total together, so there is no longer a way to write one without the other, and the compiler refuses a missing kind. Only the fold back into `complete` needs a gate, and that is what the second test is. Observed red by making exactly that mutation: two of five fixture books turn "complete" and the assertion names why.
+
+- **2026-08-06** — **A report is an instrument, and this one had already misled a decision.** Issue #62 read *"7 with gaps, would fill 1, 5 left alone"* off the output above and concluded a seventh book had fallen through the lookup. Nothing had; the arithmetic was the defect. Worth logging beside G26 because the two rows were found in the same investigation and are opposite failures: G26 is a tool that returned the wrong answer, G27 is a tool that returned a *true* answer about a smaller set than it claimed. The second is the harder one to notice, because every line it prints is correct. `docs/progress.md`'s oldest rule about instruments — *a probe that silently did nothing would be worse than no probe* — applied to a summary line.
+
+- **2026-08-02** — **G1 caught the new script before any of this was committed**, which is the second time the reverse-assert has earned its keep on a change nobody thought was about the adapter: `scripts/make-readme-image.ts` arrived importing `node:fs/promises` with no allowlist entry, exactly as `scripts/worktree.ts` did. One line added, with the justification that matters — its only input is `artifacts/shelf.png` and it never learns what a book is.
+
+- **2026-08-08** — **G26 was replaying refusals as answers, because its corpus had been captured without a Google API key.** `scripts/capture-lookup-recall.ts` read `process.env.GOOGLE_BOOKS_API_KEY` directly and never called `loadEnv()`, unlike the CLI and the deploy — so the invocation printed in its own header, with the key sitting in `.env` where every other command finds it, tripped the script's own *"the corpus will be wrong"* warning and recorded a corpus in which Google 429s. The gate then went green against it for two days. **A quota error is not a negative result**, and one had already been written down as fact: *From Zero to Profit with AI* was pinned `no-match` — "genuinely absent from both providers" — while Google held it all along at 172 pages. That is the confusion [ADR-0005](../adr/0005-three-metadata-providers.md) exists to prevent, arriving through the fixture rather than through the code. The lesson is narrower than "load your env": **a gate whose fixtures are captured by a script is only as true as that script's environment, and nothing was checking it.** The warning existed and was printed to a terminal nobody was reading. Fixed in `0092de0`; the corrected expectation is the only one of five that moved, which is why it went unnoticed.
+
+- **2026-10-17** — **G26 pins the ranking rule, not the providers' answers on one day, so its corpus is refreshed by splicing.** A full re-capture during #393 moved 12 Google, Apple and O'Reilly entries and turned G26 red on *From Zero to Profit with AI* with no code change: provider drift, read as a defect. The corpus is now frozen, and a URL change is refreshed with `scripts/capture-lookup-recall.ts --only <url-prefix>`, which re-captures that prefix and replays every other entry from the committed file, refusing any unselected URL it does not hold rather than fetching it. A bare run re-asks every provider and is no longer the refresh. [ADR-0112](../adr/0112-g26-pins-the-ranking-rule.md), [#395](https://github.com/mephistopheles4/stacks/issues/395).
+
+- **2026-08-22** — **The ticket's proposal was right and its stated reason was false, and only a measurement told them apart.** [#152](https://github.com/mephistopheles4/stacks/issues/152) argued for deleting `--skip-gates` on the grounds that its *"only plausible use … is already served better by `--dry-run`, which runs all four gates."* ⚠️ **This repo's own log is the counter-example**: `docs/progress.md` records `pnpm deploy:site --dry-run --skip-gates` as how a planted red was observed against the real 41-book `dist/`, and `--dry-run` alone cannot serve that loop, because it *runs* the suite the loop exists to skip. The two flags composed. That evidence very nearly bought a narrowed flag, a doc paragraph and a gate to hold it — until the four gates were timed: **11.9s + 0.7s + 3.3s + 19.1s ≈ 35 seconds.** The niche was real, and it was worth 35 seconds rather than a permanent override on the publish path. **The lesson is not "the ticket was wrong"** — the ticket's conclusion survived. It is that a premise phrased as *already served better* is a claim about cost, and nobody had measured the cost in the 21 days the flag existed, including the three passes that verified the flag itself. ⚠️ **This entry said *eight months* until it was checked** — an unmeasured duration written five times across an ADR, a gate register, a spine, a script comment and this bullet, in the same commit whose lesson is that unmeasured costs get asserted. Caught in review before it was pushed; logged rather than quietly fixed, because the number was invented in the act of complaining that nobody measures.
+
+- **2026-08-23** — **Two gates were an accidental style checker, and the remedy was unreachable from the red.** G14 (`commands`) and G45 (`deploy-flags`) read source as text, and both hardcoded a single quote character in their extraction regexes. A contributor who hand-wrote `.command("add")` or `process.argv.includes("--fast")` got *"extraction found 0 CLI subcommands"* — on G45, that plus a count mismatch one clause down — a message naming neither the quote nor the line. **The vacuity floors worked exactly as designed, and that is the point**: they catch a regex that stopped matching, and they cannot say why it stopped, so the loud red was loud about the wrong thing. [#231](https://github.com/mephistopheles4/stacks/issues/231) measured both breaks under a whole-tree reformat; [#229](https://github.com/mephistopheles4/stacks/issues/229) then cited this pair as its measured warrant for admitting style rules at all — the repo already *had* a quote rule, enforced by two gates that never meant to have one and phrased as an extraction failure, which is the worst of both: a style rule with no config to read and no remedy in its own message. Widened to `['"]` on either side, the idiom nine other patterns in `gates/` already used. ⚠️ **Each plant asserts both forms, not only the one that was blind**, because every live call in the tree is single-quoted: a regex *flipped* to `"` rather than widened is exactly as green against a double-quote-only plant as a widen, and blind to all seven of G14's real reads — the repair's own success criterion satisfiable by its own inverse. **The general shape is an extraction pattern that pins an incidental property of the text it reads.** The quote was never part of the shape either gate asserts, and pinning it quietly turned *"which flags does the deploy read"* into *"which quote did you use"*.
+
+- **2026-08-22** — **The pinning mechanism existed, was proven, and was aimed one flag to the left.** G17 (`deploy-branch`) has asserted since 2026-08-01 exactly which spellings override the branch guard — `--any-branch` yes, `--any` / `--branch` / `--anybranch` / `--any_branch` no — an unusually careful piece of work about a flag that refuses to *publish a branch*. The flag that skipped the **entire four-gate contract** and then published was covered by nothing, and `git grep` found it in two lines of one file. Worth logging because the gap was not a missing capability or a hard problem: it was a row scoped to the flag somebody happened to be thinking about. **G45 is that mechanism aimed at the roster instead of at one flag**, which is the class rather than the instance — the same lesson this file already logs from the other direction on 2026-08-19, *a review names an instance; the repair must cover the class.*

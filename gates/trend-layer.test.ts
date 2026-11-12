@@ -35,7 +35,7 @@
  *
  * ⚠️ **Gate slugs are read here rather than from G19.** The two read the same
  * three tables of the same file, so they cannot disagree without both failing;
- * G19 carries a live `gated` finding in `docs/gate-register.md` and this ticket
+ * G19 carries a live `gated` finding in `docs/log/2026-08-20-gate-register.md` and this ticket
  * does not touch it. Read **by header name** and never positionally — that
  * finding is precisely a positional read.
  *

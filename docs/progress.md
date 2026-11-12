@@ -2,499 +2,85 @@
 
 **Read this first.** It is the only file that says where the project actually is.
 
-This is an **index, not a narrative**. One line per event, newest phase last.
-Gists and links — never restate the plan. If you find yourself explaining *what*
-a phase does here, it belongs in [`plan.md`](./plan.md) instead.
+This is an **index, not a narrative**. Say what holds now, link the rest, and never restate the plan: what a phase does belongs in [`plan.md`](./plan.md). Update it in the **same commit** as the gate it describes.
 
-Update it in the **same commit** as the gate it describes.
-
-**No live counts in Current state.** A book count is wrong again the next time
-anyone runs `stacks add`, and a stale number in the one file that claims to say
-where the project is costs more than it tells you. Name the command that answers
-instead. Counts *inside* a dated record — what an import added, how many books a
-phone was rendering when it died — are measurements and stay exactly as they are.
+**No live counts in Current state.** A book count is wrong again the next time anyone runs `stacks add`. Name the command that answers instead. Counts inside a dated record are measurements and stay as they are.
 
 ---
 
 ## Current state
 
+All five phases are green and tagged (`phase-0` to `phase-4`). The tool runs against the owner's real vault, not fixtures. The gate scoreboard is [`gates.md`](./gates.md); the history this file used to carry is in [`log/2026-11-12-progress-before-the-cleanup.md`](./log/2026-11-12-progress-before-the-cleanup.md).
+
 | | |
 | --- | --- |
-| **O'Reilly provider removed (#450), built, in review** | Its search has answered 401 to every anonymous request since June (#394), and every route to revive it was refused. Lookups go Open Library, then Google, with Apple for covers only; `oreilly.ts`, its three fixtures and G26's one recording are gone (18 recordings remain). `oreilly_ourn` and `cover_source: oreilly` stay as provenance on older notes and no provider writes them. [ADR-0147](./adr/0147-oreilly-is-removed.md) supersedes ADR-0038; the spec is [revision 4 on #450](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728372984). A cover added by hand needs `cover_source: unknown` written by hand. |
-| **Notice modals (#536), built, in review (PR #570)** | The Attribution link on the shelf and the Privacy link in the Ask drawer open their notice in one modal over the shelf, so the Ask chat and a held book survive; `/attribution` and `/privacy` stay as pages, with the type of both set at 18 px and 9.31:1 where the pages were 16 px and 6.30:1. The text exists once (`NoticeBody`, `AttributionNotice`, `PrivacyNotice`); the modal is `packages/site/src/notice/`, a tenth mutation scope. G35 reads the modal, the notice over the drawer and a held book, and the pages with JavaScript off; G61 reads two pages with a notice open against their twins; the `privacy` rule in G20 also reads the modal's panel; `scripts/phone-check.ts --notice <name>` is the owner's phone run. [ADR-0146](./adr/0146-the-notices-open-in-one-modal-over-the-shelf.md) records it, and [the spec](./spec/notice-modals.md) is revision 3. Waiting on the owner: the phone run and the screenshot review. |
-| **Mutation dry run on every pull request (#558), built, draft** | G70 (`mutation-dry-run`): a `mutation-dry-run` job in `gates.yml` runs `pnpm exec stryker run --dryRunOnly` on every event, with no filter, and is listed in the `gates` aggregator, so a spec that Stryker's sandbox breaks shows on the pull request that caused it and not in the next nightly. Observed red on a pull request: with `scripts/ask-status.ts` un-excluded on a throwaway branch ([#569](https://github.com/mephistopheles4/stacks/pull/569), run 42505624828) the job failed in 53 s on that spec alone. The structural gate (the issue's option 2) is not built and waits with the owner. [#558](https://github.com/mephistopheles4/stacks/issues/558) carries the record |
-| **Optional Plausible (#562), built, not deployed** | `PUBLIC_PLAUSIBLE_DOMAIN`, read once by `astro.config.mjs`, turns Plausible on for a build; unset is today's site. One module (`packages/site/src/analytics/`) starts the bundled tracker only on `stacks.aymandiab.com`, scrubs every URL to the seven campaign parameters, and sends `Book Picked Up`, `Book Opened` (each with the book's public id) and `Ask Opened`. G20 holds both CSP shapes by argument, `deploy:site` prints the state and checks the live `connect-src`, and a ninth mutation scope is declared ([ADR-0139](./adr/0139-optional-plausible-direct-to-plausible-io.md), [the spec](./spec/optional-plausible.md)). ⚠️ **Nothing is turned on:** the owner creates the Plausible site and its goals, sets the variable and deploys. |
-| **The closed book turns in your hand (#553), built, not deployed** | The closed rest a pickup lands on turns by a drag or the arrow keys. A back arrow by the title and "Close the book" at the foot of the page return an open book to it. The examining dialog is gone, the X sits at the top right, and the hint hides over an open book ([ADR-0138](./adr/0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md)). G35's examining checks moved onto the closed rest. The owner waived the Pixel run for this change |
-| **A picked-up book arrives closed (#531), built, not deployed** | A click picks a book up and it stops closed and cover-on; the visitor opens it by a click on it or the Open button, and the put-back X moved to the header ([ADR-0137](./adr/0137-a-picked-up-book-arrives-closed.md), [the spec](./spec/picking-up-closed.md)). G35 and G61 read it closed and open; `athanor run smoke` is green. ⚠️ **Not covered by a green pull request:** G61 skips them, so the closed book on the Pixel is `main`'s push run and the owner's `phone-check.ts --pickups 5` and `--turn 60` (it was `--examine 60` before #553). [The stop in the track](./log/2026-11-07-the-stop-in-the-pickup-track.md) |
-| **Ask the library (#532), built, not deployed** | The Worker (`packages/ask`), the drawer (`packages/site/src/ask`), the shelf seam, the CSP's two Turnstile entries, `/privacy`, `infra/`, `deploy:ask`, `evals:ask` and G69 (`one-ai-call`) are on the branch and green. The model searches with two tools ([ADR-0132](./adr/0132-the-model-searches-the-library-with-two-tools-and-the-catalogue-leaves-the-prompt.md)) and remembers two exchanges ([ADR-0130](./adr/0130-the-page-remembers-two-exchanges-and-sends-them-in-the-user-message.md)); the Workers plan is Paid ([ADR-0133](./adr/0133-the-ask-worker-runs-on-workers-paid-and-the-spend-limit-is-its-only-cap.md)). **Proved by throwaway-Worker runs on a test gateway** (S12): C20, C24 and C30, and the offline halves of the rest by tests. **Not passed, because each needs the live deployed Worker:** C1, C2 (the last full run was 27 of 34 and later runs were partial), C7, C13, C16's live part, C18 and C19's alert. Open items are listed at the top of S12. Waiting on the owner: S13 steps 8 to 11. The site must not go public until C7 passes ([the probe](./log/2026-11-05-ask-the-library-live-probe.md)) |
-| **Last green gate** | G66 (`control-characters`) — no tracked text file carries a C0 control character other than tab, LF and CR ([#426](https://github.com/mephistopheles4/stacks/issues/426)). A PowerShell double-quoted string reads `` `a `` as U+0007, so a code span written through one loses its backtick to a character that draws as nothing; three shipped with every gate green, the last in `scripts/lib/ignore-ghsas.ts`, fixed in the same change. Observed red on a BEL planted in `README.md`. ⚠️ **Text is every tracked path G13's `BINARY` list does not match**, so a binary with an unlisted extension reddens both rows |
-| **Before it, the audit pair** | G62 (`ignore-expiry`) and G63 (`ignore-fix-published`) — an `auditConfig.ignoreGhsas` entry cannot outlive its reason ([#405](https://github.com/mephistopheles4/stacks/issues/405), [ADR-0095](./adr/0095-a-comment-carries-the-date-and-an-ignore-expires-in-30-days.md)). G62 is offline: each entry's trailing comment carries a date and the entry fails on day 31. G63 is a step in the `audit` job that fails when npm publishes a stable version outside the advisory's affected range. ⚠️ **G63's I/O is verified by planting, not by a test**: GHSA-2v37-7h3g-55p8 (nanoid, fixed in 3.3.18) came back red and GHSA-vfj7-8cjw-p6xm (braces, no fix) green through the identical invocation, 2026-10-06. ⚠️ **The date is data in a comment**, so a parser reads raw lines and fails closed. |
-| **Before it** | G61 (`one-shadow-reader`) — on the default page, exactly one program reads the real-time shadow map, in at most 4 draws a frame, at the 50-book fixture and at a generated 300-book one; `?receivers=all` is the control and must come back red ([#381](https://github.com/mephistopheles4/stacks/issues/381), [ADR-0090](./adr/0090-real-time-shadows-are-the-default.md)). It lands with real-time shadows becoming the default for every visitor, because its contract is the default page. ⚠️ **It pins the configuration that survived on one phone, not survival**: the budget is the shape the Pixel 10 Pro XL survived plus room for one member, and what kills that phone's context is not known — a re-check with 2 programs at 53 sampling draws a frame survived, refuting the draw-count model ([ADR-0088](./adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)) — so another GPU, or another shape, could fail with nothing here going red. ⚠️ **Its first plant found a defect in its own hook**: a 300-book page ran past the frame cap, frame 0 — the shadow pass — was dropped, and the page read as books that had stopped casting. See [the log](./log/2026-09-25-real-time-shadows-by-default.md) |
-| **And before that** | G60 (`context-loss-fallback`) — a context lost while the shelf samples the shadow map rebuilds it painted, once, and the device remembers it for 30 days ([ADR-0091](./adr/0091-a-lost-context-falls-back-to-painted-shadows.md)); since review a program that will not link there does the same, where it used to halt the shelf on every load (item 9); eight staged failures run in `pnpm smoke:render`. ⚠️ **A shadow probe's loss falls back and writes nothing**: `?shadows=1&receivers=all`, the reproduction, dies on the Pixel where the shipped shelf survives, and until review a re-run of it painted that phone's plain page for 30 days. ⚠️ **A staged loss is not a driver's**: on the Pixel a real loss was refused a new context in 4 of 4 runs, so what works there is the record, on the next load. ⚠️ **That refusal left the page white** — Chrome paints a lost canvas it will not restore opaque white, and the page kept it for the failure sentence — so a notice now hides the canvas, and the fifth case stages the refusal and requires the canvas hidden; back on the phone the same real loss left the page dark, 27 of 255 where it had read 235 ([the white page after a refusal](./log/2026-09-25-a-lost-context-falls-back-to-painted.md#the-white-page-after-a-refusal)) |
-| **Earlier on** | G59 (`large-library-lit`) — a large library's bookcase must stand at least half as far above the room as the 50-book shelf's does, read off the rendered pixels by `pnpm smoke:render` ([#383](https://github.com/mephistopheles4/stacks/issues/383), [the log](./log/2026-09-25-a-large-library-renders-black.md)). ⚠️ **A 273-book library was a black page with every gate green**: the fog's range was a world-unit constant while the camera backs off with the bookcase, so 17 shelves sat wholly past its far edge and every book drew as the room colour. The range is now a multiple of the framing distance ([ADR-0092](./adr/0092-the-fog-range-is-measured-in-framing-distances.md)); a pinned diff of the 50-book fixture is unchanged on a desktop within the renderer's noise, and an upright phone loses the sliver of fog that had been reaching its shelf. ⚠️ **The gate plants the defect on every run** — the same library with the fog pulled over it through `?debug=` — and fails on the instrument if that plant does not read black. ⚠️ **The number collides with [#382](https://github.com/mephistopheles4/stacks/pull/382)'s G59 and G60**, knowingly: G19's gapless clause leaves this row no other number on `main`, and whichever merges second renumbers |
-| **Earlier** | G58 (`adr-index`) — `docs/adr/`'s record files are held to `docs/adr/README.md`'s index table: every record has exactly one row, and no number is carried twice among the files or among the rows ([#263](https://github.com/mephistopheles4/stacks/issues/263)). ⚠️ **It landed red on `main`**: 0083, 0084 and 0085 had each merged with no row, invisible to a reader of the index, and the rows are added in the same change. ⚠️ **Uniqueness, never contiguity** — 0071 has been missing since four sessions collided on it on 2026-08-23 and all moved off, so a gapless clause would be red on the tree as it stands; a gap is free and a duplicate is silent, and the index's own instruction no longer says *one past the highest*, which is the rule for a gate row and the one that walked four sessions into the pile-up. ⚠️ **It prevents none of those collisions**: every duplicate lived on an unmerged branch, and a merge-time check sees only the second to merge. What it buys is a silent landed collision turned into a late red, at the cheapest moment to rename |
-| **Earlier still** | G57 (`renovation-markers`) — every stamp in a floors file is compared at merge to an entry in `renovations.json` explaining it, so a counting rule that changes without a reason is a red pull request ([#227](https://github.com/mephistopheles4/stacks/issues/227), [ADR-0085](./adr/0085-a-renovation-is-declared-and-the-window-may-survive.md)). ⚠️ **The deploy was the other candidate and was rejected**: a refusal a written sentence clears is an override wearing a reason, which [ADR-0061](./adr/0061-the-mutation-floor-refuses-deploy.md) and [ADR-0068](./adr/0068-the-complexity-cap-only-falls.md) decline — and the objection binds hardest here, because a marker may now **preserve** the calibration window, so the sentence would move the number the deploy gates on. ⚠️ **It watches the reason and never the value**: ADR-0079 declined a gate over `fixtureHash` because the stamp pinned installed versions, a premise #342 removed, but re-deriving it still needs a full counting run — so the value stays unwatched at merge on cost rather than on that record's reason. ⚠️ **One class is uncheckable by construction** — a change that moves no stamp takes a free entry, and nothing can force one, because forcing means a comparison and there is nothing to compare |
-| **Earlier again** | G56 (`config-hash`) — `stryker.floors.json`'s `configHash` is compared to `configHashOf(strykerConfig)` at merge, and a forgotten refresh is a red pull request instead of an ambush at the next deploy ([#224](https://github.com/mephistopheles4/stacks/issues/224), [ADR-0079](./adr/0079-the-floors-stamp-is-compared-at-merge.md)). ⚠️ **The drift was never silent, and *not caught* and *not noticed* are different sentences** — `floorRefusals` refuses whatever is armed on a differing hash, because its `armed` predicate guards only the absent-hash branch, so the cost was that `pnpm deploy:site` stopped with a release in hand. It did so three times; the last blocked a deploy for **two days**, found by somebody trying to publish. ⚠️ **The remedy had to be built with the gate**: no `pnpm` command wrote the stamp, so the red would have named a hand-copied hash — `pnpm mutation:stamp` is that command, and a clause reads `package.json` so the message cannot outlive it. ⚠️ **`fixtureHash`'s value stays unwatched at merge and the gate says so**, G47's convention: [ADR-0079](./adr/0079-the-floors-stamp-is-compared-at-merge.md) declined it because the stamp then pinned *installed* versions, so a gate over it reddened on every Dependabot bump. ⚠️ **That premise is gone and the conclusion stands** — [#342](https://github.com/mephistopheles4/stacks/pull/342) took the three versions out of the digest, so nothing reddens on a bump now; re-deriving it still needs a full counting run, which a merge check will not do. **G57 watches its reason instead.** ⚠️ **The deploy print now names the stamp it is counting under**, which separates a restarted calibration window from a young one — both read `0 of 10 trees` since [#341](https://github.com/mephistopheles4/stacks/issues/341). It still cannot say *why* it moved; that is [#227](https://github.com/mephistopheles4/stacks/issues/227) |
-| **Earlier still again** | G55 (`pr-conventions`) — the pull request title and body are read on every `pull_request` event, including `edited`, and a non-conforming one refuses the merge ([#289](https://github.com/mephistopheles4/stacks/issues/289)). ⚠️ **The one string that reaches `main` was the one string nothing read**: this repo squash-merges with `squash_merge_commit_title: PR_TITLE`, so the title *is* the commit subject and the local one is discarded — and the convention was 58 of 58 correct on review attention alone. ⚠️ **A `commit-msg` hook was the wrong instrument, which is the finding rather than a preference**: it lints the subject the squash throws away, so it would leave the landed one unchecked while making the convention feel enforced. ⚠️ **`docs/gates.md` had already rejected this exact check** under *Not gated, deliberately*; the row is rewritten and the rebuttal is that **Clause A asks whether the remedy is reachable, not who typed the fault** — anybody with write access edits a title in one click, on a fork's pull request included. The branch half stays ungated on coverage. ⚠️ **The gate's own worst clause was a confident zero**: the `run:`-step sweep cleared a floor of eight while reporting nothing against the injection hazard planted in the very step the row is about. It lands with **[ADR-0082](./adr/0082-zizmor-lints-the-workflows.md)** — `zizmor` in the `audit` job, pinned exact, because one gate naming one file cannot hold a rule about every workflow added later |
-| **Further back** | G54 (`woodwork-readback`) — the woodwork configuration the shelf resolved is the configuration it reports, on every apply and not only when something moved. It lands with the species menu ([#306](https://github.com/mephistopheles4/stacks/issues/306), [the log](./log/2026-08-30-the-species-menu-and-the-read-back.md)), beside **G53** (`one-sheet`), which holds a default page to exactly one woodwork sheet. ⚠️ **Map [#280](https://github.com/mephistopheles4/stacks/issues/280) earned G54 three times and not one of the three was a change anybody made**: #284's duplicated `woodRes`, where `URLSearchParams.get` returns the first and the arm meant to render 512 differenced against itself at **0.000% every rung**; #298's `woodVary`, where `Number(null)` is `0` and not `NaN`, so an absent parameter passed a finiteness guard and resolved to off against a documented default of `1`; and #297's fibre, bound at 90° to its own figure and passing every whole-frame count. ⚠️ **All four existing `ApplyReport` categories are transitions**, and a transition cannot describe a configuration wrong from the first frame — so the report gained a fifth that states rather than diffs. ⚠️ **G53 would have asserted nothing a day earlier**, which is why it lands with the menu: one hard-coded sheet made the guarantee a tautology, and a tautology in this table reads as cover. ⚠️ **G52 was widened in the same commit** — its existence clause moved from `SHIPPED_SHEETS` to `ALL_SHEETS`, because a menu is exactly the way a committed file stops being pointed at |
-| **Further back still** | G52 (`sheet-size`) — no file under the site's public wood directory exceeds its long-edge or byte cap ([#302](https://github.com/mephistopheles4/stacks/issues/302), [the log](./log/2026-08-30-the-woodwork-is-rosewood.md)). ⚠️ **A whole asset class was outside every counter**: G15 (`cover-budget`) stages the fixture vault through `publish()` and measures what lands in `covers/`, and a file committed straight into `packages/site/public/` passes through none of that. ⚠️ **The cost is decode, not download** — `edge² × 4` bytes of RGBA, 4.0 MB at 1024 and **16.0 MB at 2048**, the arithmetic G15's own row records reaching the live site and killing a phone. ⚠️ **Neither cap is derived from what is in the directory today**, which would be a floor equal to a population: both were set against sheets that had not landed yet, and **both have since landed under them without either moving** — `dark_wood` at 53.2 KB and sapele's at 34.5 KB, which is the whole shape that derivation was for |
-| **Further back again** | G49 (`format`) — Prettier over code only, checked by a `style` job beside `audit`, with `pnpm format` as the whole remedy. ⚠️ **It reads 91 files and is blind to four**: Prettier has no parser for `.astro` and a directory sweep skips 979 lines — every stylesheet rule the site has — **silently, exiting 0**. The reformat is one commit, named by `.git-blame-ignore-revs`. Markdown and `fixtures/` are excluded, each for a measured reason ([ADR-0074](./adr/0074-prettier-formats-code-and-nothing-else.md)) |
-| **Further back yet** | G48 (`markdown`) — a pull request that breaks the documentation's shape turns the build red, with the fix command in the output. Three live defects existed that 45 gates could not see, all three repaired ahead of it by [#246](https://github.com/mephistopheles4/stacks/issues/246), so the row does not land red on its own day one. **The rule set is narrow and every choice is measured**: at default rules a fix pass changed 55 files, corrupted 11 issue references, stripped a documented separator from 16 code spans and renumbered a verbatim quotation — **with all 1055 tests green throughout** ([#251](https://github.com/mephistopheles4/stacks/issues/251), [#235](https://github.com/mephistopheles4/stacks/issues/235), [ADR-0075](./adr/0075-the-markdown-fix-flag-is-allowlisted.md)). ⚠️ **The allowlist could not be a config file** — a discovered `.markdownlint.jsonc` beats `--config`, `optionsOverride.config` and `overrides` alike, all three measured — so it is a **refusal** the fix command runs before touching a file, and the gate measures what the tool actually rewrites rather than declaring it. This is the first of the static-analysis rollout's four rows; the `style` job it creates will grow ESLint and Prettier beside it. The row before this one was G45 (`deploy-flags`) |
-| **And older** | G47 (`ignored-clones`) — `jscpd.floors.json`'s `ignoredLines` counters ↔ a real sweep of the tree, and its `duplicationHash` ↔ the jscpd actually installed. G43's shape applied to a second tool, at merge and for G43's reason. It lands with the **eight duplication trend series** and [ADR-0072](./adr/0072-a-clone-is-a-relation-between-two-places.md): a clone is a relation between two places, so duplication is measured per scope **and** whole-tree, and the eight scope samples deliberately do not sum to the ninth. ⚠️ **No duplication name joins `CAPPED_SERIES`** — [#258](https://github.com/mephistopheles4/stacks/issues/258) owns that, twenty records later, because `countedIn` is keyed on the whole roster. ⚠️ **Observed-red twice, and the second time the gate was wrong**; see [the log](./log/2026-08-23-the-suppression-that-suppresses-nothing.md) |
-| **Older still** | G46 (`lint`) — ESLint stops being a function inventory and starts being a linter. `pnpm lint` runs the type-checked recommended set, tuned to four repository idioms plus `switch-exhaustiveness-check`, over **every** `.ts` file including tests, and the new `style` job in `gates.yml` refuses a pull request on one finding. It found **33** on arrival across 19 files, **every one of which `pnpm typecheck` passes** — a floating promise and an unbound method among the **9** in `scene.ts`, which sits outside every mutation scope and every complexity scope. ⚠️ **A second config file, never a merge into the counter's**: flat config would put `projectService` on the complexity run and take it from 1.5s to 7.3s, of which **0.7s is 88 extra rules and 5.1s is the one option**. Counter timings either side, unchanged: 1.29s → 1.23s over `packages/core/src`, 2.04s → 2.06s over the tree. ⚠️ **`--fix` repaired 8 of the 33** — the *one documented command with a fix flag* rule was argued about style rules and does not carry to a correctness set ([#253](https://github.com/mephistopheles4/stacks/issues/253), [ADR-0076](./adr/0076-the-linter-is-type-aware-and-pinned.md)). The row before this one was G45 (`deploy-flags`), which landed with the deletion of `--skip-gates` |
-| **And older still** | G39 (`metrics-freshness`) — the trend record is fresh **per series**, or `pnpm deploy:site` refuses on any path that publishes and names which series is not (`--check-only` reports it instead; it uploads nothing). The refusal spends one anonymous fetch to tell *you have not synced* from *the nightly has stopped*. ⚠️ It was green for half an hour against a plant that deleted the refusal outright: the harness proves a run got past by letting it fail on the next check, so the exit code asserted nothing — see [the log](./log/2026-08-19-the-deploy-reads-the-record-and-refuses-per-series.md). ⚠️ Its spec said G38 in four places; that is the **fourth** wrong pre-allocated number in this effort |
-| **Stacked on it** | G40 (`action-pins`), G41 (`gate-register`) and G42 (`dependency-audit`) on `claude/mattpocock-skills-154-162-71abbe`, based on G39's branch — **three rows in one commit**, because `gate-register` shipped alone is red on every row and shipped against stubs is green over empty sections. Standalone it was deliberately red on G19's gapless check and on its own floor; **rebased onto G39 it is 795 of 795**. ⚠️ `gate-register`'s **first red was not planted** — G37 (`agents-import`) had landed out-of-band with no register entry, 37 entries against 38 rows. See [the log](./log/2026-08-20-the-register-gate-found-a-row-nobody-triaged.md) |
-| **And stacked on that** | G43 (`ignored-mutants`) on `claude/mattpocock-skills-154-163-07f854`, based on G42's branch — **the rollout's seventh and last row**, and — ⚠️ **until G56 (`config-hash`) landed** — the only row asserting a field of `stryker.floors.json`. G43 has the `ignored` counter; G56 has `configHash`, and `fixtureHash` is still asserted by nothing. The floors file lands with it: every scope **`unarmed`**, dated, `ignored` at 0, and one hash of the score-affecting Stryker configuration each CI run now stamps into its record. ⚠️ **Built is not armed and nothing here arms anything** — arming is a human judgement per scope after that scope's 20-run window fills, the windows start together, and there is no single moment at which the ratchet becomes armed. ⚠️ **The window starts at zero on landing**, because every record already on the branch predates the config stamp and an unstamped run cannot be shown to have been scored under these floors |
-| **What `deploy:site` refuses on the floors** | four things, with **no flag clearing any of them**: a breached floor, a declared scope with no entry, an entry naming no declared scope, and a run scored under a different configuration. The absence of an override is the design — deploy now carries two metric refusals, and one blanket flag reached for on the stale-record refusal would silently clear the floor as well ([ADR-0061](./adr/0061-the-mutation-floor-refuses-deploy.md)). ⚠️ **A *different* hash refuses whatever is armed; a *missing* one waits for a scope to be armed.** The second half is what stopped the very first deploy after landing from refusing on the eleven records that predate the stamp — teaching whoever hit it how to get past the new machinery. The configuration route stays shut either way, because the calibration window refuses to *derive* a floor from a run it cannot place |
-| **The register is gated by that branch** | `docs/gates.md` rows ↔ `docs/gate-register.md` sections, both ways and by count. **A new row lands with its entry or the build is red** — five verdicts, a date, an observed-red line, per [`CONTRIBUTING.md`](../CONTRIBUTING.md). ⚠️ The merged-verdict exemption names **ten** rows, not the one the spec specifies, and is reverse-asserted; the spec's own §4 already recorded the ten |
-| **Rollout numbering** | ⚠️ **Every row number pre-allocated by the after-the-scoreboard tickets is one low**, because `agents-import` took G37 out-of-band. **No number is reserved here** — `docs/gates.md` says why, two tables down: *"The number goes in when the row does."* Count the rows in that file at the tip you branch from, and cite slug and number together, never the number alone |
-| **Trend layer** | **live, and now twenty series** — the eight duplication series landed too. The cognitive four — `cognitive-functions`, `cognitive-mass`, `cognitive-mass-over-15`, `cognitive-max` — landed beside the cyclomatic four on the same cadence, with **its own denominator** ([#255](https://github.com/mephistopheles4/stacks/issues/255), [ADR-0073](./adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md), which carries the measurements). ⚠️ **`fixtureHash` changed once at adoption** — one hash over both counting rules — so both cyclomatic calibration windows restarted. Nothing armed, nothing refused. ⚠️ **`cognitive-max` joined `CAPPED_SERIES` on 2026-09-21** and the six duplication caps landed in `jscpd.floors.json` under `duplicationHash`, every one disarmed ([#269](https://github.com/mephistopheles4/stacks/issues/269)); arming is a later human judgement per series. `.github/workflows/metrics.yml` writes one `.prom` per run to the orphan **`metrics`** branch — `git fetch origin metrics` to read it. Its first nightly found a scope 6.45 points down on a false comment in the PR that built it; see [the log](./log/2026-08-19-the-first-nightly-caught-its-own-author.md). `pnpm trend:sync` is the reading half and is **built** — it replays the branch into a local Prometheus, folds surface D in, and brings up the page you read at <http://localhost:3000/d/stacks-trend-layer>, provisioned from [`grafana/`](../grafana); needs Docker, see [`commands.md`](./commands.md). The nightly also keeps its Stryker report now — both files as a 30-day workflow artifact, and the per-scope table plus where the survivors are in the run's job summary ([#243](https://github.com/mephistopheles4/stacks/issues/243)); its survivors are kept past those 30 days too, one `survivors/<timestamp>-<sha>.jsonl` a clean night on the orphan **`survivors`** branch with one summary line saying what moved ([#344](https://github.com/mephistopheles4/stacks/issues/344), [ADR-0117](./adr/0117-survivors-are-matched-by-content-and-recorded-on-their-own-orphan-branch.md), [the spec](./spec/survivor-record.md)) — built, and unproven until its first real nightly after merge |
-| **G6 has a second check** | G46 (`lint`) now overlaps G6 (`site-core-imports`) by decision: [#245](https://github.com/mephistopheles4/stacks/issues/245) enabled two lint rules over the site package and kept G6. No new row; the reasoning is on G6's row in [`gates.md`](./gates.md) |
-| **Now working on** | Map [#366](https://github.com/mephistopheles4/stacks/issues/366), picking a book up, built in four steps from [`docs/spec/picking-a-book-up.md`](./spec/picking-a-book-up.md). Step 1, the split gate ([#410](https://github.com/mephistopheles4/stacks/issues/410)), armed G2's Thoughts split before any extractor existed; step 2, the extractor ([#411](https://github.com/mephistopheles4/stacks/issues/411)), ships `## Thoughts` as `notes/<id>.json`; step 3, the held tier ([#412](https://github.com/mephistopheles4/stacks/issues/412)), stages a 1200px copy of each cover; see Phase 3 evidence below. Step 4, the motion ([#413](https://github.com/mephistopheles4/stacks/issues/413)), picks a book up in place of the card; see Phase 2 evidence. All four are built; what remains is step 4's first deploy and the owner's acceptance, on #413's first-deploy checklist. [#88](https://github.com/mephistopheles4/stacks/issues/88), [#78](https://github.com/mephistopheles4/stacks/issues/78) and [#50](https://github.com/mephistopheles4/stacks/issues/50) before it are closed and built. `gh issue list` is the only current answer to what is open |
-| **Queued** | whatever the closed maps left in fog — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s and [#88](https://github.com/mephistopheles4/stacks/issues/88)'s *Not yet specified*; [#78](https://github.com/mephistopheles4/stacks/issues/78)'s is empty by construction. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run |
-| **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
-| **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates` + CodeQL, no bypass |
+| **O'Reilly provider removed (#450), in review** | Lookups go Open Library, then Google, with Apple for covers only. `oreilly_ourn` and `cover_source: oreilly` stay as provenance on older notes and no provider writes them. A cover added by hand needs `cover_source: unknown` written by hand. [ADR-0147](./adr/0147-oreilly-is-removed.md); the spec is [revision 4 on #450](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728372984) |
+| **Notice modals (#536), in review (PR #570)** | The Attribution link on the shelf and the Privacy link in the Ask drawer open their notice in one modal over the shelf; `/attribution` and `/privacy` stay as pages. The text exists once (`NoticeBody`, `AttributionNotice`, `PrivacyNotice`); the modal is `packages/site/src/notice/`. G35, G61 and G20's `privacy` rule read it; `scripts/phone-check.ts --notice <name>` is the owner's phone run. [ADR-0146](./adr/0146-the-notices-open-in-one-modal-over-the-shelf.md), [spec](./spec/notice-modals.md). Waiting on the owner: the phone run and the screenshot review |
+| **Mutation dry run on every pull request (#558), draft** | G70 (`mutation-dry-run`): a `mutation-dry-run` job in `gates.yml` runs `pnpm exec stryker run --dryRunOnly` on every event and is listed in the `gates` aggregator. The structural gate (the issue's option 2) is not built and waits with the owner. [#558](https://github.com/mephistopheles4/stacks/issues/558) carries the record |
+| **Optional Plausible (#562), built, not deployed** | `PUBLIC_PLAUSIBLE_DOMAIN`, read once by `astro.config.mjs`, turns Plausible on for a build; unset is today's site. One module, `packages/site/src/analytics/`, starts the tracker only on `stacks.aymandiab.com`, scrubs every URL to the seven campaign parameters, and sends `Book Picked Up`, `Book Opened` and `Ask Opened`. [ADR-0139](./adr/0139-optional-plausible-direct-to-plausible-io.md), [spec](./spec/optional-plausible.md). ⚠️ **Nothing is turned on:** the owner creates the Plausible site and its goals, sets the variable and deploys |
+| **The closed book turns in your hand (#553), built, not deployed** | The closed rest a pickup lands on turns by a drag or the arrow keys. A back arrow by the title and "Close the book" at the foot of the page return an open book to it; the X sits at the top right; the hint hides over an open book. [ADR-0138](./adr/0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md) |
+| **A picked-up book arrives closed (#531), built, not deployed** | A click picks a book up and it stops closed and cover-on; a click on it or the Open button opens it; the put-back X is in the header. [ADR-0137](./adr/0137-a-picked-up-book-arrives-closed.md), [spec](./spec/picking-up-closed.md). ⚠️ **A green pull request does not cover it:** G61 skips pull requests, so the closed book on the Pixel is `main`'s push run and the owner's `phone-check.ts --pickups 5` and `--turn 60`. [The stop in the track](./log/2026-11-07-the-stop-in-the-pickup-track.md) |
+| **Ask the library (#532), built, not deployed** | The Worker (`packages/ask`), the drawer (`packages/site/src/ask`), the shelf seam, the CSP's two Turnstile entries, `/privacy`, `infra/`, `deploy:ask`, `evals:ask` and G69 (`one-ai-call`) are built and green. The model searches with two tools ([ADR-0132](./adr/0132-the-model-searches-the-library-with-two-tools-and-the-catalogue-leaves-the-prompt.md)), remembers two exchanges ([ADR-0130](./adr/0130-the-page-remembers-two-exchanges-and-sends-them-in-the-user-message.md)) and runs on Workers Paid ([ADR-0133](./adr/0133-the-ask-worker-runs-on-workers-paid-and-the-spend-limit-is-its-only-cap.md)). Proved by throwaway-Worker runs on a test gateway (S12 of [the spec](./spec/ask-the-library.md)): C20, C24 and C30, and the offline halves of the rest by tests. **Not passed, because each needs the live deployed Worker:** C1, C2, C7, C13, C16's live part, C18 and C19's alert; open items are at the top of S12. Waiting on the owner: S13 steps 8 to 11. **The site must not go public until C7 passes** ([the probe](./log/2026-11-05-ask-the-library-live-probe.md)) |
+| **Gates** | [`gates.md`](./gates.md) is the scoreboard, one row per rule. No number is reserved: a row's number is known only when it lands, so cite slug and number together, never the number alone. G46 (`lint`) overlaps G6 (`site-core-imports`) by decision: the two share lint rules, and no new row was added for the overlap |
+| **Trend layer** | Live. `.github/workflows/metrics.yml` writes one `.prom` per run to the orphan `metrics` branch (`git fetch origin metrics` to read it) and keeps its Stryker report as a 30-day artifact, with the per-scope table in the job summary; survivors are kept past 30 days as `survivors/<timestamp>-<sha>.jsonl` on the orphan `survivors` branch ([ADR-0117](./adr/0117-survivors-are-matched-by-content-and-recorded-on-their-own-orphan-branch.md), [spec](./spec/survivor-record.md)). `pnpm trend:sync` replays the branch into a local Prometheus and brings up the page at <http://localhost:3000/d/stacks-trend-layer>, provisioned from [`grafana/`](../grafana); it needs Docker, see [`commands.md`](./commands.md). Nothing is armed: arming a floor is a human judgement per series |
+| **Deploy refusals on the floors** | `pnpm deploy:site` refuses on four things and **no flag clears any of them**: a breached floor, a declared scope with no entry, an entry naming no declared scope, and a run scored under a different configuration. A *different* hash refuses whatever is armed; a *missing* one waits for a scope to be armed ([ADR-0061](./adr/0061-the-mutation-floor-refuses-deploy.md), [`commands.md`](./commands.md)) |
+| **Mobile crash** | Real-time shadows are the default ([ADR-0090](./adr/0090-real-time-shadows-are-the-default.md)). The Pixel 10 Pro XL loses its WebGL context when every book reads the shadow map and survives when only the bookcase's program reads it, in 2 draws at every library size, under PCF only ([ADR-0088](./adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)). What kills it is not known, so G61 (`one-shadow-reader`) pins the configuration that survived, not survival. The band the books stopped receiving is painted onto each face-out cover ([the cover shade](./log/2026-09-24-the-cover-shade.md)). A context lost while sampling rebuilds the shelf painted and the device remembers it for 30 days ([ADR-0091](./adr/0091-a-lost-context-falls-back-to-painted-shadows.md)); on this phone a real loss blocks the page, so what works is the record on the next load. ⚠️ Measured on one phone and one driver; `scripts/phone-check.ts` is the check a phone runs |
+| **Now working on** | `gh issue list` is the only current answer to what is open. Map [#366](https://github.com/mephistopheles4/stacks/issues/366), picking a book up ([spec](./spec/picking-a-book-up.md)), is built in four steps; what remains is step 4's first deploy and the owner's acceptance, on [#413](https://github.com/mephistopheles4/stacks/issues/413)'s first-deploy checklist |
+| **Queued** | Whatever the closed maps left in fog: ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s and [#88](https://github.com/mephistopheles4/stacks/issues/88)'s *Not yet specified*. [#62](https://github.com/mephistopheles4/stacks/issues/62) left the owner three `stacks enrich` commands to run |
+| **Decisions** | [`docs/adr/`](./adr/), one file each |
+| **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected: PR + `gates` + CodeQL, no bypass |
 | **Blocked on** | nothing |
-| **Mobile crash** | closed twice. Two separate bugs in August: 314 MB of texture (G15), then a driver that cannot sample a shadow map, answered by painting the shadows. **Since [#381](https://github.com/mephistopheles4/stacks/issues/381) real-time shadows are the default for every visitor** ([ADR-0090](./adr/0090-real-time-shadows-are-the-default.md)): the Pixel 10 Pro XL loses its context when every book reads the shadow map and survives when only the bookcase's program reads it, in 2 draws at every library size — what kills it is not known, since a re-check refuted the draw-count model — under PCF only ([ADR-0088](./adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)), and G61 (`one-shadow-reader`) holds that on the default page. On the phone that configuration held 120 s at 60 fps as `?shadows=1`, and then as the default page itself in four runs of four through `scripts/phone-check.ts`, with G61's counts green on the device, while `?receivers=all` still lost its context at 1.2 s. The band the books stopped receiving is painted back onto each face-out cover ([the cover shade](./log/2026-09-24-the-cover-shade.md)). **Painting is the fallback now**: a context lost while sampling rebuilds the shelf painted and the device remembers it for 30 days ([ADR-0091](./adr/0091-a-lost-context-falls-back-to-painted-shadows.md)); on this phone a real loss blocks the page, so what works is the record on the next load. ⚠️ Measured on one phone and one driver; `scripts/phone-check.ts` is the check a phone runs |
-| **Deployed** | <https://stacks.aymandiab.com> — Cloudflare Pages, `pnpm deploy:site` |
-| **Running against** | the owner's real vault, not fixtures — `pnpm stacks status` for the count |
-| **Enriched** | `stacks enrich` has run twice over the real vault (2026-08-10). 41 books: 40 filled, 1 refused as a mismatch, 1 no provider knows. Ids landed on 37 Google / 26 Open Library / 24 Apple / 2 O'Reilly, and 37 notes gained an `## About`. ⚠️ **The first pass wrote the wrong values and the vault was restored from a backup and re-run** — see [`docs/spec/README.md`](./spec/README.md); `mergeFields` was enforcing absent-only one layer too low, which disabled every per-field exception. A pre-pass copy is at `../Obsidian/stacks-backup-pre-enrich` |
-
-## Gate log
-
-| Phase | Gate | Status | Commit |
-| --- | --- | --- | --- |
-| 0 — scaffold | `stacks --help` lists commands · empty shelf renders · fixtures committed | ✅ green | tag `phase-0` |
-| 1 — data layer | `stacks build` → valid `library.json` · malformed skipped · 4 test cases | ✅ green | tag `phase-1` |
-| 2 — shelf | `pnpm smoke:render` → non-blank `artifacts/shelf.png` · 50 books · click opens card | ✅ green | tag `phase-2` |
-| 3 — public build | `--public` output has zero canary hits · share card reaches `dist/` | ✅ green | tag `phase-3` |
-| 4 — import | dedupe by ISBN then title+author · re-running is idempotent | ✅ green | tag `phase-4` |
-
-Every phase additionally requires `pnpm test && pnpm build` green.
-
-### Phase 1 evidence
-
-- `pnpm test` → 7 files, **62 tests** passed · `pnpm build` clean
-- `pnpm stacks build --vault fixtures/vault` → **8 books**, 2 warnings naming
-  `The Undelivered Manuscript.md` and `Untitled Import.md`, silent on
-  `On Reading Slowly.md`, exit 0 — matching `fixtures/README.md` exactly
-- Gate's four cases covered against **real captured** responses: ISBN hit,
-  fuzzy title, API miss, malformed frontmatter. No test touches the network.
-- End-to-end `stacks add 9781603580557` into a scratch vault: note written,
-  real cover downloaded, spine colour extracted, re-running deduped correctly.
-
-### Phase 2 evidence
-
-`pnpm smoke:render` green: 49 of 50 fixture books shelved (wishlist excluded),
-715 distinct colours, 40.1% non-background, and a click on a real book opened
-its card ("Ember Protocol: Notes on Craft"). Screenshot at `artifacts/shelf.png`.
-
-Aesthetics review came back with three directions, all applied: real bookcase
-feel (continuous fill at real proportions, not one sparse row per year),
-wishlist books stay off, and spine colour sampled from the cover's binding edge
-so it matches the real spine. See [`docs/adr/`](./adr/) for each.
-
-**2026-10-09 — the pickup tuner, split and styled**
-([#413](https://github.com/mephistopheles4/stacks/issues/413)): G64
-(`tuner-split`) and G65 (`styled-pane`), two new rows in `pnpm smoke:render`,
-each observed red before it passed — G64 by a static import planted in
-`boot.ts`, G65 on its first run, against a placeholder named `default` where
-Tweakpane looks for `plugin-default`, and again with both placeholders removed.
-The tuner is Tweakpane with essentials, lazy behind `?debug`, its CSS extracted
-from the packages' text at build time and loaded by `<link>`. ⚠️ The empty
-string's hash stayed in `style-src` with no placeholder on the page, so Astro
-writes it for a reason of its own and G65 is what pins it.
-
-**2026-10-09 — picking a book up**
-([#413](https://github.com/mephistopheles4/stacks/issues/413)): a click picks a
-book up and the card overlay retired. The Phase 2 click gate now reads "picks it
-up". G35 (`enhanced-card`) is reworded to the held page, its judging moved into
-`scripts/lib/pickup-gate.ts`, and it gains the open spread of the spec's §3.6,
-read from the scene at 1280×800: six books measured at 180.00°, left page within
-0.2 px of the block face, gutter 0.00 px. G61 (`one-shadow-reader`) gains a page
-with a book held: 1 program, 2 draws a frame, as #371 measured. Both observed red
-with four faults planted at once — the address carrying the book, the pages shown
-before the fade, the board resting at 165°, and the paper sheets built without
-`withoutShadowFetch`. Every third book of the 50-book fixture now carries
-invented Thoughts, so the render gate opens a page of them.
-
-**2026-10-10 — examining the held book**
-([#418](https://github.com/mephistopheles4/stacks/issues/418)): the page's
-control now closes the held book in your hand and lets you turn it, in place of a
-flat picture of its cover ([ADR-0109](adr/0109-the-held-book-is-examined-in-3d.md),
-superseding ADR-0052 in part). The rules are a pure module, `book-turn.ts`; the
-dialog stays a native `<dialog>`, now transparent. G35's viewer check is
-reworked: the width clause retires for the board at 0° ±0.5°, and turning, focus
-return and the emptied hand are added. Observed red with faults planted in the
-build: the Escape guard removed, no focus return, the closing tween off, a
-cut that leaves the dialog open, a static dialog name and a drag that turns
-nothing. The move-4 review then widened it: the tap and the button exits,
-pitch and Home, reduced motion, nothing fetched, a book with no cover, and a
-`cover` reading taken off the material so a blank cover is not the shelf copy. ⚠️ The planting caught the gate itself: the turning and emptied-hand
-readings were taken from whichever book was reported first, so a book picked
-second hid a failure — they are now carried from the book that ran them.
-
-**2026-10-10 — the pickup's move-4 review answered**
-([#413](https://github.com/mephistopheles4/stacks/issues/413)): a double
-put-back delivered before its popstate stepped back twice and off the site; one
-put-back now waits for its own step. G35 (`enhanced-card`) gains five clauses —
-focus unmoved by a pickup, both pages inside the desktop viewport, a book
-flagged with Thoughts opening to them, the enlarged cover falling back to the
-shelf copy when the held copy fails, and no cover path in the page's attributes
-— each planted red in `pickup-gate.test.ts`. The default page's script is
-190.3 KB gzipped against 163.6 KB on `main` at `d3916cd`, so GSAP's core,
-`CSS3DRenderer` and the pickup add 26.8 KB (+16%) for every visitor; the
-stylesheet fell from 1.9 KB to 1.8 KB with the card's rules.
-
-**2026-10-10 — where G60 and G61 run**
-([#427](https://github.com/mephistopheles4/stacks/issues/427)): `smoke:render` was 6 to 7
-minutes of every pull request, about four fifths of it G60 and G61 drawing in
-software on a runner with no GPU. A pull request now passes `--pull-request`,
-which skips both; they still run on every push to `main` and in `deploy:site`,
-and every `main` run finishes ([ADR-0108](adr/0108-g60-and-g61-run-after-merge-not-on-pull-requests.md)).
-The pull-request step measured 2m24s on Node 22 and 2m29s on Node 24, against
-5m42s and 6m59s. Observed red: an unknown argument exits 1 before the build.
-
-**2026-10-16 — the release-age window, stated**
-([#399](https://github.com/mephistopheles4/stacks/issues/399)): G67
-(`release-age`) holds `minimumReleaseAge: 10080` in `pnpm-workspace.yaml`,
-observed red on the real file before the key existed and again with `1440`
-planted. ⚠️ **A frozen install is held to the window**, so a lockfile entry
-under seven days old fails CI, and **an override inside the window fails too**.
-The hatch is `minimumReleaseAgeExclude`. Dependabot gained a seven-day
-`cooldown`, which security updates ignore. See
-[the log](log/2026-10-16-the-window-that-was-not-set.md).
-
-**2026-10-17 — the release-age window's side doors**
-([#459](https://github.com/mephistopheles4/stacks/issues/459)): G67 now also
-holds `minimumReleaseAgeIgnoreMissingTime: false`, `trustPolicy: no-downgrade`
-with three exact excludes, an integrity-only lockfile, wrangler pinned exactly and
-run through `pnpm exec`. ⚠️ **Two of the issue's premises were wrong**: the
-missing-time key does not stop git or tarball dependencies, and `pnpm dlx` does
-apply the window. See [the log](log/2026-10-17-release-age-side-doors.md).
-
-### Phase 3 evidence
-
-`pnpm gate:public` green: builds for real, then greps every text file that
-shipped for the canary, for vault note paths, and for `sourcePath` — 0 hits. It
-also fails if the canary is missing from the fixture vault, so it cannot pass
-vacuously. OG image 24.8 KB at 1200x630. 71 tests pass.
-
-Both gates were made to stage their own input: they previously fought over
-`packages/site/public/library.json`, so whichever ran last decided what the
-other tested. Verified passing back to back in either order.
-
-Since G20 the rules live in `scripts/lib/public-build.ts`, and
-`deploy:site` applies the same ones to the real build rather than its own weaker
-copy. The script still owns planting the canary and building from the fixtures.
-
-**2026-08-18 — the key trace, and the vacuous rule beside it**
-([#156](https://github.com/mephistopheles4/stacks/issues/156),
-[`docs/spec/trend-layer.md`](./spec/trend-layer.md) §5 (i) and (iii)). A new
-rule, `unknown-key`: every key on every shipped book is a named `BookRecord`
-field or one of two named derived ones (`id`, `coverAspect`). It exists because
-the `note-body` rule **cannot fire on a real-vault deploy** — it greps for a
-canary planted only in `fixtures/vault` — so invariant 2's real-build check was
-vacuous, which is now written down at `FORBIDDEN` and in `deploy.ts`'s header,
-where the comment had been claiming the pre-flight re-asserts "no note bodies".
-⚠️ **It checks key names, never values**: body text stuffed into `subjects`
-passes it, and the structural argument it asserts is a claim about the schema.
-G20 now plants that case rather than leaving it asserted — the canary inside
-`subjects` fires `note-body` and **not** `unknown-key`, which locates the
-boundary exactly: on a fixture build the grep of `library.json`'s contents
-catches body text in a permitted field, and on a real build that grep is the
-vacuous one. Neither check is the one a reader assumes.
-
-Planted red, observed twice. Patching `toLibraryBook` to ship
-`...keyIfPresent('narrator', 'A Narrator')` — the field-wired-through-the-seam
-case — made `pnpm deploy:site --dry-run --skip-gates` refuse over the real
-41-book `dist/`: *"[unknown-key] 1 key(s) on shipped books that no BookRecord
-field and no named derived key explains: narrator (first on "Team Topologies")"*.
-G30 went red on the same patch, which is the division of labour: **G30 catches
-the seam in CI, this catches the artifact.** G20 carries the permanent plant.
-Non-vacuity is `empty-library`'s, confirmed rather than assumed — G20 plants all
-three of its cases (no books, no `library.json`, unparseable) — and the clean
-path now prints `N distinct book key(s), every one named`, 13 on the fixture
-build and 41 books' worth on the real one.
-
-⚠️ The named-derived list is the weakenable part: an offending key is made to
-ship by adding its name there, red to green in a one-line diff that reads like
-documentation. Two entries, and the comment demands a why-sentence for a third.
-`gates/library-seam.test.ts` keeps its own copy of those two names rather than
-importing them, so that edit costs two files instead of one; drift between the
-copies fails in the safe direction either way. No `docs/gates.md` row — it is a
-clause in an existing pre-flight, under G20 — but the **lesson** is there, under
-*G2 in full*, where the canary rule's "cannot pass vacuously" is true of
-`gate:public` and false of the caller that publishes.
-
-**2026-08-22 — the `csp` rule, and no new row again**
-([#127](https://github.com/mephistopheles4/stacks/issues/127),
-[ADR-0065](./adr/0065-the-csp-is-generated-not-written.md)). Every built page
-carries a `Content-Security-Policy`, and the rule holds each one to the **whole**
-directive set in `CSP_DIRECTIVES`, by name and by source, hashes excluded. Per
-page, for the reason `robots` is per page. The clean path prints `2 page(s), every
-one policed to 7 pinned CSP directive(s), connect-src 'self'`. **The set is
-closed**: a directive outside it fails too, because a specific fetch directive
-overrides `default-src` for its own resource type. Six `csp` defects planted in
-G20, each firing that rule alone, and two more under `headers`, one per framing
-control; three existing fixtures needed the meta tag added or they double-fired,
-which is the maintenance cost of every rule that reads the built HTML.
-
-⚠️ **The first version pinned two directives and left four deletable**, and review
-caught it: `default-src 'none'`, `img-src`, `base-uri` and `form-action` could
-each have been dropped from `astro.config.mjs` with every gate green and the page
-pixel-identical, while `_headers` and ADR-0065 went on describing the policy they
-no longer had. **That is the issue's own failure shape inside the commit closing
-it** — and it recurred twice more: in this very entry, which described the narrow
-rule and quoted an observation string the code had stopped printing; and one
-level out, where the rule walked its own list and never looked at what *else* the
-policy declared, so `script-src-elem` — which takes precedence over `script-src`
-for `<script>` elements — would have widened it with every pinned directive still
-exactly right. **Three passes, and each one found that checking the named thing
-had missed the unnamed one.**
-
-⚠️ **The policy is a generated `<meta http-equiv>`, not a header** — Astro
-computes `style-src` hashes per page, and `/attribution` carries an inline
-`<style>` the index does not, so a hand-written copy in `_headers` is wrong for
-one page the day it is written and wrong for both the day a stylesheet crosses
-Astro's 4kB threshold. The rule therefore reads `dist/**/*.html`, and
-`pnpm smoke:render` — real Chrome, real HTTP — enforces the policy for free,
-which a `_headers` policy could never be, since Cloudflare Pages is the only
-thing that reads that file. `frame-ancestors` cannot ride in a meta tag, so
-`_headers` carries it as a policy of one directive beside `X-Frame-Options: DENY`
-— **disjoint from the generated policy rather than a second copy of it**, which is
-why a fuller header policy was refused; both framing controls are asserted.
-
-⚠️ **`script-src` names `https://static.cloudflareinsights.com`**, and the
-reasoning is in the log entry below rather than here: the live zone injects a Web
-Analytics beacon this repo does not contain, and the beacon reports
-**same-origin**, so `connect-src` was never the question. Refusing it is a real
-choice and not a no-op — the analytics would stop — but it is a policy file
-overriding a zone setting for no privacy gain, and the dashboard is where that
-belongs. Pinned as a set so a second third-party origin cannot arrive unnoticed.
-
-**2026-10-09 — the Thoughts split, armed before the extractor**
-([#410](https://github.com/mephistopheles4/stacks/issues/410)): G2 extended and
-two inspector rules under G20, no new row — see
-[*The Thoughts split, armed before the extractor exists*](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
-
-**2026-10-09 — the Thoughts extractor**
-([#411](https://github.com/mephistopheles4/stacks/issues/411)): `## Thoughts`
-ships as `notes/<id>.json` in both of `publish()`'s modes; G2's presence half armed, G5, G11,
-G20 and G30 extended, `gate:public` checks presence and vacuity — same section
-of [`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
-`notes-shape` refuses comment and declaration markers (owner decision), and the
-review's leak through a lone CR or line separator is closed with the shapes it
-found; both in that section. After a second round found another shape, the owner chose an allowlist
-([ADR-0106](./adr/0106-thoughts-ship-only-plain-prose.md)): only plain prose ships, and the gates follow
-the stage's off switch so a takedown deploy can run.
-
-**2026-10-10 — the Thoughts extractor, rebuilt on a CommonMark parser**
-([#411](https://github.com/mephistopheles4/stacks/issues/411),
-[ADR-0107](./adr/0107-thoughts-are-read-by-a-commonmark-parser.md)): the section
-is read through `micromark`'s tokenizer and ADR-0106's allowlist applies to its
-tokens. Spec §3.1.4's named cases were each observed red against a stub first.
-`notes-shape` gains the twin of the extractor's output check under G20 — same
-section of [`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
-Two environment findings, both measured:
-
-- **Vitest loaded `micromark`'s `development` build.** Vite adds a
-  `development` condition and Vitest passes it to every worker as
-  `--conditions`; inside a test, `import.meta.resolve('micromark')` answered
-  `dev/index.js`. Setting `ssr.resolve.conditions` did not remove it, because
-  Vitest merges its defaults into the list, so `vitest.config.ts` filters the
-  resolved list in a `configResolved` plugin. A test now asserts the suite
-  runs the default build, as the CLI does. ⚠️ **The mutation run has its own
-  config**, `vitest.stryker.config.ts`, which first lacked the plugin: its dry
-  run loaded the development build, the load check withheld every section,
-  and G2 failed before a mutant ran. Both configs now import the plugin from
-  `vitest.cli-conditions.ts`.
-- **The adapter checks at load which build resolved**, and withholds every
-  section when it is not the default one. A test runs the extractor in a
-  fresh Node under `--conditions=development` and sees every section
-  withheld; the default build is the only one that publishes.
-
-**2026-10-10 — round 4 of move 4 on #415, and the owner's caps.** The
-tokenizer's cost grows with the square of some shapes: a run of `*_` emphasis
-marks took 0.26 s at 10,000 code points, 0.9 s at 20,000 and 3.9 s at 40,000,
-and `behaviour-lens` measured minutes near the old 200,000 cap. Plain prose
-takes milliseconds at any size. The longest real note body is 2,768 code
-points and the longest `## About` 2,605. **Owner decision, from chat: the body
-cap is 20,000, and no description over 8,000 is written** (spec §3.1.3, D12).
-The round's other fixes withhold more, never less, and `notes-shape`'s twin
-moved with them — same section of
-[`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
-Three earlier commits on the branch changed a gate with `docs/gates.md` and not
-this file; their lines are the round-3 entry above and this one, since a
-pushed commit with two branches stacked on it is not rewritten. Measured
-read-only against the real vault, counts only: all 54 notes parse in 28 ms in
-total, the slowest in 3.5 ms, and every one reads as absent — the one note
-with a `## Thoughts` heading holds nothing that ships — so a deploy today would
-publish no notes file.
-
-**2026-10-10 — round 5 of move 4 on #415:** owner decision, from chat, "keep
-going"; fixes as spec §3.1.3's D13 to D16 and N75 to N79, gates as
-[`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists)'s
-round-5 bullet. Measured at the 20,000 cap in one process, seconds: closing
-brackets 1.83, nested brackets 1.26, `*_` 0.99, wide table header 0.57, table
-body cells 0.56, text then a closing bracket 0.54, footnote calls 0.32, mixed
-emphasis 0.26; backtick runs, bracket-paren pairs, mid-line opening brackets,
-autolink and angle openers, character references, image openers, nested list
-markers, tildes and equals, and a long link label each 0.03 or less.
-`behaviour-lens` measured on its own machine, round 6: `*_` 1.70, closing
-brackets 1.27, and one About write on a near-cap closing-bracket note 4.6,
-since the writer parses the note three times.
-
-**2026-10-10 — round 6 of move 4 on #415:** owner decision, from chat, "keep
-going once more"; fixes as spec D17 to D19 and N80 to N85, gates as
-`docs/gates.md`'s round-6 bullet.
-
-**2026-10-10 — the About writer simplified, and F1 closed**
-([#424](https://github.com/mephistopheles4/stacks/issues/424)): spec D20 to
-D27 and N86 to N94. A description is written as a quote, and a section holding
-an `About` heading or line withholds; the writer refuses four writes, not
-five, and no longer reads the Thoughts; reference links ship their label. G2
-plants a quoted description under a demoted heading — `docs/gates.md`'s #424
-bullet. Two findings, both measured:
-
-- **`micromark`'s development build traces characters as codes**, one
-  `consume: \`80\`` line each, so a search of its stderr for a word of the note
-  finds nothing whether or not the body was traced. N92 decodes the trace,
-  and a control through the same harness finds the canary in a parse's trace.
-- **A leading byte-order mark in a note body shifts every offset by one**:
-  `notesHeadingAt` answered 8 for a `## Notes` at 20, which would have put
-  `## About` under the owner's last line. It now refuses (N94).
-
-Measured read-only against the real vault, counts only, matching the spec's
-§2: 54 notes, 49 with a `## About`, one in the F1 layout, none with text under
-`## Thoughts`, none quoted, none with CRLF. The writer ran end to end on this
-Windows machine on an LF and a CRLF note, and refused both under a
-`development` condition with `DEBUG` set, the canary traced nowhere (#424).
-D25's Obsidian check was not taken before move 4, so D19 stays. The gate, the
-code and the records landed in separate commits on the branch, the records
-last; the squash-merge lands them as one. Move 4's first round added the
-`About` rule's reading after Obsidian's marks, and restored the cut refusals'
-shapes as a test of the quote.
-
-**2026-10-09 — the held tier, gated first**
-([#412](https://github.com/mephistopheles4/stacks/issues/412)): `orphan-held`,
-`held-oversize` and `held-metadata` under G20, `heldCover` in `foreign-cover`
-and `unknown-key`, `headers` requiring `/held-covers/*`, and `gate:public`'s
-held-tier vacuity, presence and filter checks, all observed red before any
-staging code; G5's ignore line armed as `it.fails` — see
-[*The held tier, gated before it is staged*](./gates.md#the-held-tier-gated-before-it-is-staged).
-Then the stage: a re-encoded, upright copy of every shelved cover over 512px,
-at most 1200px, named by `heldCover`, pruned per build; the enlarged-cover
-viewer shows it; G5 armed, G15 and G35's viewer check extended — same section.
-The stage's off switch, `PUBLISH_HELD_COVERS`, changed what `gate:public`
-asserts in a commit that touched `docs/gates.md` and not this file; its line is
-this one, since a pushed commit with a branch stacked on it is not rewritten.
-
-**2026-10-10 — round 1 of move 4 on #416:** `foreign-cover` judges a held path
-decoded, `held-metadata` reads IPTC, PNG text and a Photoshop block, the held
-size check reads a cap of its own, the held rules' words are pinned, and G35's
-viewer check reads `library.json` and both viewer paths — each planted red,
-same section's round-1 bullets. CodeQL's DOM-text alert on the viewer was
-answered by handing the held path over in memory. Measured on the real vault,
-read-only, before the first real deploy: a public build stages 36 held copies,
-6.67 MB, none carrying metadata, in 6.2 s (owner decision, from chat, to post
-the counts on #412).
-
-**2026-10-10 — round 2, the security pair on the fix diff:** owner decision,
-from chat, "run sécurité pair". `isSameOriginHeld` refuses spaces and controls,
-`held-metadata`'s observation names the five kinds it reads, and the takedown
-steps cover a single book made private — same section's round-2 bullets. The
-owner reports no access policy on the per-deployment addresses.
-
-### Phase 4 evidence
-
-`stacks import audible <export>` against a real Libation export: 22 records, 17
-added, 5 correctly matched against books already shelved — two of them separated
-only by a *long* subtitle, which needed a dedupe fix first. Re-running added 0
-and skipped 22, so the import is idempotent. The vault now holds 25 books, every
-one with cover art.
-
-The source is Audible/Libation rather than the brief's Audiobookshelf; see
-[ADR-0021](./adr/0021-audible-via-libation.md) for why. `importBooks` is source-agnostic — an ABS importer would
-need only a new mapper.
+| **Deployed** | <https://stacks.aymandiab.com>, Cloudflare Pages, `pnpm deploy:site` |
+| **Running against** | the owner's real vault, not fixtures; `pnpm stacks status` for the count |
+| **Enriched** | `stacks enrich` has been run twice over the real vault. A pre-pass copy of the vault is at `../Obsidian/stacks-backup-pre-enrich`; see [`docs/spec/README.md`](./spec/README.md) for the merge's absent-only rule |
 
 ## Environment findings
 
 | Finding | Status |
 | --- | --- |
 | Node / pnpm / git | ✅ Node 24.14.1, pnpm 11.18.0, git 2.55.0 (Windows) |
-| `@stacks/core` resolves under tsx + vitest + astro/tsc | ✅ verified |
-| Headless Chrome for Phase 2 | ✅ system Chrome present; use `channel: 'chrome'`, no download |
-| `.astro` files ARE typechecked, and are counted by nothing | ✅ since 2026-08-23: `astro check` runs inside `pnpm build` as **G50** (`astro-types`), `@astrojs/check@0.9.10` pinned exact on `packages/site` ([ADR-0077](./adr/0077-astro-check-is-the-checker-for-astro-files.md)). It could not run at all under TS 7; [ADR-0066](./adr/0066-typescript-6-until-7-1.md)'s pin to 6.0.3 is what makes it possible, and that ADR's own revisit at TS 7.1 would un-run it — asserted, not remembered. ⚠️ **Still keep logic in `.ts`**, for the reason that replaced the old one: every mutation scope and every complexity population globs `*.ts`, so logic in an `.astro` file earns no score and no series |
+| `@stacks/core` resolves under tsx, vitest, astro and tsc | ✅ |
+| Headless Chrome for Phase 2 | ✅ system Chrome; use `channel: 'chrome'`, no download |
+| **`.astro` files are typechecked and counted by nothing** | `astro check` runs inside `pnpm build` as G50 (`astro-types`), `@astrojs/check@0.9.10` pinned exact on `packages/site` ([ADR-0077](./adr/0077-astro-check-is-the-checker-for-astro-files.md)). It needs TypeScript 6.0.3, pinned exactly ([ADR-0066](./adr/0066-typescript-6-until-7-1.md)); the pin's revisit at TS 7.1 un-runs it, and a G50 clause reads the pin. ⚠️ **Keep logic in `.ts`**: every mutation scope and every complexity population globs `*.ts`, so logic in an `.astro` file earns no score and no series |
 | **`node -e` with ESM top-level await exits silently** | ⚠️ prints nothing, exit 0. Put scripts in a file and run with `pnpm tsx` |
-| **Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
-| **A worktree cut by anything but `pnpm worktree` has no `node_modules`** | ⚠️ an agent harness makes its own under `.claude/worktrees/` with a bare `git worktree add`, so every command fails with `'tsx' is not recognized`, which reads as a broken toolchain rather than a missing install. `pnpm install` in it first — that step, and printing which `.env` it reads, is the whole reason `pnpm worktree` exists |
-| Google Books unauthenticated | ⚠️ 429s on a shared quota — a bonus, never a dependable fallback |
-| **Open Library's bare `/api/books` answers 404; `/api/books.json` answers 200** | ⚠️ measured 2026-09-26 for every ISBN tried, with `/isbn/<isbn>.json` and `search.json` answering 200 through the identical request. The docs still show the bare path. The 404 was silent — `HttpGet` returns `undefined` for it as for a miss — so every ISBN lookup fell through to Google's fuzzy `q=isbn:` until the path moved ([ADR-0093](./adr/0093-open-library-isbn-lookups-ask-api-books-json.md)) |
-| **Fixture-capture scripts need the key in the *environment*** | ⚠️ `capture-lookup-recall.ts` read `process.env` without `loadEnv()`, so with the key only in `.env` it recorded a corpus of 429s and G26 went green against it. Fixed; the class is not — check any capture script's env before trusting what it wrote. See [`gates.md`](gates.md) |
-| **Zone bot protection can refuse the deploy check** | ⚠️ see below — the deploy still works, the *verification* does not |
-| **The scripts echo the commands they run** | ℹ️ since G24 — `gate:public` gained two `$ pnpm …` lines, `pnpm worktree` one. Nothing asserts on that stdout; checked |
-| **Stryker's default plugin glob loads nothing under pnpm** | ⚠️ both packages install and symlink correctly and the child runner process still reports *"no TestRunner plugins were loaded"*. Name the plugin: `plugins: ["@stryker-mutator/vitest-runner"]`. See [`spec/mutation-scoring.md`](./spec/mutation-scoring.md) §1 |
-| **TypeScript 7 broke Stryker twice, and one of them was invisible to a grep** | ℹ️ **history since [ADR-0066](./adr/0066-typescript-6-until-7-1.md) put the repo on 6.0.3** — kept because it is what the two workarounds were for, and what returns if the pin ever moves back. `@stryker-mutator/typescript-checker`'s peer range `">=3.6"` admits `7.0.2` and then fails at runtime, so it was not installed. Separately `@stryker-mutator/core`'s `ts-config-preprocessor.js` does a **dynamic** `await import('typescript')` and calls `ts.parseConfigFileTextToJson`, which TS 7 does not have — worked around by pointing `tsconfigFile` at a filename not in the project. ⚠️ **On 6.0.3 that second workaround inverts**: the function exists again, so an absent tsconfig is no longer harmless but a checker that cannot start. `tsconfigFile` is back to the real `tsconfig.json`; `checkers` stays `[]` **by decision now, not impossibility** |
-| **`process.chdir()` does not exist in a worker thread** | ⚠️ Stryker's vitest-runner hardcodes `pool: 'threads'`, and `packages/cli/src/env.test.ts` calls `chdir` ten times — so any mutation scope wide enough to pull that spec in dies at the **dry** run, before a single mutant. `vitest.stryker.config.ts` drops the one spec |
-| **A worktree installed with `pnpm add -w` alone has no `packages/site/node_modules`** | ⚠️ `pnpm install` in the worktree — `astro` and `three` are the *site package's* dependencies, so a root-only install leaves the toolchain looking fine and three things broken. **Measured** by moving that folder aside: `pnpm test` fails **8 spec files** (every one that imports `three`, 131 tests never run), `pnpm build` dies at `Cannot find module 'three'`, and Stryker's sandbox fails with *"Failed to load tsconfig 'astro/tsconfigs/strict'"*. **Stryker's is the one that misleads** — the other two name the missing module and this one names a tsconfig |
-| **A Stryker run that crashes leaves its sandbox behind** | ℹ️ `cleanTempDir: true` cleans after a run that *completes*; the two failed runs on 2026-08-18 each left a 3 MB `.stryker-tmp/sandbox-*`. Gitignored, so nothing notices — delete by hand. **It cannot pollute `pnpm test`**, measured by planting specs in a fake sandbox: `vitest.config.ts`'s includes are anchored at `packages/` and `gates/`, and a leftover sits under `.stryker-tmp/` |
-| **`promtool` rejects a naive concatenation of two `.prom` files, and it is the whole file that dies** | ⚠️ `# EOF` terminates an OpenMetrics document, so a second document after it is *"unexpected data after # EOF"* and **no block is written at all** — not a partial ingest. `docs/spec/trend-layer.md` §1 says `trend:sync` *"concatenates the files newer than what is stored"*, which is that exact shape. **Measured 2026-08-19** against `prom/prometheus:latest`: one record ingests (4 series); two joined naively fail; the same two with `# EOF` stripped from all but the last ingest as **two blocks**, timestamps intact. That is the join `trend:sync` has to do ([#158](https://github.com/mephistopheles4/stacks/issues/158)) |
-| **CRLF anywhere in a `.prom` file is a parse error** | ⚠️ *"invalid metric type \"gauge\r\""* — met by concatenating the records with PowerShell's `Set-Content`, not by the emitter, which writes a bare LF. Worth knowing before anything on Windows touches the record |
-| **Actions minutes are free here, and the 3,000/month figure does not apply** | ℹ️ `mephistopheles4/stacks` is **public**, and GitHub Actions on **standard** runners in a public repository is free with no minute quota — the 3,000 is the *private*-repo allowance on Pro. Both jobs use `ubuntu-latest`, which is standard. ⚠️ **This is a property of the repository's visibility, not of the workflow**: make the repo private and the nightly costs ~750 min/month, a quarter of that allowance, at which point the cadence becomes a real decision rather than a free one. `mutation-run-runtime` is the series that would price it |
-| **A GitHub Actions `schedule:` only ever fires from the default branch** | ℹ️ so `.github/workflows/metrics.yml`'s nightly, and `workflow_dispatch` on it, cannot be observed from a pull-request branch at all — the file has to be on `main` first. The emitter half is fully testable locally and was; the workflow half is observed after merge, by dispatch. Written down because "the workflow is untested" and "the workflow cannot be tested here" look identical in a PR |
-| **A check that only executes on `main` is a check no pull request can prove** | ⚠️ G17 (`deploy-branch`)'s real-checkout arm reddened `main` twice while no pull request could run it ([#270](https://github.com/mephistopheles4/stacks/issues/270)). Since [#321](https://github.com/mephistopheles4/stacks/issues/321) a designed stop gives it a pull-request twin, and what stays `main`-only is the one decision `--any-branch` skips. The mechanism, both incidents and what to do on a red `main` are on G17's row in [`gates.md`](gates.md) |
-| **`git checkout -- <path>` on a file only the working tree has is a no-op, and on a tracked one it discards uncommitted work** | ⚠️ cost a restore of `docs/gates.md` mid-session: reverting a planted defect took the real edits with it, because the plant and the work were both uncommitted. Commit before planting. The pathspec error for the untracked file was printed and scrolled past |
-| **`promtool` comes out of the Prometheus image, and needs `--entrypoint`** | ℹ️ the image's entrypoint is `prometheus`, so the backfill is `docker run --rm --entrypoint promtool prom/prometheus:<tag> tsdb create-blocks-from openmetrics …`. `pnpm trend:sync` takes both halves from one pinned tag on purpose ([ADR-0058](./adr/0058-the-trend-store-is-a-container.md)) — a `promtool` that disagrees with the server about block format fails as *the sync worked and the dashboard is empty*. ⚠️ **Set `--storage.tsdb.retention.time` too**: the default is 15 days and would delete a fourteen-day replay hours after it landed |
-| **A Cloudflare `HEAD` for a path this build does not have answers 200 with no `content-length`** | ⚠️ measured 2026-08-19 against the live origin: not a 404, and no size header. The cover comparison read that as `served === 0` and reported the cover stale — **pre-existing in `deploy:site`**, surfaced by the move into `lib/edge-probe.ts`, and now closed with a **third outcome**: such covers come back `uncomparable`, counted and named, never as zero bytes and never silently dropped. See [the log](./log/2026-08-19-the-reading-half-lands-and-a-count-that-said-three.md) |
-| **After a real context loss, Android Chrome blocks WebGL for the page, and a force-stop is what clears it** | ⚠️ measured on the Pixel 10 Pro XL, 2026-09-25: after `GPU process exited unexpectedly`, a new canvas in the same page is refused with `Web page caused context loss and was blocked` to at least +24 s, and a reload at about 9 s is refused too, while reloads at about 17 s and 73 s were served ([the log](./log/2026-09-25-a-lost-context-falls-back-to-painted.md)). **A run after a loss measures the block, not the shelf** — so `scripts/phone-check.ts` force-stops Chrome before every run, which is how the investigation's own harness got a clean page after each of its losses, and removes the lost-context record the loss left. `--keep` skips the force-stop, for looking rather than measuring |
-| Resolved versions | TS **6.0.3, pinned exactly** since [ADR-0066](./adr/0066-typescript-6-until-7-1.md) — was 7.0.2 · Vitest 4 · Astro 7.2.3 · three 0.185.1 · sharp 0.35 · Stryker 9.6.1 (pinned exactly) · Prometheus 2.55.1 (the trend store's image) |
+| **The Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
+| **A worktree cut by anything but `pnpm worktree` has no `node_modules`** | ⚠️ every command fails with `'tsx' is not recognized`, which reads as a broken toolchain. Run `pnpm install` in it first. A root-only install (`pnpm add -w`) also leaves `packages/site/node_modules` missing: `astro` and `three` are the site package's dependencies, so `pnpm test` fails the 8 spec files that import `three`, `pnpm build` dies at `Cannot find module 'three'`, and Stryker's sandbox fails with *"Failed to load tsconfig 'astro/tsconfigs/strict'"*, which names a tsconfig and misleads |
+| Google Books unauthenticated | ⚠️ 429s on a shared quota: a bonus, never a dependable fallback |
+| **Open Library's bare `/api/books` answers 404; `/api/books.json` answers 200** | ⚠️ the docs still show the bare path. The 404 is silent (`HttpGet` returns `undefined` for it as for a miss), so every ISBN lookup would fall through to Google's fuzzy `q=isbn:`. [ADR-0093](./adr/0093-open-library-isbn-lookups-ask-api-books-json.md) |
+| **Fixture-capture scripts need the key in the *environment*** | ⚠️ a script that reads `process.env` without `loadEnv()` records a corpus of 429s when the key is only in `.env`, and G26 goes green against it. Check any capture script's env before trusting what it wrote. See [`gates.md`](gates.md) |
+| **Zone bot protection can refuse the deploy check** | ⚠️ see *The deploy check and the zone*, below: the deploy works, the *verification* does not |
+| **The scripts echo the commands they run** | ℹ️ `gate:public` prints two `$ pnpm …` lines and `pnpm worktree` one. Nothing asserts on that stdout |
+| **Stryker's default plugin glob loads nothing under pnpm** | ⚠️ the child runner reports *"no TestRunner plugins were loaded"*. Name the plugin: `plugins: ["@stryker-mutator/vitest-runner"]`. See [`spec/mutation-scoring.md`](./spec/mutation-scoring.md) §1 |
+| **Stryker's TypeScript checker is not installed** | ℹ️ `@stryker-mutator/typescript-checker`'s peer range `">=3.6"` admits TypeScript 7.0.2 and then fails at runtime. `tsconfigFile` is the real `tsconfig.json`; `checkers` stays `[]` by decision ([ADR-0066](./adr/0066-typescript-6-until-7-1.md)). On TS 7 a tsconfig filename not in the project had been the workaround for `@stryker-mutator/core`'s dynamic `import('typescript')`, which calls `ts.parseConfigFileTextToJson`; on 6.0.3 that function exists again and an absent tsconfig is a checker that cannot start |
+| **`process.chdir()` does not exist in a worker thread** | ⚠️ Stryker's vitest-runner hardcodes `pool: 'threads'`, and `packages/cli/src/env.test.ts` calls `chdir` ten times, so any mutation scope wide enough to pull that spec in dies at the **dry** run. `vitest.stryker.config.ts` drops the one spec |
+| **A Stryker run that crashes leaves its sandbox behind** | ℹ️ `cleanTempDir: true` cleans after a run that *completes*; a failed one leaves a 3 MB `.stryker-tmp/sandbox-*`. Gitignored, so nothing notices: delete it by hand. It cannot pollute `pnpm test`: `vitest.config.ts`'s includes are anchored at `packages/` and `gates/` |
+| **`promtool` rejects a naive concatenation of two `.prom` files, and the whole file dies** | ⚠️ `# EOF` terminates an OpenMetrics document, so a second document after it is *"unexpected data after # EOF"* and **no block is written**. Strip `# EOF` from all but the last file and the blocks ingest with timestamps intact; that is the join `trend:sync` does ([#158](https://github.com/mephistopheles4/stacks/issues/158)) |
+| **CRLF anywhere in a `.prom` file is a parse error** | ⚠️ *"invalid metric type \"gauge\r\""*, met by concatenating records with PowerShell's `Set-Content`. The emitter writes a bare LF |
+| **`promtool` comes out of the Prometheus image, and needs `--entrypoint`** | ℹ️ the image's entrypoint is `prometheus`, so the backfill is `docker run --rm --entrypoint promtool prom/prometheus:<tag> tsdb create-blocks-from openmetrics …`. `pnpm trend:sync` takes both halves from one pinned tag on purpose ([ADR-0058](./adr/0058-the-trend-store-is-a-container.md)): a `promtool` that disagrees with the server about block format fails as *the sync worked and the dashboard is empty*. ⚠️ Set `--storage.tsdb.retention.time` too: the default is 15 days and would delete a fourteen-day replay hours after it landed |
+| **Actions minutes are free here** | ℹ️ `mephistopheles4/stacks` is public, and Actions on standard runners in a public repository has no minute quota. ⚠️ That is a property of the repository's visibility: made private, the nightly costs ~750 min/month against the 3,000 allowance on Pro, and the cadence becomes a real decision. `mutation-run-runtime` is the series that would price it |
+| **A GitHub Actions `schedule:` only fires from the default branch** | ℹ️ `.github/workflows/metrics.yml`'s nightly, and `workflow_dispatch` on it, cannot be observed from a pull-request branch: the file has to be on `main` first. The emitter half is testable locally; the workflow half is observed after merge, by dispatch |
+| **A check that only executes on `main` is a check no pull request can prove** | ⚠️ G17 (`deploy-branch`)'s real-checkout arm has a pull-request twin through a designed stop, and what stays `main`-only is the one decision `--any-branch` skips. The mechanism and what to do on a red `main` are on G17's row in [`gates.md`](gates.md) |
+| **`git checkout -- <path>` discards uncommitted work on a tracked file, and is a no-op on one only the working tree has** | ⚠️ reverting a planted defect takes the real edits with it when the plant and the work are both uncommitted. Commit before planting |
+| **A Cloudflare `HEAD` for a path this build does not have answers 200 with no `content-length`** | ⚠️ not a 404 and no size header. The cover comparison reports such covers `uncomparable`, counted and named, never as zero bytes and never silently dropped. See [the log](./log/2026-08-19-the-reading-half-lands-and-a-count-that-said-three.md) |
+| **After a real context loss, Android Chrome blocks WebGL for the page, and a force-stop clears it** | ⚠️ on the Pixel 10 Pro XL, after `GPU process exited unexpectedly` a new canvas in the same page is refused (`Web page caused context loss and was blocked`) for at least 24 s, and a reload at about 9 s is refused too ([the log](./log/2026-09-25-a-lost-context-falls-back-to-painted.md)). **A run after a loss measures the block, not the shelf**, so `scripts/phone-check.ts` force-stops Chrome before every run and removes the lost-context record the loss left; `--keep` skips the force-stop, for looking rather than measuring |
+| Resolved versions | TypeScript 6.0.3 pinned exactly · Vitest 4 · Astro 7.2.3 · three 0.185.1 · sharp 0.35 · Stryker 9.6.1 pinned exactly · Prometheus 2.55.1 (the trend store's image) |
 
-### The deploy check could not read the site
+### The deploy check and the zone
 
-**2026-08-03.** `deploy:site` uploaded correctly and then could not confirm what
-the site was serving, because the zone answered every automated request with a
-Cloudflare challenge — `403`, `Cf-Mitigated: challenge`. Cleared by allowing
-"definitely automated" traffic; the check reads the site again. The code that
-came out of it is [ADR-0027](./adr/0027-deploy-check-reports-refusal.md), and it
-is deliberately not specific to any of this.
+When the zone answers automated requests with a Cloudflare challenge (`403`, `Cf-Mitigated: challenge`), `deploy:site` uploads correctly and then cannot confirm what the site is serving. Allow "definitely automated" traffic and the check reads the site again. The check reports the refusal instead of waiting it out ([ADR-0027](./adr/0027-deploy-check-reports-refusal.md)). Four things to know:
 
-Four things worth keeping, none of which are guessable from the symptom:
-
-- **Images were exempt, so the loud part of the output stayed green.** A run
-  makes one HTML request and thirty-odd cover requests; only the HTML one was
-  challenged. `.json` was challenged too, `.png` and `.jpg` were not.
-- **It failed in the vocabulary of its own false positive.** The refusal
-  surfaced as "serving a build with no stamp", which reads exactly like the edge
-  propagation delay the check is built to wait out — so it looked like something
-  to ignore. That is why it went unnoticed, and why the fix was to make the
-  check distinguish the two rather than to change any setting.
-- **A DNS change the day before was the obvious suspect and was not the cause.**
-  `stacks.aymandiab.com` resolves to the same edge addresses as the root domain
-  rather than the Pages range, so it is proxied through the zone — which is what
-  makes zone rules apply at all, and is the necessary condition. But that was
-  already true: `deploy.ts` records that the zone overrides this build's
-  `Cache-Control`, which only happens through a proxy, and this file records
-  `X-Robots-Tag` being read off a live response, which a challenge would have
-  prevented. A setting changed, not the routing.
-- **Only the zone can date it.** Security → Events names the service that
-  mitigated a given request, and the account Audit Log says who changed what and
-  when. Nothing in this repository can see either — the same blind spot as the
-  zone's cache TTL.
+- **Images are exempt, so the loud part of the output stays green.** A run makes one HTML request and thirty-odd cover requests; only the HTML one is challenged. `.json` is challenged too, `.png` and `.jpg` are not.
+- **A refusal reads like the edge propagation delay the check waits out.** It surfaces as "serving a build with no stamp". The check distinguishes the two rather than relying on a setting.
+- **A DNS change is not the first suspect.** `stacks.aymandiab.com` is proxied through the zone, which is the necessary condition for zone rules to apply at all; a setting changed, not the routing.
+- **Only the zone can date a change.** Security → Events names the service that mitigated a request, and the account Audit Log says who changed what and when. Nothing in this repository can see either.
 
 ## The log
 
-One line per episode, newest last. The narrative lives in [`log/`](./log/) —
-one file per investigation, which is what "index, not a narrative" above has
-always asked for and what this file stopped being at about 400 lines.
-
-Dates are when the entry first appeared in this file, per `git log`. Three
-episodes were written up out of sequence; they are listed by date here, so
-"newest last" is true of the list rather than merely claimed by it.
+One line per episode, newest last. The narrative is one file per investigation in [`log/`](./log/); add a line here and leave the narrative there. Phase A's open items are listed at the end of [its log](./log/2026-07-31-phase-a-invariant-scoreboard.md).
 
 - 2026-07-31 — [Since the phase gates](./log/2026-07-31-since-the-phase-gates.md)
-- 2026-07-31 — [Phase A — invariant scoreboard](./log/2026-07-31-phase-a-invariant-scoreboard.md) — **three items still open**
-- 2026-08-01 — [The mobile crash — G15](./log/2026-08-01-the-mobile-crash-g15.md) — closed; the longest thread here
+- 2026-07-31 — [Phase A — invariant scoreboard](./log/2026-07-31-phase-a-invariant-scoreboard.md)
+- 2026-08-01 — [The mobile crash — G15](./log/2026-08-01-the-mobile-crash-g15.md)
 - 2026-08-01 — [Worktrees, and the deploy guard that follows from them](./log/2026-08-01-worktrees-and-the-deploy-guard-that-follows-from-them.md)
 - 2026-08-03 — [A test had been calling the internet for months — G21](./log/2026-08-03-a-test-had-been-calling-the-internet-for-months-g21.md)
 - 2026-08-03 — [Cover acquisition — G22](./log/2026-08-03-cover-acquisition-g22.md)
@@ -509,71 +95,58 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-08-08 — [The update that reported success and changed nothing](./log/2026-08-08-the-update-that-reported-success-and-changed-nothing.md)
 - 2026-08-08 — [The gaps the owner had always noticed](./log/2026-08-08-the-gaps-the-owner-had-always-noticed.md)
 - 2026-08-08 — [The collisions, and the gate that can finally see them](./log/2026-08-08-the-collisions-and-the-gate-that-can-finally-see-them.md)
-- 2026-08-09 — [The packer was estimating, and the estimate cost a book a row](./log/2026-08-09-the-packer-was-estimating-and-the-estimate-cost-a-book.md) — map [#78](https://github.com/mephistopheles4/stacks/issues/78), now closed
+- 2026-08-09 — [The packer was estimating, and the estimate cost a book a row](./log/2026-08-09-the-packer-was-estimating-and-the-estimate-cost-a-book.md)
 - 2026-08-09 — [CodeQL became a second required gate, and one of its twelve was real](./log/2026-08-09-codeql-became-a-second-required-gate.md)
-- 2026-08-10 — [The artifacts were ours, and the cover finally has somewhere to be looked at](./log/2026-08-10-the-artifacts-were-ours.md) — the staging re-encode was subsampling chroma on 33 of 43 covers; plus the enlarged-cover dialog, and why O'Reilly still has no link
-- 2026-08-19 — [The first nightly caught its own author](./log/2026-08-19-the-first-nightly-caught-its-own-author.md) — the trend layer's first four-series row moved one scope 6.45 points, on a false comment in the pull request that built it. Five scopes reproduced exactly; two moved without a source change, which is the tool-noise band measured for the first time
-- 2026-08-19 — [The reading half lands, and a count that said three](./log/2026-08-19-the-reading-half-lands-and-a-count-that-said-three.md) — `pnpm trend:sync` replayed nine committed records into a local Prometheus and got the first nightly's figures back to the digit; surface D folded in, writing to the local store only. The spec's four-series / three-bounded discrepancy resolved, and a pre-existing blind spot found in the cover check
-- 2026-08-19 — [The page lands, and the store was somebody else's](./log/2026-08-19-the-page-lands-and-the-store-was-somebody-elses.md) — the trend layer's dashboard, provisioned from the repo so the panel order is a diff. ⚠️ The sync had been writing blocks into this checkout while Prometheus served **another worktree's** store: `imported 11 record(s)` against a store answering for nine. The PR window turned out to have no producer anywhere in the rollout, and one wrong explanation was written, tested and reverted before the right one was measured
-- 2026-08-19 — [The constitution leaves CLAUDE.md](./log/2026-08-19-the-constitution-leaves-claude-md.md) — the rules moved to `AGENTS.md` and `CLAUDE.md` became a one-line import; three gates observed red in two distinct states, only one of which the ticket predicted. ⚠️ The import itself is still unobserved: `/context` is owed by a human, and `G29` stayed green throughout while eight links pointed at a file with no invariants left in it
-- 2026-08-19 — [The deploy reads the record, and the exit code proved nothing](./log/2026-08-19-the-deploy-reads-the-record-and-refuses-per-series.md) — G39 (`metrics-freshness`) lands: the panel, the per-series refusal, and the one fetch that splits *you have not synced* from *the nightly stopped*. The gate passed ten of ten against a plant that deleted the refusal, because the harness's sentinel is itself a refusal; also why the disambiguating fetch writes a second ref, and why the panel's subject is the newest **scored** run
-- 2026-08-19 — [The ratchet lands disarmed, and the guard that would have taught the wrong lesson](./log/2026-08-19-the-ratchet-lands-disarmed.md) — G43 (`ignored-mutants`), the floors file, and the four deploy refusals with no override. ⚠️ The config-hash guard **would have refused the first deploy after landing**, because every record on the branch predates the stamp — the exact *teach them how to get past it* failure the no-override decision exists to prevent; it now refuses only once something is armed, and the derivation is what actually shuts that route. ⚠️ **A review names an instance; the repair must cover the class** — four times in one day a fix was scoped to the example a reviewer gave and the twin was found later by somebody else; the query for the rest of the class is almost always one command. ⚠️ **Nobody finds their own defects by re-reading** — every self-found defect across the three branches came from *executing* (planting one, running a refusal by hand, pointing a check at real data), and every defect found by reading was found by somebody else. **Review substitutes for the reading, not for the running.** A plant table inherits its author's picture of the file, so it asks for the wrong value and never the right value in an unexpected shape. ⚠️ Also: `git reset --soft <branch-name>` to squash **silently reverted eleven lines of a neighbouring ticket's work** — a soft reset re-parents onto a tip that moved, and the reverted lines were prose, so nothing could have gone red. ⚠️ The merge half of `metrics.yml` scores nothing, so counting its records would have left every scope with a hole and unarmable forever. Also: a `const` in the temporal dead zone that no test could see, and why the counter must match a comment rather than the words
-- 2026-08-20 — [The register gate found a row nobody triaged](./log/2026-08-20-the-register-gate-found-a-row-nobody-triaged.md) — G40 `action-pins`, G41 `gate-register` and G42 `dependency-audit` in one commit. ⚠️ `gate-register`'s **first red was not planted**: `agents-import` (G37) had landed out-of-band with no register entry, 37 entries against 38 rows, and nothing could have noticed before. Three spec claims about the tree measured false — the row numbers, the one-row exemption that is ten, and *exactly one disposition* that the file falsifies 19 times
-- 2026-08-22 — [The summary that grew a byte per mutant, and the gate that was reading a clock](./log/2026-08-22-the-summary-that-grew-a-byte-per-mutant.md) — the nightly went red on **two independent faults on one night**, and the reported one was not why. ⚠️ **G17 had been standing on the dated bootstrap**: it drives the real deploy at a scratch repository, step 0b was inserted between the branch guard and its sentinel, a scratch repository holds no records, and the exemption expired on a calendar day — four assertions green for three days, then red on `main`, on every open pull request and on the nightly, at a commit whose only changes were documentation. G39's own docblock had closed that exact trap on G39's row three days earlier. **That half is [#209](https://github.com/mephistopheles4/stacks/pull/209)'s**, reached independently by two sessions within the hour — which the tracker cannot prevent, because every session here authenticates as one account. ⚠️ Separately, **Vitest's `github-actions` reporter appends to `$GITHUB_STEP_SUMMARY` once per `onTestRunEnd`** — once under `pnpm test`, once **per mutant** under Stryker: 923 bytes over four mutants, **1054k over ~5900**, past GitHub's 1024k. Invisible locally, because `GITHUB_ACTIONS` is unset on a laptop and the reporter is never added. G44 (`stryker-reporters`) is the row
-- 2026-08-22 — [The CSP lands, and the site was already loading somebody else's script](./log/2026-08-22-the-csp-and-the-beacon-that-was-already-there.md) — [#127](https://github.com/mephistopheles4/stacks/issues/127)'s `csp` rule joins `PUBLIC_BUILD_RULES`; no new gate row, G20's observed-red obligation discharged by joining the roster. ⚠️ **Two of the issue's own premises were false when it was written.** The shelf's "perfect same-origin record" is a property of the *repository*: the live origin serves a second `<script>` — Cloudflare Web Analytics, injected at the edge, on both pages, present in no file here — findable only by asking the origin, never by grep. The first instinct, *block it to enforce #119*, was wrong twice: the injected beacon reports **same-origin** to `/cdn-cgi/rum`, so `connect-src 'self'` was never in tension with it; and #119 rejected a beacon *stacks would build*, its own correction already accepting that edge-injected markup is observed by nothing. ⚠️ **And "blocking removes nothing" — written into five documents before review caught it — is false**: the browser refuses the script and the analytics stop. The argument that holds is narrower: blocking is a policy file overriding a zone setting for no privacy gain, since the beacon reports same-origin and carries nothing derived from the owner's reading. ⚠️ **Reading #127's one-clause compression of #119 instead of #119 produced a confident wrong recommendation.** The policy is a generated per-page `<meta http-equiv>` rather than a hand-written header, because Astro's 4kB inlining threshold means two pages of one build need different `style-src` hashes ([ADR-0065](./adr/0065-the-csp-is-generated-not-written.md)) — and `smoke:render` therefore enforces it for free, which no `_headers` policy could ever be. Also: the security headers were keyed `/`, so `/attribution` was answering Cloudflare's default `Referrer-Policy`, the robots rule's own history repeating
-- 2026-08-22 — [The reading surface, and a count printed under somebody else's commit](./log/2026-08-22-the-reading-surface-and-a-count-under-somebody-elses-commit.md) — the print block and the four panels for the complexity series ([#203](https://github.com/mephistopheles4/stacks/issues/203)), on #202's record. ⚠️ **The block anchored on a different record from the one panel 1 names** — `deltaPair` takes the newest *carrier* and panel 1 the newest *scored* run, which are different records on a busy week, so a merge's counts printed under a nightly's commit. Every spec passed while it did: they asserted substrings of the rows, and the wrong line was the one above them. Found by rendering it against eight realistic scopes and reading the output. ⚠️ The `trend:sync` observation **covers the rendering and not the record**: all four panels resolve eight scope-labelled series through Grafana's own provisioned datasource, but the three complexity records were emitted locally into the gitignored `.trend/local` — real counts over the real tree, chosen clock, and **the `metrics` branch was not touched**. That half closes on #202's first CI record
-- 2026-08-22 — [Coverage comes back as an ingredient, and the report wrote a null where a column should be](./log/2026-08-22-coverage-comes-back-as-an-ingredient.md) — `@vitest/coverage-v8` enters the repo for one consumer, an opt-in pre-commit CRAP print, with `coverage.include` **derived** from `stryker.scopes.json` so the claim cannot go stale unwatched. ⚠️ **Twenty green tests against planted reports missed a defect the first real report showed in a second**: every `loc.end` the V8 provider writes carries `"column": null`, read as column 0, dropping every statement on a function's closing line — coverage low and CRAP high, worst for the longest functions, which is what the table sorts to the top. ⚠️ `--passWithNoTests` is load-bearing: without it a commit adding a file no spec imports prints a diagnostic instead of the maximal-CRAP row it exists for. G1 (`adapter-boundary`) failed the runner by name and was right. `pnpm test` unchanged at 12.1s; the hook is 3.0s on a three-file commit
-- 2026-08-23 — [The suppression that suppresses nothing, and four measurements that were all the same special case](./log/2026-08-23-the-suppression-that-suppresses-nothing.md) — jscpd and the eight duplication series ([#254](https://github.com/mephistopheles4/stacks/issues/254)), G47 (`ignored-clones`). ⚠️ **The premise under the ignored-lines counter was the special case.** The spec's *34 raw lines with a 12-line block report 20* reproduces exactly — and jscpd honours a suppression block **only when no code follows it**: with one live line after it, it removes **nothing, silently**. Every prior measurement, #237's and this session's first four, put the block at the end of a file. Found by **planting**, not reading: the first plant landed a directive inside a header comment (the sweep counted 6, jscpd removed 0, producing `commentStateAfter`), the second was byte-clean and still did nothing. So the counter records what the source **declares**, and `total-lines + ignored-lines` is an approximation, not the identity an earlier draft claimed. ⚠️ **jscpd's denominator cannot be reimplemented either** — a hand-rolled one disagreed on three of ninety-five files, once by 27 lines, because a file under `--min-tokens` is declined whole. ⚠️ **The counter found two clones in its own commit** and both were real; the second had been living in `emit-metrics.ts`, where no spec can hold a rule. ⚠️ **Adding eight names widened `GATED_SERIES`**, so the first `pnpm deploy:site` after this refuses until CI writes a record carrying them
-- 2026-08-23 — [markdownlint lands, and the thing that needed guarding was its remedy](./log/2026-08-23-markdownlint-lands-and-its-remedy-needed-guarding.md) — G48 (`markdown`) and the `style` job, first of the static-analysis rollout's four rows. ⚠️ **The fix allowlist could not be a config file.** A discovered `.markdownlint.jsonc` beats `--config`, `optionsOverride.config` and an `overrides` entry at `combine: "replace"` — all three measured, all three still reporting a rule the narrowed set turns off — and that filename is load-bearing because CodeRabbit reads it *and* it takes the comments that carry each rule's measurement. A `.markdownlint-fix.jsonc` was written and deleted twenty minutes later; **it would have read correct in review**. So the allowlist is a refusal the command runs before touching a file, and the gate **measures** what the tool rewrites rather than declaring it — a declaration would be a claim about 0.23.2 in a file that outlives it. ⚠️ **The first measurement returned an empty set**, which is exactly what *"nothing is fixable"* looks like and would have passed every assertion built on it: it parsed `logMessage`, and findings go to `logError`. The floor added for it — every adopted rule must fire on its own probe — is not decoration, because fixability is *reported before, absent after*, so a rule that stops firing measures as unfixable. ⚠️ **MD033 found two real rendering defects nobody was looking for**: a backslash-escaped backtick inside a code span, which Markdown does not support, so the span closed early and `<n>` was parsed as an HTML tag and dropped from the page — in two documents that were describing a gate's extraction pattern. The fix pass itself touched 51 files and did **none** of the three damage classes, because the six rules that cause them are off
-- 2026-08-23 — [The terrain for `astro check`, measured while the gate is still blocked](./log/2026-08-23-the-terrain-for-astro-check.md) — [#257](https://github.com/mephistopheles4/stacks/issues/257) is hard-blocked by [#250](https://github.com/mephistopheles4/stacks/issues/250), so the half that does not need the block cleared was done instead: baseline confirmed at one error over 44 files, and #238's plant re-run so the Observed-red line is gathered under this ticket. ⚠️ **The plant ships to two meta tags, not the one #238 recorded** — `og:image` and `twitter:image` both read the same binding. ⚠️ **`.astro` is outside the mutation and complexity scopes by one list, not two**: `complexity.ts`'s `populationOf` reads `stryker.scopes.json`'s globs, so the two counters miss it once rather than independently — and `site-meta.ts`, the module the plant actually corrupts, is an *excluded directory* in that same file, so the bad value crossed from an unscored `.astro` file into an unscored `.ts` file. ⚠️ **`docs/spec/supply-chain.md`'s specimen moves rather than closing**: installing `@astrojs/check` falsifies its *"not a dependency at any version"* clause without settling the TS 7 claim, because the repo is pinned to TS 6 — but the package's own `peerDependencies: { typescript: '^5.0.0 || ^6.0.0' }` is the first in-repository evidence that sentence has ever had, **and it couples this gate to ADR-0066's revisit condition**. ⚠️ **The sweep for addresses the landing would falsify was counted twice and was short both times** — twelve, then eighteen, then more again at the landing, which found `docs/adr/0066` (four), `docs/spec/README.md`, `docs/spec/static-analysis-and-style.md` and one line of the complexity spec that the "recorded as fog, three times" row had itself miscounted. **A table of hits is a snapshot; the grep is the artifact.** ⚠️ Independently, `docs/gate-register.md` misattributes its quote to `CLAUDE.md` a constitution move ago. **The block cleared the same evening and the gate landed in the same branch** — see the entry below
-- 2026-08-23 — [`astro check` lands as G50, and G7's warrant is replaced rather than narrowed](./log/2026-08-23-the-terrain-for-astro-check.md) — [#250](https://github.com/mephistopheles4/stacks/issues/250) merged while the terrain above was being surveyed, so the same branch landed the gate: `@astrojs/check@0.9.10` pinned exact on `packages/site`, whose `build` script is now `astro check && astro build`, inside `pnpm build` ([ADR-0077](./adr/0077-astro-check-is-the-checker-for-astro-files.md)). ⚠️ **The order is the decision, not the presence** — `astro build && astro check` reports the same error and has already written the `dist/` carrying it, which is the *invisible* weakening; the clause asserts position and was planted red. ⚠️ **G7's warrant is replaced, not narrowed**: *"`.astro` files are not typechecked"* is false from this commit, and what holds is coverage — `.astro` sits outside **one** scope list that both counters read, since `complexity.ts`'s `populationOf` takes `stryker.scopes.json`'s own globs. ⚠️ **This gate pins the compiler harder than [ADR-0066](./adr/0066-typescript-6-until-7-1.md) did**: `@astrojs/check@0.9.10`'s peer range is `^5 || ^6`, so that record's own scheduled revisit at TypeScript 7.1 un-runs the gate — asserted by a clause that reads the pin, so the revisit meets it as a failing test rather than as a paragraph somebody has to remember. Six executed plants, all red. The stale-claim sweep ran as a class and discharged ADR-0066's explicitly parked `AGENTS.md` debt
-- 2026-08-30 — [The bookcase stops flickering, and the fix is applied to the class](./log/2026-08-30-the-bookcase-stops-flickering.md) — [#301](https://github.com/mephistopheles4/stacks/issues/301) closing [#296](https://github.com/mephistopheles4/stacks/issues/296), G51 (`coplanar-faces`), the first of six implementation tickets under [`docs/spec/the-woodwork-reads-as-wood.md`](./spec/the-woodwork-reads-as-wood.md). **46 coplanar, overlapping face pairs on a four-row case, present since the case was built** — the depth-buffer tie condition, invisible on 30 of them only because every woodwork face carries the identical flat colour. ⚠️ **The 16 pairs the backboard takes part in were the exception and flickered on `main`**, because it is a second material in a second colour, which is why this lands as its own pull request ahead of the woodwork treatment: a texture does not cause the tie, it reveals all 46 at once. ⚠️ **The trap is fixing the pair somebody points at**: #284's first pass cleared 10 in `x` and left every backboard pair plus the plank front and back faces at `z = ±0.36`, and the second report came minutes later — so the gate enumerates the class from `SHELF` and derives its count as `8 × (rows + 1) + 6`, with the *un-inset* count asserted first because zero is otherwise what a broken enumerator reports. ⚠️ **The backboard takes twice the plank's inset**, measured: equal insets re-create 10 pairs on a new plane at `±1.786` that the uprights merely happen to hide. ⚠️ **#296's own pair table sums to 48 against the 46 it states** — corrected in the gate and the register, not on the issue. ⚠️ **The before/after screenshots could not be committed and that is G13 working**: `docs/images/` is pinned by filename to the generated README shelf and no other binary may be tracked, so the crops live in the pull request body and in ignored `artifacts/`
-- 2026-08-30 — [The woodwork is rosewood, and the UVs are rewritten to world space](./log/2026-08-30-the-woodwork-is-rosewood.md) — [#302](https://github.com/mephistopheles4/stacks/issues/302), the second of six under the woodwork spec. One CC0 sheet at its true 7.68 units, the grain along each member's own long axis, and **G52** capping what may live in the site's public wood directory
-- 2026-08-30 — [The species menu, lazy and honest — and the read-back this map earned three times](./log/2026-08-30-the-species-menu-and-the-read-back.md) — [#306](https://github.com/mephistopheles4/stacks/issues/306), the last of six under the woodwork spec, with **G53** (`one-sheet`) and **G54** (`woodwork-readback`). `materials.woodSpecies` is a roster of every sheet actually rendered and measured plus the flat comparison entry — three where #281 settled four, because a third species means committing a sheet nobody has looked at. ⚠️ **The knob cannot move the backboard**, whose sheet is a constant of one candidate in 41, so the control is labelled *woodwork sheet* rather than *wood species*. ⚠️ **Species and resolution are coupled and the coupling reaches the drawn fibre**: it rides the same UVs, so laying it by the module's default constant would have tiled it **4.8× wrong** under sapele with every whole-frame number in range — #297's defect one surface over, caught by writing the lay down as a field on the resolution instead of reading it off a constant. ⚠️ **`flat` is laid by the default sheet**, which is what makes it a control rather than a fourth look: it can only separate a sheet that moved the grain from one that moved the average colour with everything except the diffuse map held constant. ⚠️ **The report gained a fifth category because the other four are transitions** and none of the three defects G54 was earned for was ever a change. ⚠️ **The lazy claim is asserted on the resolution function and measured separately on a live server**, because G21 refuses any request the suite makes — default fetches two sheets, sapele fetches only its own, `flat` fetches none, and selecting sapele in the panel fetches nothing until rebuild
-- 2026-09-21 — [The survivor set diffs cleanly, and the cross-tree pair did not cross a tree](./log/2026-09-21-the-survivor-set-diffs-cleanly.md) — [#344](https://github.com/mephistopheles4/stacks/issues/344)'s measurement. A content key — file + mutator + original text + replacement, matched as a multiset — matched **3,713 of 3,713** survivors on byte-identical trees, and 16.9% of survivors share a key, which costs attribution and never the counts. ⚠️ **The named cross-tree pair changes no mutated file**, so the cross-tree numbers are still owed, by the first nightly after a `.ts` change, paired with a `c52cc9f0` report before those expire on 2026-10-20 and 2026-10-21. ⚠️ **Aligning mutants by array position invents 997 status flips on an identical tree**: `mutants[]` is not in `id` order and the order varies per run. The real noise is one `Survived`↔`Timeout` flip on two of seven nights, in `head-cap.ts`, so two reports of one tree differ by at most two survivors
-- 2026-09-22 — [Incremental mode is not score-neutral, and it is still worth running locally](./log/2026-09-22-incremental-is-not-score-neutral.md) — [#347](https://github.com/mephistopheles4/stacks/issues/347). Six plants, each an incremental run against a fresh full run on the identical tree, compared mutant by mutant. ⚠️ **A fixture edit and a one-line redundant filter elsewhere in the same file both left three `apple-books.ts` mutants `Killed` where the full run said `Survived`**, and excluding a spec left 32 `Survived` where it said `NoCoverage`. The must-flip control was caught, and so was a source guard the source reading predicted would go stale, because the dry run re-collects per-test coverage every time. ⚠️ **Coverage is per test but change detection is per spec file**: the Vitest runner reports no test position, so one `it.skip` re-keyed all seven tests in its file. ⚠️ **`SCORE_NEUTRAL_OPTIONS` loses both entries, against the brief** — which said keep them because they only matter inside the config file, and inside the config file is exactly where keeping them let `incremental: true` hash away silently; now G56 refuses it. A command-line flag never reaches `configHash` either way, so the nightly's fresh checkout is the real guarantee, recorded under *Not gated, deliberately*. 52 s incremental against 1,074 s full. ⚠️ **Six load-sensitive mutants move between two plain full runs** — Vitest's 5 s per-test timeout on static mutants, not reuse
-- 2026-09-22 — [The content key holds across a real edit](./log/2026-09-22-the-content-key-holds-across-a-real-edit.md) — [#344](https://github.com/mephistopheles4/stacks/issues/344)'s owed cross-tree half, from a dispatched `metrics.yml` run on `60ba2696` against the `c52cc9f0` nightlies: five mutated `scripts/lib` files changed, the base content key matched **3,682** survivors and left **0** unmatched in the 69 unchanged files, and the refinement gave identical counts. Every one of the 48 unmatched survivors is explained — 27 killed by new tests on untouched lines, 21 text an edit removed or added — while a position key would have lost 558. ⚠️ **A collision names the wrong line**: twice the new copy of an already-surviving string sat in a hunk and the matcher reported an untouched line, so counts are exact and attribution is not. ⚠️ **The 2026-09-22 nightly uploaded no report** — it died in the dry run #364 fixed — which is why the newer report is a dispatch rather than a schedule
-- 2026-09-24 — [The woodwork is one mesh](./log/2026-09-24-the-woodwork-is-one-mesh.md) — [#381](https://github.com/mephistopheles4/stacks/issues/381)'s first change. Both uprights and every plank are one geometry, so the bookcase draws **2 calls at every library size** instead of `rowCount + 4`: 320 → 314 draws on the 50-book fixture, and under `?shadows=1` the bookcase's sampling draws go 8 → 2. The Pixel 10 Pro XL loses the context at 13 sampling draws a frame from one program, and the old count reached that at about 66 books (⚠️ a later re-check refuted that edge as a rule; see ADR-0088). ⚠️ **The pixels are not identical, and the criterion set before the run fails in 6 of 12 SwiftShader runs**: up to 348 pixels by up to 26 levels, as speckle on the lid's faces seen at a grazing angle. The join itself is clean (0 pixels on desktop); baking positions into the vertices changes the GPU's rounding, and two controls rule out a rigid shift or vertex rounding alone. Whether that is acceptable is the owner's call ([ADR-0088](./adr/0088-one-program-samples-the-shadow-map-in-two-draws.md), proposed)
-- 2026-09-24 — [Only the bookcase reads the shadow map](./log/2026-09-24-only-the-bookcase-reads-the-shadow-map.md) — `?shadows=1` on the Pixel 10 Pro XL, three rounds of shader hooks on the live site, and the site-side change. **One sampling program survives and four or five die**: with only the bookcase's program reading the map the page ran 120 s three times, 300 s once and 120 s orbiting; with the four book programs reading it, frame 8. It counts draws, not time, and `gl.flush()` does not move it. ⚠️ **`receiveShadow = false` is not the fix** — forcing the uniform to `0` died at frames 8 and 9, so the sampler has to leave the program. Book materials now compile without it (`#undef USE_SHADOWMAP` in `onBeforeCompile`, a fixed cache key), and `?shadows=1` samples in **2 draws from 1 program** at both fixture sizes, where it was 302 from 5; `?receivers=all` is the old `?shadows=1` byte for byte. ⚠️ **PCF only**: `basic` with only the bookcase reading still died, at frame 11. ⚠️ **The empty case survives now**, where ADR-0016 records it dying in August. The cost is the plank's band across the top of each face-out cover row, 5.4% of the live page's pixels
-- 2026-09-24 — [The cover shade](./log/2026-09-24-the-cover-shade.md) — [#381](https://github.com/mephistopheles4/stacks/issues/381)'s third change: the band the plank throws across each face-out cover, and a neighbour's wedge, painted back as **one mesh reading no shadow map** — +1 draw, +1 texture, +0 programs at every library size. Fitted against `?receivers=all` at the phone viewport, the error inside the band falls from 21.8 to 7.9 (50 books) and 25.7 to 9.7 (seven). ⚠️ **One strength, 0.28, where the two fixtures fit 0.233 and 0.331**: a real shadow takes only the key light, and how much that is depends on where a cover stands. ⚠️ **The wedge is thrown by the page block**, the part that casts, not the case — from the case it landed a few pixels off. ⚠️ **The painted default changes too**: 1.6% of the 50-book phone frame, all on covers. Spines stay unpainted, and the owner's real vault and the phone itself have not seen it yet
-- 2026-09-25 — [A lost context falls back to painted](./log/2026-09-25-a-lost-context-falls-back-to-painted.md) — [#381](https://github.com/mephistopheles4/stacks/issues/381)'s fourth change. A context lost while the shelf samples the shadow map writes one record, redraws painted — on the restored canvas, or a new one after 2.5 s — and later loads start painted for 30 days; `?shadows=` in the URL always wins. G60 (`context-loss-fallback`) drives five losses through `pnpm smoke:render`, the fifth a refused redraw, which left the page white until a notice hid the canvas behind it. ⚠️ **On the Pixel 10 Pro XL a real loss reaches neither rebuild**: 4 of 4 were refused a new context (`Web page caused context loss and was blocked`) to at least +24 s in the same page, and a reload at about 9 s was refused too; reloads at about 17 s and 73 s came back painted from the record at 60 fps. ⚠️ **The GPU string carries no driver build**, so the expiry, not the string, is what retries an updated driver. `?shadows=1` itself held 120 s at 60 fps on the phone
-- 2026-09-25 — [Real-time shadows by default](./log/2026-09-25-real-time-shadows-by-default.md) — [#381](https://github.com/mephistopheles4/stacks/issues/381)'s last change. A bare URL gets the shadow map, read by the bookcase alone in 2 draws; G61 (`one-shadow-reader`) counts that on the default page at 50 and 300 books, with `?receivers=all` as a control that must fail. The phone investigation's thread — draws not time, not vertex colours, not flush, not `receiveShadow`, the 12/13 ceiling — is summarised there. ⚠️ **A re-check then refuted the 12/13 ceiling as a rule**: 2 programs at 53 sampling draws a frame survived 120 s on the shipped build while `?receivers=all` died, so what kills the context is not known and G61's budget is a pin on what survived, not a margin
-- 2026-09-25 — [A large library renders black](./log/2026-09-25-a-large-library-renders-black.md) — [#383](https://github.com/mephistopheles4/stacks/issues/383). The fog's world-unit range painted a 17-shelf bookcase the room colour: the bookcase region measured **22.6**, the luma of `0x1a1613` exactly, against 69.5 with the fog off. The range became a multiple of the framing distance, and G59 (`large-library-lit`) reads the picture, red on the old fog and green on the new.
-- 2026-09-25 — [G61 flakes on a late sheet](./log/2026-09-25-g61-flakes-on-a-late-sheet.md) — [#385](https://github.com/mephistopheles4/stacks/issues/385). The second woodwork sheet to decode switches to a program the first already linked, so nothing links, and G61's settle, which ended at the last link, judged the gap between the decodes as steady. Held back 600 ms, 4 of 4 red; the settle now also ends at the last change of readers, and a standing second reader is still red.
-- 2026-09-26 — [A title lookup carries a different-language edition's ISBN](./log/2026-09-26-title-lookup-foreign-isbn.md) — the plan, its [plan review](./log/2026-09-26-title-lookup-foreign-isbn-plan-review.md) and its [security review](./log/2026-09-26-title-lookup-foreign-isbn-security-review.md). `lookup('Thinking, Fast and Slow')` returned a **Turkish** ISBN, because Open Library's search answers with a *work* whose `isbn` list jumbles 36 editions in 8 languages. A title search now takes every edition-scoped field from the **one** edition the search projects, only when its `language` holds the reading language (`STACKS_LANGUAGE`, default `en`, refused rather than defaulted when unknown); Google's title search drops the ISBN of a volume in another language ([ADR-0094](./adr/0094-a-title-search-takes-one-edition-in-the-reading-language.md)). ⚠️ **It fixes new lookups, not notes already written**, and every cached Open Library search goes cold. ⚠️ **A full G26 re-capture moved an outcome through Google data drift, not this change** — *From Zero to Profit with AI* was refused — so only the five Open Library entries, all still `numFound: 0`, were re-captured. ⚠️ `open-library-search-sparse-sibling.json` was **not** re-captured: a fresh capture no longer holds the authorless twin its test exists for
-- 2026-10-16 — [The window that was not set](./log/2026-10-16-the-window-that-was-not-set.md) — [#399](https://github.com/mephistopheles4/stacks/issues/399). The August nanoid decline was not the release-age window: on the same pnpm 11.18.0, with the window at 0, `pnpm update nanoid` still leaves 3.3.16. Seven days is now set, G67 holds it, and both a frozen install and an override inside the window fail under it
-- 2026-10-17 — [`smoke:render` waits for state, not for time](./log/2026-10-17-smoke-render-waits-for-state.md) — [#436](https://github.com/mephistopheles4/stacks/issues/436). Every wait in the gate is one of five kinds; a presence is polled to a 30 s floor and the screenshot settles read state.
-- 2026-10-17 — [The release-age window's side doors](./log/2026-10-17-release-age-side-doors.md) — [#459](https://github.com/mephistopheles4/stacks/issues/459). The missing-time key does not stop git or tarball dependencies; a lockfile rule does. The trust policy fails three lockfile entries, so three exact excludes. wrangler became a pinned devDependency because `pnpm dlx` applies the window and never the trust policy
-- 2026-10-17 — [The open main page](./log/2026-10-17-the-open-main-page.md) — [#397](https://github.com/mephistopheles4/stacks/issues/397). G60's 13.5 s to ready per boot on CI was the gate's own main page, left open and drawing; it is closed after the phone check. Locally the twelve `visit()` boots went from 44.6 s to 11.9 s to ready, and G61's boots are timed too.
-- 2026-10-21 — [The tuning panel joins the pane](./log/2026-10-21-the-tuning-panel-joins-the-pane.md) — [#496](https://github.com/mephistopheles4/stacks/issues/496). `debug-panel.ts` is gone; `tuning-panel.ts` is a loop over `panel-model.ts`, and `smoke:render` reads the rendered state for each field it writes, each check shown red with its copy line removed. The widening half of the range copy is held by a Node test alone.
-- 2026-10-25 — [The duplication backfill](./log/2026-10-25-duplication-backfill.md) — [#454](https://github.com/mephistopheles4/stacks/issues/454). The whole-tree duplication series reach back to the first commit: 136 points from one `jscpd --history` run, in a committed `jscpd.history.json` the sync renders under names of its own. 97 of 97 overlapping records match under the two newest counting stamps. The trend page gains the chart, draws lines across gaps up to three days, and is retitled.
-- 2026-11-05 — [The Ask the library live probe](./log/2026-11-05-ask-the-library-live-probe.md) — [#532](https://github.com/mephistopheles4/stacks/issues/532). Exact routes match the bare path only; one finding was wrong and corrected.
-- 2026-11-06 — [Five models on the Ask evals](./log/2026-11-06-model-comparison.md) — [#540](https://github.com/mephistopheles4/stacks/issues/540). DeepSeek V4.1 Flash passed 18 of 18 twice, at a median near 4 s; the other four passed 14 to 16, and two had calls past the 30-second deadline. It leaks the follow-ups marker where the old split could not see it, so the split and the evals changed ([ADR-0136](./adr/0136-ask-the-library-runs-on-deepseek-v4-1-flash.md)).
-- 2026-11-07 — [The stop in the pickup track](./log/2026-11-07-the-stop-in-the-pickup-track.md) — [#531](https://github.com/mephistopheles4/stacks/issues/531). `addPause` stops a GSAP timeline in both directions and re-fires from a pause placed on it; the track resumes a reverse and lands a jump 0.1 ms past the stop.
-- 2026-11-08 — [Pages or Workers: the probe](./log/2026-11-08-pages-or-workers-probe.md) — [#535](https://github.com/mephistopheles4/stacks/issues/535). Static files do not run a Worker; an old Workers version's files stay public until `preview_urls` is false; the hostname switch, which is also the way back, is untried, so [ADR-0140](./adr/0140-stay-on-pages-until-the-hostname-switch-is-tried.md) records staying on Pages for now.
+- 2026-08-10 — [The artifacts were ours, and the cover finally has somewhere to be looked at](./log/2026-08-10-the-artifacts-were-ours.md)
+- 2026-08-19 — [The first nightly caught its own author](./log/2026-08-19-the-first-nightly-caught-its-own-author.md)
+- 2026-08-19 — [The reading half lands, and a count that said three](./log/2026-08-19-the-reading-half-lands-and-a-count-that-said-three.md)
+- 2026-08-19 — [The page lands, and the store was somebody else's](./log/2026-08-19-the-page-lands-and-the-store-was-somebody-elses.md)
+- 2026-08-19 — [The constitution leaves CLAUDE.md](./log/2026-08-19-the-constitution-leaves-claude-md.md)
+- 2026-08-19 — [The deploy reads the record, and the exit code proved nothing](./log/2026-08-19-the-deploy-reads-the-record-and-refuses-per-series.md)
+- 2026-08-19 — [The ratchet lands disarmed, and the guard that would have taught the wrong lesson](./log/2026-08-19-the-ratchet-lands-disarmed.md)
+- 2026-08-20 — [The register gate found a row nobody triaged](./log/2026-08-20-the-register-gate-found-a-row-nobody-triaged.md)
+- 2026-08-22 — [The summary that grew a byte per mutant, and the gate that was reading a clock](./log/2026-08-22-the-summary-that-grew-a-byte-per-mutant.md)
+- 2026-08-22 — [The CSP lands, and the site was already loading somebody else's script](./log/2026-08-22-the-csp-and-the-beacon-that-was-already-there.md)
+- 2026-08-22 — [The reading surface, and a count printed under somebody else's commit](./log/2026-08-22-the-reading-surface-and-a-count-under-somebody-elses-commit.md)
+- 2026-08-22 — [Coverage comes back as an ingredient, and the report wrote a null where a column should be](./log/2026-08-22-coverage-comes-back-as-an-ingredient.md)
+- 2026-08-23 — [The suppression that suppresses nothing, and four measurements that were all the same special case](./log/2026-08-23-the-suppression-that-suppresses-nothing.md)
+- 2026-08-23 — [markdownlint lands, and the thing that needed guarding was its remedy](./log/2026-08-23-markdownlint-lands-and-its-remedy-needed-guarding.md)
+- 2026-08-23 — [The terrain for `astro check`, measured while the gate is still blocked](./log/2026-08-23-the-terrain-for-astro-check.md)
+- 2026-08-23 — [`astro check` lands as G50, and G7's warrant is replaced rather than narrowed](./log/2026-08-23-the-terrain-for-astro-check.md)
+- 2026-08-30 — [The bookcase stops flickering, and the fix is applied to the class](./log/2026-08-30-the-bookcase-stops-flickering.md)
+- 2026-08-30 — [The woodwork is rosewood, and the UVs are rewritten to world space](./log/2026-08-30-the-woodwork-is-rosewood.md)
+- 2026-08-30 — [The species menu, lazy and honest — and the read-back this map earned three times](./log/2026-08-30-the-species-menu-and-the-read-back.md)
+- 2026-09-21 — [The survivor set diffs cleanly, and the cross-tree pair did not cross a tree](./log/2026-09-21-the-survivor-set-diffs-cleanly.md)
+- 2026-09-22 — [Incremental mode is not score-neutral, and it is still worth running locally](./log/2026-09-22-incremental-is-not-score-neutral.md)
+- 2026-09-22 — [The content key holds across a real edit](./log/2026-09-22-the-content-key-holds-across-a-real-edit.md)
+- 2026-09-24 — [The woodwork is one mesh](./log/2026-09-24-the-woodwork-is-one-mesh.md)
+- 2026-09-24 — [Only the bookcase reads the shadow map](./log/2026-09-24-only-the-bookcase-reads-the-shadow-map.md)
+- 2026-09-24 — [The cover shade](./log/2026-09-24-the-cover-shade.md)
+- 2026-09-25 — [A lost context falls back to painted](./log/2026-09-25-a-lost-context-falls-back-to-painted.md)
+- 2026-09-25 — [Real-time shadows by default](./log/2026-09-25-real-time-shadows-by-default.md)
+- 2026-09-25 — [A large library renders black](./log/2026-09-25-a-large-library-renders-black.md)
+- 2026-09-25 — [G61 flakes on a late sheet](./log/2026-09-25-g61-flakes-on-a-late-sheet.md)
+- 2026-09-26 — [A title lookup carries a different-language edition's ISBN](./log/2026-09-26-title-lookup-foreign-isbn.md)
+- 2026-10-16 — [The window that was not set](./log/2026-10-16-the-window-that-was-not-set.md)
+- 2026-10-17 — [`smoke:render` waits for state, not for time](./log/2026-10-17-smoke-render-waits-for-state.md)
+- 2026-10-17 — [The release-age window's side doors](./log/2026-10-17-release-age-side-doors.md)
+- 2026-10-17 — [The open main page](./log/2026-10-17-the-open-main-page.md)
+- 2026-10-21 — [The tuning panel joins the pane](./log/2026-10-21-the-tuning-panel-joins-the-pane.md)
+- 2026-10-25 — [The duplication backfill](./log/2026-10-25-duplication-backfill.md)
+- 2026-11-05 — [The Ask the library live probe](./log/2026-11-05-ask-the-library-live-probe.md)
+- 2026-11-06 — [Five models on the Ask evals](./log/2026-11-06-model-comparison.md)
+- 2026-11-07 — [The stop in the pickup track](./log/2026-11-07-the-stop-in-the-pickup-track.md)
+- 2026-11-08 — [Pages or Workers: the probe](./log/2026-11-08-pages-or-workers-probe.md)
+- 2026-11-12 — [The gate register (moved out of `docs/`)](./log/2026-08-20-gate-register.md)
+- 2026-11-12 — [The gates history, cut from `gates.md`](./log/2026-11-12-gates-history.md)
+- 2026-11-12 — [The agent docs history, cut from the spec index, shelf docs and `commands.md`](./log/2026-11-12-agent-docs-history.md)
+- 2026-11-12 — [`progress.md` before the cleanup](./log/2026-11-12-progress-before-the-cleanup.md)
 
 ## Notes to the next session
 
-All five phases are green and tagged. The tool runs against the owner's real
-vault, not only fixtures.
-
-If you pick this up:
-
-- Run `pnpm test && pnpm build && pnpm smoke:render && pnpm gate:public` first.
-  Those four are the contract; if they are green the project is where this file
-  says it is.
-- **Both gates stage their own fixture vault into `packages/site/public/`.**
-  Running them while `pnpm dev:watch` is up swaps the live site to fixture data
-  until the next vault edit. Rebuild with
-  `pnpm stacks build --public --assets packages/site/public`.
-- **Verify covers by eye, not by counting.** Sixteen were swapped for print
-  editions once; eleven were right and five were wrong — three were a
-  placeholder graphic and two were a different book — and nothing in the counts
-  distinguished them. A contact sheet did.
-- Configuration lives in `.env` (gitignored): `STACKS_VAULT`, and
-  `GOOGLE_BOOKS_API_KEY` without which Google Books 429s on a shared quota.
-  There is exactly one, in the main checkout, and every worktree reads it.
-- Still open: whether the print and audiobook editions of one title should
-  collapse into a single spine. They currently render as two.
-- Everything in `fixtures/` is invented. No copyrighted material, ever — see
-  `plan.md` §1.
+- Run `pnpm test && pnpm build && pnpm smoke:render && pnpm gate:public` first. Those four are the contract; if they are green the project is where this file says it is.
+- **`smoke:render` and `gate:public` each stage their own fixture vault into `packages/site/public/`.** Running them while `pnpm dev:watch` is up swaps the live site to fixture data until the next vault edit. Rebuild with `pnpm stacks build --public --assets packages/site/public`.
+- **Verify covers by eye, not by counting.** A contact sheet shows a placeholder graphic or a different book that no count distinguishes.
+- Configuration lives in `.env` (gitignored): `STACKS_VAULT`, and `GOOGLE_BOOKS_API_KEY`, without which Google Books 429s on a shared quota. There is exactly one, in the main checkout, and every worktree reads it.
+- Still open: whether the print and audiobook editions of one title should collapse into a single spine. They render as two.
+- Everything in `fixtures/` is invented. No copyrighted material, ever; see `plan.md` §1.

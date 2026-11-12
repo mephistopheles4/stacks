@@ -129,7 +129,7 @@
   "MD038": false,
 
   // 3 findings. It renumbers ordered lists inside blockquotes. In
-  // docs/gate-register.md it renumbered a **verbatim quotation** sitting under
+  // docs/log/2026-08-20-gate-register.md it renumbered a **verbatim quotation** sitting under
   // a heading that says the file "still defined category 5". This repo's
   // decision policy is to carry original reasoning verbatim, so this rule is
   // aimed straight at it.

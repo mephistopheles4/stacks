@@ -234,7 +234,7 @@ before it.
 | [`CONTEXT.md`](../../CONTEXT.md) | add **`Trend`**; amend **`Gate`** to turn on *scored* rather than on *present in `docs/gates.md`*. **Proposed and not made**: a **Vacuity floor** entry in the *Checking* section |
 | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) | a new gate lands with a register entry carrying **five verdicts, a disposition, a date and an observed-red line** |
 | [`SECURITY.md`](../../SECURITY.md) | the pinning line amended — held in shape by a gate, and what the gate does not hold; the *unverifiable* clause extended by one sentence |
-| [`docs/gate-register.md`](../gate-register.md) | entries for all seven rows, **triaged in the commit that lands them**; a category-1 verdict on `auditConfig.ignoreGhsas`; the G19 findings in G19's own entry |
+| [`docs/gate-register.md`](../log/2026-08-20-gate-register.md) | entries for all seven rows, **triaged in the commit that lands them**; a category-1 verdict on `auditConfig.ignoreGhsas`; the G19 findings in G19's own entry |
 | [`docs/progress.md`](../progress.md) | updated in the same commit as each gate, per its own rule |
 | `scripts/deploy.ts` | the print block; three refusals; **every refusal states which flags clear it** |
 

@@ -51,7 +51,7 @@
  * ⚠️ **It proves the wiring, never the checker's verdict** — G40's stated
  * limit and G44's, reached again. Nothing offline can make this file observe
  * `astro check` finding a real error; that observation is the perturbation
- * recorded on this row in `docs/gate-register.md`, and it is why the register
+ * recorded on this row in `docs/log/2026-08-20-gate-register.md`, and it is why the register
  * requires an Observed-red line rather than trusting a green suite.
  *
  * ⚠️ **`typescript` is pinned to 6.x and that is load-bearing here.**

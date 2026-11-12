@@ -35,7 +35,7 @@
  * repository has a gate that read 28 lines of a 155-line section while reading
  * as though it covered the whole thing. So both directions are asserted, both
  * are floored, and the reach was proved by changing the prose and watching this
- * go red; the observed-red line is in `docs/gate-register.md`.
+ * go red; the observed-red line is in `docs/log/2026-08-20-gate-register.md`.
  *
  * ## What it does not assert
  *
@@ -151,7 +151,7 @@ function interpolatesContext(script: string): boolean {
  * ⚠️ **The positive control, and it is code rather than a paragraph.** The first
  * version of the injection sweep reported a confident zero against this exact
  * shape while clearing its own floor; the observation that caught it lived in a
- * commit message and in `docs/gate-register.md`, where nothing re-runs it. Both
+ * commit message and in `docs/log/2026-08-20-gate-register.md`, where nothing re-runs it. Both
  * step shapes are here, because the matcher's bug was that it recognised
  * neither.
  */
