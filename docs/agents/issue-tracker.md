@@ -138,8 +138,9 @@ gate ([`gates.md`](../gates.md#not-gated-deliberately)).
 1. **One issue per ticket.** Each ticket issue names its parent by full URL, its
    claims, and what it depends on. A dependency is recorded natively, under
    *Wayfinding operations* below, as well as named in the body.
-2. **Link it as a sub-issue.** `gh` has no flag for this; the parent's
-   `sub_issues` endpoint takes the child's **REST id**, never its number:
+2. **Link it as a sub-issue.** `gh issue create --parent <parent>` links a new
+   ticket as it is filed. For one that already exists, `gh` has no flag; the
+   parent's `sub_issues` endpoint takes the child's **REST id**, never its number:
 
    ```sh
    gh api --method POST repos/{owner}/{repo}/issues/<parent>/sub_issues -F sub_issue_id=$(gh api repos/{owner}/{repo}/issues/<child> --jq .id)
