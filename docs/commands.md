@@ -142,8 +142,8 @@ loads the repository root's `.env` and `.env.local` when it starts, and puts the
 back in its own environment, so where a `.env` sits at the root the Google Books
 key and the vault path still reach wrangler and its packages. Measured by reading
 the pinned wrangler's start-up code, not by a deploy. The owner accepted this;
-the repository has
-no threat model, so it is recorded nowhere else.
+the threat model
+records it under Deploy.
 
 **After a wrangler bump merges, run `pnpm install` before the next deploy**: the
 refusal above is that reminder, and it fires after the four gates, so run the

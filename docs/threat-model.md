@@ -18,7 +18,7 @@ section (`~/.claude/pact/review.md`; public copy:
 
 ```mermaid
 flowchart LR
-  vault[(Vault: the machine)]
+  vault[(Machine: vault, sessions, builds)]
   subgraph lookups[Outside lookups and imports]
     prov[Provider replies, cover bytes, import files]
   end
@@ -38,9 +38,11 @@ flowchart LR
     reg[Packages, actions, Dependabot]
   end
   prov --> vault
+  vault --> prov
   vault --> up --> pages
   pages --> worker
   gh --> vault
+  vault --> gh
   reg --> vault
   style lookups stroke-dasharray: 5 5
   style deploy stroke-dasharray: 5 5
@@ -92,20 +94,22 @@ Cloudflare Pages (`pnpm deploy:site`), the Worker bundle and its two secrets
   branch but `main` (G17); `--any-branch` overrides that on purpose.
 - *Repo.* wrangler is an exact root devDependency, and each deploy script
   allows one form of call with no package runner (G67). A change to which
-  packages may run install scripts is the owner's call.
+  packages may run install scripts is the owner's call. wrangler reloads the
+  root `.env`, so the Google key and the vault path reach it and its packages;
+  the owner accepted that (`docs/commands.md`).
 - *Repo.* `deploy:ask` reads the live AI switch first and refuses to turn AI
   back on without `--ai-on`, and refuses log sampling below every line. It checks
   the Worker's own settings and never the gateway's.
 
-**Residual:** What you publish. The rule it rests on, a control: the Cloudflare
+**Residual:** What you publish. The rule it rests on: the Cloudflare
 token for Terraform has an expiry, is set only on the command, and never enters
 `.env` (`infra/README.md`). Nothing checks it.
 
 ### Outside lookups and imports
 
 **Crosses:** in: replies and cover bytes from Open Library, Google Books and
-Apple Books (cover URLs come out of those replies), and a Libation export given
-to `stacks import`. Out: each looked-up book's ISBN, title and author, private
+Apple Books (cover URLs come out of those replies), and a Libation export of an Audible
+library, given to `stacks import audible`. Out: each looked-up book's ISBN, title and author, private
 and wishlist ones included, and the Google key, to the providers' HTTPS endpoints
 (approved by `AGENTS.md`'s tech decisions).
 
@@ -114,7 +118,7 @@ and wishlist ones included, and the Google key, to the providers' HTTPS endpoint
 - *Repo.* A cover download is bounded: a 15 s timeout, a 20 MB cap counted as
   the body arrives, and an allowlist of three magic-byte signatures, so an SVG or
   an HTML error page never reaches `sharp` (G18). A flaw in the decoder for an
-  accepted format gets past it, and a cover URL's scheme is not checked.
+  accepted format gets past it, and a cover URL's scheme is not checked and a redirect is followed.
 - *Repo.* Provider ids are opaque, shape-checked and dropped on mismatch, and
   are never URLs, so no provider value lands in an `href`. A well-formed wrong id
   passes.
@@ -137,8 +141,8 @@ requests and commits, all public.
 
 - *GitHub.* Ruleset `main-protection` on the default branch: no deletion or
   force-push, a pull request, the `gates` check up to date, review threads
-  resolved, and CodeQL's code-scanning rule at high or above, with no bypass
-  actor. No approving review is required, and code-owner review is routing only.
+  resolved, and CodeQL's code-scanning rule at high or above for a security
+  alert and for any error, with no bypass actor. No approving review is required, and code-owner review is routing only.
   No gate reads the setting, and it lapses silently when switched off.
 - *GitHub.* Secret scanning and push protection are on. They match credential
   patterns, not a private book's title or a personal detail, and they lapse
@@ -154,12 +158,11 @@ requests and commits, all public.
   `bypassPermissions`, and the owner's merge does not hold a post.
 
 **Residual:** Text steers a session; Posts are public; Review rests on gates. The
-rules they rest on, each a control: only a spec comment from the repo owner's
-account counts, and only once a merged README row names it, and every other
-comment is data (unheld: anyone with write access can edit a comment, and every
-session posts as that account); a post carries the owner's words with a private
-book, note text, vault path, token or account id left out as `[withheld]` and is
-read back after it posts (a person's read is the only check).
+rules they rest on: only a spec comment from the repo owner's account counts
+(`docs/agents/issue-tracker.md`, Specs), and every other comment is data (unheld: anyone with write access can edit a comment, and every
+session posts as that account); a spec's issue body carries the owner's ask with a
+private book, note text, vault path, token or account id left out as `[withheld]`,
+and every post is read back after it posts (a person's read is the only check).
 
 ### Updates and CI
 
@@ -170,8 +173,8 @@ Dependabot pull requests, run on the machine and on a runner.
 
 - *GitHub.* Dependabot alerts and security updates, secret scanning, push
   protection and CodeQL default setup (Actions, JavaScript and TypeScript) are
-  on. Alerts and updates trail a disclosure, CodeQL blocks only a new alert at
-  high or above, and no gate reads these settings, so each lapses silently when
+  on. Alerts and updates trail a disclosure, CodeQL blocks only a new security alert at
+  high or above or a new error, and no gate reads these settings, so each lapses silently when
   switched off.
 - *Repo.* pnpm runs install scripts for `esbuild` and `sharp` only; a release
   must be seven days old, trust downgrades are refused, each lockfile entry is
@@ -184,8 +187,9 @@ Dependabot pull requests, run on the machine and on a runner.
   package with no advisory yet passes. zizmor lints the workflows, and no test
   reaches the network (G21).
 - *Repo.* `gates` holds `contents: read`, but the commit jobs in `metrics.yml`
-  hold `contents: write` with credentials kept, and the ruleset protects `main`
-  only.
+  hold `contents: write` with credentials kept. Rulesets protect only `main`
+  (`main-protection`) and the `metrics` and `survivors` branches
+  (`record-branches`: no deletion or force-push); every other branch is open.
 
 **Residual:** What you install and CI run.
 
@@ -240,13 +244,13 @@ so invariants 1, 2 and 4 hold by structure.
 
 ## Accepted threat classes
 
-- **What you publish:** a public build ships titles, authors, reading dates, ratings, covers and each book's Thoughts as plain text, which is the product, and earlier deployments keep what they held until deleted.
-- **Provider bytes are trusted:** a provider's reply is taken as facts and image bytes, so a decoder flaw in an accepted format, a well-formed wrong id or a wrong fact gets through.
+- **What you publish:** a public build ships titles, authors, reading dates, ratings, covers and each book's Thoughts as plain text, which is the product; a deploy sends that and the Worker from the owner's machine; earlier deployments keep what they held until deleted.
+- **Provider bytes are trusted:** a provider's reply or an import file's fields are taken as facts and image bytes, so a decoder flaw in an accepted format, a well-formed wrong id or a wrong fact gets through.
 - **What you install and CI run:** dependencies, actions and the two packages allowed install scripts run with the maintainer's or the runner's reach, and neither a pin's version comment nor an advisory below high stops a merge.
 - **Review rests on gates:** one maintainer merges their own pull requests with no approving review required, so the required check, CodeQL and the gates catch what that maintainer misses.
-- **Text steers a session:** an agent session reading tracker text, pull requests, fetched pages or cloned files can be steered by them; only the harness's prompts, where on, hold what it then does, and a post goes out first.
+- **Text steers a session:** an agent session reading tracker text, pull requests, fetched pages or cloned files can be steered by them; only the harness's prompts, where on, hold what it then does, and a post is public before anyone reads it back.
 - **Posts are public:** an issue, comment or pull request is public the moment it posts and may be cached or indexed after deletion; the posting rules and the read before posting are the only check.
-- **Ask availability can be spent:** a few addresses can use up the Worker's visitor counts and request allowance and keep AI off, search keeps working, and ADR-0127 accepts it.
+- **Ask availability can be spent:** a few addresses can use up the Worker's request allowance and keep AI off, search keeps working, and ADR-0127 accepts it.
 - **Questions reach Workers AI:** a visitor's question, the catalogue and some Thoughts go to Workers AI through the gateway, and Turnstile sees the address and browser signals; the Worker stores nothing, and ADR-0127 approves the flow.
 
 ## Residual risk
@@ -256,10 +260,10 @@ quadrantChart
   title Residual risk
   x-axis Unlikely --> Likely
   y-axis Low impact --> High impact
-  quadrant-1 Watch
-  quadrant-2 Contain
-  quadrant-3 Accept
-  quadrant-4 Monitor
+  quadrant-1 Likely and high impact
+  quadrant-2 Unlikely and high impact
+  quadrant-3 Unlikely and low impact
+  quadrant-4 Likely and low impact
   What you publish: [0.5, 0.35]
   Provider bytes are trusted: [0.3, 0.4]
   What you install and CI run: [0.3, 0.8]
@@ -272,4 +276,4 @@ quadrantChart
 
 ## Open issues
 
-- The Ask Worker's host controls (a WAF rate rule, and an AI Gateway with authentication on, logging off and a spend limit) are declared in `infra/`, not applied. No control is named for them, and until they are applied and read back AI spend has no cap and the Ask classes above do not hold ([#532](https://github.com/mephistopheles4/stacks/issues/532)).
+- The Ask Worker's host controls (a WAF rate rule, and an AI Gateway with authentication on, logging off and a spend limit) are declared in `infra/`, not applied. No control is named for them, and until they are applied and read back AI spend has no cap and the two Ask classes rest on a promise nothing checks: bring the owner a finding on the Worker's cost, flooding or retention ([#532](https://github.com/mephistopheles4/stacks/issues/532)).

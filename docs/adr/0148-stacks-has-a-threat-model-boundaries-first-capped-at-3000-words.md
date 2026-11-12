@@ -33,7 +33,7 @@ that places each finding on a boundary first, and this file is what it reads.
 - **In:** private notes reaching the public build (the public site, held by
   invariant 2 and G2); crafted import files and provider bytes (outside input);
   the Worker, with visitors' questions going to Workers AI (off the machine, held
-  by storing and logging nothing, and approved by ADR-0127).
+  by the Worker storing no question and logging only outcome codes, with the gateway's logging-off an open issue, and approved by ADR-0127).
 - **The machine's:** the vault at rest, and a vault value that escapes its path.
   A hostile vault was already not defended.
 - **Out as a class:** data loss in a vault. Its gates stay, and `AGENTS.md` says

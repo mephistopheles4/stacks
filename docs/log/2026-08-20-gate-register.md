@@ -6761,4 +6761,4 @@ stayed green under both, which is the reason the gate exists.
 - **Satisfying the letter** — **exposed.** Words are counted by splitting on whitespace, so a file can be padded under the cap with a dense table, a long unbroken line or a diagram, and still be unreadable in one sitting. The cap is a proxy for length, not for being read. Disposition `accepted`.
 - **Routing around** — **exposed.** A second threat-model file, or a section moved to another document, keeps this one short while the content grows elsewhere, and nothing reads the other file. `AGENTS.md` names `docs/threat-model.md` as the one. Disposition `accepted`.
 - **Vacuous green** — **gated.** An empty file, a renamed one and a misspelt path all satisfy a cap, so the read is floored at 500 words and a missing file throws. A second test hands the cap check the real text padded past the cap and requires it to report the file over. Disposition `gated`.
-- **Decay** — **clean.** The count reads the file as it stands and holds no number of its own except the cap.
+- **Decay** — **clean.** The count reads the file as it stands and holds no number of its own except the cap and the floor.

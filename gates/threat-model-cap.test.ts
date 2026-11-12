@@ -9,9 +9,9 @@
  * ## The vacuous green
  *
  * A cap is satisfied by an empty file, a renamed one and a misspelt path, so
- * the read is floored. The cap check is one function, `capFault`, and the second
- * test hands it the real text padded past the cap, so the check itself is seen
- * to fail and not only the counter.
+ * the read is floored. The second test pads the real text past the cap and
+ * checks the check reports it over, and the third hands it a stub and checks it
+ * reports the floor, which is how each is seen to fail.
  *
  * See docs/gates.md, row G72 (threat-model-cap), and docs/threat-model.md.
  */
@@ -24,7 +24,7 @@ const THREAT_MODEL = 'docs/threat-model.md';
 /** Words the file may hold, whole file, diagrams included. */
 const MAX_WORDS = 3000;
 
-/** A file shorter than this is not a threat model the cap is guarding. */
+/** A file this short or shorter is not a threat model the cap is guarding. */
 const MIN_WORDS = 500;
 
 const wordCount = (text: string): number => text.split(/\s+/).filter(Boolean).length;
@@ -42,13 +42,18 @@ function capFault(text: string): string | undefined {
 }
 
 describe('G72 — the threat model is read, and held to its cap', () => {
-  it('holds at most 3,000 words, and is not empty', () => {
+  it('holds more than 500 and at most 3,000 words', () => {
     expect(capFault(readRepoFile(THREAT_MODEL))).toBeUndefined();
   });
 
   it('reports a padded copy as over the cap', () => {
     const padded = `${readRepoFile(THREAT_MODEL)}\n${'padding '.repeat(MAX_WORDS)}`;
 
-    expect(capFault(padded)).toMatch(/over the cap of 3000/);
+    expect(MAX_WORDS).toBe(3000);
+    expect(capFault(padded)).toMatch(/over the cap of 3000\./);
+  });
+
+  it('reports a stub as too short', () => {
+    expect(capFault('a few words')).toMatch(/too few/);
   });
 });

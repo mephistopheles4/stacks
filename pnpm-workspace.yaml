@@ -78,8 +78,8 @@ minimumReleaseAgeIgnoreMissingTime: false
 # published with weaker evidence than an earlier release of the same package.
 #
 # ⚠️ **Never add or change an entry below without the owner's word.** Each one
-# accepts a possible package takeover on the owner's say-so, and the repository
-# has no threat model to record that acceptance in. Stop conditions, for every
+# accepts a possible package takeover on the owner's say-so, and the threat model
+# records that acceptance as the class "What you install and CI run". Stop conditions, for every
 # later bump: an install that fails on any entry other than these exact
 # versions; a lockfile resolution that is not integrity-only (G67); a new version
 # of a package `allowBuilds` admits by name, whose install script would run with
