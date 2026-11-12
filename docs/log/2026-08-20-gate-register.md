@@ -6734,3 +6734,17 @@ stayed green under both, which is the reason the gate exists.
 - **Routing around** — **exposed.** The remedy for a red run is to exclude the spec in `vitest.stryker.config.ts` or the file in `stryker.scopes.json`, and either turns the job green without fixing anything. That is the intended escape, so it is a reviewed diff with a reason beside it, and `docs/commands.md` says to name what keeps an oracle. Disposition `accepted`.
 - **Vacuous green** — **gated.** Stryker exits non-zero when the initial run executes no test (`No tests were executed. Stryker will exit prematurely`), which was seen on a scoped run here when only an unimported script was named. Disposition `gated`.
 - **Decay** — **exposed.** A Stryker or Vitest release that changes what a dry run does moves this job with no line of the repository changing, and that is the case it exists to catch; a flaky red blocks every merge, since the job feeds the one required check. `docs/commands.md` says a flake gets an issue and not an exclusion. Disposition `accepted`.
+
+### G71 — `doc-word-budget`
+
+**Gate:** [`gates/doc-word-budget.test.ts`](../../gates/doc-word-budget.test.ts)
+**Date:** 2026-11-12
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real files: with the ceiling for `AGENTS.md` lowered to 5,900 in the test's own `BUDGETS` table, `holds every budgeted file to its ceiling` failed with `AGENTS.md: 6051 words, budget 5900`, and the other two cases stayed green. The plant was reverted. The measuring function is also shown red on a synthetic document over its budget by a case of its own, so the red does not depend on a real file being large.
+
+- **Weakening** — **exposed.** Raising a ceiling in the test turns it green without cutting anything. That is a reviewed one-line diff, and the test's header says a ceiling raised whenever it fails is a comment. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The gate counts whitespace-separated words, so a file can stay under its ceiling while carrying history, or by moving text into a file the table does not list. It does not judge what the words say. Disposition `accepted`.
+- **Routing around** — **exposed.** Moving a file out of the table, or renaming it, drops its budget. The tracked-file clause turns a rename red, so a doc that leaves the table has to be deleted or moved deliberately. Disposition `accepted`.
+- **Vacuous green** — **gated.** The table must name at least ten files, each tracked and above 300 words, so an emptied table or a file that became a stub fails, and the measuring function is planted red on a document over its budget and green on one inside it. Disposition `gated`.
+- **Decay** — **exposed.** The ceilings sit just above each file's size on the day they were set, so a file that is later cut hard keeps unused headroom that nothing tightens. Disposition `accepted`.
