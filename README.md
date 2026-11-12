@@ -180,7 +180,8 @@ workflow requires them, and every gate passes without a single one installed.
 | [AGENTS.md](AGENTS.md) | the invariants and contracts that must not break |
 | [docs/adr/](docs/adr/) | every choice made, and why |
 | [docs/gates.md](docs/gates.md) | which rule each gate protects — and which are protected by nothing |
-| [SECURITY.md](SECURITY.md) | the threat model, stated plainly |
+| [docs/threat-model.md](docs/threat-model.md) | the threat model, boundaries first |
+| [SECURITY.md](SECURITY.md) | how to report a vulnerability |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1, and what one maintainer can escalate |
 | [docs/library-brief.md](docs/library-brief.md) | the original product spec (historical) |
 

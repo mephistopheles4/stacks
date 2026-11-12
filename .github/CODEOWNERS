@@ -13,6 +13,7 @@
 /docs/gates.md              @mephistopheles4
 /AGENTS.md                  @mephistopheles4
 /CLAUDE.md                  @mephistopheles4
+/docs/threat-model.md       @mephistopheles4
 
 # The merge gate itself, and anything that runs with the workflow token.
 /.github/workflows/         @mephistopheles4

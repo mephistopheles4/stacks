@@ -6748,3 +6748,17 @@ stayed green under both, which is the reason the gate exists.
 - **Routing around** — **exposed.** Moving a file out of the table, or renaming it, drops its budget. The tracked-file clause turns a rename red, so a doc that leaves the table has to be deleted or moved deliberately. Disposition `accepted`.
 - **Vacuous green** — **gated.** The table must name at least ten files, each tracked and at least half its ceiling in words, so an emptied table, a file that became a stub or a count that undercounts fails, and the measuring function is planted red on a document over its budget and green on one inside it. Disposition `gated`.
 - **Decay** — **exposed.** The ceilings sit just above each file's size on the day they were set, so a file that is later cut hard keeps unused headroom that nothing tightens. Disposition `accepted`.
+
+### G72 — `threat-model-cap`
+
+**Gate:** [`gates/threat-model-cap.test.ts`](../../gates/threat-model-cap.test.ts)
+**Date:** 2026-11-12
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real file: 1,000 words of padding appended to `docs/threat-model.md` (2,300 words by the test's own count) turned the first test red with `docs/threat-model.md holds 3300 words, over the cap of 3000`, and the padding was removed. Before the threat model existed, both tests were red on a missing file. The second test hands the cap check the real text padded past the cap and passes only because the check reports it over.
+
+- **Weakening** — **exposed.** The cap is one constant in the test file, and raising it, or deleting the test, passes every other gate. The spec calls raising it a spec change, and `gates/` is owned in `CODEOWNERS`, so the diff is visible and a reviewer reads it. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** Words are counted by splitting on whitespace, so a file can be padded under the cap with a dense table, a long unbroken line or a diagram, and still be unreadable in one sitting. The cap is a proxy for length, not for being read. Disposition `accepted`.
+- **Routing around** — **exposed.** A second threat-model file, or a section moved to another document, keeps this one short while the content grows elsewhere, and nothing reads the other file. `AGENTS.md` names `docs/threat-model.md` as the one. Disposition `accepted`.
+- **Vacuous green** — **gated.** An empty file, a renamed one and a misspelt path all satisfy a cap, so the read is floored at 500 words and a missing file throws. A second test hands the cap check the real text padded past the cap and requires it to report the file over. Disposition `gated`.
+- **Decay** — **clean.** The count reads the file as it stands and holds no number of its own except the cap and the floor.

@@ -199,6 +199,7 @@ Every phase: `pnpm test && pnpm build` green, plus:
 - In Phase 2, save a screenshot to `artifacts/` on every meaningful visual change — the human reviews aesthetics from these.
 - If a gate can't pass after 3 distinct approaches, stop, write up what you tried in `docs/blockers.md`, and end the session rather than thrashing.
 - Do not add dependencies without noting why in the relevant record under [`docs/adr/`](docs/adr/). Prefer zero-dep solutions for small utilities.
+- Before you rule on anything security, read [`docs/threat-model.md`](docs/threat-model.md), boundaries first. Data loss in a vault with no attacker is no class there, and its gates (G1, G3, G4, G32, the staging-folder rule) stay. Loosening them, adding or widening a class, or changing the scope needs a new spec comment from the owner.
 
 ## Commands
 
