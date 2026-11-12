@@ -1,5 +1,5 @@
 /**
- * G41 — `docs/gates.md`'s numbered rows ↔ `docs/gate-register.md`'s row sections.
+ * G41 — `docs/gates.md`'s numbered rows ↔ `docs/log/2026-08-20-gate-register.md`'s row sections.
  *
  * The register is a standalone document, which is *a second copy of the row
  * list with nothing holding it to the first* unless something holds it. This is
@@ -82,7 +82,7 @@ import { describe, expect, it } from 'vitest';
 import { expectFound, readRepoFile, sectionsOf } from './repo.ts';
 
 const SCOREBOARD = 'docs/gates.md';
-const REGISTER = 'docs/gate-register.md';
+const REGISTER = 'docs/log/2026-08-20-gate-register.md';
 
 /** The five categories, spelled as the register's verdict bullets spell them. */
 const CATEGORIES = [

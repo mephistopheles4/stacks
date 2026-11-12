@@ -401,7 +401,7 @@ paragraph whose whole argument is that a claim about the tree must be measured.
 | `gates/action-pins.test.ts` | **G39** — four clauses, one exemption, the vacuity floor with its population in the header comment, **plus the `audit`-job-and-`needs:` assertions that give G41 teeth**, and the written limit from §5 |
 | [`docs/gates.md`](../gates.md) | **row G39 (Contract seams)**, with G39's limit beside it; **row G41 `dependency-audit` (Defect gates, ✅, observed red 2026-08-08)**; **`## CI-only gates` removed**, its prose kept under a named `## G41 —` heading |
 | [`SECURITY.md`](../../SECURITY.md) | the pinning line amended — held in shape by a gate, and what the gate does not hold; the *unverifiable* clause extended by one sentence |
-| [`docs/gate-register.md`](../gate-register.md) | entries for G39 and G41 **and a category-1 verdict on `auditConfig.ignoreGhsas`**, all in the commit that lands the rows |
+| [`docs/gate-register.md`](../log/2026-08-20-gate-register.md) | entries for G39 and G41 **and a category-1 verdict on `auditConfig.ignoreGhsas`**, all in the commit that lands the rows |
 | [`CONTEXT.md`](../../CONTEXT.md) | **proposed**, not made: a **Vacuity floor** entry in its *Checking* section — 38 call sites across the suite, and its neighbour *Vacuous pass* already names the failure without naming the instrument built against it |
 
 ⚠️ **The `CONTEXT.md` entry is proposed rather than written** because the destination

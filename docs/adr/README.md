@@ -167,4 +167,5 @@ Two other files hold what these deliberately do not:
 | [0145](./0145-new-specs-live-on-their-issues.md) | New specs live on their issues, and the ones written before stay files |
 | [0146](./0146-the-notices-open-in-one-modal-over-the-shelf.md) | The attribution and privacy notices open in one modal over the shelf (amends 0138 and 0139) |
 | [0147](./0147-oreilly-is-removed.md) | O'Reilly is removed as a metadata provider (supersedes 0038) |
-| [0148](./0148-stacks-has-a-threat-model-boundaries-first-capped-at-3000-words.md) | Stacks has a threat model, boundaries first, capped at 3,000 words (G71) |
+| [0150](./0150-the-agent-docs-hold-what-holds-now.md) | The agent docs hold what holds now, and the history lives in `docs/log/` (supersedes parts of 0040 and 0024) |
+| [0148](./0148-stacks-has-a-threat-model-boundaries-first-capped-at-3000-words.md) | Stacks has a threat model, boundaries first, capped at 3,000 words (G72) |

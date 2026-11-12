@@ -135,7 +135,7 @@ row is **G45**. **Cite slug and number together, never the number alone.**
 
 Each new gate costs a row in [`docs/gates.md`](../gates.md), which **G19**
 (`constitution-scoreboard`) enforces in both directions, and a five-cell section
-in [`docs/gate-register.md`](../gate-register.md), which **G41**
+in [`docs/gate-register.md`](../log/2026-08-20-gate-register.md), which **G41**
 (`gate-register`) enforces the same way.
 
 | Label | Gate | Why nothing today catches it |

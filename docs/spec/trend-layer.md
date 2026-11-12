@@ -692,7 +692,7 @@ fail.**
 | [`docs/gates.md`](../gates.md) | **rows G36 (Contract seams) and G38 (Defect gates)**; a new `## Trends` section immediately before *Triaging a CodeQL finding* |
 | [`AGENTS.md`](../../AGENTS.md) | `trend:sync` in the commands list — `gates/commands.test.ts` (G14) holds both lists in both directions |
 | [`CONTEXT.md`](../../CONTEXT.md) | add **`Trend`**; amend **`Gate`** to turn on *scored* rather than on *present in `docs/gates.md`* |
-| [`docs/gate-register.md`](../gate-register.md) | entries for G36 and G38, triaged in the commit that lands them |
+| [`docs/gate-register.md`](../log/2026-08-20-gate-register.md) | entries for G36 and G38, triaged in the commit that lands them |
 
 ⚠️ **`metrics.yml` is authored during the only window in which nothing checks its
 pins** — G39 (`action-pins`) lands in the second commit and sweeps `.github/**/*.yml`

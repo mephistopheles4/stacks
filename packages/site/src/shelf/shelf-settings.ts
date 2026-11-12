@@ -512,7 +512,7 @@ export interface ShelfSettings {
  * Every number here was the literal that used to sit at the call site, so this
  * commit changes no pixels. `pnpm smoke:render` is the check: same book count,
  * same bookcase overflow, and a distinct-colour count inside the ~40-pixel noise
- * floor `docs/progress.md` measured for `artifacts/shelf.png`.
+ * floor `docs/log/2026-11-12-progress-before-the-cleanup.md` measured for `artifacts/shelf.png`.
  *
  * **This is the paste target.** The debug panel's export button copies JSON, and
  * JSON is a subset of TypeScript object-literal syntax — so dialling a shelf you

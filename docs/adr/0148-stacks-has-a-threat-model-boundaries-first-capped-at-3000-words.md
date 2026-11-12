@@ -17,7 +17,7 @@ provenance: no dates, no history, no author.
 
 `SECURITY.md` keeps how to report a vulnerability and points at it. The file is
 capped at 3,000 words, counted over the whole file by splitting on whitespace,
-by G71 (`threat-model-cap`). Raising the cap is a spec change.
+by G72 (`threat-model-cap`). Raising the cap is a spec change.
 
 ## Why
 
@@ -52,8 +52,9 @@ that places each finding on a boundary first, and this file is what it reads.
 
 ## Consequences
 
-- A host control named here that turns out not to be applied is a finding for the
-  owner, not a thing this change fixes.
+- Until the host controls are applied and read back, the model names none of them
+  and says so under Open issues; applying them is the owner's step, not a thing
+  this change does.
 - `SECURITY.md`'s table of platform settings is gone. The GitHub ones that were
   readable are named under their boundary; Dependabot malware alerts and grouped
   security updates have no read and are not named.

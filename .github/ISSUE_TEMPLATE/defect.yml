@@ -1,10 +1,9 @@
 name: Defect
 description: Something behaves differently from what is documented or expected.
 title: '<what broke, in one line>'
-# No `labels:` here on purpose. The five labels in docs/agents/triage-labels.md
-# now exist, so this is no longer about a form silently applying nothing — it is
-# that `needs-triage` on every new issue carries no information, because it
-# would be true of all of them. Triage is a person deciding, not a default.
+# No `labels:` here on purpose. The five triage labels (docs/agents/issue-tracker.md)
+# exist, but `needs-triage` on every new issue carries no information, because
+# it would be true of all of them. Triage is a person deciding, not a default.
 body:
   - type: markdown
     attributes:

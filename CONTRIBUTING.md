@@ -92,7 +92,7 @@ row in the scoreboard was held to this and several failed the first time.
 
 **A new row lands with its register entry, in the same commit.** Add a row to
 [`docs/gates.md`](docs/gates.md) and it owes a matching section in
-[`docs/gate-register.md`](docs/gate-register.md) carrying **five verdicts — one
+[`docs/log/2026-08-20-gate-register.md`](docs/log/2026-08-20-gate-register.md) carrying **five verdicts — one
 bullet each for weakening, satisfying the letter, routing around, vacuous green
 and decay — a date, and an observed-red line**, plus a disposition
 (`gated` / `repaired` / `accepted` / `declined`) wherever a finding survives.
@@ -169,14 +169,15 @@ gates have to be worth trusting.
 The owner works on this repo with Claude Code and a set of
 [engineering skills](https://github.com/mattpocock/skills) installed. The
 per-repo configuration they read lives in [`docs/agents/`](docs/agents/):
-where issues are tracked, the triage label vocabulary, and how to consume the
-domain docs.
+where issues are tracked and the triage label vocabulary. How to consume the
+domain docs is in `AGENTS.md`.
 
 **None of it is required, and none of it is a condition of contributing.** The
 four commands at the top of this file are the contract. A contributor with no
 skills installed — or no agent at all — must be able to pass every gate, and if
 that ever stops being true it is a bug in this repo, not in your setup. Nothing
-under `docs/agents/` is read by any gate, any script, or CI.
+under `docs/agents/` is read by any gate, any script, or CI, except that G71
+(`doc-word-budget`) counts the words of `issue-tracker.md`.
 
 They are written down because a workflow that lives only in one person's head
 is the same failure this project keeps gating against: a documented claim that

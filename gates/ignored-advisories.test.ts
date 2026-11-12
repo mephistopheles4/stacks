@@ -17,7 +17,7 @@
  *   hand-written records, and asserts the step is *wired* — present, after
  *   `pnpm audit`, taking its token through `env:` — so deleting it goes red.
  *   The step's own I/O is verified by planting, recorded in
- *   docs/gate-register.md, G63.
+ *   docs/log/2026-08-20-gate-register.md, G63.
  *
  * ⚠️ **A vacuous live green is the risk here**: with no entry in the workspace
  * file, G62's live assertion passes over nothing. The synthetic cases below

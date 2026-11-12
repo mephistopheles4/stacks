@@ -406,7 +406,7 @@ Flagged rather than left silent because **all five stryker-js#6073 ghosts sit in
 | [`docs/gates.md`](../gates.md) | **row G37 `mutation-scope`, *Contract seams → gates*** |
 | [`docs/gates.md`](../gates.md), *Not gated, deliberately* | the **Mutation testing (Stryker)** row **marked in place, dated, with the corrected count beside the wrong one** — see below |
 | [`docs/adr/`](../adr/) | one record for the Stryker dependency |
-| [`docs/gate-register.md`](../gate-register.md) | an entry for G37, triaged in the commit that lands it |
+| [`docs/gate-register.md`](../log/2026-08-20-gate-register.md) | an entry for G37, triaged in the commit that lands it |
 
 **The rejection row is marked, never deleted.** The documented retirement
 mechanism is for *numbered* rows — *"keeps its number and its row"* — and this

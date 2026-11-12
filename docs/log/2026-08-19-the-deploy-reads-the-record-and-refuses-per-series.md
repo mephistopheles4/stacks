@@ -102,7 +102,7 @@ catalogue decay.
 
 ## Observed red
 
-Five plants, all reverted, recorded in [`docs/gate-register.md`](../gate-register.md)'s
+Five plants, all reverted, recorded in [`docs/gate-register.md`](2026-08-20-gate-register.md)'s
 G39 entry with what each one printed. In summary: an aggregate freshness bound in
 place of the per-series one; a series with no sample treated as fine; the bound
 widened from 3 days to 90; the two disambiguation messages swapped; and the

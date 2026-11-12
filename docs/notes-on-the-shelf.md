@@ -2,22 +2,14 @@
 
 Picking a book up off the shelf and reading what you thought of it.
 
-This is P2 in the brief — *architectural insurance: design for, don't build*.
-Nothing here is implemented. It exists so that the decisions being made now, in
-the renderer and in the publisher, don't quietly foreclose it, and so that the
-reasoning survives the session it was worked out in.
+This is the design the locked spec rests on, and both halves are built.
 
-> **Specified.** [Map #366](https://github.com/mephistopheles4/stacks/issues/366)
-> finished this design, and the result is a locked spec:
-> [`docs/spec/picking-a-book-up.md`](spec/picking-a-book-up.md). Build from that
-> file, not from this one. This one is kept as written, because it is the
-> reasoning the spec rests on; where the two differ, the spec is the later
-> word. Three places differ: the heading is now locked (below), the held tier is
-> capped at 1200 px rather than the vault original, and releasing the other
-> covers on pickup is deferred (§2). **Built from the spec** in four steps,
-> [#410](https://github.com/mephistopheles4/stacks/issues/410) to
-> [#413](https://github.com/mephistopheles4/stacks/issues/413), so "nothing here
-> is implemented" above describes the day this was written.
+> **Specified and built.** The locked spec is
+> [`docs/spec/picking-a-book-up.md`](spec/picking-a-book-up.md). Build and change
+> from that file, not from this one; this one is the reasoning the spec rests on,
+> and where the two differ, the spec is the later word. Three places differ: the
+> heading is locked (below), the held tier is capped at 1200 px rather than the
+> vault original, and releasing the other covers on pickup is deferred (§2).
 
 Two separable pieces:
 
@@ -34,15 +26,14 @@ a rendering problem and rides on the lazy texture loader the shelf needs anyway.
 
 ### The invariant this changes
 
-Invariant 2 currently reads:
+Invariant 2 as first written read:
 
 > **Note bodies are private.** Nothing below the frontmatter block is ever parsed
 > into `library.json` or shipped in any build.
 
 The brief is narrower — *"never parsed for the public build"* (line 80), *"notes
 stay private **by default**"* (line 31). Two different rules, and this feature is
-legal under one and illegal under the other. Nothing has noticed so far because
-no code has ever wanted to read a note body.
+legal under one and illegal under the other.
 
 The split: `library.json` never carries body text, and a `--public` build ships
 only an explicitly allowlisted section. See AGENTS.md for the revised wording.
@@ -68,10 +59,9 @@ The presence of the section is the signal.
 - A `## Thoughts` section → that section ships with the book.
 - `private: true` → the book does not ship at all, so neither do its notes.
 
-An earlier draft of this design gave `private:` a third state for "publish the
-book but not its notes". It isn't needed: that state is simply not writing a
-public section, which is also what every existing note in every existing vault
-already does.
+`private:` has no third state for "publish the book but not its notes": that
+state is simply not writing a public section, which is also what every existing
+note in every existing vault already does.
 
 ### The extraction happens in the adapter
 
@@ -152,35 +142,25 @@ which is why the loader should be built as `load(book, quality)` rather than a
 load-it / don't-load-it boolean:
 
 - **shelf tier** — 512px, what `MAX_COVER_EDGE` caps today;
-- **held tier** — the vault-quality original, one book at a time.
+- **held tier** — a re-encoded copy capped at 1200px (`HELD_COVER_EDGE`), not the
+  vault original, one book at a time
+  ([ADR-0105](./adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md)).
 
-  *Built since as a re-encoded copy capped at 1200px, not the original:* see
-  [ADR-0105](./adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md) and
-  `HELD_COVER_EDGE`. The paragraph below is the reasoning as it stood before.
-
-That cuts against the 512px decision as currently written in [`docs/adr/`](./adr/0015-cover-texture-budget.md).
+That cuts against the 512px decision in [`docs/adr/`](./adr/0015-cover-texture-budget.md).
 The cap is not wrong; it is right for a spine on a shelf and wrong for a cover
 filling a phone screen. It is the shelf tier of two tiers, not a permanent
-policy — and a public build will eventually need to stage a full-size copy
-alongside the capped one, fetched only on pickup.
+policy.
 
-Usefully, this helps rather than hurts the memory problem that caused the mobile
-crash: picking one book up is the natural moment to release every other cover.
-
-> **Since superseded on both points.** The held tier is capped at 1200 px, and
-> releasing the other covers waits for G15 (`cover-budget`) to go red: the crash
-> was not cover memory
-> ([ADR-0105](adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md),
-> [#377](https://github.com/mephistopheles4/stacks/issues/377)).
+Releasing every other cover on pickup is deferred: it waits for G15
+(`cover-budget`) to go red, because the mobile crash was not cover memory
+([ADR-0105](adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md)).
 
 ---
 
 ## Deliberately not decided
 
-- ~~**The heading name.** `## Thoughts` is a placeholder that reads well; nothing
-  above depends on the word.~~ **Decided:** `## Thoughts`, exact and
-  case-sensitive, locked by map #366 and carried in
-  [the spec](spec/picking-a-book-up.md).
+- **The heading name** is decided: `## Thoughts`, exact and case-sensitive,
+  carried in [the spec](spec/picking-a-book-up.md).
 - **Highlights as distinct from thoughts.** The brief lists Readwise-style
   highlight import separately. Imported highlights are someone else's text —
   quoted from the book — and whether they may be republished is a different

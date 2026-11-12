@@ -5,7 +5,7 @@
  * its packages' versions from npm, and exits 1 when a fix is published or when
  * any lookup cannot be trusted. Every decision is in `scripts/lib/ignore-ghsas.ts`;
  * this file is only the I/O around it, and is verified by planting, not by a
- * unit test — see docs/gate-register.md, G63.
+ * unit test — see docs/log/2026-08-20-gate-register.md, G63.
  *
  * Run as `pnpm exec tsx scripts/check-ignored-advisories.ts`. `GITHUB_TOKEN`
  * lifts GitHub's advisory API from 60 requests an hour per runner IP; the

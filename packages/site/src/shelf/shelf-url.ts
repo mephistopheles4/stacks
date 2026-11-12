@@ -23,7 +23,7 @@ import {
  * ## Two vocabularies, deliberately
  *
  * **The probes keep their own flat spellings** — `?aa=0`, `?shadows=1`,
- * `?shadowtype=vsm`, `?books=5`. They are documented in `docs/progress.md` with
+ * `?shadowtype=vsm`, `?books=5`. They are documented in `docs/log/2026-11-12-progress-before-the-cleanup.md` with
  * measured results attached, they are typed by hand on a phone, and every one of
  * them has to keep meaning what it meant. They are the reason this is not simply
  * a blob. The original ten gained an eleventh, `?receivers=all`, for exactly

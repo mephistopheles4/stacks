@@ -3,24 +3,12 @@
 A glossary, and only a glossary. Every term below is one this project uses in a
 narrower sense than English does, and that **no gate pins down**.
 
-## Why this is not the third copy [ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md) refused
-
-That record turned down a `CONSTITUTION.md` on the grounds that *"a rule written
-down twice is a rule that will be true in one place and false in the other"* —
-the invariants already lived in [`AGENTS.md`](AGENTS.md) and were already scored
-in [`docs/gates.md`](docs/gates.md), so a third file would have been a second
-thing to keep in sync and no new enforcement.
-
-The same argument applies here and rules most candidate entries out. **A term
-whose meaning a gate already holds is linked, never restated.** The frontmatter
-keys belong to G8, the invariants to G19, the commands to G14, `shelf_order` to
-G12, cover paths to G10 — a definition here would be a copy that can rot, and
-those five cannot.
-
-What is left is vocabulary this project has been using precisely for a year with
-nowhere saying so. Naming those costs nothing to keep true, because **nothing
-below states a rule**. If an entry here ever needs a "must", it has stopped being
-a glossary entry and belongs in `AGENTS.md` with a gate.
+**A term whose meaning a gate already holds is linked, never restated**
+([ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md)): the
+frontmatter keys belong to G8, the invariants to G19, the commands to G14,
+`shelf_order` to G12, cover paths to G10. **Nothing below states a rule.** If an
+entry here ever needs a "must", it belongs in [`AGENTS.md`](AGENTS.md) with a
+gate.
 
 ## Language
 
@@ -146,9 +134,9 @@ taken by the *struck* roughness weave — see #68).
 Which of the three providers in use a cover's *bytes* were downloaded from — a
 separate question from which provider answered for the book's metadata. The two
 differ often enough that conflating them loses real information: a book Open
-Library answered for can carry an Apple cover. Covers cached before O'Reilly was
-removed (ADR-0147) may still say `oreilly`. It is provenance and not permission —
-nothing reads it, and every cover is published whatever its source.
+Library answered for can carry an Apple cover. Older covers may still say
+`oreilly` ([ADR-0147](docs/adr/0147-oreilly-is-removed.md)). The rules are the
+`cover_source` ones in [`AGENTS.md`](AGENTS.md).
 *Avoid*: source (ambiguous — a record's `source` is the metadata provider).
 
 **Candidate**:
@@ -171,9 +159,7 @@ name**, used in `BookInput` and everywhere in `packages/core`; `spine_color` is
 the **contract name**, the one in the note on disk and the one G8 pins. Creating
 a note speaks domain names and the adapter translates; *updating* one speaks
 contract names directly.
-*Avoid*: treating them as a style difference. Three commands assembled the same
-three cover keys three different ways, and this split — not anything about
-covers — is why.
+*Avoid*: treating them as a style difference.
 
 **Removal**:
 Setting a key to `undefined` when updating an existing note, which deletes it
@@ -386,9 +372,7 @@ distinguish "found nothing" from "looked nowhere".
 **Ship phrase**:
 The canary's opposite: a phrase planted inside a fixture's **Thoughts section**
 that a check requires to be *present* in the built notes, so "the split held"
-cannot pass on a build that shipped no Thoughts at all. Named *must-ship marker*
-on [#367](https://github.com/mephistopheles4/stacks/issues/367); renamed because
-*marker* is on the canary's *Avoid* list.
+cannot pass on a build that shipped no Thoughts at all.
 *Avoid*: marker, presence canary (a canary is what must be absent).
 
 **Thoughts section**:
@@ -415,9 +399,8 @@ happens to Markdown marks), redacted (nothing is partly shipped).
 **Gate**:
 A named check that goes red when a rule breaks, and that is **scored** in
 [`docs/gates.md`](docs/gates.md) — a numbered row carrying ✅, 🔴 or ⬜. A rule
-with no gate is a comment. **Scored, not merely present in that file**: since the
-`## Trends` section landed, the file also carries things that are deliberately
-not gates, and *appearing in `docs/gates.md`* stopped being the test.
+with no gate is a comment. **Scored, not merely present in that file**: it also
+carries things that are deliberately not gates, in its `## Trends` section.
 *Avoid*: test, check, CI job.
 
 **Trend**:
