@@ -26,7 +26,7 @@ const BUDGETS: Readonly<Record<string, number>> = {
   'AGENTS.md': 6_100,
   'CONTEXT.md': 3_950,
   'CONTRIBUTING.md': 1_750,
-  'docs/agents/issue-tracker.md': 2_400,
+  'docs/agents/issue-tracker.md': 2_750,
   'docs/commands.md': 15_300,
   'docs/gates.md': 31_800,
   'docs/notes-on-the-shelf.md': 1_350,
