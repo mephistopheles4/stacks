@@ -72,7 +72,9 @@ describe('G71 — the agent-facing docs stay inside a word budget', () => {
       'budgeted files that are not tracked: a renamed or deleted doc must leave this table',
     ).toEqual([]);
     expect(
-      names.filter((path) => wordCount(readRepoFile(path)) < BUDGETS[path] / 2),
+      Object.entries(BUDGETS)
+        .filter(([path, ceiling]) => wordCount(readRepoFile(path)) < ceiling / 2)
+        .map(([path]) => path),
       'a budgeted file under half its ceiling is a moved file, or a count that undercounts, and the budget no longer measures it',
     ).toEqual([]);
   });
