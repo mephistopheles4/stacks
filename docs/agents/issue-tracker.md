@@ -139,19 +139,28 @@ gate ([`gates.md`](../gates.md#not-gated-deliberately)).
    claims, and what it depends on. A dependency is recorded natively, under
    *Wayfinding operations* below, as well as named in the body.
 2. **Link it as a sub-issue.** `gh issue create --parent <parent>` links a new
-   ticket as it is filed. For one that already exists, `gh` has no flag; the
-   parent's `sub_issues` endpoint takes the child's **REST id**, never its number:
+   ticket as it is filed, and `gh issue edit <child> --parent <parent>` links one
+   that exists, in a `gh` that has the flag. The version-independent form is the
+   parent's `sub_issues` endpoint, which takes the child's **REST id**, never its
+   number:
 
    ```sh
    gh api --method POST repos/{owner}/{repo}/issues/<parent>/sub_issues -F sub_issue_id=$(gh api repos/{owner}/{repo}/issues/<child> --jq .id)
    ```
 
    `-F`, not `-f`: the id must go as an integer, and `-f` posts it as a string.
-   List a parent's tickets with
-   `gh api repos/{owner}/{repo}/issues/<parent>/sub_issues --jq '[.[].number]'`.
+   `{owner}/{repo}` fills in from this checkout, so a child in another
+   repository needs its own explicit `repos/<owner>/<repo>` path on the id
+   lookup. List a parent's tickets with
+   `gh api --paginate repos/{owner}/{repo}/issues/<parent>/sub_issues --jq '[.[].number]'`.
 3. **A ticket's pull request closes its own ticket**, not the parent: the body
    says `Closes #<ticket>`, and the pull request is signed by the session that
-   built it. The parent closes when its last sub-issue closes.
+   built it. The parent closes when its last sub-issue closes, but GitHub does
+   not do it: the session that merges the last ticket's pull request runs the
+   row check under *Specs*, then closes the parent with `gh issue close`. While a
+   ticket's pull request is open, the owner's sign-off comment under *Specs*
+   covers it, and the spec's row is brought up to date in the last ticket's
+   pull request.
 4. **Tickets that can run side by side do.** Tickets with no dependency between
    them and no shared files start in parallel, one session each, and the cut
    says which those are. Tickets that touch the same file, or where one needs the
