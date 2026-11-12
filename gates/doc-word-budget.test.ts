@@ -23,7 +23,7 @@ import { expectFound, readRepoFile, trackedFiles } from './repo.ts';
 
 /** File → the most words it may hold. Words are whitespace-separated runs. */
 const BUDGETS: Readonly<Record<string, number>> = {
-  'AGENTS.md': 6_150,
+  'AGENTS.md': 6_100,
   'CONTEXT.md': 3_950,
   'CONTRIBUTING.md': 1_750,
   'docs/agents/issue-tracker.md': 2_400,

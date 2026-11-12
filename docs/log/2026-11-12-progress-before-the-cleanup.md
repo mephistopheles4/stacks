@@ -2,7 +2,7 @@
 
 The whole of `docs/progress.md` as it read on 2026-11-12, moved here unedited when that file was cut down to its current state ([#585](https://github.com/mephistopheles4/stacks/issues/585)). Its current-state rows, gate log, phase evidence, environment-finding histories and the per-episode summaries of the investigation index are the record kept here. The live file is [`progress.md`](../progress.md).
 
-**Read this first.** It is the only file that says where the project actually is.
+*(Archived text follows. It no longer applies: the live file is [`docs/progress.md`](../progress.md).)* **Read this first.** It is the only file that says where the project actually is.
 
 This is an **index, not a narrative**. One line per event, newest phase last.
 Gists and links — never restate the plan. If you find yourself explaining *what*

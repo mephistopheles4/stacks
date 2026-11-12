@@ -137,6 +137,10 @@ One line per episode, newest last. The narrative is one file per investigation i
 - 2026-11-06 — [Five models on the Ask evals](./log/2026-11-06-model-comparison.md)
 - 2026-11-07 — [The stop in the pickup track](./log/2026-11-07-the-stop-in-the-pickup-track.md)
 - 2026-11-08 — [Pages or Workers: the probe](./log/2026-11-08-pages-or-workers-probe.md)
+- 2026-11-12 — [The gate register (moved out of `docs/`)](./log/2026-08-20-gate-register.md)
+- 2026-11-12 — [The gates history, cut from `gates.md`](./log/2026-11-12-gates-history.md)
+- 2026-11-12 — [The agent docs history, cut from the spec index, shelf docs and `commands.md`](./log/2026-11-12-agent-docs-history.md)
+- 2026-11-12 — [`progress.md` before the cleanup](./log/2026-11-12-progress-before-the-cleanup.md)
 
 ## Notes to the next session
 
