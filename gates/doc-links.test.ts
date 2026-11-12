@@ -11,7 +11,7 @@
  * ~1400 lines across 17 new files. That change is exactly the kind this repo
  * has no defence against: a link that silently stops resolving is a documented
  * claim that has quietly become false, which is the failure `docs/gates.md`
- * opens by listing six instances of.
+ * opens by describing.
  *
  * **Local links only — no network.** G21 forbids a test touching the internet,
  * so `http(s):` and `mailto:` targets are skipped rather than fetched. A link

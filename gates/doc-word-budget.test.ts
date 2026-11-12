@@ -12,7 +12,7 @@
  * ceiling only for a rule that is new.
  *
  * Three guards against a vacuous pass: the budget table must name files that
- * exist and are tracked, none may be under 300 words, and the measuring
+ * exist and are tracked, none may be under half its ceiling, and the measuring
  * function is shown to fail on a document over its budget.
  *
  * See docs/gates.md, row G71 (doc-word-budget).
@@ -72,8 +72,8 @@ describe('G71 — the agent-facing docs stay inside a word budget', () => {
       'budgeted files that are not tracked: a renamed or deleted doc must leave this table',
     ).toEqual([]);
     expect(
-      names.filter((path) => wordCount(readRepoFile(path)) < 300),
-      'a budgeted file this short is a moved file the budget no longer measures',
+      names.filter((path) => wordCount(readRepoFile(path)) < BUDGETS[path] / 2),
+      'a budgeted file under half its ceiling is a moved file, or a count that undercounts, and the budget no longer measures it',
     ).toEqual([]);
   });
 

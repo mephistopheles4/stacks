@@ -10,7 +10,7 @@
  * scoreboard tracking which rules are enforced was the only unenforced thing in
  * the repo — which is precisely the failure it opens by describing:
  *
- *   > A rule nothing can fail on is a comment.
+ *   > A rule written down and checked by nothing is a comment
  *
  * **Every assertion here anchors to the cell that carries the claim**, never to
  * the row and never to the document. The first version of this gate did neither
@@ -319,7 +319,7 @@ describe('G19 — every row has a name, and the name means something', () => {
     // G35 had already made it seven when `enhanced-card` landed naming a script
     // instead of a spec, and `dependency-audit` makes it eight. `docs/gates.md`
     // says it two tables away — *"A positional reference to a table that grows
-    // is the same species as the count in the next paragraph"* — and naming the
+    // is the same species as a count in prose"* — and naming the
     // rows breaks loudly where a number just goes quietly stale.
     //
     // ⚠️ **A row can un-anchor another row's slug by mentioning its spec in
