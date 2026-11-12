@@ -7,22 +7,19 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 ## Start here — orientation for a cold session
 
 1. `docs/progress.md` — where the project actually is. Read this first, always.
-   It is a **spine**: current state, the gate log, environment findings, and an
-   index of every investigation. The narratives themselves live one per file in
-   `docs/log/` — follow a link from the index when you need one, rather than
-   reading 1500 lines to find the four that matter.
+   It is a **spine**: current state, environment findings, and an index of every
+   investigation. The narratives live one per file in `docs/log/`; follow a link
+   from the index when you need one.
 2. `docs/plan.md` — the approved execution plan, rules of engagement, fixture spec.
 3. `docs/library-brief.md` — full product spec. Read before starting any phase.
 4. `docs/gates.md` — the invariant scoreboard: which rule each gate protects, and
    which rules are still protected by nothing.
-5. `docs/notes-on-the-shelf.md` — the design for public/private notes and for
-   picking a book up. Both halves are built — the `## Thoughts` extractor, and
-   picking a book up in place of the card ([#413](https://github.com/mephistopheles4/stacks/issues/413));
-   read it before changing invariant 2, the publisher, or the cover cap.
+5. `docs/notes-on-the-shelf.md` — the design for public/private notes (the
+   `## Thoughts` extractor) and for picking a book up in place of the card; read
+   it before changing invariant 2, the publisher, or the cover cap.
 6. [`docs/spec/README.md`](docs/spec/README.md) — the index of every spec and
-   its state. A spec written before [#533](https://github.com/mephistopheles4/stacks/issues/533)
-   is a file in `docs/spec/`, decided end to end: read it *instead of*
-   re-deciding. A spec written since is a comment on its issue titled
+   its state. An older spec is a file in `docs/spec/`, decided end to end: read
+   it *instead of* re-deciding. A newer one is a comment on its issue titled
    `## Spec: <name> (revision <n>)`, and its row in the README links that
    comment by full URL. Each spec carries its own build order and gate roster.
    Only a spec comment posted by the repo owner's account (`mephistopheles4`)
@@ -41,9 +38,8 @@ other agent reads this file and is missing nothing.
 
 Update `docs/progress.md` in the same commit as the gate it describes, and
 `docs/gates.md` in the same commit as the gate it scores. A new investigation
-goes to `docs/log/<date>-<slug>.md` with one index line in the spine — **not**
-appended to `docs/progress.md`, which is how that file reached 1551 lines while
-its own second paragraph called it an index.
+goes to `docs/log/<date>-<slug>.md` with one index line in the spine, never
+appended to `docs/progress.md`.
 
 ## Invariants — never violate these
 
@@ -113,11 +109,10 @@ key there and not here is exactly the drift that gate exists to catch.
 
 **It fails closed, unlike every other key.** Anything present that is not clearly a "no" means private, because `private: yes` is a *string* under YAML 1.2 and a strict boolean check would drop it and publish the book. Wrongly private is a missing spine you notice in a second; wrongly public is someone's reading on a URL that may already have been shared or crawled. Only one of those is undoable.
 
-`binding` is the one thing about a book's shape **no provider knows** — the word
-`physical_format` appears zero times across every cached response this project
-holds, and Google and Apple have no field for it at all. So it is declared or it
-is invented, never looked up, and inference from cover aspect or page count is
-struck permanently rather than deferred ([#52](https://github.com/mephistopheles4/stacks/issues/52)).
+`binding` is the one thing about a book's shape **no provider knows**: no cached
+response carries it, and Google and Apple have no field for it at all. So it is
+declared or it is invented, never looked up, and inference from cover aspect or
+page count is struck permanently ([#52](https://github.com/mephistopheles4/stacks/issues/52)).
 
 **Absent does not mean hardback.** It routes to a stable per-book hash, so no
 missing key can flatten the shelf into one format — the fail-closed property met
@@ -126,7 +121,7 @@ Binding moves the board and the binder's square *together* (a paperback is not a
 hardback with the overhang removed) and biases the height band, which is the tell
 that actually reads at shelf distance. `books.paperbackRatio` dials the mixture.
 
-`cover_source` records which provider a cover's bytes came from, taken from the URL that was actually downloaded. **It is provenance, not permission** — the providers permit different things, but nothing reads this key: `publish.ts` has never looked at it and every cover ships whatever its source. What it buys is precision if a provider ever asks for its art down — *those two*, not *all of them*. This line used to say a public build "cannot treat them alike", which read as policy and described nothing; see `packages/core/src/covers/cover-source.ts` and [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider.md). **Absent and `unknown` are different**: absent means nobody looked (every cover cached before this key existed), `unknown` means somebody looked and did not recognise the host. An unrecognised value is dropped at parse time rather than kept, because a typo must not read as a permission. **A cover dropped in by hand is `unknown` too** — there is no `local`, because the honest reading of that value is *"somebody looked and did not recognise the host"*, which is exactly what a file from outside the providers is. ⚠️ **Write `cover_source: unknown` by hand on a cover you add by hand**: `stacks covers --backfill` infers an absent value from the image and guesses anything 700px or wider as `apple-books`, so an O'Reilly cover saved at 1200px would be recorded as Apple's. What must never survive is the *old* value: swapping the bytes under a note that still says `apple-books` is the one way this key can state something false, and it is the only failure here nothing would notice.
+`cover_source` records which provider a cover's bytes came from, taken from the URL that was actually downloaded. **It is provenance, not permission** — nothing reads this key: `publish.ts` never looks at it and every cover ships whatever its source, Apple's included. What it buys is precision if a provider ever asks for its art down — *those*, not *all of them*; see `packages/core/src/covers/cover-source.ts` and [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider.md). **Absent and `unknown` are different**: absent means nobody looked (every cover cached before this key existed), `unknown` means somebody looked and did not recognise the host. An unrecognised value is dropped at parse time rather than kept, because a typo must not read as a permission. **A cover dropped in by hand is `unknown` too** — there is no `local`, because the honest reading of that value is *"somebody looked and did not recognise the host"*, which is exactly what a file from outside the providers is. ⚠️ **Write `cover_source: unknown` by hand on a cover you add by hand**: `stacks covers --backfill` infers an absent value from the image and guesses anything 700px or wider as `apple-books`, so an O'Reilly cover saved at 1200px would be recorded as Apple's. What must never survive is the *old* value: swapping the bytes under a note that still says `apple-books` is the one way this key can state something false, and it is the only failure here nothing would notice.
 
 `publisher`, `published` and `subjects` come from the merge revision, and each
 carries a rule worth knowing. **`published` is stored verbatim** — `2008` from
@@ -137,10 +132,9 @@ means re-asking every provider; the card renders the first four-digit run.
 provider categories contain commas natively — Apple's `Health, Mind & Body` is in
 this repo's own G26 corpus — so a comma split would invent a genre nobody said,
 and a value containing the separator is dropped rather than escaped.
-⚠️ **`publisher` was already hand-written on 17 of the 41 real notes** before it
-was ever a contract key, and absent-only leaves every one of them alone, so the
-field is **mixed-provenance from day one**: nothing downstream may assume a
-provider supplied it.
+⚠️ **`publisher` is mixed-provenance**: many notes carry a hand-written value and
+absent-only leaves each one alone, so nothing downstream may assume a provider
+supplied it.
 
 `google_volume_id`, `apple_track_id`, `openlibrary_olid` and `oreilly_ourn` are
 the **contributor ids**, and the set of them present *is* the record of which
@@ -159,13 +153,13 @@ whether the book exists or not — because an O'Reilly early release is the one
 book no other provider matches, and recording only linkable providers would leave
 it with no provenance at all. ⚠️ **No provider writes it any more**: O'Reilly was removed ([ADR-0147](docs/adr/0147-oreilly-is-removed.md)), so the key survives on older notes only.
 
-**A book you are reading comes ahead of all of that**, numbered or not. `stacks order --renumber` numbers every shelved book, so any rule that only applied to unnumbered books stopped applying at all after one run — and the next book you picked up sorted behind every pin. Pinned by `gates/shelf-order.test.ts`.
+**A book you are reading comes ahead of all of that**, numbered or not. `stacks order --renumber` numbers every shelved book, so a rule that only applied to unnumbered books would stop applying after one run and the next book you picked up would sort behind every pin. Pinned by `gates/shelf-order.test.ts`.
 
 ## Tech decisions (made — don't relitigate)
 
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page.
-- **One `THREE.Group` per book, not `InstancedMesh`.** `buildBook` in `packages/site/src/shelf/scene.ts` builds each book as a case of single-material parts round a page block, and nothing on the shelf is instanced. Instancing was rejected because per-book covers would force a texture atlas, and 49 books rendered fine; the parts kept that rejection for the same reason ([ADR-0008](docs/adr/0008-book-geometry.md)). ⚠️ **The measurement it deferred has never been taken** — the ADR puts the brief's 200-book target at ~1200 objects rather than ~200, and parts have been added since, so measure first and don't optimize blind. The one recorded live lead for instancing is the head cap, per-instance colour collapsing its ~20 draws to 1, and it is written up beside that mesh in `scene.ts`.
-- **Real-time shadows are the default, and one program reads the map: the bookcase's, in 2 draws at every library size.** Every book part compiles with no shadow fetch (`withoutShadowFetch` in `packages/site/src/shelf/shadow-receivers.ts`) and the woodwork is one mesh. On the Pixel 10 Pro XL every book reading the map loses the WebGL context and this shape survives, and **what kills it is not known** — a count of sampling draws was the model until a re-check refuted it — so a book that reads the map again, or a bookcase member with a mesh of its own, leaves the one configuration measured to survive and is answered on a phone, not by arithmetic ([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md), [ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). G61 (`one-shadow-reader`) counts it on the default page, and with a book held. Painted shading is the fallback a device takes after a lost context ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
+- **One `THREE.Group` per book, not `InstancedMesh`.** `buildBook` in `packages/site/src/shelf/scene.ts` builds each book as a case of single-material parts round a page block, and nothing on the shelf is instanced. Instancing was rejected because per-book covers would force a texture atlas, and the parts keep that rejection for the same reason ([ADR-0008](docs/adr/0008-book-geometry.md)). ⚠️ **The measurement it deferred has not been taken**: the brief's 200-book target is ~1200 objects, not ~200, so measure first and don't optimize blind. The one recorded live lead for instancing is the head cap, per-instance colour collapsing its ~20 draws to 1, and it is written up beside that mesh in `scene.ts`.
+- **Real-time shadows are the default, and one program reads the map: the bookcase's, in 2 draws at every library size.** Every book part compiles with no shadow fetch (`withoutShadowFetch` in `packages/site/src/shelf/shadow-receivers.ts`) and the woodwork is one mesh. On the Pixel 10 Pro XL every book reading the map loses the WebGL context and this shape survives, and **what kills it is not known** — a count of sampling draws does not predict it — so a book that reads the map again, or a bookcase member with a mesh of its own, leaves the one configuration measured to survive and is answered on a phone, not by arithmetic ([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md), [ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). G61 (`one-shadow-reader`) counts it on the default page, and with a book held. Painted shading is the fallback a device takes after a lost context ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
 - **A click picks the book up, it arrives closed, and the visitor opens it; the card overlay retired** ([ADR-0102](docs/adr/0102-pickup-replaces-the-card.md), [ADR-0137](docs/adr/0137-a-picked-up-book-arrives-closed.md)). The card's lines moved onto the held book's pages, which are plain DOM placed in the scene by three's `CSS3DRenderer` and updated in the same frame as the render — never in-canvas UI, and never markup: every text node goes through `textContent`. GSAP (`gsap/gsap-core`) plays the motion, stepped from the shelf's own frame ([ADR-0103](docs/adr/0103-gsap-plays-the-pickup-motion.md)).
 - **The site may only `import type` from `@stacks/core`.** The package root
   re-exports the adapter, sharp and the metadata layer, so a *value* import
@@ -181,17 +175,8 @@ it with no provenance at all. ⚠️ **No provider writes it any more**: O'Reill
   there earns no mutation score and no complexity series. Anything with a type
   or a branch lives in a `.ts` file, where the counters can see it.
 - Metadata: **three providers, in this order** — Open Library first, Google Books as the fallback (needs `GOOGLE_BOOKS_API_KEY`; unauthenticated requests share one exhausted quota and 429 every time), and Apple Books consulted *only* for cover art, because its artwork is ~800x1200 against Google's ~128px. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
-- **O'Reilly** — removed ([ADR-0147](docs/adr/0147-oreilly-is-removed.md), superseding [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider.md)). `oreilly_ourn` and `cover_source: oreilly` stay as provenance on older notes; no provider writes them now.
-- **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded.
-
-  **It records provenance and gates nothing.** This line used to say it decided
-  what a public build may re-host; `publish.ts` has never read it, and every
-  cover is published whatever its source — 26 of Apple's among them, whose terms
-  the code's own comment says do not enumerate book covers at all. The claim
-  read as a policy and was a plan, and it talked one session out of a decision
-  the shelf had already made 35 times. What the key actually buys: if a provider
-  ever asks for its art to come down, the answer can be *those nine* rather than
-  *all of them*.
+- **There is no O'Reilly provider** ([ADR-0147](docs/adr/0147-oreilly-is-removed.md)). `oreilly_ourn` and `cover_source: oreilly` stay as provenance on older notes; no provider writes them.
+- **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded, and its rules are in the Frontmatter contract.
 - TypeScript strict everywhere. Vitest. pnpm workspaces.
 
 ## Phase gates — a phase is DONE only when its gate passes
@@ -209,7 +194,7 @@ Every phase: `pnpm test && pnpm build` green, plus:
 ## Working rules for agents
 
 - **Assign an issue to yourself before you cut a branch or a worktree for it** — any issue an agent picks up, not only a wayfinder ticket. Reading, searching and triaging need no claim; the claim is due before the first durable artifact exists. **The assignee is an advisory, not a lock**: it records that somebody intends to work the issue, so the next session can decide knowingly, and it prevents nothing. Read it back through a window — **an assignment less than one hour old is presumed live** — and on finding a live one, take a different issue, or establish that whoever holds it has finished before carrying on. Nothing needs unassigning when work is abandoned, because the window expires the presumption on its own. ⚠️ **The case the tracker cannot answer is an assignee that is already your own account.** Every session here authenticates as the same user, so *mine, claimed a minute ago* and *free to take* are the same record. Establish outside the tracker whether another of your own sessions holds it; your own name on it is not permission. The invocation lives in [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md), and this rule is [not gated, deliberately](docs/gates.md#not-gated-deliberately).
-- Commit at every green gate with a one-paragraph summary. Never batch multiple phases into one commit. **The subject is conventional and the body is that paragraph** — `<type>(<scope>): <subject>`, type from `build chore ci docs feat fix perf refactor revert style test`, scope optional and from `core cli site gates docs ci`. ⚠️ **Conventional Commits enumerates no type vocabulary** — it mandates `feat` and `fix`, permits others, and points at the Angular convention as an example — so that list is this repository's decision and not a lookup; do not go looking for a canonical one. ⚠️ **`docs` and `ci` are each a type *and* a scope, which is fine**: `docs: x`, `docs(docs): x` and `feat(docs): x` all pass, because the two slots are read separately and never compared. Both lists are parsed out of this sentence by `gates/pr-conventions.test.ts` (G55), so editing either here moves the checker or turns the build red. Branch names follow [Conventional Branch](https://conventionalbranch.org/) — `<type>/<description>`, lowercase `a-z`, `0-9` and hyphens, with no consecutive, leading or trailing hyphen, and trunk branches unprefixed. **Dots are allowed in a `release/` description and nowhere else** — `release/v1.2.0` is conformant — under the same no-consecutive, no-leading, no-trailing rule, and never adjacent to a hyphen. ⚠️ **`scripts/worktree.ts` is more permissive than this and is not the contract**: its `BRANCH` guard at line 64 admits dots anywhere, plus underscores and uppercase, because it exists to refuse a path that would break the script rather than to enforce a convention. A branch you cut yourself is `<type>/<issue>-<slug>`, which is that shape carrying the ticket number the spec asks for: `fix/273-gates-in-the-dry-run`. ⚠️ **Four of this repo's prefixes are local extensions and not in the spec** — `docs/`, which Conventional Branch files under `chore/`, and `research/`, `prototype/` and `experiment/` for a branch that never becomes a commit. They are kept because each says something `chore/` does not, and they are named here so the next session reading the spec does not quietly rename them as non-conformant. ⚠️ **Put both on the pull request too, and treat that copy as the real one**: this repo squash-merges with `PR_TITLE`/`PR_BODY`, so the pull request title *is* the subject that reaches `main` and the local one is discarded. ⚠️ **A branch the harness named needs no exemption, and this line used to grant one.** `claude/` is one of the spec's own AI-agent prefixes, so `claude/wayfinder-228-remaining-046e4a` breaks no rule — it is noisy rather than non-conformant, and the noise is a generated suffix nothing reads. Rename it to a purposeful `<type>/<issue>-<slug>` before the first commit if you like; nothing here requires it, because the name exists before a session can read this and a squash-merge discards it either way. [ADR-0057](docs/adr/0057-the-pull-request-title-is-the-commit-subject.md). ⚠️ **The pull request half is gated and the local half and the branch half are not**, which is the whole of G55 (`pr-conventions`): the title and body a squash-merge actually lands are read on every `pull_request` event, and a local subject or a branch name is held by nothing. The branch stays ungated on **coverage** rather than visibility — `github.head_ref` carries it on the same event, but only on a pull request, so a branch that never opens one is never read.
+- Commit at every green gate with a one-paragraph summary. Never batch multiple phases into one commit. **The subject is conventional and the body is that paragraph** — `<type>(<scope>): <subject>`, type from `build chore ci docs feat fix perf refactor revert style test`, scope optional and from `core cli site gates docs ci`. The type list is this repository's own decision: Conventional Commits mandates only `feat` and `fix`. ⚠️ **`docs` and `ci` are each a type *and* a scope, which is fine**: `docs: x`, `docs(docs): x` and `feat(docs): x` all pass, because the two slots are read separately and never compared. Both lists are parsed out of this sentence by `gates/pr-conventions.test.ts` (G55), so editing either here moves the checker or turns the build red. Branch names follow [Conventional Branch](https://conventionalbranch.org/) — `<type>/<description>`, lowercase `a-z`, `0-9` and hyphens, with no consecutive, leading or trailing hyphen, and trunk branches unprefixed. **Dots are allowed in a `release/` description and nowhere else** — `release/v1.2.0` is conformant — under the same no-consecutive, no-leading, no-trailing rule, and never adjacent to a hyphen. ⚠️ **`scripts/worktree.ts` is more permissive than this and is not the contract**: its `BRANCH` guard admits dots anywhere, plus underscores and uppercase, because it exists to refuse a path that would break the script. A branch you cut yourself is `<type>/<issue>-<slug>`: `fix/273-gates-in-the-dry-run`. ⚠️ **Four of this repo's prefixes are local extensions and not in the spec** — `docs/`, which Conventional Branch files under `chore/`, and `research/`, `prototype/` and `experiment/` for a branch that never becomes a commit; keep them, each says something `chore/` does not. ⚠️ **Put both on the pull request too, and treat that copy as the real one**: this repo squash-merges with `PR_TITLE`/`PR_BODY`, so the pull request title *is* the subject that reaches `main` and the local one is discarded ([ADR-0057](docs/adr/0057-the-pull-request-title-is-the-commit-subject.md)). A branch the harness named (`claude/…`) breaks no rule; rename it to a purposeful `<type>/<issue>-<slug>` before the first commit if you like. ⚠️ **The pull request half is gated; the local subject and the branch name are not** (G55, `pr-conventions`): the title and body a squash-merge lands are read on every `pull_request` event, and a branch that never opens a pull request is never read.
 - When you make a decision the brief left open (library choice, API quirk, workaround), record it in [`docs/adr/`](docs/adr/) in the same commit — if it is hard to reverse, surprising without context, and a real trade-off. A gate lesson goes to [`docs/gates.md`](docs/gates.md) instead.
 - In Phase 2, save a screenshot to `artifacts/` on every meaningful visual change — the human reviews aesthetics from these.
 - If a gate can't pass after 3 distinct approaches, stop, write up what you tried in `docs/blockers.md`, and end the session rather than thrashing.
@@ -282,10 +267,9 @@ because a backfill with holes nobody can see is not one
 ([ADR-0126](docs/adr/0126-the-duplication-backfill-is-a-committed-file.md)).
 
 `pnpm lint:md` is the Markdown gate, and its rule set is **narrow because a
-default run here is dangerous**: at default rules a fix pass changed 55 files,
-corrupted 11 issue references, stripped a documented separator out of 16 code
-spans and renumbered a verbatim quotation — with all 1055 tests green throughout.
-`pnpm lint:md:fix` is allowlisted to seven rules for that reason. Nothing can
+default run here is dangerous**: at default rules a fix pass corrupts issue
+references, strips documented separators out of code spans and renumbers a
+verbatim quotation, with every test green. `pnpm lint:md:fix` is allowlisted to seven rules for that reason. Nothing can
 narrow a markdownlint run below the root config, so the allowlist is a
 **refusal**: the fix pass declines to run at all when a version bump widens what
 the tool can rewrite, or when the tree holds a finding whose fix nobody has
@@ -370,10 +354,9 @@ Every choice this project has already made, one file each, lives in
 **[`docs/adr/`](docs/adr/)** — with the original reasoning carried verbatim.
 Read it before proposing anything that contradicts one.
 
-They were a dated log at the bottom of this file until that log was 85% of it
-by weight and buried the rules above. A lesson about a *gate* rather than a
-decision goes to [`docs/gates.md`](docs/gates.md); an environment finding goes
-to [`docs/progress.md`](docs/progress.md).
+A lesson about a *gate* rather than a decision goes to
+[`docs/gates.md`](docs/gates.md); an environment finding goes to
+[`docs/progress.md`](docs/progress.md).
 
 ## Agent skills
 
@@ -388,8 +371,21 @@ GitHub issues on `mephistopheles4/stacks`, via the `gh` CLI. See [`docs/agents/i
 
 ### Triage labels
 
-The five canonical roles, each label string equal to its name. All five exist on the repo since August 2026. See [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+The five canonical roles — `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` — each label string equal to its name, all five existing on the repo. The label commands are in [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md#triage-labels).
 
 ### Domain docs
 
-Single-context — four packages (`core`, `cli`, `site`, `ask`), one vocabulary. That vocabulary is [`CONTEXT.md`](CONTEXT.md), and it holds only the terms **no gate pins down** — anything a gate already enforces is linked from there, never restated, for [ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md)'s reason. Decisions live in [`docs/adr/`](docs/adr/), one file each, carrying the original reasoning verbatim. See [`docs/agents/domain.md`](docs/agents/domain.md).
+Single-context: four packages (`core`, `cli`, `site`, `ask`), one vocabulary, no `CONTEXT-MAP.md` unless a package grows a genuinely independent language. Read, in this order, whatever of these exists (proceed silently when one does not): this file, `docs/progress.md`, `docs/adr/` (its [index](docs/adr/README.md) first, then the records touching the area you work in), `docs/gates.md`, and [`CONTEXT.md`](CONTEXT.md).
+
+Vocabulary has two homes: the Frontmatter contract above carries every term a gate enforces (held both ways by `gates/frontmatter-contract.test.ts`), and `CONTEXT.md` carries the terms **no gate pins down**, linking anything a gate holds rather than restating it ([ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md)). When your output names a domain concept, use the project's term; a concept in neither is either invented language (reconsider) or a gap to note.
+
+Where a new note belongs:
+
+| It is… | It goes to |
+| --- | --- |
+| a decision — hard to reverse, surprising without context, a real trade-off | a new record in [`docs/adr/`](docs/adr/), numbered by the rule in its README |
+| a lesson about a gate — what it caught, why it was vacuous | [`docs/gates.md`](docs/gates.md) |
+| where the project is, or a fact about the environment it runs in | [`docs/progress.md`](docs/progress.md) |
+| none of those | a commit message |
+
+Records are append-only: a decision that turned out wrong earns a **new** record saying so, not an edit to the old one, and a new record can be three sentences. If your output contradicts an existing record, surface it (*"Contradicts ADR-0013 on re-hosting cover art, but worth reopening because…"*) rather than silently overriding it.
