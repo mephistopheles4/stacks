@@ -294,3 +294,5 @@ athanor, run the `pnpm` forms.
 A defect worth fixing is usually worth a named gate that goes red — see
 [`docs/gates.md`](../gates.md). An issue describing a defect is more useful when
 it says which gate *would* have caught it, or that none would.
+
+**Before ruling on security here, read the threat model, boundaries first:** [`docs/threat-model.md`](../threat-model.md).

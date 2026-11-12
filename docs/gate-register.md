@@ -6734,3 +6734,17 @@ stayed green under both, which is the reason the gate exists.
 - **Routing around** — **exposed.** The remedy for a red run is to exclude the spec in `vitest.stryker.config.ts` or the file in `stryker.scopes.json`, and either turns the job green without fixing anything. That is the intended escape, so it is a reviewed diff with a reason beside it, and `docs/commands.md` says to name what keeps an oracle. Disposition `accepted`.
 - **Vacuous green** — **gated.** Stryker exits non-zero when the initial run executes no test (`No tests were executed. Stryker will exit prematurely`), which was seen on a scoped run here when only an unimported script was named. Disposition `gated`.
 - **Decay** — **exposed.** A Stryker or Vitest release that changes what a dry run does moves this job with no line of the repository changing, and that is the case it exists to catch; a flaky red blocks every merge, since the job feeds the one required check. `docs/commands.md` says a flake gets an issue and not an exclusion. Disposition `accepted`.
+
+### G71 — `threat-model-cap`
+
+**Gate:** [`gates/threat-model-cap.test.ts`](../gates/threat-model-cap.test.ts)
+**Date:** 2026-11-12
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real file: 1,000 words of padding appended to `docs/threat-model.md` took it from 2,131 to 3,131 words and turned the first test red with `docs/threat-model.md holds 3132 words, over the cap of 3000`; the padding was removed. Before the threat model existed, both tests were red on a missing file.
+
+- **Weakening** — **exposed.** The cap is one constant in the test file, and raising it, or deleting the test, passes every other gate. The spec calls raising it a spec change, and `gates/` is owned in `CODEOWNERS`, so the diff is visible and a reviewer reads it. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** Words are counted by splitting on whitespace, so a file can be padded under the cap with a dense table, a long unbroken line or a diagram, and still be unreadable in one sitting. The cap is a proxy for length, not for being read. Disposition `accepted`.
+- **Routing around** — **exposed.** A second threat-model file, or a section moved to another document, keeps this one short while the content grows elsewhere, and nothing reads the other file. `AGENTS.md` names `docs/threat-model.md` as the one. Disposition `accepted`.
+- **Vacuous green** — **gated.** An empty file, a renamed one and a misspelt path all satisfy a cap, so the read is floored at 500 words and a missing file throws. A second test pads the real text and requires the counter to report it over. Disposition `gated`.
+- **Decay** — **clean.** The count reads the file as it stands and holds no number of its own except the cap.

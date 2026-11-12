@@ -459,7 +459,7 @@ overrides:
 # every unrelated merge, and the honest response is to say so here rather than
 # to lower the threshold. An entry needs the GHSA id, the date, and why it does
 # not reach this project — a local-first CLI and static site, whose one Worker
-# (`packages/ask`, see SECURITY.md) takes untrusted input only through its own
+# (`packages/ask`, see docs/threat-model.md) takes untrusted input only through its own
 # validated request shape, rule out a lot of advisory classes. Remove
 # the entry the moment a fix ships; a permanent ignore is a decision nobody
 # revisits.
