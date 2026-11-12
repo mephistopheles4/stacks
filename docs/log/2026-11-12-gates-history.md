@@ -1,6 +1,6 @@
 # The gates scoreboard's history, moved out of `docs/gates.md`
 
-Text cut from [`docs/gates.md`](../gates.md) on 2026-11-12 ([#585](https://github.com/mephistopheles4/stacks/issues/585)) because it tells how a row or a rule came to be rather than what holds now. Each `###` group is the original text, verbatim, of what was cut or replaced from the row or section it names; the rule it carried stays in `docs/gates.md`. Fragments are the cut text next to wording that was rewritten, so a group can hold a whole paragraph where only part was cut.
+Text cut from [`docs/gates.md`](../gates.md) on 2026-11-12 ([#585](https://github.com/mephistopheles4/stacks/issues/585)) because it tells how a row or a rule came to be rather than what holds now. Each `###` group is the original text, verbatim, of what was cut or replaced from the row or section it names; the rule it carried stays in `docs/gates.md`. A group may hold a whole paragraph even where only part of it was cut.
 
 ## The moved text
 

@@ -11,9 +11,9 @@
  * words to a file at its ceiling, move the history out of it first, and raise a
  * ceiling only for a rule that is new.
  *
- * Two guards against a vacuous pass: the budget table must name files that
- * exist and are tracked, and the measuring function is shown to fail on a
- * document over its budget.
+ * Three guards against a vacuous pass: the budget table must name files that
+ * exist and are tracked, none may be under 300 words, and the measuring
+ * function is shown to fail on a document over its budget.
  *
  * See docs/gates.md, row G71 (doc-word-budget).
  */

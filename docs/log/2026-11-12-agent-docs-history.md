@@ -1,10 +1,10 @@
 # The agent docs' history, moved out on 2026-11-12
 
-Text cut from `docs/spec/README.md`, `docs/notes-on-the-shelf.md`, `docs/shelf-inspectors.md` and `docs/commands.md` because it tells how a rule came to be rather than what holds now ([#585](https://github.com/mephistopheles4/stacks/issues/585)). Each group is the original text, verbatim, of what was cut or replaced; the rule it carried stays in the file named. A group can hold a whole paragraph where only part was cut.
+Text cut from `docs/spec/README.md`, `docs/notes-on-the-shelf.md`, `docs/shelf-inspectors.md` and `docs/commands.md` because it tells how a rule came to be rather than what holds now ([#585](https://github.com/mephistopheles4/stacks/issues/585)). Each group holds the original words of what was cut or replaced, one source line at a time with a blank line after each, so a table or a sentence in it reads broken; the rule it carried stays in the file named. A group may hold a whole paragraph even where only part of it was cut.
 
 ## The moved text
 
-### docs/spec/README.md — original lines near -4,18
+### docs/spec/README.md — cut text (1)
 
 on its issue** ([ADR-0145](../adr/0145-new-specs-live-on-their-issues.md)); the table
 
@@ -36,9 +36,9 @@ done when a rendered bookcase is on `main` — not when this folder is complete.
 
 issue** ([ADR-0145](../adr/0145-new-specs-live-on-their-issues.md)). A spec
 
-### docs/spec/README.md — original lines near -28,0
+### docs/spec/README.md — cut text (2)
 
-### docs/spec/README.md — original lines near -34,13
+### docs/spec/README.md — cut text (3)
 
 | Static analysis and style — one routing rule, a verdict per candidate | [`static-analysis-and-style.md`](../spec/static-analysis-and-style.md) | **built.** All four gate rows landed — **G46** (`lint`), **G48** (`markdown`), **G49** (`format`), and **G50** (`astro-types`) inside `pnpm build` — three of them in one `style` job beside `audit`, and all twelve trend rows **this rollout adds** emit: eight duplication and four cognitive. ⚠️ **Twelve is this spec's count, not the nightly's** — `metrics.yml`'s `--expect` list carries sixteen trend series, the other four being the `complexity-*` rows [`complexity-on-the-trend-layer.md`](../spec/complexity-on-the-trend-layer.md) landed. Three refusals recorded. §6 step 9 landed on 2026-09-21 — `cognitive-max` joined `CAPPED_SERIES` and the six duplication caps landed in `jscpd.floors.json`, **every cap disarmed** ([#269](https://github.com/mephistopheles4/stacks/issues/269)). ⚠️ **Arming is not part of this spec** and waits on each window — ten distinct trees, and **a nightly that fails breaks the streak rather than pausing it**; the duplication caps have no window printed yet. ⚠️ **Deliberately thin** — eleven tickets hold the reasoning and the file links rather than retells, per [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md). [The map](https://github.com/mephistopheles4/stacks/issues/228) is **closed as of 2026-08-26** and carries the trail, and the eleven verdicts were also read as one configuration in a morphological box that is deliberately not in this checkout |
 
@@ -66,7 +66,7 @@ issue** ([ADR-0145](../adr/0145-new-specs-live-on-their-issues.md)). A spec
 
 | Ask the library — a chat drawer on the shelf | [`ask-the-library.md`](../spec/ask-the-library.md) | **built on a branch, not deployed**: the live probe and the live runs are done and recorded in S12; steps 8 to 11 are the owner's. Signed off on 2026-11-04, standard tier with the security pair. A Worker answers visitors in the owner's voice from public build output only, through Workers AI and an AI Gateway spend limit, with search as the fallback. ⚠️ **The steps left are the owner's (S13 steps 8 to 11)**, because they publish, and the prototype only ran locally with test keys. Two lens rounds; [#532](https://github.com/mephistopheles4/stacks/issues/532) carries the record |
 
-### docs/spec/README.md — original lines near -50,3
+### docs/spec/README.md — cut text (4)
 
 | The attribution and privacy notices open in a modal over the shelf | [`notice-modals.md`](../spec/notice-modals.md) | **built in the pull request for [#536](https://github.com/mephistopheles4/stacks/issues/536)**, standard tier, spec revision 3 after two lens rounds. One native `<dialog>` holds both notices; the pages stay; the text exists once and is set at 18 px and 7:1. [ADR-0146](../adr/0146-the-notices-open-in-one-modal-over-the-shelf.md). The phone run is the owner's |
 
@@ -74,7 +74,7 @@ issue** ([ADR-0145](../adr/0145-new-specs-live-on-their-issues.md)). A spec
 
 | The O'Reilly metadata provider is removed | no file in this folder: [revision 4](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728372984), signed off by [this comment](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728402276), on [#450](https://github.com/mephistopheles4/stacks/issues/450) | **built in the pull request for #450**, standard tier, one build session, signed off on 2026-11-08 on the lead's decision (the owner's ask: "drop O'Reilly"). The provider, its fixtures and its G26 recording are deleted; lookups go Open Library, Google, with Apple for covers only. `oreilly_ourn` and `cover_source: oreilly` stay on older notes, and the inert O'Reilly names in the metadata layer stay unexercised. [ADR-0147](../adr/0147-oreilly-is-removed.md) supersedes ADR-0038. Revisions 1 and 2, which moved the provider to O'Reilly's MCP search with a personal token, were not built; re-adding O'Reilly starts from [revision 2](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728059674). G26 and G31 keep their code and pass; G26's corpus lost one recording. Amendments A1 to A3, three comment and doc edits the lead decided after the first review round: [the amendment comment](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728828080) |
 
-### docs/spec/README.md — original lines near -56,6
+### docs/spec/README.md — cut text (5)
 
 order rather than chosen. ⚠️ **That is not a typo and it is this warning's own
 
@@ -88,17 +88,17 @@ open — so every pre-allocated number in it landed one low, and four separate
 
 register entries record the correction. A row number is a fact about when
 
-### docs/spec/README.md — original lines near -82
+### docs/spec/README.md — cut text (6)
 
 > residuals are the artifact — with the build order below now reading as what
 
-### docs/spec/README.md — original lines near -84,2
+### docs/spec/README.md — cut text (7)
 
 > twice, against the real vault — 40 books filled on the first pass and 1 more on
 
 > the second, which is the convergence property G34 asserts, doing it for real.
 
-### docs/spec/README.md — original lines near -87,10
+### docs/spec/README.md — cut text (8)
 
 > ⚠️ **The real data found a bug the fixtures could not.** `mergeFields` skipped
 
@@ -120,7 +120,7 @@ register entries record the correction. A row number is a fact about when
 
 > enforcing it one layer too low made the whole table decorative.
 
-### docs/spec/README.md — original lines near -98,6
+### docs/spec/README.md — cut text (9)
 
 > The ADR list below proposed five;
 
@@ -134,7 +134,7 @@ register entries record the correction. A row number is a fact about when
 
 > separate cost — a book already wrong stays wrong.
 
-### docs/spec/README.md — original lines near -105,3
+### docs/spec/README.md — cut text (10)
 
 > **The marks have landed, and not the way §5 assumed.** The card's three are
 
@@ -142,7 +142,7 @@ register entries record the correction. A row number is a fact about when
 
 > spec's redistribution residual for a modification one — see
 
-### docs/spec/README.md — original lines near -109,3
+### docs/spec/README.md — cut text (11)
 
 > powered-by graphic *is* vendored unaltered, and turned out to be 62×30 rather
 
@@ -150,23 +150,23 @@ register entries record the correction. A row number is a fact about when
 
 > plate. Apple's own icon was 404 at every URL tried.
 
-### docs/spec/README.md — original lines near -185,2
+### docs/spec/README.md — cut text (12)
 
 Numbers are deliberately **unassigned** — `docs/gates.md`'s own note is that a
 
 row's number is not knowable until it lands, and the highest live row is G29.
 
-### docs/spec/README.md — original lines near -191,2
+### docs/spec/README.md — cut text (13)
 
 Landed as **G30**–**G34**; the labels below are how the spec referred to them
 
 before they had numbers.
 
-### docs/spec/README.md — original lines near -198
+### docs/spec/README.md — cut text (14)
 
 | **M3** | *(not a new gate)* G26 `lookup-recall`'s corpus **re-captured through `loadEnv()`** | A merge change moves its expectations, and a corpus captured without the Google key once replayed refusals as answers for two days |
 
-### docs/spec/README.md — original lines near -262,3
+### docs/spec/README.md — cut text (15)
 
 and a real trade-off.** Five decisions in this effort meet all three. The
 
