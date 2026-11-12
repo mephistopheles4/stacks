@@ -251,17 +251,6 @@ so invariants 1, 2 and 4 hold by structure.
 - **Root of trust:** the owner's machine and their GitHub and Cloudflare accounts.
   One maintainer.
 
-## Accepted threat classes
-
-- **What you publish:** a public build ships titles, authors, reading dates, ratings, covers and each book's Thoughts as plain text, which is the product; a deploy sends that and the Worker from the owner's machine; earlier deployments keep what they held until deleted.
-- **Provider bytes are trusted:** a provider's reply or an import file's fields are taken as facts, and the bytes at a cover URL as an image wherever it leads, so a decoder flaw, a wrong fact or text that steers the Ask model gets through.
-- **What you install and CI run:** dependencies, actions and the two packages allowed install scripts run with the maintainer's or the runner's reach, and neither a pin's version comment nor an advisory below high stops a merge.
-- **Review rests on gates:** one maintainer merges their own pull requests with no approving review required, so the required check and CodeQL catch what that maintainer misses, and the gates do too, except a change to the gates themselves.
-- **Text steers a session:** an agent session reading tracker text, pull requests, fetched pages or cloned files can be steered by them; only the harness's prompts, where on, hold what it then does, and a post is public before anyone reads it back.
-- **Posts are public:** an issue, comment or pull request is public the moment it posts and may be cached or indexed after deletion; the posting rules and the read before posting are the only check.
-- **Ask availability can be spent:** a few addresses can use up the Worker's request allowance and keep AI off, search keeps working, and ADR-0127 accepts it.
-- **Questions reach Workers AI:** a visitor's question, the catalogue and some Thoughts go to Workers AI through the gateway, and Turnstile sees the address and browser signals; the Worker stores no question, and ADR-0127 approves the flow.
-
 ## Residual risk
 
 ```mermaid
@@ -282,6 +271,17 @@ quadrantChart
   Ask availability can be spent: [0.6, 0.3]
   Questions reach Workers AI: [0.7, 0.2]
 ```
+
+## Accepted threat classes
+
+- **What you publish:** a public build ships titles, authors, reading dates, ratings, covers and each book's Thoughts as plain text, which is the product; a deploy sends that and the Worker from the owner's machine; earlier deployments keep what they held until deleted.
+- **Provider bytes are trusted:** a provider's reply or an import file's fields are taken as facts, and the bytes at a cover URL as an image wherever it leads, so a decoder flaw, a wrong fact or text that steers the Ask model gets through.
+- **What you install and CI run:** dependencies, actions and the two packages allowed install scripts run with the maintainer's or the runner's reach, and neither a pin's version comment nor an advisory below high stops a merge.
+- **Review rests on gates:** one maintainer merges their own pull requests with no approving review required, so the required check and CodeQL catch what that maintainer misses, and the gates do too, except a change to the gates themselves.
+- **Text steers a session:** an agent session reading tracker text, pull requests, fetched pages or cloned files can be steered by them; only the harness's prompts, where on, hold what it then does, and a post is public before anyone reads it back.
+- **Posts are public:** an issue, comment or pull request is public the moment it posts and may be cached or indexed after deletion; the posting rules and the read before posting are the only check.
+- **Ask availability can be spent:** a few addresses can use up the Worker's request allowance and keep AI off, search keeps working, and ADR-0127 accepts it.
+- **Questions reach Workers AI:** a visitor's question, the catalogue and some Thoughts go to Workers AI through the gateway, and Turnstile sees the address and browser signals; the Worker stores no question, and ADR-0127 approves the flow.
 
 ## Open issues
 
