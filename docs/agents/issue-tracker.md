@@ -128,6 +128,44 @@ that list that a sign-off comment links or the row already names, and every
 list that the row does not name and no sign-off links stops the merge for the
 owner; it is never added to the row to make the check pass.
 
+## Tickets
+
+When a spec is cut into tickets, each ticket is its own issue, linked to the
+spec's issue as a GitHub sub-issue. The spec stays a comment on the parent, as
+under *Specs*; the tickets never live as a list inside it. Nothing here is a
+gate ([`gates.md`](../gates.md#not-gated-deliberately)).
+
+1. **One issue per ticket.** Each ticket issue names its parent by full URL, its
+   claims, and what it depends on. A dependency is recorded natively, under
+   *Wayfinding operations* below, as well as named in the body.
+2. **Link it as a sub-issue.** `gh issue create --parent <parent>` links a new
+   ticket as it is filed, and `gh issue edit <child> --parent <parent>` links one
+   that exists, in a `gh` that has the flag. The version-independent form is the
+   parent's `sub_issues` endpoint, which takes the child's **REST id**, never its
+   number:
+
+   ```sh
+   gh api --method POST repos/{owner}/{repo}/issues/<parent>/sub_issues -F sub_issue_id=$(gh api repos/{owner}/{repo}/issues/<child> --jq .id)
+   ```
+
+   `-F`, not `-f`: the id must go as an integer, and `-f` posts it as a string.
+   `{owner}/{repo}` fills in from this checkout, so a child in another
+   repository needs its own explicit `repos/<owner>/<repo>` path on the id
+   lookup. List a parent's tickets with
+   `gh api --paginate repos/{owner}/{repo}/issues/<parent>/sub_issues --jq '[.[].number]'`.
+3. **A ticket's pull request closes its own ticket**, not the parent: the body
+   says `Closes #<ticket>`, and the pull request is signed by the session that
+   built it. The parent closes when its last sub-issue closes, but GitHub does
+   not do it: the session that merges the last ticket's pull request runs the
+   row check under *Specs*, then closes the parent with `gh issue close`. While a
+   ticket's pull request is open, the owner's sign-off comment under *Specs*
+   covers it, and the spec's row is brought up to date in the last ticket's
+   pull request.
+4. **Tickets that can run side by side do.** Tickets with no dependency between
+   them and no shared files start in parallel, one session each, and the cut
+   says which those are. Tickets that touch the same file, or where one needs the
+   other's output, run in order.
+
 ## Conventions
 
 - **Create an issue**: `gh issue create --body-file`, as under *Posting prose*.
