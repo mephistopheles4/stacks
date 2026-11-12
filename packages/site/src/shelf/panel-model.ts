@@ -20,7 +20,7 @@ import { WOOD_SPECIES, speciesPending } from './woodwork.ts';
  * the rows (#496). **A behaviour that gets view code of its own needs a browser
  * check of its own**; this file is where it should have lived instead.
  *
- * The panel's one rule, from `docs/progress.md`: *"A probe that silently did
+ * The panel's one rule, from `docs/log/2026-11-12-progress-before-the-cleanup.md`: *"A probe that silently did
  * nothing would be worse than no probe."* Every control says its class, whether
  * it is doing anything, and why not. Tweakpane has no tooltip, and a disabled
  * row takes no pointer events, so **every reason is text in the label** (#487).

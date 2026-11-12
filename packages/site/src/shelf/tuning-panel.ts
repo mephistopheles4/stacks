@@ -18,7 +18,7 @@
  *
  * ## The one rule this exists to keep
  *
- * `docs/progress.md`: *"A probe that silently did nothing would be worse than no
+ * `docs/log/2026-11-12-progress-before-the-cleanup.md`: *"A probe that silently did nothing would be worse than no
  * probe."* Every control says its class, whether it is doing anything and why
  * not, in its label, because Tweakpane has no tooltip and a disabled row takes no
  * pointer events. The shelf reports back what it applied (`ApplyReport`), the

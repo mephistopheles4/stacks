@@ -223,7 +223,7 @@ export interface ShelfStats {
 /**
  * What a settings change actually did — and, more importantly, what it did not.
  *
- * The rule this exists to keep is `docs/progress.md`'s: *"a probe that silently
+ * The rule this exists to keep is `docs/log/2026-11-12-progress-before-the-cleanup.md`'s: *"a probe that silently
  * did nothing would be worse than no probe"*. Every one of the original ten was
  * verified to have a real measured effect before it shipped, because a probe
  * that appears to work and does not sends the owner off to rule out the actual
@@ -2271,7 +2271,7 @@ function fitShadowCamera(
  * All four are live: `setPixelRatio` and `setSize` reallocate the drawing buffer,
  * `toneMapping` and `toneMappingExposure` are uniforms the frame reads. Tone
  * mapping is the one with a catch — changing the *mode* changes a `#define`, so
- * three recompiles every material, which is the operation `docs/progress.md`
+ * three recompiles every material, which is the operation `docs/log/2026-11-12-progress-before-the-cleanup.md`
  * records failing to link on a Pixel 10. Exposure alone is a plain uniform and
  * recompiles nothing.
  */
@@ -2726,7 +2726,7 @@ function applyLive(
  * that returns false for `MeshBasicMaterial` — so flipping `shadowMap.enabled`
  * relinks the lit materials and leaves the painted shadow planes alone.
  *
- * Those planes are the entire point. `docs/progress.md` records that the program
+ * Those planes are the entire point. `docs/log/2026-11-12-progress-before-the-cleanup.md` records that the program
  * which will not link on the Pixel 10 is a `MeshBasicMaterial` — a painted
  * shadow plane, which is unlit and wants nothing to do with shadows. So a naive
  * live toggle would *appear to work* on the device that cannot hold the shipped

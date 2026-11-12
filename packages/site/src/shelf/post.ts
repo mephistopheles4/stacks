@@ -22,7 +22,7 @@ import type { ShelfSettings } from './shelf-settings.ts';
  * visible.
  *
  * Worse than visible: it would make `?aa` a probe that does nothing. Toggling it
- * would flip a context attribute nothing reads, on a page where `docs/progress.md`
+ * would flip a context attribute nothing reads, on a page where `docs/log/2026-11-12-progress-before-the-cleanup.md`
  * records the rule that *"a probe that silently did nothing would be worse than
  * no probe"* — and where a probe reporting a filter that was not running has
  * already happened once (`SHADOW_TYPES`, where `soft` had silently been `pcf`).
