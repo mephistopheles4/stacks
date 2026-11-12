@@ -1074,7 +1074,7 @@ job, and a red there is this command's own output.
 The documentation here is load-bearing rather than decorative, which is why a
 Markdown rule break is a defect and not a matter of taste. G19 holds
 `docs/gates.md` to `AGENTS.md`, G14 holds `docs/commands.md` to `package.json`,
-G41 extracts `docs/gate-register.md` **by heading**, and nine gate regexes read
+G41 extracts `docs/log/2026-08-20-gate-register.md` **by heading**, and nine gate regexes read
 table pipes and emphasis markers as text. When a gate parses a document, the
 document's shape is part of the contract.
 
@@ -1083,7 +1083,7 @@ and the danger is silent.** At default rules a fix pass over this tree changed 5
 files, turned 11 issue references into H1 headings — every `#167's …` became a
 heading and lost the reference — stripped an intentional space from 16 code
 spans, two of which are regexes gates depend on, and renumbered a **verbatim
-quotation** in `docs/gate-register.md` sitting under a heading that says the file
+quotation** in `docs/log/2026-08-20-gate-register.md` sitting under a heading that says the file
 "still defined category 5". `pnpm test` on that damaged tree was **all 1055 tests
 green**. Prettier's Markdown damage is loud, because four gates go red; this
 tool's is not. The narrow allowlist is the entire protection.

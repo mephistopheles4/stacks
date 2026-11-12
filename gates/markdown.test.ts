@@ -286,7 +286,7 @@ describe('G48 — the fix pass rewrites what was measured, and nothing else', ()
     // Both directions, and they fail differently. A fixable rule on neither
     // list is a version bump rewriting text nobody watched. A declared name
     // that is no longer fixable is a standing permission for a shape the tool
-    // no longer produces — the category-1 failure docs/gate-register.md
+    // no longer produces — the category-1 failure docs/log/2026-08-20-gate-register.md
     // catalogues, so it goes red rather than sitting there granting nothing.
     expect(
       fixable,

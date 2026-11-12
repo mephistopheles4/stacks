@@ -324,7 +324,7 @@ export function assignFiles(report: MutationReport, scopes: Scope[]): Assignment
    * So what ships is the **denominator half honestly and the numerator half
    * structurally zero** — a config-drift tripwire rather than the measurement
    * the spec names. Carried as an open weakness on G36 in
-   * `docs/gate-register.md` rather than as a solved problem, because a series
+   * `docs/log/2026-08-20-gate-register.md` rather than as a solved problem, because a series
    * incapable of movement is a flat line, and a flat line that arrives on time
    * is the exact shape this whole layer was built to refuse.
    *

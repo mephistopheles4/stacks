@@ -127,7 +127,7 @@ and is kept as fog on
   rather than rewritten, per that folder's own rule for a locked spec.
 
   **Left, and named so it is not mistaken for an oversight.**
-  [`docs/gate-register.md`](../gate-register.md) quotes `typescript: ^7.0.2`
+  [`docs/gate-register.md`](../log/2026-08-20-gate-register.md) quotes `typescript: ^7.0.2`
   under *"Measured, 2026-08-15"*. It is a dated observation that was true on its
   date. Editing it would make the register lie about what was measured, which is
   worse than letting it age.

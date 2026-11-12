@@ -92,7 +92,7 @@ row in the scoreboard was held to this and several failed the first time.
 
 **A new row lands with its register entry, in the same commit.** Add a row to
 [`docs/gates.md`](docs/gates.md) and it owes a matching section in
-[`docs/gate-register.md`](docs/gate-register.md) carrying **five verdicts — one
+[`docs/log/2026-08-20-gate-register.md`](docs/log/2026-08-20-gate-register.md) carrying **five verdicts — one
 bullet each for weakening, satisfying the letter, routing around, vacuous green
 and decay — a date, and an observed-red line**, plus a disposition
 (`gated` / `repaired` / `accepted` / `declined`) wherever a finding survives.

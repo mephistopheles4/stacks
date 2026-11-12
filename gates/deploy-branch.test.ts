@@ -302,7 +302,7 @@ describe('G17 — deploy publishes main', { timeout: SPAWN_BUDGET_MS }, () => {
   });
 
   it('ships a command that supplies no argv of its own', () => {
-    // ⚠️ **The remedy `docs/gate-register.md` named for this row and did not
+    // ⚠️ **The remedy `docs/log/2026-08-20-gate-register.md` named for this row and did not
     // build.** Every case here spawns `scripts/deploy.ts` directly, so the argv
     // the *shipped* command supplies is outside the gate's reach: baking
     // `--any-branch` into `package.json` leaves the whole suite green while
