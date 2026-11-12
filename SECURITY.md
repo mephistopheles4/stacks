@@ -8,7 +8,7 @@ Please use GitHub's **private vulnerability reporting** — the "Report a
 vulnerability" button under this repository's Security tab. It goes to the
 maintainer and nobody else.
 
-Do not open a public issue for a way past a control the threat model names, or for anything that
+Do not open a public issue for anything the threat model names, its Open issues included, or for anything that
 would let a crafted note, a crafted API response, or a crafted import file reach
 outside the vault.
 

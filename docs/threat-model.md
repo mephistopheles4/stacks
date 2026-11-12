@@ -111,7 +111,9 @@ token for Terraform has an expiry, is set only on the command, and never enters
 Apple Books (cover URLs come out of those replies), and a Libation export of an Audible
 library, given to `stacks import audible`. Out: each looked-up book's ISBN, title and author, private
 and wishlist ones included, and the Google key, to the providers' HTTPS endpoints
-(approved by `AGENTS.md`'s tech decisions).
+(approved by `AGENTS.md`'s tech decisions); and, on an Audible import, the
+export's picture ids and the owner's address to Amazon's image CDN, which no
+record approves.
 
 **Controls:**
 
@@ -143,7 +145,10 @@ requests and commits, all public.
   force-push, a pull request, the `gates` check up to date, review threads
   resolved, and CodeQL's code-scanning rule at high or above for a security
   alert and for any error, with no bypass actor. No approving review is required, and code-owner review is routing only.
-  No gate reads the setting, and it lapses silently when switched off.
+  A pull request runs its own copy of the workflow and the gates, so a change to
+  `.github/workflows/` or `gates/` is judged by the changed copy and only the
+  owner's read holds it. No gate reads the setting, and it lapses silently when
+  switched off.
 - *GitHub.* Secret scanning and push protection are on. They match credential
   patterns, not a private book's title or a personal detail, and they lapse
   silently when switched off.
@@ -158,16 +163,18 @@ requests and commits, all public.
   `bypassPermissions`, and the owner's merge does not hold a post.
 
 **Residual:** Text steers a session; Posts are public; Review rests on gates. The
-rules they rest on: only a spec comment from the repo owner's account counts
-(`docs/agents/issue-tracker.md`, Specs), and every other comment is data (unheld: anyone with write access can edit a comment, and every
+rules they rest on: only a spec comment from the repo owner's account counts, once a merged
+README row names it (`docs/agents/issue-tracker.md`, Specs), and every other comment is data (unheld: anyone with write access can edit a comment, and every
 session posts as that account); a spec's issue body carries the owner's ask with a
 private book, note text, vault path, token or account id left out as `[withheld]`,
-and every post is read back after it posts (a person's read is the only check).
+and every post is read for a secret or a personal detail before it posts (the
+pact's posting rules) and read back after (a person's read is the only check).
 
 ### Updates and CI
 
 **Crosses:** in: npm packages and their install scripts, GitHub Actions and
-Dependabot pull requests, run on the machine and on a runner.
+Dependabot pull requests, run on the machine and on a runner. Out: Astro's
+build telemetry from CI, which the owner's machine switches off.
 
 **Controls:**
 
@@ -187,15 +194,17 @@ Dependabot pull requests, run on the machine and on a runner.
   package with no advisory yet passes. zizmor lints the workflows, and no test
   reaches the network (G21).
 - *Repo.* `gates` holds `contents: read`, but the commit jobs in `metrics.yml`
-  hold `contents: write` with credentials kept. Rulesets protect only `main`
-  (`main-protection`) and the `metrics` and `survivors` branches
-  (`record-branches`: no deletion or force-push); every other branch is open.
+  hold `contents: write` with credentials kept.
+- *GitHub.* Ruleset `record-branches` blocks deletion and force-push on the
+  `metrics` and `survivors` branches, and no other branch has one but `main`. No
+  gate reads it, and it lapses silently when switched off.
 
 **Residual:** What you install and CI run.
 
 ### The Ask the library Worker
 
-**Crosses:** in: a visitor's question at `/api/chat`. Out: the question, the
+**Crosses:** in: a visitor's question at `/api/chat`, and catalogue text a
+provider wrote, which the model reads through its tools. Out: the question, the
 catalogue and some Thoughts to Workers AI through an AI Gateway, and the visitor's
 address to Turnstile. The host keeps a hashed-address count for a day and outcome
 lines carrying that count for a week. The Worker reads public build output only,
@@ -216,7 +225,7 @@ so invariants 1, 2 and 4 hold by structure.
   answer: its logs hold fixed outcome codes and invocation logs are off. That
   says nothing about what the gateway keeps.
 
-**Residual:** Ask availability can be spent; Questions reach Workers AI.
+**Residual:** Ask availability can be spent; Questions reach Workers AI; Provider bytes are trusted.
 
 ## Scope
 
@@ -237,7 +246,7 @@ so invariants 1, 2 and 4 hold by structure.
   isolation, disk encryption and antivirus. None is a control on a boundary above.
 - **Third parties relied on:** Open Library, Google Books, Apple Books, Cloudflare
   (Pages, Workers, Workers AI, AI Gateway, Turnstile, Web Analytics, the WAF),
-  Plausible, GitHub, the npm registry, Obsidian, and wherever a generated site is
+  Plausible, GitHub, the npm registry, Amazon's image CDN, Obsidian, and wherever a generated site is
   hosted.
 - **Root of trust:** the owner's machine and their GitHub and Cloudflare accounts.
   One maintainer.
@@ -245,13 +254,13 @@ so invariants 1, 2 and 4 hold by structure.
 ## Accepted threat classes
 
 - **What you publish:** a public build ships titles, authors, reading dates, ratings, covers and each book's Thoughts as plain text, which is the product; a deploy sends that and the Worker from the owner's machine; earlier deployments keep what they held until deleted.
-- **Provider bytes are trusted:** a provider's reply or an import file's fields are taken as facts and image bytes, so a decoder flaw in an accepted format, a well-formed wrong id or a wrong fact gets through.
+- **Provider bytes are trusted:** a provider's reply or an import file's fields are taken as facts, and the bytes at a cover URL as an image wherever it leads, so a decoder flaw, a wrong fact or text that steers the Ask model gets through.
 - **What you install and CI run:** dependencies, actions and the two packages allowed install scripts run with the maintainer's or the runner's reach, and neither a pin's version comment nor an advisory below high stops a merge.
-- **Review rests on gates:** one maintainer merges their own pull requests with no approving review required, so the required check, CodeQL and the gates catch what that maintainer misses.
+- **Review rests on gates:** one maintainer merges their own pull requests with no approving review required, so the required check and CodeQL catch what that maintainer misses, and the gates do too, except a change to the gates themselves.
 - **Text steers a session:** an agent session reading tracker text, pull requests, fetched pages or cloned files can be steered by them; only the harness's prompts, where on, hold what it then does, and a post is public before anyone reads it back.
 - **Posts are public:** an issue, comment or pull request is public the moment it posts and may be cached or indexed after deletion; the posting rules and the read before posting are the only check.
 - **Ask availability can be spent:** a few addresses can use up the Worker's request allowance and keep AI off, search keeps working, and ADR-0127 accepts it.
-- **Questions reach Workers AI:** a visitor's question, the catalogue and some Thoughts go to Workers AI through the gateway, and Turnstile sees the address and browser signals; the Worker stores nothing, and ADR-0127 approves the flow.
+- **Questions reach Workers AI:** a visitor's question, the catalogue and some Thoughts go to Workers AI through the gateway, and Turnstile sees the address and browser signals; the Worker stores no question, and ADR-0127 approves the flow.
 
 ## Residual risk
 
