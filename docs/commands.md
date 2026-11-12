@@ -29,27 +29,21 @@ loads it with `--config`, which *replaces* the config lookup rather than adding
 to it. Flat config merges every config object whose `files` glob matches, so a
 single file would put the linter's `projectService` on the counter's run — and
 the counter cannot opt out, because `scripts/lib/complexity.ts` constructs
-`new ESLint({ cwd })` with no `overrideConfigFile`. Measured on
-[#233](https://github.com/mephistopheles4/stacks/issues/233): **88 extra rules
-cost 0.7 seconds and the one option costs 5.1**, taking the counter from 1.5s to
-7.3s while changing no count.
+`new ESLint({ cwd })` with no `overrideConfigFile`. The one option, `projectService`,
+is what costs: it makes the counter about five times slower while changing no count.
 
-**`pnpm lint --fix` repairs about a quarter of what this can report**, and that
-is the honest figure rather than a hedge: of the 33 findings on the tree the day
-it landed, 8 auto-fixed, 2 carried an editor suggestion and **23 had no fix at
-all**. Run it, then read the rest. What makes the 23 reachable is the rule's own
-message naming the file, the line and the problem — not the flag.
+**`pnpm lint --fix` repairs about a quarter of what this can report**: the rest has
+no fix, or only an editor suggestion. Run it, then read the rest. What makes the
+rest reachable is the rule's own message naming the file, the line and the
+problem — not the flag.
 
 **Four rule options are tuned, and each one is in the config with its reason.**
 `require-await` is off, `no-unused-vars` honours the `_` prefix,
 `no-irregular-whitespace` skips regular expressions, and
-`switch-exhaustiveness-check` accepts a `default:` clause. Measured on
-[#233](https://github.com/mephistopheles4/stacks/issues/233), against the tree at
-`c8ba4ee`: untuned the set reported **75** findings and tuned it reported **36**,
-removing none of the real ones. All 39 it stopped reporting named deliberate,
-documented idiom — a linter that flags the house style trains people to ignore
-it. ⚠️ **Do
-not remove one of those reasons without removing the option it justifies**: no
+`switch-exhaustiveness-check` accepts a `default:` clause. Each one stops a finding
+that named deliberate, documented idiom and no real defect — a linter that flags
+the house style trains people to ignore it. ⚠️ **Do not remove one of those
+reasons without removing the option it justifies**: no
 gate reads this config, and the comment is what stands in for one.
 
 **It takes about 7.5 seconds**, against `pnpm typecheck`'s 2.2, because it builds
@@ -61,9 +55,8 @@ make it cheaper, since the program is loaded either way.
 
 **`pnpm format` rewrites the tree; `pnpm format:check` exits non-zero and names
 every file that would change.** The check is the gate form and the write is its
-whole remedy, which is the property that let a style rule onto the aggregator at
-all: whoever hits the red runs one command they did not have to know this
-repository to find ([#229](https://github.com/mephistopheles4/stacks/issues/229)).
+whole remedy: whoever hits the red runs one command they did not have to know this
+repository to find.
 
 ⚠️ **`pnpm format` reports success having never opened four files, and they are
 every stylesheet rule the site has.** Prettier infers a parser from the
@@ -77,8 +70,7 @@ source, and the number it prints is not a coverage figure.
 
 **The gap is left open on purpose.** `prettier-plugin-astro` closes it and is a
 new dependency, which `AGENTS.md` says owes a record under `docs/adr/` — and
-[#238](https://github.com/mephistopheles4/stacks/issues/238) measured what it
-would cost: formatting `.astro` splits a three-element bootstrap guard across
+formatting `.astro` would split a three-element bootstrap guard across
 five lines, and **G7 (`astro-no-logic`) counts lines rather than statements**, so
 a block one *under* its cap of 6 is reported as nine. That is a false red whose
 message tells the contributor to move code that nobody moved. Taking the plugin
@@ -120,8 +112,7 @@ clears nothing: the branch guard runs before it and still refuses — unless
 `--dry-run` or `--check-only` skipped the guard, in which case reaching the stop
 proves nothing about the branch. It exists so G17's test can drive the real
 checkout past the guard on a pull request, where the checkout is never `main`,
-without being able to deploy
-([#321](https://github.com/mephistopheles4/stacks/issues/321)). Typed by hand it
+without being able to deploy. Typed by hand it
 is a harmless look at the branch guard, `SITE_URL` and the trend record.
 
 ## `pnpm deploy:site` — the upload, and what it refuses
@@ -150,17 +141,16 @@ user-profile variables (`USERPROFILE` or `HOME`) still reach.
 loads the repository root's `.env` and `.env.local` when it starts, and puts them
 back in its own environment, so where a `.env` sits at the root the Google Books
 key and the vault path still reach wrangler and its packages. Measured by reading
-the pinned wrangler's start-up code, not by a deploy. The owner accepted this
-([#459](https://github.com/mephistopheles4/stacks/issues/459)); the repository has
+the pinned wrangler's start-up code, not by a deploy. The owner accepted this;
+the repository has
 no threat model, so it is recorded nowhere else.
 
 **After a wrangler bump merges, run `pnpm install` before the next deploy**: the
 refusal above is that reminder, and it fires after the four gates, so run the
-install first and save the minutes. **The first deploy after this change is also
-the first proof** that wrangler reaches its login through that environment and
-that `workerd: false` is enough for `pages deploy`; nothing short of a real
-deploy shows either. Both fail safe, since a failing upload publishes nothing.
-A variable that only `.env` supplies, a proxy setting say, no longer reaches the
+install first and save the minutes. **Only a real deploy shows** that wrangler
+reaches its login through that environment and that `workerd: false` is enough
+for `pages deploy`; both fail safe, since a failing upload publishes nothing.
+A variable that only `.env` supplies, a proxy setting say, does not reach the
 upload unless it is a `CLOUDFLARE_` or `WRANGLER_` name.
 
 ## `pnpm deploy:site` — what it checks after the upload
@@ -171,11 +161,9 @@ A successful upload is not the same as a changed site, and the two checks fail
 differently. Every build stamps `index.html` with a hash of itself, because cover
 bytes cannot answer "which build is this": covers are named after book titles and
 keep those names, so a deploy that changes only code leaves every one of them
-identical and the cover check passes against either build — which it did, minutes
-after an upload, while the origin still served the previous `index.html` and
-therefore the previous bundle. The cover check remains for the opposite case, a
-cached copy carrying the right name and the wrong bytes, which is how the fix for
-the mobile crash appeared to deploy while phones kept crashing. The build check
+identical and the cover check passes against either build. The cover check
+remains for the opposite case, a cached copy carrying the right name and the
+wrong bytes. The build check
 waits out edge propagation before complaining, since a deploy is not live the
 instant wrangler returns.
 
@@ -188,9 +176,7 @@ than guessing.** Bot protection answers a non-browser client with a *challenge
 page*, which is HTML carrying no build stamp and a content-length of its own —
 so read as content, a refusal is indistinguishable from the stale build these
 checks exist to catch, and recommends purging a cache that was never involved.
-That is not hypothetical — it happened here, and went unnoticed for a while
-because the message read like an edge-propagation delay
-([`docs/progress.md`](progress.md)). A refusal retries like anything else
+A refusal retries like anything else
 and is reported only after every attempt, since one refusal is not evidence of a
 standing one. **Do not make it pass by sending a browser user agent** — that was
 measured and does not work. See
@@ -276,7 +262,7 @@ for `notes/` above, and a held copy is the larger file, named for its book.
 dashboard** — and the same goes for **one book**: making a book `private`, or
 replacing its cover, after a deploy removes its held copy from the next
 deployment only. This project has no access policy on its per-deployment
-addresses (the owner, on #412), so every earlier one stays public until it is
+addresses, so every earlier one stays public until it is
 deleted; an access policy covering them would make this step unnecessary, and
 nobody has yet checked that one does cover a production deployment's own
 address.
@@ -341,7 +327,7 @@ Four refusals, and **no flag clears any of them**:
 | **configuration mismatch** | the run was scored under a different Stryker configuration from the one these floors were derived under. ⚠️ **A run stamped with a *different* hash refuses whatever is armed** — somebody changed the scoring configuration without re-deriving. A run carrying **no** hash is a record from before the stamp existed, which is evidence of nothing, and refuses only once a scope is armed and there is a comparison to protect |
 
 ⚠️ **The absence of an override is the design, not an omission.** `deploy:site`
-now carries two metric refusals — a stale record and a floor breach — and a
+carries two metric refusals — a stale record and a floor breach — and a
 blanket flag would get reached for on the stale-record one, a blameless dead
 pipe, silently clearing the floor at the same time. The only way past a breach is
 a committed lowering: a one-line diff in `stryker.floors.json` plus a `notes`
@@ -357,13 +343,9 @@ lowering is visible, not that it is avoidable.**
 watch one fail on purpose. **`--check-only` does not reach them at all** — it
 builds nothing and exists to ask a live origin what it is serving.
 
-⚠️ **A fourth flag, --skip-gates, used to sit here and does not any more.** It
-skipped the whole four-gate contract on a path that still uploaded, was written
-down nowhere for 19 of the 21 days it existed, and bought about 35 seconds.
-Deleted in [#152](https://github.com/mephistopheles4/stacks/issues/152); see
-[ADR-0064](adr/0064-no-flag-skips-the-deploy-gates.md). Typing it today is inert
-— the gates run — which is the safe direction for a flag still sitting in
-somebody's shell history.
+⚠️ **No flag skips the gates.** --skip-gates no longer exists: typing it is
+inert — the gates run — which is the safe direction for a flag still sitting in
+somebody's shell history. See [ADR-0064](adr/0064-no-flag-skips-the-deploy-gates.md).
 
 **The flags on this page are the roster.** `gates/deploy-flags.test.ts` (**G45**)
 holds these four sections to `scripts/deploy.ts` in both directions, so a flag
@@ -374,9 +356,7 @@ it back. **The same applies to the six flags this command merely forwards** —
 --public, --vault and --assets go to `stacks build`, --filter to pnpm,
 --project-name and --branch to wrangler, and not one of them is a flag you can
 type at `deploy:site`. Name those in prose, as this paragraph does, and never in
-a code span. ⚠️ **The first draft of this very paragraph broke the gate it was
-explaining**, which is the most direct evidence available that the trap is real
-and that the red is loud.
+a code span.
 
 `ignored` — the disable-directive counter beside each floor — is the one field
 gated at merge, by **G43** (`ignored-mutants`) in [`docs/gates.md`](gates.md).
@@ -434,14 +414,14 @@ platform's four-digit code when its message starts with one (such as 3043); it i
 **`pnpm ask:status`** prints, for each completed UTC day still whole in Workers Logs,
 the questions, outcomes by reason and limit, Neurons, AI time, and how many visitor-days
 reached 1, 5, 10, 20 and 30 questions ([`ask-observability.md`](spec/ask-observability.md)
-S3, [#541](https://github.com/mephistopheles4/stacks/issues/541)). It reads
+S3). It reads
 `CLOUDFLARE_ACCOUNT_ID` from `.env` (`pnpm exec wrangler whoami` prints it).
 ⚠️ **It needs `ASK_STATUS_TOKEN` too**: an API token with one permission, **Account →
 Workers → Metadata Read-only** (the current group; it covers observability, and the legacy
 "Workers Observability Read" is the fallback), with an expiry and nothing else. It reads
 every Worker's logs on the account, and is kept in plaintext `.env` on the owner's choice. `ask:status` never hands
-it to wrangler, though wrangler reads `.env` itself on every run (#459). `wrangler login`'s OAuth scopes have no observability
-scope, and every query answered 403 with its token on 2026-11-06. Without the variable
+it to wrangler, though wrangler reads `.env` itself on every run. `wrangler login`'s OAuth scopes have no observability
+scope, and every query answered 403 with its token. Without the variable
 it falls back to the login, with wrangler's usage telemetry off, and says why a 403
 came back.
 
@@ -456,7 +436,7 @@ came back.
   `pnpm trend:sync` imports, and the Ask page in Grafana draws. It refuses from a linked
   worktree, since that checkout's `.trend/` goes with it, and never rewrites a day.
   ⚠️ **Pass it only after the first live check (spec C10) has passed**: the shape is
-  documented, corrected by the first deployed day's replies (#548). **To undo a record**,
+  documented and corrected by the first deployed day's replies. **To undo a record**,
   delete its file and run `pnpm trend:sync --rebuild`; it can be written again only while
   its logs are kept.
 - **`--day YYYY-MM-DD`** reads that one day alone, and refuses one that has not ended an
@@ -466,8 +446,8 @@ came back.
 ## `pnpm turnstile` — the Ask the library Turnstile widget and its secret
 
 [`docs/spec/ask-the-library.md`](spec/ask-the-library.md) S13 steps 8 to 11,
-[ADR-0135](adr/0135-the-turnstile-widget-is-made-and-rotated-by-a-script.md), issue
-[#537](https://github.com/mephistopheles4/stacks/issues/537). **Owner-run at a terminal,
+[ADR-0135](adr/0135-the-turnstile-widget-is-made-and-rotated-by-a-script.md).
+**Owner-run at a terminal,
 and never by an agent**: it needs the owner's API token typed at a prompt and the owner's
 `wrangler login`. It is not a gate, and the agent guard does not refuse it; what stops
 an agent is that it has no token and no terminal.
@@ -567,15 +547,13 @@ the tests pass, and the work sits on an old commit. The fetch does not fail the
 command when it cannot reach the network, because being offline does not stop
 the rest from working; it says so and carries on.
 
-Three cases, and for a while only the first was handled:
+Three cases:
 
 - **A new branch** is cut from `origin/main`, not from the local `main`.
 - **A branch `origin` already has** is checked out from `origin/<branch>`,
-  tracking it. It used to be created *empty off `origin/main`*, because the only
-  question asked was whether a **local** branch existed — so a branch a
-  colleague or another machine had already pushed came back as a new one of the
-  same name, and the first push either bounced or, forced, took the work with
-  it.
+  tracking it, so a branch a colleague or another machine already pushed does not
+  come back as a new one of the same name, whose first push would bounce or, forced,
+  take the work with it.
 - **A branch already here** is fast-forwarded when it is strictly behind, and
   otherwise reported and left alone. Never merged or rebased: a branch that is
   ahead or has diverged is yours to resolve, and this command exists to make you
@@ -639,8 +617,7 @@ athanor run -- sh -c 'pnpm exec stryker run --concurrency 4 --mutate scripts/lib
 pnpm mutation:score artifacts/stryker/scoped/mutation.json
 ```
 
-Measured on 2026-10-24: one file, 21 mutants, 7 s, the report intact on the
-host. `--mutate` takes a comma-separated list. `--concurrency 4` matches the
+One file takes seconds. `--mutate` takes a comma-separated list. `--concurrency 4` matches the
 `cpus: 4` that the `athanor` key in the root `package.json` sets for every
 command, rather than oversubscribe it; no cap is set for mutation alone,
 because athanor 0.1.0 has none per command. In PowerShell, run it under
@@ -674,9 +651,6 @@ standard output (athanor 0.1.0 brings back nothing else):
 athanor run -- sh -c 'pnpm exec stryker run --dryRunOnly --concurrency 4 --mutate scripts/lib/ask-status.ts,scripts/ask-status.ts 2>&1'
 ```
 
-Measured on 2026-11-08, with `scripts/ask-status.ts` instrumented: it fails in
-about three seconds on the 2026-11-07 break, naming the same spec and
-`expected '/**\n * Daily totals for the Ask the …' to match /if \(linked\) \{\s*fail\(/`.
 ⚠️ **Naming the file the spec reads is not enough.** The Vitest runner narrows
 the dry run to specs *related to the mutated files*, and a spec that reads a
 script as text imports nothing from it, so `--mutate scripts/ask-status.ts`
@@ -703,7 +677,7 @@ job, which is the unscoped dry run an agent cannot run.
   reads as uncovered, so say what keeps an oracle (see that file's header).
 - **Or leave the file out of mutation**, in `stryker.scopes.json`, with a named
   mechanism. This moves `configHash`: run `pnpm mutation:stamp`, and add the
-  renovation entry the way [#557](https://github.com/mephistopheles4/stacks/issues/557) did.
+  renovation entry in `renovations.json`.
 
 **A red that a rerun clears is a flake**, and it gets an issue, not an
 exclusion. The job feeds `gates`, the one required check, so a flaky dry run
@@ -731,10 +705,7 @@ ignored.
 
 ⚠️ **It is not score-neutral, measured.** A verdict is carried forward when the
 mutant's own text and its covering tests look unchanged, and some edits change
-neither. On [#347](https://github.com/mephistopheles4/stacks/issues/347),
-removing `"Books"` from `fixtures/api/apple-search-hit.json` left three
-`apple-books.ts` mutants `Killed` where a full run on the same tree said
-`Survived` — and so did a one-line redundant filter elsewhere in the same file.
+neither, and a carried-over verdict can read `Killed` where a full run says `Survived`.
 What it cannot see:
 
 - **A fixture, a helper outside the mutant's span, or `vitest.stryker.config.ts`.**
@@ -767,7 +738,7 @@ records on the `survivors` branch, matched as a multiset
 an equivalent mutant, read before a floor is armed. **It lists nothing when
 fewer than N records agree** on `keySchema`, the Stryker version and
 `configHash` with the newest, and names the record where the run ended instead.
-A read, never a gate, and not a `pnpm` script ([#472](https://github.com/mephistopheles4/stacks/issues/472)).
+A read, never a gate, and not a `pnpm` script.
 
 ## `pnpm mutation:stamp`
 
@@ -775,7 +746,7 @@ A read, never a gate, and not a `pnpm` script ([#472](https://github.com/mephist
 that writes a stamp.** It re-derives `stryker.floors.json`'s `configHash` from
 the Stryker configuration beside it and writes the one line back. Run it in the
 same diff as whatever moved the configuration — `docs/spec/the-ratchet.md` §4's
-route table has always asked for both halves, and G56 is what makes forgetting
+route table asks for both halves, and G56 is what makes forgetting
 the second half a red pull request rather than an ambush at the next deploy.
 
 ⚠️ **`--check` asks and writes nothing, and its reader is `.husky/pre-commit`.**
@@ -786,11 +757,7 @@ never write — rewriting `stryker.floors.json` mid-commit would change what is
 about to be committed, outside the staged set — so it needs a way to ask, which
 the bare command cannot give. It warns and never refuses; G56 stays the
 guarantee, because Dependabot commits with no working tree and `--no-verify`
-skips the hook. The flag was cut on
-[#329](https://github.com/mephistopheles4/stacks/pull/329) as one nothing called
-and came back on [#330](https://github.com/mephistopheles4/stacks/pull/330) with
-the hook that calls it — *a field arrives with its reader* working, not
-reversed. See [the hooks](#the-hooks--what-arrives-with-pnpm-install-and-reading-the-crap-table).
+skips the hook. See [the hooks](#the-hooks--what-arrives-with-pnpm-install-and-reading-the-crap-table).
 
 ⚠️ **It re-derives and re-scores nothing.** Running it makes the file
 self-consistent, not correct — every floor in it is still a number measured
@@ -800,18 +767,13 @@ file's own comment describes. **Once a scope is armed, running this is a
 re-derivation and owes a justification like any other lowering**, and neither
 this command nor the gate can tell the two apart.
 
-⚠️ **It does not touch `fixtureHash`**, which since
-[#341](https://github.com/mephistopheles4/stacks/issues/341) digests the two rule
-option sets and the two counter **inventories** — what each rule is held to say
-about every counted construct — and no longer the installed tool versions. G56
-does not watch that stamp either, deliberately.
-[ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md) declined the gate
-because a stamp over an *installed version* reddens on every Dependabot bump and
-a bot cannot re-derive one; that reasoning held for the stamp as it then was, and
-[ADR-0084](adr/0084-the-counting-stamp-is-behaviour-not-a-version.md) removed the
-versions rather than the refusal. A behaviour change now reddens
-`complexity.test.ts` or `cognitive.test.ts` at merge instead, and correcting that
-fixture is what moves the stamp.
+⚠️ **It does not touch `fixtureHash`**, which digests the two rule option sets
+and the two counter **inventories** — what each rule is held to say about every
+counted construct. G56 does not watch that stamp either, deliberately
+([ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md),
+[ADR-0084](adr/0084-the-counting-stamp-is-behaviour-not-a-version.md)): a
+behaviour change reddens `complexity.test.ts` or `cognitive.test.ts` at merge
+instead, and correcting that fixture is what moves the stamp.
 
 ## `pnpm duplication:report`
 
@@ -830,14 +792,10 @@ scope list is structurally blind to exactly that clone, and because `gates/` is
 read by no scope at all. See
 [ADR-0072](adr/0072-a-clone-is-a-relation-between-two-places.md).
 
-**Whole-tree means whole-tree *TypeScript*, and the restriction is measured.**
-Over every file jscpd reports 1042 duplicated lines, **570 of them JSON this
-repository did not write** — cached provider responses and a provisioned
-dashboard. Two O'Reilly fixtures shared 105 identical lines because one book came
-back from two endpoints, and a recorded response cannot be de-duplicated without
-falsifying the fixture. Those fixtures were deleted with the provider
-([ADR-0147](adr/0147-oreilly-is-removed.md)); the figures above were measured
-before that and have not been re-measured.
+**Whole-tree means whole-tree *TypeScript*.** Over every file jscpd reports a
+large share of duplicated lines in JSON this repository did not write — cached
+provider responses and a provisioned dashboard — and a recorded response cannot
+be de-duplicated without falsifying the fixture.
 
 **The thresholds are the measurement, not settings around it.** 50 tokens, 5
 lines, `mild` mode. One step looser gives 82 clones where these give 12, over the
@@ -850,9 +808,9 @@ actually installed.
 tree grows and nothing else happens, so the record carries counts and the reader
 derives the fraction — the rule the complexity counts already follow.
 
-**`--history` measures the backfill and writes `jscpd.history.json`** (#454). It
+**`--history` measures the backfill and writes `jscpd.history.json`**. It
 is the one mode here that writes. One `jscpd --history` run covers every
-first-parent commit up to the parent of #262, the commit that published the
+first-parent commit up to the parent of the commit that published the
 first duplication series. The tip is a constant, so the range cannot drift. A
 point holds the four whole-tree counts at each commit's landing time, and
 nothing else from jscpd's report, so no commit message reaches the file. Run it
@@ -891,7 +849,7 @@ every time a block moved a line.
 
 ## `pnpm metrics:emit` and the trend layer
 
-**A score is a trend, not a gate, and `docs/gates.md` now has a place for both.**
+**A score is a trend, not a gate, and `docs/gates.md` has a place for both.**
 A check is a gate when its red has a named, reachable remedy *and* its verdict
 does not depend on how much test code exists; otherwise it is a trend. The
 taxonomy is **binary** — [`docs/spec/gate-or-trend.md`](spec/gate-or-trend.md)
@@ -959,7 +917,8 @@ The record is imported once by name, like any local row.
 - ⚠️ **A revert does not reach a store that already holds it.** The full
   rollback is a revert, then deleting `.trend/local/1787677348-history.prom`,
   then `pnpm trend:sync --rebuild`.
-See [#227](https://github.com/mephistopheles4/stacks/issues/227) and
+
+See
 [ADR-0085](adr/0085-a-renovation-is-declared-and-the-window-may-survive.md).
 
 **It also asks the ratchet's tightening question**, so a tightenable bound
@@ -970,8 +929,7 @@ only when the asks change — the store remembers a digest of them — so a sync
 with nothing new still imports nothing. Each row says *every* ask at that sync,
 an empty one included, so a bound you have tightened drops off the page at the
 next sync. It asks only: it refuses, files and edits nothing
-([ADR-0111](adr/0111-the-ratchet-asks-to-tighten-in-a-print.md),
-[#463](https://github.com/mephistopheles4/stacks/issues/463)).
+([ADR-0111](adr/0111-the-ratchet-asks-to-tighten-in-a-print.md)).
 
 **No laptop cron and no daemon.** A second scheduled thing that can silently stop
 is the failure class this design spends its budget containing, and this one would
@@ -1023,8 +981,7 @@ the dashboard is empty*. A `promtool` on your PATH is deliberately not used. See
 
 ⚠️ **A container is reused only when its image *and* its mount match.** A
 `stacks-prometheus` left by another checkout of this repo keeps that checkout's
-`.trend/`, so the sync would write blocks here and Prometheus would serve there —
-`imported 11 record(s)` on a store answering for nine. Measured, not imagined:
+`.trend/`, so the sync would write blocks here and Prometheus would serve there.
 `pnpm worktree` makes two checkouts on one machine the ordinary case, and the
 container name is global to the Docker daemon. A mismatch recreates the container
 and says which path it was serving.
@@ -1079,14 +1036,13 @@ table pipes and emphasis markers as text. When a gate parses a document, the
 document's shape is part of the contract.
 
 ⚠️ **The rule set is narrow because a default run here is actively dangerous,
-and the danger is silent.** At default rules a fix pass over this tree changed 55
-files, turned 11 issue references into H1 headings — every `#167's …` became a
-heading and lost the reference — stripped an intentional space from 16 code
-spans, two of which are regexes gates depend on, and renumbered a **verbatim
-quotation** in `docs/log/2026-08-20-gate-register.md` sitting under a heading that says the file
-"still defined category 5". `pnpm test` on that damaged tree was **all 1055 tests
-green**. Prettier's Markdown damage is loud, because four gates go red; this
-tool's is not. The narrow allowlist is the entire protection.
+and the danger is silent.** At default rules a fix pass over this tree turns
+issue references into H1 headings, strips an intentional space from code spans —
+some of them regexes gates depend on — and renumbers a **verbatim quotation** in
+`docs/log/2026-08-20-gate-register.md` sitting under a heading that says the file
+"still defined category 5". `pnpm test` stays **green** on the damaged tree.
+Prettier's Markdown damage is loud, because four gates go red; this tool's is
+not. The narrow allowlist is the entire protection.
 
 **Three settings are worth knowing about**, because each is a rule whose default
 would have protected nothing:
@@ -1122,8 +1078,7 @@ watched.
 
 ⚠️ **A declared exclusion is not a rule the fix pass skips.** Nothing narrows the
 run — that is the paragraph above — so `--fix` would apply MD050's fix like any
-other enabled rule's. Measured: `text __x__ text` became `text **x** text` while
-four documents in this repository said it would be left alone. **So the exclusion
+other enabled rule's: `text __x__ text` becomes `text **x** text`. **So the exclusion
 is enforced by declining the whole pass**: write `__G41__` into a scoreboard row
 and `pnpm lint:md` goes red naming MD050 and the line, and `pnpm lint:md:fix`
 **refuses** and tells you to repair it by hand and read the diff. Doing that, and
@@ -1170,9 +1125,7 @@ thing everyone clears with `--no-verify`.
 ⚠️ **`lint-staged` names extensions rather than `*`, and that is load-bearing
 twice.** Prettier errors on a `.astro` file named explicitly (see above), so
 `*` would fail every commit touching the site; and `.prettierignore` keeps
-Markdown and `fixtures/` out, which was **verified with a positive control**
-rather than assumed — identical malformed content is exit 0 under `fixtures/`
-and exit 1 at a path that is not ignored.
+Markdown and `fixtures/` out.
 
 **The list is wider than the tree**, deliberately: it carries `js`, `jsx`,
 `tsx`, `cjs` and `cts`, of which this repository holds **zero**. A glob that
@@ -1186,15 +1139,11 @@ formatted `.js` (measured), so CI is the backstop this layer never replaces.
 
 ### `.githooks/pre-commit` is retired, and why it could not simply stay
 
-**Git has exactly one `core.hooksPath`.** The old hook was opt-in per clone via
-`git config core.hooksPath .githooks`; husky claims that same slot on
-`pnpm install`. Its own header predicted the collision — *"a husky or lefthook
-install among the possibilities … Nothing here needs that slot badly enough to
-take somebody's hook manager off them."* Two things cannot own one slot, so the
-CRAP print moved into `.husky/pre-commit` rather than competing with it, and its
-`pnpm lint` line is superseded by the pre-push hook.
+**Git has exactly one `core.hooksPath`**, and husky claims that slot on
+`pnpm install`, so the opt-in CRAP print lives in `.husky/pre-commit` and
+`pnpm lint` is the pre-push hook's.
 
-**The print stayed opt-in** — it is a ranking whose exponents nobody calibrated,
+**The print is opt-in** — it is a ranking whose exponents nobody calibrated,
 and making it everybody's would be the refusing hook
 [`docs/spec/complexity-on-the-trend-layer.md`](spec/complexity-on-the-trend-layer.md)
 §4 turned down:
@@ -1315,8 +1264,8 @@ is, and why it is 4 is in `scripts/lib/shadow-sampling.ts` and in
 `docs/gates.md` under G61's own section.
 The check that settles a doubt is a phone, below.
 
-It adds about 20 s to the gate on a workstation: 42 s before G61, 63 s with it
-on a local GPU, 78 s under SwiftShader. `pnpm deploy:site` runs it, so a deploy
+G61 adds about 20 s to the gate on a workstation, and more under SwiftShader.
+`pnpm deploy:site` runs it, so a deploy
 pays the same.
 
 ## `scripts/phone-check.ts` — the check only a phone can run
@@ -1340,19 +1289,18 @@ pnpm exec tsx scripts/phone-check.ts --notice privacy       # the same with the 
 **`--pickups <n>` drives the shelf's loop hook**, `window.__shelf.pickupLoop(n)`:
 once the page is ready it picks up a book, holds it **closed**, opens it, holds
 it open, puts it back and moves on, `n` times, while the run watches the context.
-A book arrives closed ([#531](https://github.com/mephistopheles4/stacks/issues/531)),
+A book arrives closed,
 so a pass has tested a closed book and its memory figure still measures an open
 one. The result reports how many rounds reached the closed rest and how many
 reached open, each on its own, and, for each held cover, `renderer.initTexture`'s time
 on the device and the texture count after it — the swap-frame figures the
 picking-a-book-up spec's §8 asks the owner to judge. ⚠️ **A function, never an
-address switch**: #371's prototype looped on `?autoplay=5`, which any link could
-carry to a visitor's phone, and nothing in a URL can start this.
+address switch**: a URL parameter could be carried by any link to a visitor's
+phone, and nothing in a URL can start this.
 
 **`--notice <attribution|privacy>` opens a notice over the shelf** once the page is
 ready and before the watched window, by clicking the page's own links as a visitor
-does ([#536](https://github.com/mephistopheles4/stacks/issues/536), the notice
-modals' claim C4), so the same run says whether the WebGL context held with the
+does (claim C4 of [the notice modals spec](spec/notice-modals.md)), so the same run says whether the WebGL context held with the
 modal showing. Run it beside a plain run on the same phone, once for each notice:
 the figure is the script's own, the `phoneVerdict` kind and the sampling row it
 prints. The modal changes nothing about rendering (no blur, no backdrop animation,
@@ -1363,7 +1311,7 @@ the page's reason, or after ninety seconds with no answer from the page.
 **Not a `pnpm` script, and that is deliberate.** It needs adb and a phone with
 USB debugging on, which no CI runner has and [`CONTRIBUTING.md`](../CONTRIBUTING.md)
 cannot ask a contributor for — and a `pnpm` script is one G14 would pin in
-`AGENTS.md` while nothing ever ran it. The retired `gh-post.ts` set a precedent.
+`AGENTS.md` while nothing ever ran it.
 
 **Before it runs:** adb on the `PATH`, or `--adb <path>`; the phone plugged in
 with USB debugging on and the computer authorised; Chrome on the phone; and a
@@ -1438,10 +1386,8 @@ athanor run --json       # one JSON object on stdout: outcome, exit code, image,
 athanor status           # which slots are held
 ```
 
-Measured on 2026-10-21, with the image already built: `test` 21 s (150 files,
-2877 passed, 2 skipped, as on the host), `typecheck` 6 s, `lint` 18 s, `build`
-16 s, `smoke` 242 s with G60 and G61 included. A test planted to fail made
-`athanor run` exit 1 with `outcome: fail`.
+With the image already built, `test` takes about 20 s, `typecheck` 6 s, `lint`
+18 s, `build` 16 s and `smoke`, G60 and G61 included, about four minutes.
 
 **What it tests is the tracked tree as it stands**, staged or not. ⚠️ **A new
 test file you have not `git add`ed is left out** and the run says how many
@@ -1541,14 +1487,12 @@ stream, never an explicit allow, so the owner's permission prompts stay in
 force — and a fault in the hook is silence too, because a guard that failed
 closed would stop all work in the repo. It runs with `node:` built-ins under
 Node's own type stripping, so it works in a worktree before `pnpm install`.
-Measured on the owner's Windows machine: **219 ms** median for an unguarded
-command against 151 ms for a bare `node`, and 330 ms for a guarded one, which
-probes athanor. To switch it off, delete the `PreToolUse` entry.
+A guarded command costs a few hundred milliseconds, because it probes athanor.
+To switch it off, delete the `PreToolUse` entry.
 
 ## Analytics
 
-Optional Plausible on the shelf ([#562](https://github.com/mephistopheles4/stacks/issues/562),
-[ADR-0139](./adr/0139-optional-plausible-direct-to-plausible-io.md),
+Optional Plausible on the shelf ([ADR-0139](./adr/0139-optional-plausible-direct-to-plausible-io.md),
 [the spec](./spec/optional-plausible.md)). Off unless `PUBLIC_PLAUSIBLE_DOMAIN` is set at build
 time, from the shell or `.env`. Unset is a complete and supported build.
 

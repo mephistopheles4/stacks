@@ -1,9 +1,8 @@
 # The shelf's inspectors — `?solo`, `?debug` and `?woodSeed`
 
 All three are query-string instruments on the ordinary page, and none exists for
-a visitor who does not ask for it. They lived in [`AGENTS.md`](../AGENTS.md) until
-that file's size became [#174](https://github.com/mephistopheles4/stacks/issues/174);
-nothing here changed but where it sits, and `AGENTS.md` points at this file.
+a visitor who does not ask for it. [`AGENTS.md`](../AGENTS.md) points at this
+file.
 
 Read this before changing the renderer, the debug panel, or `shelf-settings.ts`.
 
@@ -18,35 +17,31 @@ moment it mattered.
 
 **It exists because the shelf is the worst place to look at a book.** Books
 occlude each other, the case occludes the row, and the camera cannot get above or
-below. Two defects at the head of every hardback survived two code reviews, a
-479-test suite and a gate that reports every renderer counter — because they
-moved none of them. `?solo` found both in one screenshot.
+below. A defect at the head of a hardback can pass code review, the test suite
+and a gate that reports every renderer counter, because it moves none of them;
+`?solo` shows it in one screenshot.
 
 **Stand somewhere by number, not by dragging: `window.__solo.look()`.** It takes
 `{ azimuth, elevation, distance, target }` — degrees, and distances in the book's
 own heights — and it is the sibling of the `window.__shelf` that `smoke:render`
-reads. The head corner was re-cut seven times before this existed, and every one
-of those rounds was judged from a hand-dragged orbit, so no two before-and-afters
-were the same picture and *"it looks better"* was never checkable. `distance` is
+reads. A change judged from a hand-dragged orbit has no two before-and-afters
+that are the same picture, so *"it looks better"* is not checkable. `distance` is
 clamped by the inspector's own `minDistance`: it magnifies, it does not invent.
 
 ⚠️ **What you can see here, nobody can see at all — and that cuts two ways.**
 
 - **Angle.** The shipped `maxPolarAngle` is `PI * 0.52`, so a visitor never gets
-  more than 3.6° under the horizon — which is why
-  [#56](https://github.com/mephistopheles4/stacks/issues/56) decided there is no
-  tail cap and never will be.
+  more than 3.6° under the horizon — which is why there is no tail cap and never
+  will be.
 - **Distance.** `?solo` sets `minDistance` to 0.4 of a book's height, about
   **four times closer than the shelf's 1.5**. So it magnifies; it does not
   invent.
 
 ⚠️ **It is still the right instrument, and "a visitor could never see that" is
-not a disposal.** That sentence was written here once, about the case's assembly
-seams, and the owner produced a shelf screenshot at the shelf's own `minDistance`
-with the seam plainly in it. What had actually happened is that the claim was
-made from a render the writer had already decided was clean. **Anything you want
-to dismiss on visibility grounds gets a shelf render at `minDistance` first, and
-somebody other than the person who wants it dismissed should look at it.**
+not a disposal.** A claim of that kind is easily made from a render the writer
+has already decided is clean. **Anything you want to dismiss on visibility
+grounds gets a shelf render at `minDistance` first, and somebody other than the
+person who wants it dismissed should look at it.**
 
 ## The dice, held still — `?woodSeed`
 
@@ -55,28 +50,24 @@ off, so two renders differ by the arm under test and not by the dice.
 
 **A member of the bookcase has no identity.** The root is drawn fresh on every
 page load and the promise is *one page load only* — two loads give two different
-bookcases, which is
-[#287](https://github.com/mephistopheles4/stacks/issues/287)'s decision and not
-an accident. A book-derived seed was declined on arithmetic as well as on taste:
+bookcases, by decision. A book-derived seed was declined on arithmetic as well as on taste:
 `woodKeys` names one plank per shelf **plus a lid** — the top plank never holds
 a book — `rowsForBookcase` keeps one empty row ahead, and an empty vault gives
 three planks and no books at all.
 
-That is exactly what defeats a differ. [#282](https://github.com/mephistopheles4/stacks/issues/282)'s
-harness compares two renders of one scene, so with a per-load draw the two frames
-differ by the dice as well as by the treatment and a count of just-noticeable
-pixels stops meaning anything. Forced, the dice are equal and the difference is
-the arm.
+That is exactly what defeats a differ. The harness compares two renders of one
+scene, so with a per-load draw the two frames differ by the dice as well as by
+the treatment and a count of just-noticeable pixels stops meaning anything.
+Forced, the dice are equal and the difference is the arm.
 
 ⚠️ **Byte identical is a property of the renderer as well as of the seed.**
 Two shots at one seed are byte identical under **SwiftShader**, which is what
-`pnpm smoke:render` selects when `CI=true` — 0 of 3,888,000 samples, worst Δ 0.
-On the same machine's **GPU** path the identical pair differs on **6 samples of
-207,000 at worst Δ 1**, and tripling the settle does not shrink it. That residual
-is rasterisation, not the dice: it is measured with the dice held fixed, and
-against it two seeds move 507,396 samples at worst Δ 99. A harness asserting
-byte identity has to say which renderer it means, or it will read a GPU's noise
-floor as a seed that did not hold.
+`pnpm smoke:render` selects when `CI=true`. On a **GPU** path the identical pair
+differs on a few samples at worst Δ 1, and a longer settle does not shrink it.
+That residual is rasterisation, not the dice, and two seeds move orders of
+magnitude more samples. A harness asserting byte identity has to say which
+renderer it means, or it will read a GPU's noise floor as a seed that did not
+hold.
 
 ⚠️ **No default, and never in the settings diff (`?debug=<json>`).** A default would quietly make every
 render reproducible while the shipped shelf was not, so the refusal lives in the
@@ -86,13 +77,12 @@ so the seed is a **flat spelling** beside `?solo` and `?debug`, and is not a
 member of `ShelfSettings` at any depth.
 
 ⚠️ **Absent and empty both fall through to a fresh draw**, and the last of a
-repeated key wins. Three of this shelf's measured false zeros came from a query
-string nobody had proved: `URLSearchParams.get` returning the *first* of a
-duplicated key, so an arm asking for 512 rendered 1024 and differenced to a
-perfect 0.000%; and `Number(null)` being `0` rather than `NaN`, so an absent
-`?woodVary=` passed a `>= 0` guard and disarmed the whole variation. A seed that
-dropped out of a query must not silently agree with another shot whose seed also
-dropped out.
+repeated key wins. Two query-string traps produce false zeros:
+`URLSearchParams.get` returns the *first* of a duplicated key, so an arm asking
+for 512 can render 1024 and difference to a perfect 0.000%; and `Number(null)`
+is `0` rather than `NaN`, so an absent `?woodVary=` passes a `>= 0` guard and
+disarms the whole variation. A seed that dropped out of a query must not
+silently agree with another shot whose seed also dropped out.
 
 Read in `shelf-url.ts`; the keys are built in `woodwork.ts`'s `woodKeys`, which
 is where the backboard's is held to carrying the root.
@@ -119,8 +109,7 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   read). The folder starts open. When the previous record has no clean exit, the
   pane opens itself too, at any width. `diagnostics.ts` imports nothing from the pane
   and the readout takes only `import type` from it (G68), so Tweakpane never
-  reaches the eager bundle
-  ([#488](https://github.com/mephistopheles4/stacks/issues/488)).
+  reaches the eager bundle.
 - **The tuning panel** (`tuning-panel.ts`, the pane's second instrument) is every
   setting the shelf has, live. It is a **loop over `panel-model.ts`**, which gives
   each row's lamp, label, disabled reason, list options, range and the rebuild
@@ -133,7 +122,7 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   inside a re-entry guard, which also absorbs the float step a range leaves behind
   when it narrows again. A rebuild disposes and re-adds only this instrument's
   folder, at its index. `?debug=<json>` and the address writer are
-  `shelf-url.ts`'s, and the module-level `written` flag (#426) lives in the view,
+  `shelf-url.ts`'s, and the module-level `written` flag lives in the view,
   which loads once per page. `smoke:render` reads the rendered state once for each
   field the view writes.
 - **The debug pane** (`debug-pane.ts`) is one Tweakpane `Pane`, titled, collapsed
@@ -167,21 +156,20 @@ Everything the shelf looks like is one object — `ShelfSettings` in
 `DEFAULT_SETTINGS`. `shelf-url.ts` owns the query string in both directions: the
 ten historic probes keep their flat spellings because `docs/progress.md`
 documents them with measured results.
-`?receivers=all` joined the ten probes as an eleventh, for their reason: it is how
-`?shadows=1` still reaches what it drew before the books stopped reading the map
+`?receivers=all` is an eleventh flat probe, for their reason: it is how
+`?shadows=1` reaches the books reading the shadow map
 ([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)), and
 it is G61's control.
 Everything else rides in `?debug=<json>`, a diff from the defaults in the
 value of the parameter that mounts the instruments — so a page without `?debug`
-cannot be tuned by a link. `?tune=` is retired: a page ignores it and prints one
+cannot be tuned by a link. `?tune=` is ignored: a page prints one
 console line naming the new spelling
 ([ADR-0118](adr/0118-the-settings-diff-rides-in-debug.md)). ⚠️ **To re-test the crash by hand, open
 `?shadows=1&receivers=all`, never `?receivers=all` alone**: it is inert while
 shadows are off, and a device carrying a lost-context record starts painted, so
 the page reads no map, survives, and looks like a fixed driver.
 `scripts/phone-check.ts` clears the record first, and a hand re-test does not.
-**Two old probes mean what they always meant against a
-different default** since real-time shadows became every visitor's
+**Two probes read against the default of real-time shadows**
 ([ADR-0090](adr/0090-real-time-shadows-are-the-default.md)): `?shadows=1` asks
 for what a fresh device gets anyway, and overrides a remembered fallback for
 one load; `?shadows=0` is the painted shelf, which is what a device that lost
@@ -193,9 +181,9 @@ says what it does to the phone first.
 **A control must not lie, and that is the whole design.** `applySettings`
 returns an `ApplyReport` — `applied`, `needsRebuild`, `needsReload`, `refused` —
 and the panel renders what the shelf reported rather than what it was asked for.
-This is [`docs/progress.md`](progress.md)'s oldest rule about instruments,
+This is [`docs/progress.md`](progress.md)'s rule about instruments,
 *"a probe that silently did nothing would be worse than no probe"*, applied to a
-slider. It caught seven real faults; they are listed there.
+slider.
 
 **The pickup tuner keeps the same floor, through Tweakpane's own API.** A
 Tweakpane binding redraws from the object it is bound to, so a control there
