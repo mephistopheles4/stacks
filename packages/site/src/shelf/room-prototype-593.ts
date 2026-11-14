@@ -64,7 +64,7 @@ declare global {
 /** Fetches and adds the room; resolves once it is in the scene. */
 export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promise<LoadedRoom> {
   const started = performance.now();
-  // `?chair=blocks|scripted|polyhaven|trellis` picks which baked room to load.
+  // `?chair=blocks|scripted|polyhaven|trellis|hero` picks which baked room to load.
   const chair = new URLSearchParams(location.search).get('chair') ?? 'blocks';
   const file = /^[a-z]+$/.test(chair) ? `room-${chair}.glb` : 'room-blocks.glb';
   const url = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/room-prototype-593/${file}`;
@@ -78,7 +78,12 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
     if (node instanceof THREE.Mesh) {
       const old = node.material as THREE.MeshStandardMaterial;
       const map = old.map;
-      if (map) map.colorSpace = THREE.SRGBColorSpace;
+      if (map) {
+        map.colorSpace = THREE.SRGBColorSpace;
+        // seen at a glancing angle, a mip chosen for the blurrier axis smears the leather's grain
+        // into streaks along the other; three clamps this to what the device allows
+        map.anisotropy = 16;
+      }
       node.material = new THREE.MeshBasicMaterial({
         map,
         color: new THREE.Color(exposure, exposure, exposure),

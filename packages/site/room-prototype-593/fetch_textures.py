@@ -1,0 +1,50 @@
+"""PROTOTYPE for #593: fetch the CC0 Poly Haven texture sets the hero chair uses into .cache/polyhaven/.
+
+Runs under any Python 3 with no dependencies, Blender's included:
+  blender -b --factory-startup --python-exit-code 1 -P packages/site/room-prototype-593/fetch_textures.py -- [--res 2k] [ids...]
+
+Every Poly Haven asset is CC0 (https://polyhaven.com/license). The cache is gitignored; the
+baked atlases that ship are recorded in public/room-prototype-593/SOURCES.md.
+"""
+import json
+import os
+import sys
+import urllib.request
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+CACHE = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".cache", "polyhaven"))
+DEFAULT = ["leather_red_02", "leather_red_03", "black_walnut_veneer_01", "american_walnut_veneer"]
+# The leathers ship their colour as two variants, coll1/coll2, instead of a single Diffuse.
+MAPS = {"Diffuse": "diff", "coll1": "diff", "coll2": "diff2", "nor_gl": "nor_gl", "Rough": "rough",
+        "Displacement": "disp", "AO": "ao"}
+
+argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+res = "2k"
+if "--res" in argv:
+    i = argv.index("--res")
+    res = argv[i + 1]
+    del argv[i:i + 2]
+ids = argv or DEFAULT
+UA = {"User-Agent": "stacks-room-prototype/0.1"}
+
+
+def get(url):
+    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
+        return r.read()
+
+
+for asset in ids:
+    files = json.loads(get(f"https://api.polyhaven.com/files/{asset}"))
+    out = os.path.join(CACHE, asset)
+    os.makedirs(out, exist_ok=True)
+    for key, short in MAPS.items():
+        entry = files.get(key, {}).get(res, {})
+        fmt = "jpg" if "jpg" in entry else "png" if "png" in entry else None
+        if not fmt:
+            print(f"[textures] {asset}: no {key} at {res}")
+            continue
+        dst = os.path.join(out, f"{short}.{fmt}")
+        if not os.path.exists(dst):
+            with open(dst, "wb") as f:
+                f.write(get(entry[fmt]["url"]))
+        print(f"[textures] {asset}/{short}.{fmt}")

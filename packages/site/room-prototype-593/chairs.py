@@ -21,7 +21,26 @@ def build_chair(args, fabric, wood, box, cyl):
         return _blocks(fabric, wood, box, cyl)
     if args.chair == "scripted":
         return _scripted(fabric, wood)
+    if args.chair == "hero":
+        return _hero(args)
     return _imported(args, fabric)
+
+
+# ── hero: the Met's easy chair rebuilt at bake resolution (hero_chair.py) ─
+def _hero(args):
+    import hero_chair
+
+    k = args.chair_height / hero_chair.HEIGHT  # it is built in metres
+    # every part hangs off one scaled empty; build_room joins them without applying it, so object
+    # coordinates stay in metres and the textures keep their real size
+    space = bpy.data.objects.new("hero_space", None)
+    space.scale = (k, k, k)
+    bpy.context.scene.collection.objects.link(space)
+    parts = hero_chair.build(mats=hero_chair.materials(unit=k))
+    for o in parts:
+        o.parent = space
+    print(f"[room] hero chair: {len(parts)} parts, {sum(len(o.data.polygons) for o in parts)} faces, ×{k:.3f}")
+    return parts
 
 
 # ── blocks: the first pass, unchanged ─────────────────────────────────────

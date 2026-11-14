@@ -29,10 +29,13 @@ ap.add_argument("--samples", type=int, default=128)
 ap.add_argument("--res", type=int, default=2048)
 ap.add_argument("--rows", type=int, default=4)
 ap.add_argument("--save-blend", default="")
-ap.add_argument("--chair", choices=("blocks", "scripted", "import"), default="blocks")
+ap.add_argument("--chair", choices=("blocks", "scripted", "import", "hero"), default="blocks")
+ap.add_argument("--chair-res", type=int, default=0, help="the chair's own atlas size (default: --res)")
+ap.add_argument("--chair-faces", type=int, default=40000, help="hero: faces in the decimated chair that ships")
 ap.add_argument("--chair-file", default="", help="model to import for --chair import (.glb/.gltf/.fbx/.blend)")
 ap.add_argument("--chair-yaw", type=float, default=0.0, help="degrees to turn an imported chair so it faces -y")
 ap.add_argument("--chair-height", type=float, default=3.8, help="height an imported chair is scaled to")
+ap.add_argument("--chair-own-uv", action="store_true", help="bake an imported single-mesh chair into its own unwrap, not a new one")
 ap.add_argument("--chair-recolour", action="store_true", help="paint an imported chair's fabric the room's red")
 args = ap.parse_args(argv)
 sys.path.insert(0, __import__("os").path.dirname(__file__))
@@ -204,8 +207,11 @@ chair_parts = build_chair(args, M_RED, M_DARKWOOD, box, cyl)
 chair = bpy.data.objects.new("chair_root", None)
 scene.collection.objects.link(chair)
 for p in chair_parts:
-    if p.parent is None:
-        p.parent = chair
+    root = p
+    while root.parent:
+        root = root.parent
+    if root is not chair:
+        root.parent = chair
 chair.location = (5.2, -2.4, 0)
 chair.rotation_euler = (0, 0, math.radians(-62))  # faces toward the bookcase and a little toward the viewer
 
@@ -301,8 +307,30 @@ def join(name, objs):
     return o
 
 
-def unwrap(o):
-    """Lightmap UVs go in a layer of their own: an imported model's textures keep theirs for the bake."""
+def join_in_place(name, objs):
+    """Join parts that share one parent without applying its transform: the mesh stays in the
+    parts' own space (the hero chair's metres), so box-projected textures, whose blend follows the
+    object-space normal, keep their axes. Applying the chair's 62° turn into the mesh streaked them."""
+    apply_modifiers(objs)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.join()
+    o = bpy.context.active_object
+    mw = o.matrix_world.copy()
+    o.parent = None
+    o.matrix_world = mw
+    o.name = name
+    return o
+
+
+def unwrap(o, reuse=False):
+    """Lightmap UVs go in a layer of their own: an imported model's textures keep theirs for the bake.
+
+    reuse copies the model's own unwrap instead of cutting a new one. Smart UV Project on a dense
+    generated mesh (95k faces from TRELLIS.2) makes thousands of tiny islands whose margins leave
+    the chair 2% of its atlas; the model's own non-overlapping unwrap used 64%."""
     bpy.ops.object.select_all(action="DESELECT")
     o.select_set(True)
     bpy.context.view_layer.objects.active = o
@@ -312,14 +340,74 @@ def unwrap(o):
     for layer in uvs:
         layer.active_render = True
         break
-    uvs.active = uvs.new(name="bake")
+    uvs.active = uvs.new(name="bake")  # starts as a copy of the active layer
+    if reuse:
+        return
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.004)
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
-def bake_to(o, res):
+def unwrap_packed(o):
+    """For the decimated hero chair: islands at one texel density, packed tight."""
+    unwrap(o)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.average_islands_scale()
+    bpy.ops.uv.pack_islands(rotate=True, margin=0.002)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def make_low(high, faces):
+    """A decimated copy of the high-resolution chair. It ships; the high one only lights it.
+    Invisible to every ray, so it neither shadows the room nor the chair it is baked from."""
+    low = high.copy()
+    low.data = high.data.copy()
+    scene.collection.objects.link(low)
+    low.name = "room_chair"
+    m = low.modifiers.new("decimate", "DECIMATE")
+    m.ratio = min(1.0, faces / len(high.data.polygons))
+    apply_modifiers([low])  # leaves low selected and active
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)  # world-unit cage
+    for attr in ("visible_camera", "visible_diffuse", "visible_glossy", "visible_transmission",
+                 "visible_volume_scatter", "visible_shadow"):
+        setattr(low, attr, False)
+    return low
+
+
+def site_camera():
+    """The page's default view (frameBookcase): the angle a glossy bake is seen from."""
+    cd = bpy.data.cameras.new("site_camera")
+    cd.sensor_fit = "VERTICAL"
+    cd.angle_y = math.radians(40)
+    cam = bpy.data.objects.new("site_camera", cd)
+    cam.location = (0.57, -9.1, 2.33)
+    cam.rotation_euler = (Vector((0, 0, 2.15)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+    scene.collection.objects.link(cam)
+    return cam
+
+
+def bake_from_high(low, high, res):
+    """Light the high chair, record it on the low one. Glossy is kept, seen from the page's own
+    camera: the leather's sheen and the brass's glints are most of what makes them read, and the
+    view only orbits a little."""
+    bake = scene.render.bake
+    bake.use_selected_to_active = True
+    # rays start this far outside the low surface; tufts sit up to ~0.04 m × 3.1 off it
+    bake.cage_extrusion = 0.06
+    bake.max_ray_distance = 0.18
+    bake.use_pass_glossy = True
+    bake.view_from = "ACTIVE_CAMERA"
+    scene.camera = site_camera()
+    img = bake_to(low, res, also_select=(high,))
+    bake.use_selected_to_active = False
+    bake.view_from = "ABOVE_SURFACE"
+    return img
+
+
+def bake_to(o, res, also_select=()):
     img = bpy.data.images.new(f"{o.name}_bake", res, res)
     for m in o.data.materials:
         nt = m.node_tree
@@ -329,12 +417,15 @@ def bake_to(o, res):
         nt.nodes.active = n
     bpy.ops.object.select_all(action="DESELECT")
     o.select_set(True)
+    for other in also_select:
+        other.select_set(True)
     bpy.context.view_layer.objects.active = o
     bake = scene.render.bake
     bake.use_pass_direct = True
     bake.use_pass_indirect = True
     bake.use_pass_diffuse = True
-    bake.use_pass_glossy = False  # view-dependent; a lightmap must not carry it
+    if not bake.use_selected_to_active:
+        bake.use_pass_glossy = False  # view-dependent; a lightmap must not carry it
     bake.use_pass_transmission = False
     bake.use_pass_emit = True
     bake.margin = 8
@@ -362,19 +453,38 @@ import time
 
 shell_obj = join("room_shell", shell)
 furn_obj = join("room_furniture", furn)
-chair_obj = join("room_chair", chair_parts)
+chair_obj = join_in_place("room_chair", chair_parts) if args.chair == "hero" else join("room_chair", chair_parts)
+for c in chair.children:  # the hero's texture space must keep its place when the root goes
+    mw = c.matrix_world.copy()
+    c.parent = None
+    c.matrix_world = mw
 bpy.data.objects.remove(chair)
+chair_high = None
+if args.chair == "hero":
+    chair_high = chair_obj
+    chair_high.name = "room_chair_high"
+    chair_obj = make_low(chair_high, args.chair_faces)
+    print(f"[room] hero chair decimated {len(chair_high.data.polygons)} → {len(chair_obj.data.polygons)} faces")
 meshes = (shell_obj, furn_obj, chair_obj)
 for o in meshes:
-    unwrap(o)
+    if o is chair_obj and chair_high:
+        unwrap_packed(o)
+    else:
+        unwrap(o, reuse=(o is chair_obj and args.chair_own_uv))
 
 baked = {}
 for o in meshes:
     t0 = time.time()
-    baked[o.name] = bake_to(o, args.res)
-    print(f"[room] baked {o.name} ({len(o.data.polygons)} faces) at {args.res}² / {args.samples} spp in {time.time() - t0:.1f}s")
+    res = (args.chair_res or args.res) if o is chair_obj else args.res
+    if o is chair_obj and chair_high:
+        baked[o.name] = bake_from_high(o, chair_high, res)
+    else:
+        baked[o.name] = bake_to(o, res)
+    print(f"[room] baked {o.name} ({len(o.data.polygons)} faces) at {res}² / {args.samples} spp in {time.time() - t0:.1f}s")
 
 bpy.data.objects.remove(proxy)
+if chair_high:
+    bpy.data.objects.remove(chair_high)
 for o in meshes:
     swap_to_baked(o, baked[o.name])
     baked[o.name].pack()

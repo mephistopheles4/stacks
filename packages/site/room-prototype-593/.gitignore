@@ -1,0 +1,8 @@
+# Blender scenes: rebuilt by the scripts here, and too large to keep in history
+*.blend
+*.blend1
+__pycache__/
+# local TRELLIS.2 run helpers: they name the owner's password-manager entry
+trellis/trellis.env
+trellis/check-token.cmd
+trellis/run-trellis.cmd
