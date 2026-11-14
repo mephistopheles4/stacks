@@ -64,7 +64,10 @@ declare global {
 /** Fetches and adds the room; resolves once it is in the scene. */
 export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promise<LoadedRoom> {
   const started = performance.now();
-  const url = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/room-prototype-593/room.glb`;
+  // `?chair=blocks|scripted|polyhaven|trellis` picks which baked room to load.
+  const chair = new URLSearchParams(location.search).get('chair') ?? 'blocks';
+  const file = /^[a-z]+$/.test(chair) ? `room-${chair}.glb` : 'room-blocks.glb';
+  const url = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/room-prototype-593/${file}`;
   const response = await fetch(url);
   const buffer = await response.arrayBuffer();
   const gltf = await new GLTFLoader().parseAsync(buffer, '');

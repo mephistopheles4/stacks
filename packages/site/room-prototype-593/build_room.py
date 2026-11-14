@@ -29,7 +29,13 @@ ap.add_argument("--samples", type=int, default=128)
 ap.add_argument("--res", type=int, default=2048)
 ap.add_argument("--rows", type=int, default=4)
 ap.add_argument("--save-blend", default="")
+ap.add_argument("--chair", choices=("blocks", "scripted", "import"), default="blocks")
+ap.add_argument("--chair-file", default="", help="model to import for --chair import (.glb/.gltf/.fbx/.blend)")
+ap.add_argument("--chair-yaw", type=float, default=0.0, help="degrees to turn an imported chair so it faces -y")
+ap.add_argument("--chair-height", type=float, default=3.8, help="height an imported chair is scaled to")
+ap.add_argument("--chair-recolour", action="store_true", help="paint an imported chair's fabric the room's red")
 args = ap.parse_args(argv)
+sys.path.insert(0, __import__("os").path.dirname(__file__))
 
 ROW_HEIGHT = 1.12
 CASE_W = 3.4 + 0.09 * 2
@@ -137,7 +143,7 @@ M_WALL = material("wall", (0.035, 0.05, 0.045), rough=0.9)
 M_SKIRT = material("skirting", (0.03, 0.04, 0.036), rough=0.6)
 M_FLOOR = floor_material()
 M_RUG = rug_material()
-M_RED = material("chair_fabric", (0.32, 0.02, 0.025), rough=0.95, sheen=0.8)
+M_RED = material("chair_fabric", (0.2, 0.014, 0.017), rough=0.95, sheen=1.0)
 M_DARKWOOD = material("dark_wood", (0.06, 0.03, 0.015), rough=0.45)
 M_BRASS = material("brass", (0.35, 0.24, 0.08), rough=0.35)
 M_SHADE = material("shade", (0.55, 0.42, 0.25), rough=0.9, emit=(1.0, 0.62, 0.3), emit_strength=1.5)
@@ -191,23 +197,15 @@ shell.append(box("rug", (8.5, 5.5, 0.04), (2.2, -3.6, 0.02), M_RUG, bevel=0.015,
 # The bookcase stand-in: casts the contact shadow during the bake, then goes.
 proxy = box("bookcase_proxy", (CASE_W, CASE_D, CASE_H), (0, 0, CASE_H / 2), M_PROXY)
 
-# ── the chair: a button-less wingback, to the right, angled toward the case ──
-chair_parts = []
-S = 1.0  # chair local frame; seat front faces local -y
-chair_parts.append(box("seat", (2.5, 2.3, 0.55), (0, 0, 1.25), M_RED, bevel=0.12))
-chair_parts.append(box("base", (2.6, 2.4, 0.7), (0, 0, 0.75), M_RED, bevel=0.08))
-chair_parts.append(box("back", (2.6, 0.45, 2.6), (0, 1.0, 2.6), M_RED, bevel=0.18))
-for side in (-1, 1):
-    chair_parts.append(box(f"wing{side}", (0.35, 1.1, 1.5), (side * 1.25, 0.55, 3.1), M_RED, bevel=0.15))
-    chair_parts.append(box(f"arm{side}", (0.4, 2.3, 0.9), (side * 1.3, 0.05, 1.7), M_RED, bevel=0.16))
-    chair_parts.append(cyl(f"roll{side}", 0.3, 2.35, (side * 1.38, 0.0, 2.15), M_RED, rot=(math.radians(90), 0, 0)))
-    for fy in (-1, 1):
-        chair_parts.append(cyl(f"leg{side}{fy}", 0.08, 0.45, (side * 1.1, fy * 1.0, 0.22), M_DARKWOOD, verts=12))
-chair_parts.append(box("cushion", (2.2, 2.0, 0.3), (0, -0.1, 1.62), M_RED, bevel=0.12))
+# ── the chair: one of three variants, to the right, angled toward the case ──
+from chairs import build_chair  # noqa: E402  (sibling module, see sys.path below)
+
+chair_parts = build_chair(args, M_RED, M_DARKWOOD, box, cyl)
 chair = bpy.data.objects.new("chair_root", None)
 scene.collection.objects.link(chair)
 for p in chair_parts:
-    p.parent = chair
+    if p.parent is None:
+        p.parent = chair
 chair.location = (5.2, -2.4, 0)
 chair.rotation_euler = (0, 0, math.radians(-62))  # faces toward the bookcase and a little toward the viewer
 
@@ -304,9 +302,17 @@ def join(name, objs):
 
 
 def unwrap(o):
+    """Lightmap UVs go in a layer of their own: an imported model's textures keep theirs for the bake."""
     bpy.ops.object.select_all(action="DESELECT")
     o.select_set(True)
     bpy.context.view_layer.objects.active = o
+    uvs = o.data.uv_layers
+    if len(uvs) == 0:
+        uvs.new(name="UVMap")
+    for layer in uvs:
+        layer.active_render = True
+        break
+    uvs.active = uvs.new(name="bake")
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.004)
@@ -348,24 +354,28 @@ def swap_to_baked(o, img):
     nt.links.new(t.outputs["Color"], p.inputs["Base Color"])
     o.data.materials.clear()
     o.data.materials.append(m)
+    for layer in [l for l in o.data.uv_layers if l.name != "bake"]:
+        o.data.uv_layers.remove(layer)
 
 
 import time
 
 shell_obj = join("room_shell", shell)
-furn_obj = join("room_furniture", furn + chair_parts)
+furn_obj = join("room_furniture", furn)
+chair_obj = join("room_chair", chair_parts)
 bpy.data.objects.remove(chair)
-for o in (shell_obj, furn_obj):
+meshes = (shell_obj, furn_obj, chair_obj)
+for o in meshes:
     unwrap(o)
 
 baked = {}
-for o in (shell_obj, furn_obj):
+for o in meshes:
     t0 = time.time()
     baked[o.name] = bake_to(o, args.res)
-    print(f"[room] baked {o.name} at {args.res}² / {args.samples} spp in {time.time() - t0:.1f}s")
+    print(f"[room] baked {o.name} ({len(o.data.polygons)} faces) at {args.res}² / {args.samples} spp in {time.time() - t0:.1f}s")
 
 bpy.data.objects.remove(proxy)
-for o in (shell_obj, furn_obj):
+for o in meshes:
     swap_to_baked(o, baked[o.name])
     baked[o.name].pack()
 
@@ -374,7 +384,7 @@ if args.save_blend:
 
 # ── export ─────────────────────────────────────────────────────────────────
 bpy.ops.object.select_all(action="DESELECT")
-for o in (shell_obj, furn_obj, *slots):
+for o in (*meshes, *slots):
     o.select_set(True)
 bpy.ops.export_scene.gltf(
     filepath=args.out,
