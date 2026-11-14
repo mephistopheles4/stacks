@@ -3,6 +3,7 @@ import { attempted, type Attempt } from '../analytics/events.ts';
 import { onPickUpRequest } from '../ask/bridge.ts';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
+import { ROOM_LIGHTING, roomMode } from './room-prototype-593.ts';
 import {
   createPickup,
   loopPickups,
@@ -180,6 +181,8 @@ export async function boot(
   const record = readRecord(store, Date.now());
   const asked = readSettings(params);
   let base = startingBase(record);
+  // PROTOTYPE #593: the room's own lighting becomes the base the URL folds onto.
+  if (roomMode(params) === 'match') base = resolveSettings(ROOM_LIGHTING, base);
 
   /**
    * `?solo=N` — one book on a turntable instead of the shelf.
