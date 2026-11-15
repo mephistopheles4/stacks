@@ -39,6 +39,8 @@ ap.add_argument("--lamp", choices=("arc", "hero"), default="arc",
                 help="hero: the bridge lamp of hero_lamp.py, behind the chair, lighting the room")
 ap.add_argument("--table", choices=("drum", "polyhaven"), default="drum",
                 help="polyhaven: Poly Haven's Side Table Tall 01 (CC0; fetch_textures.py --model side_table_tall_01)")
+ap.add_argument("--candles", choices=("glass", "hero"), default="glass",
+                help="hero: hero_candles.py's brass candlesticks and pillar, on the table top")
 ap.add_argument("--table-file", default=os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".cache", "polyhaven",
     "side_table_tall_01", "side_table_tall_01_2k.gltf")))
@@ -289,7 +291,35 @@ else:
     furn.append(cyl("table_stem", 0.09, 1.9, (tx, ty, 1.0), M_DARKWOOD, verts=12))
     furn.append(cyl("table_foot", 0.45, 0.08, (tx, ty, 0.04), M_DARKWOOD, verts=24))
     top = 2.05
-for i, (dx, dy, h) in enumerate(((-0.25, 0.1, 0.55), (0.25, -0.15, 0.38))):
+candle_parts = []
+flame_marks = []
+if args.candles == "hero":
+    import hero_candles
+
+    # built in metres round the table top's centre, scaled into room units like the lamp
+    cspace = bpy.data.objects.new("candle_space", None)
+    cspace.scale = (3.11, 3.11, 3.11)
+    cspace.location = (tx, ty, top)
+    scene.collection.objects.link(cspace)
+    candle_parts = hero_candles.build()
+    for o in candle_parts:
+        o.parent = cspace
+    bpy.context.view_layer.update()
+    for i, f in enumerate(hero_candles.FLAMES):
+        point_light(f"candle{i}", tuple(cspace.matrix_world @ f), 5, (1.0, 0.6, 0.3), radius=0.012)
+    # the flames move on the page, so none is baked: each leaves an empty where it burns
+    for o in [o for o in candle_parts if o.name.startswith("flame_")]:
+        candle_parts.remove(o)
+        bpy.data.objects.remove(o)
+    for i, (root, h) in enumerate(hero_candles.FLAME_ROOTS):
+        e = bpy.data.objects.new(f"flame_{i}", None)
+        e.location = cspace.matrix_world @ root
+        e["flame_h"] = round(h * 3.11, 4)
+        e["seed"] = i
+        scene.collection.objects.link(e)
+        flame_marks.append(e)
+    print(f"[room] hero candles: {len(candle_parts)} parts, {sum(len(o.data.polygons) for o in candle_parts)} faces")
+for i, (dx, dy, h) in enumerate(((-0.25, 0.1, 0.55), (0.25, -0.15, 0.38)) if args.candles == "glass" else ()):
     cx, cy = tx + dx, ty + dy
     furn.append(cyl(f"glass{i}", 0.19, h + 0.15, (cx, cy, top + (h + 0.15) / 2), M_GLASS, verts=20))
     furn.append(cyl(f"wax{i}", 0.13, h, (cx, cy, top + h / 2), M_WAX, verts=16))
@@ -322,12 +352,12 @@ if args.lamp == "hero":
           f"bulb at {tuple(round(c, 2) for c in bulb)} (three: x {bulb.x:.2f}, y {bulb.z:.2f}, z {-bulb.y:.2f})")
     # 1500 W clipped the rug's lightmap under the shade (99.9th pct 2.56 against 2.0)
     point_light("lamp_bulb", tuple(bulb), 1100, (1.0, 0.74, 0.5), radius=0.12)
-    # a warm wash from above, so the whole room reads, not only the pool under the shade;
-    # centred on the bookcase and wider than the room, so its far side is not left dark
+    # a faint warm wash from above, so the far side is dim rather than black. The owner preferred
+    # the room dark, lit in pools by the lamp and the candles: 2400 W over 20 units read too bright
     fill = bpy.data.lights.new("room_fill", "AREA")
-    fill.energy, fill.size, fill.color = 2400, 20, (1.0, 0.82, 0.62)
+    fill.energy, fill.size, fill.color = 450, 12, (1.0, 0.82, 0.62)
     fo = bpy.data.objects.new("room_fill", fill)
-    fo.location = (0.0, -5.0, 11.5)
+    fo.location = (2.0, -5.0, 11.5)
     scene.collection.objects.link(fo)
 if args.lamp == "arc":
     lx, ly = 7.0, 0.0
@@ -559,7 +589,7 @@ def swap_to_baked(o, img):
 import time
 
 shell_obj = join("room_shell", shell)
-furn_obj = join("room_furniture", furn)
+furn_obj = join("room_furniture", furn) if furn else None  # empty when every piece is a hero
 chair_obj = join_in_place("room_chair", chair_parts) if args.chair == "hero" else join("room_chair", chair_parts)
 for c in chair.children:  # the hero's texture space must keep its place when the root goes
     mw = c.matrix_world.copy()
@@ -582,10 +612,18 @@ if lamp_parts:
         c.matrix_world = mw
     bpy.data.objects.remove(space)
     print(f"[room] hero lamp joined: {len(lamp_obj.data.polygons)} faces")
-meshes = ((shell_obj, furn_obj, chair_obj) + ((lamp_obj,) if lamp_obj else ())
-          + ((table_obj,) if table_obj else ()))
+candles_obj = None
+if candle_parts:
+    candles_obj = join_in_place("room_candles", candle_parts)
+    for c in list(cspace.children):
+        mw = c.matrix_world.copy()
+        c.parent = None
+        c.matrix_world = mw
+    bpy.data.objects.remove(cspace)
+meshes = ((shell_obj, chair_obj) + ((furn_obj,) if furn_obj else ()) + ((lamp_obj,) if lamp_obj else ())
+          + ((table_obj,) if table_obj else ()) + ((candles_obj,) if candles_obj else ()))
 for o in meshes:
-    if (o is chair_obj and chair_high) or o is lamp_obj:
+    if (o is chair_obj and chair_high) or o is lamp_obj or o is candles_obj:
         unwrap_packed(o)
     else:
         # the Poly Haven table's own unwrap is non-overlapping: bake into it
@@ -597,7 +635,7 @@ for o in meshes:
     res = (args.chair_res or args.res) if o is chair_obj else args.res
     if o is chair_obj and chair_high:
         baked[o.name] = bake_from_high(o, chair_high, res)
-    elif o is lamp_obj or o is table_obj:
+    elif o is lamp_obj or o is table_obj or o is candles_obj:
         baked[o.name] = bake_glossy(o, res)
     else:
         baked[o.name] = bake_to(o, res)
@@ -623,7 +661,7 @@ if args.save_blend:
 
 # ── export ─────────────────────────────────────────────────────────────────
 bpy.ops.object.select_all(action="DESELECT")
-for o in (*meshes, *(o for o, _ in lit), *slots):
+for o in (*meshes, *(o for o, _ in lit), *slots, *flame_marks):
     o.select_set(True)
 bpy.ops.export_scene.gltf(
     filepath=args.out,

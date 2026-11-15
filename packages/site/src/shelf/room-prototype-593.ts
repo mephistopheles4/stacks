@@ -11,6 +11,7 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { addCandleFlames } from './room-flames-593.ts';
 import type { SettingsPatch } from './shelf-settings.ts';
 
 export type RoomMode = 'off' | 'match' | 'keep';
@@ -77,6 +78,7 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
 
   let draws = 0;
   const slots: Record<string, unknown> = {};
+  const flames: THREE.Object3D[] = [];
   const folder = url.slice(0, url.lastIndexOf('/') + 1);
   const textures = new THREE.TextureLoader();
   const texture = (path: string, repeat: boolean): THREE.Texture => {
@@ -140,6 +142,8 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
       node.castShadow = false;
       node.receiveShadow = false;
       draws += 1;
+    } else if (node.name.startsWith('flame_')) {
+      flames.push(node);
     } else if (node.name.startsWith('slot_')) {
       slots[node.name] = {
         position: node.position.toArray(),
@@ -148,6 +152,7 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
       };
     }
   });
+  draws += addCandleFlames(flames); // after the walk: it adds children to the nodes it found
   scene.add(gltf.scene);
 
   const room = { bytes: buffer.byteLength, loadMs: performance.now() - started, draws, slots };
