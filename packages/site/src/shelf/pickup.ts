@@ -59,6 +59,8 @@ import { loadThoughts } from './notes.ts';
 import { paperMaterial, sheetGeometry } from './gutter-sheet.ts';
 import { openSpread, type OpenSpread } from './open-spread.ts';
 import { bezier, openAngle, schedule, textOpacity } from './pickup-motion.ts';
+import { flatPlacement } from './flat-page.ts';
+import { roomMode } from './room-prototype-593.ts';
 import { noticeIsOpen } from '../notice/open.ts';
 import { createPickupState, type PickupState, type Track } from './pickup-state.ts';
 import { buildTrack, engine, type Timeline } from './pickup-track.ts';
@@ -74,6 +76,9 @@ const NARROW_ASPECT = 0.9;
 
 /** The layer the veil is drawn on, and the one the held book is drawn on. */
 const VEIL_LAYER = 2;
+/** PROTOTYPE #593: the light a held book takes in place of the room's, and the room's veil. */
+const HAND_LIGHT = { colour: 0xfff2e2, key: 2.2, fill: 0.9 } as const;
+const ROOM_DIM = 0.3;
 const HELD_LAYER = 1;
 
 /** What a book carries once it has been picked up the first time. */
@@ -102,7 +107,10 @@ interface Lifted {
   /** The tween squaring a turned book as it opens, while one runs. */
   ease: Timeline | undefined;
   readonly pages: HeldPages;
+  /** Each page's slot in the 3D layer, right then left; the page sits in it or in the flat layer. */
   readonly pageObjects: readonly CSS3DObject[];
+  /** Whether the pages rest in the flat layer (#599, prototyped on #593). */
+  flat: boolean;
   readonly narrow: boolean;
   track: Track | undefined;
   /** The held copy while it is swapped in, and what it replaced. */
@@ -237,6 +245,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   let current = stage;
   const { controls } = elements;
   const motion: { -readonly [K in keyof PickupMotion]: PickupMotion[K] } = { ...PICKUP_MOTION };
+  // PROTOTYPE #593: the room is dark already, so the veil over it goes less far
+  if (roomMode() !== 'off') motion.dim = ROOM_DIM;
   const rigs = new WeakMap<THREE.Group, Rigged>();
   const lifted = new Map<string, Lifted>();
   const swaps: SwapReading[] = [];
@@ -253,6 +263,30 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   layer.className = 'held-layer';
   const css = new CSS3DRenderer({ element: layer });
   elements.host.append(layer);
+
+  // #599's spec S4, prototyped on #593: once the book is open and at rest its pages leave the 3D
+  // layer for this flat one, at the same screen place, because iOS WebKit never starts a native
+  // overflow scroll inside `CSS3DRenderer`'s. Same box and z-index as `.held-layer`, no transform.
+  const flat = document.createElement('div');
+  flat.className = 'held-flat';
+  Object.assign(flat.style, {
+    position: 'absolute',
+    inset: '0',
+    overflow: 'hidden',
+    pointerEvents: 'none',
+    zIndex: '5',
+  });
+  elements.host.append(flat);
+  const layerSize = { width: 0, height: 0 };
+
+  // PROTOTYPE #593: the held book leaves the room's light for a light of its own, riding with the
+  // camera, from above and left of the visitor, casting nothing. It fades in as the book comes
+  // up and the room's lights fade out of the held book's pass, so a dark room cannot swallow it.
+  const handKey = new THREE.DirectionalLight(HAND_LIGHT.colour, 0);
+  handKey.position.set(-0.7, 0.9, 0.6);
+  handKey.target.position.set(0, 0, -2);
+  const handFill = new THREE.AmbientLight(HAND_LIGHT.colour, 0);
+  for (const object of [handKey, handKey.target, handFill]) object.layers.set(HELD_LAYER);
 
   const veil = new THREE.Mesh(
     new THREE.PlaneGeometry(2, 2),
@@ -309,8 +343,9 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       closing: (book) => {
         const entry = lifted.get(book.id);
         // Focus on the pages moves to the X before they hide, never to <body>.
-        if (layer.contains(document.activeElement)) controls.putBack.focus();
+        if (onPages(document.activeElement)) controls.putBack.focus();
         if (entry !== undefined) {
+          unflatten(entry);
           entry.pages.setScrollable(false);
           entry.pages.right.scrollTop = 0;
         }
@@ -323,6 +358,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         current.redrawShadows();
         // A hidden page cannot take focus: pose it visible first.
         pose();
+        // Then into the flat layer, placed in this same call, before anything takes focus.
+        if (entry !== undefined) flatten(entry);
         syncControls();
         const pending = focusPageOnOpen;
         focusPageOnOpen = false;
@@ -345,6 +382,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         // The hand emptied, by whichever way down: the pages are about to hide.
         if (book === undefined) {
           catchFocus();
+          for (const entry of lifted.values()) unflatten(entry);
           focusPageOnOpen = false;
         } else if (chatPickup !== undefined && chatPickup !== book.id) {
           // Not cleared when the hand empties: a chat link to another book empties
@@ -396,6 +434,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       ease: undefined,
       pages,
       pageObjects,
+      flat: false,
       narrow,
       track: undefined,
       released: false,
@@ -430,7 +469,57 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
    */
   const catchFocus = (): void => {
     const at = document.activeElement;
-    if (layer.contains(at) || controls.root.contains(at)) current.canvas.focus();
+    if (onPages(at) || controls.root.contains(at)) current.canvas.focus();
+  };
+
+  const onPages = (node: Element | null): boolean => layer.contains(node) || flat.contains(node);
+
+  /** Where each page's slot is on screen as a 2D matrix, right then left; undefined if skewed. */
+  let warnedSkew = false;
+  const placements = (entry: Lifted): string[] | undefined => {
+    entry.staged.group.updateMatrixWorld(true);
+    current.camera.updateMatrixWorld();
+    const out: string[] = [];
+    for (const slot of entry.pageObjects) {
+      const placed = flatPlacement(slot, current.camera, layerSize);
+      if (placed.skew > 1) {
+        if (!warnedSkew) {
+          console.warn(
+            `[pickup] a page at rest is skewed ${placed.skew.toFixed(1)} px: it stays in the 3D layer`,
+          );
+        }
+        warnedSkew = true;
+        return undefined;
+      }
+      out.push(placed.matrix);
+    }
+    return out;
+  };
+
+  const pagesOf = (entry: Lifted): HTMLElement[] => [entry.pages.right, entry.pages.left];
+
+  /** The open book's pages, out of their slots into the flat layer at the same screen place. */
+  const flatten = (entry: Lifted): void => {
+    if (entry.flat || entry.released) return;
+    const matrices = placements(entry);
+    if (matrices === undefined) return;
+    pagesOf(entry).forEach((page, i) => {
+      page.style.transformOrigin = '0 0';
+      page.style.transform = matrices[i] ?? '';
+      flat.append(page);
+    });
+    entry.flat = true;
+  };
+
+  /** Back into their slots, before anything moves: no page stays flat while a book does. */
+  const unflatten = (entry: Lifted): void => {
+    if (!entry.flat) return;
+    entry.flat = false;
+    pagesOf(entry).forEach((page, i) => {
+      page.style.transform = '';
+      page.style.transformOrigin = '';
+      entry.pageObjects[i]?.element.append(page);
+    });
   };
 
   // ---- the controls outside the pages ------------------------------------------
@@ -550,6 +639,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     group.traverse((object) => {
       object.layers.disable(HELD_LAYER);
     });
+    unflatten(entry);
     for (const object of entry.pageObjects) object.removeFromParent();
     releaseHeldCover(entry);
     if (lifted.size === 0) {
@@ -656,9 +746,13 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     current.lookup.set(rightSheet, entry.book);
     current.lookup.set(leftSheet, entry.book);
 
+    // The sheets are basic too now (unlit paper), and are not the neighbour shadow.
     const painted = group.children.filter(
       (child): child is THREE.Mesh =>
-        child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial,
+        child instanceof THREE.Mesh &&
+        child.material instanceof THREE.MeshBasicMaterial &&
+        child !== rightSheet &&
+        child !== leftSheet,
     );
 
     const rig: Rigged = {
@@ -686,19 +780,31 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     }
     pages.setScrollable(false);
 
-    const right = new CSS3DObject(pages.right);
+    const right = new CSS3DObject(slotFor(pages.right));
     right.scale.setScalar(scale);
     right.rotation.y = Math.PI / 2;
     right.position.set(spread.right.x + PAGE_LIFT, spread.right.y, spread.right.z);
     rig.rightSheet.parent?.add(right);
 
-    const left = new CSS3DObject(pages.left);
+    const left = new CSS3DObject(slotFor(pages.left));
     left.scale.setScalar(scale);
     left.rotation.y = -Math.PI / 2;
     const board = spread.leftOnBoard;
     left.position.set(board.x - PAGE_LIFT - spread.pivot.x, board.y, board.z - spread.pivot.z);
     rig.hinge.add(left);
+    // An empty slot over the canvas must not take the click that opens a book, or the drag that turns it.
+    for (const slot of [right, left]) slot.element.style.pointerEvents = 'none';
     return [right, left];
+  };
+
+  /** A page's slot: an empty box its size, which `CSS3DRenderer` places, holding the page. */
+  const slotFor = (page: HTMLElement): HTMLElement => {
+    const slot = document.createElement('div');
+    slot.style.width = page.style.width;
+    slot.style.height = page.style.height;
+    Object.assign(page.style, { position: 'absolute', left: '0', top: '0' });
+    slot.append(page);
+    return slot;
   };
 
   // ---- each frame ----------------------------------------------------------------
@@ -826,13 +932,33 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       camera.layers.set(VEIL_LAYER);
       renderer.render(scene, camera);
       camera.layers.set(HELD_LAYER);
+      // The room's lights fade out of the held pass as the hand light fades in (PROTOTYPE #593).
+      const roomLights = scene.children.filter(
+        (child): child is THREE.Light => child instanceof THREE.Light,
+      );
+      const kept = roomLights.map((light) => light.intensity);
+      for (const light of roomLights) light.intensity *= 1 - rest;
+      handKey.intensity = HAND_LIGHT.key * rest;
+      handFill.intensity = HAND_LIGHT.fill * rest;
       renderer.render(scene, camera);
+      roomLights.forEach((light, i) => {
+        light.intensity = kept[i] ?? light.intensity;
+      });
       camera.layers.set(0);
       renderer.autoClear = autoClear;
       scene.background = background;
     },
     after: (): void => {
       css.render(current.scene, current.camera);
+      for (const entry of lifted.values()) {
+        if (!entry.flat) continue;
+        const matrices = placements(entry);
+        if (matrices === undefined) continue;
+        pagesOf(entry).forEach((page, i) => {
+          const next = matrices[i] ?? '';
+          if (page.style.transform !== next) page.style.transform = next;
+        });
+      }
     },
   };
 
@@ -844,6 +970,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     next.scene.traverse((object) => {
       if (object instanceof THREE.Light) object.layers.enableAll();
     });
+    // After that, so they stay on the held layer alone.
+    next.camera.add(handKey, handKey.target, handFill);
     next.setFrame(hooks);
     sizeLayer();
     observer.disconnect();
@@ -853,6 +981,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   const sizeLayer = (): void => {
     const box = current.canvas.getBoundingClientRect();
     css.setSize(box.width, box.height);
+    layerSize.width = box.width;
+    layerSize.height = box.height;
   };
   const observer = new ResizeObserver(sizeLayer);
 
@@ -973,12 +1103,14 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
 
   // The two ways to close the open book, on pages built anew for every pickup:
   // listened for on the layer that holds them all, by delegation.
-  layer.addEventListener('click', (event) => {
+  const closeFromPage = (event: MouseEvent): void => {
     const target = event.target;
     if (!(target instanceof Element)) return;
     if (target.closest(`.${CLOSE_BUTTON_CLASS}, .${CLOSE_FOOT_CLASS}`) === null) return;
     state.close();
-  });
+  };
+  layer.addEventListener('click', closeFromPage);
+  flat.addEventListener('click', closeFromPage);
 
   const tunable: TunablePickup = {
     motion,
@@ -1044,6 +1176,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       state.putBack();
     },
     attach: (next) => {
+      for (const entry of lifted.values()) unflatten(entry);
       state.drop();
       // The canvas may be a new element: the old one's cursor listener goes first.
       setCursor(false);
@@ -1051,6 +1184,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       listenForDrags(next.canvas);
     },
     drop: () => {
+      for (const entry of lifted.values()) unflatten(entry);
       state.drop();
     },
     held: () => {
@@ -1133,7 +1267,7 @@ function asMesh(object: THREE.Object3D | undefined): THREE.Mesh | undefined {
  * One of the two paper sheets: lit, reading no shadow map, casting none, and
  * darkening into the fold — see gutter-sheet.ts.
  */
-function sheetMesh(material: THREE.MeshStandardMaterial, page: 'left' | 'right'): THREE.Mesh {
+function sheetMesh(material: THREE.MeshBasicMaterial, page: 'left' | 'right'): THREE.Mesh {
   const mesh = new THREE.Mesh(sheetGeometry(page), material);
   mesh.castShadow = false;
   mesh.receiveShadow = false;

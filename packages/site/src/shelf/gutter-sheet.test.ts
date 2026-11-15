@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { GUTTER_DARKEN } from './gutter-shade.ts';
 import { paperMaterial, sheetGeometry } from './gutter-sheet.ts';
-import { isShielded } from './shadow-receivers.ts';
 
 /** Each vertex's x and its shade, read back off the built geometry. */
 function vertices(geometry: THREE.BufferGeometry): { x: number; z: number; shade: number }[] {
@@ -68,7 +67,8 @@ describe('the paper', () => {
     expect(paperMaterial().vertexColors).toBe(true);
   });
 
-  it('reads no shadow map, as G61 requires of every book part', () => {
-    expect(isShielded(paperMaterial())).toBe(true);
+  it('takes no light, so the open book reads the same in any room (#599 S5)', () => {
+    expect(paperMaterial()).toBeInstanceOf(THREE.MeshBasicMaterial);
+    expect(paperMaterial().fog).toBe(false);
   });
 });

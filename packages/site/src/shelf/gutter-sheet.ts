@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { gutterStops } from './gutter-shade.ts';
-import { withoutShadowFetch } from './shadow-receivers.ts';
 
 /**
  * The held book's two paper sheets, as `pickup.ts` rigs them: the geometry
@@ -18,11 +17,13 @@ import { withoutShadowFetch } from './shadow-receivers.ts';
  */
 const FOLD = { right: -1, left: 1 } as const;
 
-/** The paper both sheets share: lit, reading no shadow map, shaded per vertex. */
-export function paperMaterial(): THREE.MeshStandardMaterial {
-  return withoutShadowFetch(
-    new THREE.MeshStandardMaterial({ color: 0xece2cf, roughness: 0.95, vertexColors: true }),
-  );
+/**
+ * The paper both sheets share: unlit and unfogged (#599's spec, S5, prototyped on #593), so an
+ * open book reads the same in any room at any brightness; shaded per vertex by the gutter. A
+ * basic material samples no shadow map, so G61's reader count cannot rise.
+ */
+export function paperMaterial(): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({ color: 0xece2cf, vertexColors: true, fog: false });
 }
 
 /**
