@@ -199,18 +199,17 @@ shell = []
 shell.append(box("floor", (34, 22, 0.1), (0, WALL_Y - 11, -0.05), M_FLOOR))
 shell.append(box("wall", (34, 0.1, 12), (0, WALL_Y + 0.05, 6), M_WALL))
 shell.append(box("skirting", (34, 0.12, 0.45), (0, WALL_Y - 0.06, 0.225), M_SKIRT, bevel=0.02))
-lit = []  # (object, albedo file, tint): light-only bakes, textured on the page
-rug = None
+lit = []  # (object, extras): light-only bakes, textured on the page from what extras name
 if args.lightmaps:
     import lightmaps
+    import rug
 
     out_dir = os.path.dirname(os.path.abspath(args.out))
     floor = shell.pop(0)
     lit.append(lightmaps.floor(floor, WALL_Y, material, out_dir))
     if args.rug_photo:
-        rug = box("rug", lightmaps.RUG_SIZE, (2.2, -3.6, 0.02), M_RUG, bevel=0.015, rot=(0, 0, math.radians(-6)))
-        lit.append(lightmaps.rug(rug, args.rug_photo, material, out_dir, (2.2, -3.6), math.radians(-6)))
-if rug is None:
+        lit += rug.rug(args.rug_photo, material, out_dir, (2.2, -3.6), math.radians(-6))
+if not (args.lightmaps and args.rug_photo):
     shell.append(box("rug", (8.5, 5.5, 0.04), (2.2, -3.6, 0.02), M_RUG, bevel=0.015, rot=(0, 0, math.radians(-6))))
 
 # The bookcase stand-in: casts the contact shadow during the bake, then goes.
@@ -498,12 +497,12 @@ for o in meshes:
         baked[o.name] = bake_to(o, res)
     print(f"[room] baked {o.name} ({len(o.data.polygons)} faces) at {res}² / {args.samples} spp in {time.time() - t0:.1f}s")
 
-for o, albedo, tint in lit:  # while the proxy still casts the bookcase's shadow
+for o, extras in lit:  # while the proxy still casts the bookcase's shadow
     t0 = time.time()
     part = o.name.removeprefix("room_")
     rel = f"light/{os.path.splitext(os.path.basename(args.out))[0]}-{part}.jpg"
     lightmaps.bake_light(o, 4096 if part == "floor" else 2048, os.path.join(out_dir, rel))
-    lightmaps.finish(o, albedo, rel, tint)
+    lightmaps.finish(o, extras, rel)
     print(f"[room] baked light for {o.name} in {time.time() - t0:.1f}s")
 
 bpy.data.objects.remove(proxy)
@@ -518,7 +517,7 @@ if args.save_blend:
 
 # ── export ─────────────────────────────────────────────────────────────────
 bpy.ops.object.select_all(action="DESELECT")
-for o in (*meshes, *(o for o, _, _ in lit), *slots):
+for o in (*meshes, *(o for o, _ in lit), *slots):
     o.select_set(True)
 bpy.ops.export_scene.gltf(
     filepath=args.out,

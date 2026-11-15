@@ -88,18 +88,35 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
   };
   gltf.scene.traverse((node) => {
     const extras = (node.userData.albedo ? node.userData : node.parent?.userData) as
-      { albedo?: string; lightmap?: string; tint?: number[] } | undefined;
+      | {
+          albedo?: string;
+          lightmap?: string;
+          tint?: number[];
+          pile?: string;
+          pile_repeat?: number[];
+        }
+      | undefined;
     if (node instanceof THREE.Mesh && extras?.albedo && extras.lightmap) {
       // Light-only bake (lightmaps.py): the sharp texture on UV0, the soft light on UV1,
       // stored at half scale; MeshBasicMaterial divides a light map by PI.
       const lightMap = texture(extras.lightmap, false);
       lightMap.channel = 1;
       const [r = 1, g = 1, b = 1] = extras.tint ?? [];
+      // the rug's pile grain (rug.py): a tiling occlusion finer than the photograph, on UV0
+      // with its own repeat; its average darkening is given back by the tint
+      let aoMap: THREE.Texture | null = null;
+      if (extras.pile) {
+        aoMap = texture(extras.pile, true);
+        aoMap.colorSpace = THREE.NoColorSpace;
+        const [ru = 1, rv = 1] = extras.pile_repeat ?? [];
+        aoMap.repeat.set(ru, rv);
+      }
       (node.material as THREE.Material).dispose();
       node.material = new THREE.MeshBasicMaterial({
         map: texture(extras.albedo, true),
         lightMap,
         lightMapIntensity: 2 * Math.PI,
+        aoMap,
         color: new THREE.Color(r * exposure, g * exposure, b * exposure),
       });
       node.castShadow = false;

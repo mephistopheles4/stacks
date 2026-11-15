@@ -86,38 +86,7 @@ def floor(o, wall_y, material, out_dir):
     o.data.materials.append(_image_material(material, "floor_planks", src, FLOOR_TINT, rough=0.5))
     os.makedirs(os.path.join(out_dir, "tex"), exist_ok=True)
     shutil.copyfile(src, os.path.join(out_dir, "tex", "plank_flooring_diff.jpg"))
-    return o, "tex/plank_flooring_diff.jpg", FLOOR_TINT
-
-
-def rug(o, photo, material, out_dir, centre, turn):
-    """The carpet photograph laid once across the rug, its long side along x, never mirrored.
-    Its edges and bevels take the border's own colour. UV1 gets a fresh unwrap: the top face
-    alone would leave the edges sharing its texels.
-
-    `box()` bakes location and turn into the mesh, so the rug's own axes come from `centre`
-    (x, y) and `turn` (radians); reading the mesh as if local laid one corner of the carpet."""
-    o.name = "room_rug"
-    _apply_modifiers(o)
-    _keep_faces(o, lambda f: f.normal.z > -0.5)
-    sx, sy, _ = RUG_SIZE
-    c, s = math.cos(-turn), math.sin(-turn)
-
-    def own(co):
-        dx, dy = co.x - centre[0], co.y - centre[1]
-        return dx * c - dy * s, dx * s + dy * c
-
-    _set_uv(o, "UVMap", lambda co: (0.5 - own(co)[1] / sy, 0.5 + own(co)[0] / sx))
-    o.data.uv_layers.active = o.data.uv_layers.new(name="bake")
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.01)
-    bpy.ops.object.mode_set(mode="OBJECT")
-    o.data.materials.clear()
-    o.data.materials.append(_image_material(material, "rug_carpet", photo, (1, 1, 1), rough=1.0))
-    img = o.data.materials[0].node_tree.nodes["Image Texture"].image
-    rel = "tex/" + os.path.splitext(os.path.basename(photo))[0] + ".jpg"
-    _save_jpeg(img, os.path.join(out_dir, rel), raw=True)
-    return o, rel, (1.0, 1.0, 1.0)
+    return o, {"albedo": "tex/plank_flooring_diff.jpg", "tint": list(FLOOR_TINT)}
 
 
 def _save_jpeg(img, path, raw=False, quality=90):
@@ -164,7 +133,7 @@ def bake_light(o, res, path):
     return img
 
 
-def finish(o, albedo, lightmap, tint):
+def finish(o, extras, lightmap):
     """Ship the mesh without an embedded image: the page fetches both textures by name."""
     m = bpy.data.materials.new(f"{o.name}_lightmapped")
     o.data.materials.clear()
@@ -174,6 +143,6 @@ def finish(o, albedo, lightmap, tint):
     uvs = o.data.uv_layers
     uvs.active = uvs["UVMap"]
     uvs["UVMap"].active_render = True
-    o["albedo"] = albedo
+    for key, value in extras.items():
+        o[key] = value
     o["lightmap"] = lightmap
-    o["tint"] = list(tint)
