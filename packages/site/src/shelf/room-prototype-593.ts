@@ -127,11 +127,14 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
       draws += 1;
     } else if (node instanceof THREE.Mesh) {
       const old = node.material as THREE.MeshStandardMaterial;
-      const map = old.map;
-      if (map) {
+      // The baked atlas is a file of its own (`userData.baked`), never packed in the GLB: a packed
+      // image is read through a blob: URL, which the site's CSP refuses, and the mesh drew white.
+      // `texture` sets the anisotropy: seen at a glancing angle, a mip chosen for the blurrier
+      // axis smears the leather's grain into streaks along the other.
+      const baked = (node.userData.baked ?? node.parent?.userData.baked) as string | undefined;
+      const map = baked ? texture(baked, false) : old.map;
+      if (map && !baked) {
         map.colorSpace = THREE.SRGBColorSpace;
-        // seen at a glancing angle, a mip chosen for the blurrier axis smears the leather's grain
-        // into streaks along the other; three clamps this to what the device allows
         map.anisotropy = 16;
       }
       node.material = new THREE.MeshBasicMaterial({

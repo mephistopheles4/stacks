@@ -644,7 +644,7 @@ for o in meshes:
 for o, extras in lit:  # while the proxy still casts the bookcase's shadow
     t0 = time.time()
     part = o.name.removeprefix("room_")
-    rel = f"light/{os.path.splitext(os.path.basename(args.out))[0]}-{part}.jpg"
+    rel = f"light/{os.path.splitext(os.path.basename(args.out))[0]}-{part}.webp"
     lightmaps.bake_light(o, 4096 if part == "floor" else 2048, os.path.join(out_dir, rel))
     lightmaps.finish(o, extras, rel)
     print(f"[room] baked light for {o.name} in {time.time() - t0:.1f}s")
@@ -655,6 +655,11 @@ if chair_high:
 for o in meshes:
     swap_to_baked(o, baked[o.name])
     baked[o.name].pack()
+    # each atlas ships as a file of its own beside the room, named in the mesh's extras: an image
+    # packed in the GLB is read through a blob: URL, which the site's CSP refuses
+    rel = f"bake/{os.path.splitext(os.path.basename(args.out))[0]}-{o.name.removeprefix('room_')}.webp"
+    lightmaps.save_image(baked[o.name], os.path.join(out_dir, rel), raw=True, quality=88)
+    o["baked"] = rel
 
 if args.save_blend:
     bpy.ops.wm.save_as_mainfile(filepath=args.save_blend)
@@ -669,8 +674,7 @@ bpy.ops.export_scene.gltf(
     use_selection=True,
     export_extras=True,
     export_lights=False,
-    export_image_format="JPEG",
-    export_jpeg_quality=85,
+    export_image_format="NONE",  # every texture ships as its own file, named in the extras
     export_yup=True,
 )
 print(f"[room] wrote {args.out}")

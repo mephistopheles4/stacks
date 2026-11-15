@@ -136,15 +136,15 @@ def rug(photo, material, out_dir, centre, turn):
     _unwrap_bake(o)
     o.data.materials.append(lightmaps._image_material(material, "rug_carpet", photo, (1, 1, 1), rough=1.0))
     img = o.data.materials[0].node_tree.nodes["Image Texture"].image
-    rel = "tex/" + os.path.splitext(os.path.basename(photo))[0] + ".jpg"
-    lightmaps._save_jpeg(img, os.path.join(out_dir, rel), raw=True)
+    rel = "tex/" + os.path.splitext(os.path.basename(photo))[0] + ".webp"
+    lightmaps.save_image(img, os.path.join(out_dir, rel), raw=True)
     pile, mean = _pile_texture()
-    lightmaps._save_jpeg(_image("rug_pile", pile), os.path.join(out_dir, "tex", "rug-pile.jpg"), raw=True)
+    lightmaps.save_image(_image("rug_pile", pile), os.path.join(out_dir, "tex", "rug-pile.webp"), raw=True)
     k = round(1 / mean, 3)  # the grain darkens on average; the tint gives that back
     rug_entry = (o, {
         "albedo": rel,
         "tint": [k, k, k],
-        "pile": "tex/rug-pile.jpg",
+        "pile": "tex/rug-pile.webp",
         "pile_repeat": [round(SY / PILE_TILE, 2), round(SX / PILE_TILE, 2)],
     })
     return [rug_entry, _fringe(o, material, out_dir)]
@@ -203,8 +203,8 @@ def _fringe(rug_obj, material, out_dir, spacing=0.036, width=0.018, segs=8):
     o.location = rug_obj.location.copy()
     o.rotation_euler = rug_obj.rotation_euler.copy()
     img = _image("fringe_strand", _strand_texture())
-    path = os.path.join(out_dir, "tex", "rug-fringe.jpg")
-    lightmaps._save_jpeg(img, path, raw=True)
+    path = os.path.join(out_dir, "tex", "rug-fringe.webp")
+    lightmaps.save_image(img, path, raw=True)
     m = lightmaps._image_material(material, "rug_fringe", path, (1, 1, 1), rough=0.9)
     o.data.materials.append(m)
-    return o, {"albedo": "tex/rug-fringe.jpg", "tint": [1.0, 1.0, 1.0]}
+    return o, {"albedo": "tex/rug-fringe.webp", "tint": [1.0, 1.0, 1.0]}

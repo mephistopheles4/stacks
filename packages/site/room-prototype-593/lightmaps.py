@@ -14,7 +14,6 @@ glTF exporter writes as node extras and three reads back as `userData`.
 """
 import math
 import os
-import shutil
 
 import bmesh
 import bpy
@@ -84,15 +83,17 @@ def floor(o, wall_y, material, out_dir):
     src = os.path.join(TEX, "plank_flooring", "diff.jpg")
     o.data.materials.clear()
     o.data.materials.append(_image_material(material, "floor_planks", src, FLOOR_TINT, rough=0.5))
-    os.makedirs(os.path.join(out_dir, "tex"), exist_ok=True)
-    shutil.copyfile(src, os.path.join(out_dir, "tex", "plank_flooring_diff.jpg"))
-    return o, {"albedo": "tex/plank_flooring_diff.jpg", "tint": list(FLOOR_TINT)}
+    save_image(bpy.data.images.load(src), os.path.join(out_dir, "tex", "plank_flooring_diff.webp"), raw=True)
+    return o, {"albedo": "tex/plank_flooring_diff.webp", "tint": list(FLOOR_TINT)}
 
 
-def _save_jpeg(img, path, raw=False, quality=90):
+def save_image(img, path, raw=False, quality=85):
+    """JPEG or WebP, by the path's extension. The room ships WebP: about a third smaller than
+    JPEG at the same look, and a plain same-origin file the site's CSP allows (an image packed
+    in the GLB is read through a blob: URL, which `connect-src 'self'` refuses)."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     s = bpy.context.scene.render.image_settings
-    s.file_format = "JPEG"
+    s.file_format = "WEBP" if path.lower().endswith(".webp") else "JPEG"
     s.color_mode = "RGB"
     s.quality = quality
     if raw:  # an sRGB photo: copy its bytes through the same encoding, no view transform
@@ -128,7 +129,7 @@ def bake_light(o, res, path):
     peak = float(np.percentile(px[:, :3], 99.9))
     px[:, :3] *= 0.5
     img.pixels.foreach_set(px.ravel())
-    _save_jpeg(img, path)
+    save_image(img, path)
     print(f"[room] light {o.name}: 99.9th percentile irradiance {peak:.2f} (clips above 2.0)")
     return img
 
