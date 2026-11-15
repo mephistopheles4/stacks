@@ -11,6 +11,7 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { FOV, type Framing } from './framing.ts';
 import { addCandleFlames } from './room-flames-593.ts';
 import { showLoadingScreen } from './room-loading-593.ts';
@@ -126,7 +127,9 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
   });
   progress.glbDone = true;
   screen.update(progress);
-  const gltf = await new GLTFLoader().parseAsync(buffer, '');
+  // the room's meshes are meshopt-compressed (build_room.py --pack): three's own decoder, in WebAssembly
+  await MeshoptDecoder.ready;
+  const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buffer, '');
   // every texture the walk below asks for counts toward the screen, which lifts once the last is in
   const manager = new THREE.LoadingManager();
   manager.onProgress = (_url, loaded, total) => {

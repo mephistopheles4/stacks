@@ -837,16 +837,17 @@ print(f"[room] wrote {args.out}")
 # Packed for the web (#593): Cloudflare Pages refuses an asset over 25 MiB, and the bake alone wrote
 # 36 MB of float geometry. gltfpack halves the triangles where that costs under 1% deviation, with
 # mesh borders locked so the light maps' seams hold, and quantizes the positions
-# (KHR_mesh_quantization, which three.js reads with no decoder, so no WebAssembly and no CSP change).
+# (KHR_mesh_quantization), then compresses them with meshopt (-cc), which three.js decodes in
+# WebAssembly: the site's CSP carries 'wasm-unsafe-eval' for it (astro.config.mjs).
 # Kept: every named node (the slots, the flames), the extras (each piece's texture paths), the
 # materials, and the UVs, which gltfpack would drop as unused since no material here carries a
 # texture; the UVs stay float, as a quantized UV needs a texture transform on the material, and the
-# page replaces every material. Measured on bake 10: 35.9 MB -> 12.9 MB.
+# page replaces every material. Measured on bake 10: 35.9 MB -> 12.9 MB quantized, 3.0 MB with meshopt.
 if args.pack:
     import subprocess
     raw = args.out[:-4] + ".raw.glb"
     os.replace(args.out, raw)
-    subprocess.run([args.pack, "-i", raw, "-o", args.out, "-kn", "-ke", "-km", "-kv", "-vtf",
+    subprocess.run([args.pack, "-i", raw, "-o", args.out, "-cc", "-kn", "-ke", "-km", "-kv", "-vtf",
                     "-si", "0.5", "-slb"], check=True)
     os.remove(raw)
     print(f"[room] packed {args.out}: {os.path.getsize(args.out) / 1e6:.1f} MB")

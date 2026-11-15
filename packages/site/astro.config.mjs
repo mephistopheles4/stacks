@@ -116,6 +116,12 @@ export default defineConfig({
         // project chose to add rather than one Cloudflare injects.
         resources: [
           "'self'",
+          // PROTOTYPE #593: the room's meshes are meshopt-compressed and three's
+          // decoder compiles WebAssembly, which a CSP blocks without this. The
+          // narrow keyword: no JavaScript eval, and the hash list still keeps out
+          // any script it does not name. Site-wide only because Astro emits one
+          // policy; the spec scopes it to the shelf page.
+          "'wasm-unsafe-eval'",
           'https://static.cloudflareinsights.com',
           'https://challenges.cloudflare.com',
         ],
