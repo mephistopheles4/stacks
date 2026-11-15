@@ -162,14 +162,19 @@ def _written_page(scene, path, at, yaw_deg, width=0.19):
 BOOK_SIZE = 1.5  # Hobu's books at this scale match the bookcase's: their long side 0.87 units
 HOBU_BOOKS = ("Book1.1Blue.001", "Book1.1Yellow.001", "Book1.1Grey.001", "Book1Green.002", "Book1Red.002")
 # the floor's stacks, on the rug in front of the bookcase's left end, low enough to take the wishlist
-# on top: (x, y, the stack's yaw, how many books). They stand on the rug's pile (rug.TOP). Hobu's eight different books (each colour of each size)
-# are drawn from at random, so no two stacks are copies.
+# on top: (x, y, the stack's yaw, how many books). They stand on the rug's pile (rug.TOP). Hobu's
+# books are drawn from at random, so no two stacks are copies. A yaw of None turns every book's spine
+# to the page's opening view, so the right-hand stack's spines read from where a visitor first stands.
 FLOOR_STACKS = (
-    (-2.86, -2.85, 8.0, 5),
-    (-1.95, -1.71, -22.0, 5),
+    (-2.86, -2.85, 8.0, 4),
+    (-1.95, -1.71, None, 4),
 )
+CAMERA_XY = (-5.267, -14.331)  # room-prototype-593.ts ROOM_VIEW's position, in the room's x and y
+# a little bigger than the bookcase's books, so the wishlist book on top never overhangs the stack:
+# each book's long side 0.96 to 1.03 units, against a shelf book's 0.78 to 0.95
+FLOOR_BOOK_SIZE = 2.0
 RUG_TOP = 0.03
-FLOOR_KINDS = ("Book1.1Blue_", "Book1.1Grey_", "Book1.1Red_", "Book1.1Yellow_", "Book1Blue_", "Book1Green_", "Book1Grey_", "Book1Red_")
+FLOOR_KINDS = ("Book1.1Blue_", "Book1.1Red_", "Book1.1Yellow_", "Book1Blue_", "Book1Green_", "Book1Grey_", "Book1Red_")
 FLOOR_SEED = 593
 
 
@@ -189,7 +194,7 @@ def dress_floor_books(scene, repo, seed=FLOOR_SEED):
         pts = [Vector(c) for c in o.bound_box]
         lo = Vector([min(p[i] for p in pts) for i in range(3)])
         hi = Vector([max(p[i] for p in pts) for i in range(3)])
-        shapes.append((o, lo, hi, o.matrix_world.to_scale().x * M * BOOK_SIZE))
+        shapes.append((o, lo, hi, o.matrix_world.to_scale().x * M * FLOOR_BOOK_SIZE))
     roots = []
     for n, (x, y, yaw, count) in enumerate(FLOOR_STACKS):
         picks = [rng.choice(shapes) for _ in range(count)]
@@ -198,9 +203,13 @@ def dress_floor_books(scene, repo, seed=FLOOR_SEED):
         scene.collection.objects.link(piv)
         piv.location = (x, y, 0.0)
         z = RUG_TOP
+        # a Hobu book's spine is its mesh's +x side (seen in a render): turned by a, it faces (cos a, sin a)
+        spines_out = yaw is None
+        if spines_out:
+            yaw = math.degrees(math.atan2(CAMERA_XY[1] - y, CAMERA_XY[0] - x))
         for k, (o, lo, hi, scale) in enumerate(picks):
-            turn = 180.0 if rng.random() < 0.3 else 0.0
-            if k >= 2 and rng.random() < 0.15:
+            turn = 180.0 if not spines_out and rng.random() < 0.3 else 0.0
+            if not spines_out and k >= 2 and rng.random() < 0.15:
                 turn += 90.0
             a = math.radians(yaw + turn + rng.gauss(0.0, 2.5))
             at = Vector((x + rng.gauss(0.0, 0.03), y + rng.gauss(0.0, 0.03), z))
