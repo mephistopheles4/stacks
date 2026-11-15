@@ -31,6 +31,8 @@ ap.add_argument("--samples", type=int, default=128)
 ap.add_argument("--res", type=int, default=2048)
 ap.add_argument("--rows", type=int, default=4)
 ap.add_argument("--save-blend", default="")
+ap.add_argument("--pack", default="",
+                help="the gltfpack binary (npm gltfpack): pack the GLB after export, see the end of this file")
 ap.add_argument("--chair", choices=("blocks", "scripted", "import", "hero"), default="blocks")
 ap.add_argument("--chair-res", type=int, default=0, help="the chair's own atlas size (default: --res)")
 ap.add_argument("--lightmaps", action="store_true",
@@ -827,6 +829,24 @@ bpy.ops.export_scene.gltf(
     export_extras=True,
     export_lights=False,
     export_image_format="NONE",  # every texture ships as its own file, named in the extras
+    export_normals=False,  # the page draws the room unlit (MeshBasicMaterial): a normal is never read
     export_yup=True,
 )
 print(f"[room] wrote {args.out}")
+
+# Packed for the web (#593): Cloudflare Pages refuses an asset over 25 MiB, and the bake alone wrote
+# 36 MB of float geometry. gltfpack halves the triangles where that costs under 1% deviation, with
+# mesh borders locked so the light maps' seams hold, and quantizes the positions
+# (KHR_mesh_quantization, which three.js reads with no decoder, so no WebAssembly and no CSP change).
+# Kept: every named node (the slots, the flames), the extras (each piece's texture paths), the
+# materials, and the UVs, which gltfpack would drop as unused since no material here carries a
+# texture; the UVs stay float, as a quantized UV needs a texture transform on the material, and the
+# page replaces every material. Measured on bake 10: 35.9 MB -> 12.9 MB.
+if args.pack:
+    import subprocess
+    raw = args.out[:-4] + ".raw.glb"
+    os.replace(args.out, raw)
+    subprocess.run([args.pack, "-i", raw, "-o", args.out, "-kn", "-ke", "-km", "-kv", "-vtf",
+                    "-si", "0.5", "-slb"], check=True)
+    os.remove(raw)
+    print(f"[room] packed {args.out}: {os.path.getsize(args.out) / 1e6:.1f} MB")
