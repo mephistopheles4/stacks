@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FOV, type Framing } from './framing.ts';
 import { addCandleFlames } from './room-flames-593.ts';
+import { showLoadingScreen } from './room-loading-593.ts';
 import type { SettingsPatch } from './shelf-settings.ts';
 
 export type RoomMode = 'off' | 'match' | 'keep';
@@ -113,16 +114,28 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
   // `BASE_URL` is vite's; the root typecheck sees only the slice boot.ts declares
   const base = (import.meta.env as unknown as { BASE_URL?: string }).BASE_URL ?? '/';
   const url = `${base.replace(/\/$/, '')}/room-prototype-593/${file}`;
-  const response = await fetch(url);
-  const buffer = await response.arrayBuffer();
+  const screen = showLoadingScreen();
+  const progress = { glbLoaded: 0, glbTotal: 0, glbDone: false, texLoaded: 0, texTotal: 0 };
+  const buffer = await download(url, (loaded, total) => {
+    screen.update({ ...progress, glbLoaded: loaded, glbTotal: total });
+  });
+  progress.glbDone = true;
+  screen.update(progress);
   const gltf = await new GLTFLoader().parseAsync(buffer, '');
+  // every texture the walk below asks for counts toward the screen, which lifts once the last is in
+  const manager = new THREE.LoadingManager();
+  manager.onProgress = (_url, loaded, total) => {
+    screen.update({ ...progress, texLoaded: loaded, texTotal: total });
+  };
 
   let draws = 0;
   const slots: Record<string, unknown> = {};
   const flames: THREE.Object3D[] = [];
   const folder = url.slice(0, url.lastIndexOf('/') + 1);
-  const textures = new THREE.TextureLoader();
+  const textures = new THREE.TextureLoader(manager);
+  let asked = 0;
   const texture = (path: string, repeat: boolean): THREE.Texture => {
+    asked += 1;
     const t = textures.load(folder + path);
     t.colorSpace = THREE.SRGBColorSpace;
     t.flipY = false; // the UVs come through glTF, which counts v from the top
@@ -200,10 +213,40 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
   });
   draws += addCandleFlames(flames); // after the walk: it adds children to the nodes it found
   scene.add(gltf.scene);
+  // a failed texture still ends its item, so this always comes; the room's files are one origin
+  manager.onLoad = () => screen.done();
+  if (asked === 0) screen.done();
 
   const room = { bytes: buffer.byteLength, loadMs: performance.now() - started, draws, slots };
   window.__room = room;
   window.__roomScene = scene;
   console.info('[room-593]', room);
   return room;
+}
+
+/** The GLB, its bytes counted as they arrive; `total` is 0 when the server sends no length. */
+async function download(
+  url: string,
+  onProgress: (loaded: number, total: number) => void,
+): Promise<ArrayBuffer> {
+  const response = await fetch(url);
+  const total = Number(response.headers.get('content-length') ?? 0);
+  if (!response.body) return response.arrayBuffer();
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    onProgress(loaded, total);
+  }
+  const out = new Uint8Array(loaded);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.byteLength;
+  }
+  return out.buffer;
 }

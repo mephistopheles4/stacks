@@ -36,6 +36,9 @@ SELVEDGE = 0.031  # the overcast binding down each long side, 1 cm
 KILIM = 0.05  # the flat-woven band across each end, 1.6 cm
 PILE_TILE = 0.31  # one pile tile covers about 10 cm
 RNG = np.random.default_rng(593)
+# rug(..., ruck=(x, y)): a chair's back feet stand there, in the rug's own axes, and pushing back
+# has bunched the carpet behind them into a ridge that bows away from them; None keeps the old ruck
+RUCK = None
 
 
 def _smoothstep(e0, e1, x):
@@ -46,11 +49,23 @@ def _smoothstep(e0, e1, x):
 
 def lift(x, y):
     """How far the rug rises off the floor at (x, y), in its own axes."""
-    # the ruck: a ridge that starts at the front edge and dies out toward the middle
-    p0, d = (-1.9, -SY / 2 - 0.1), (0.67, 0.74)
-    px, py = x - p0[0], y - p0[1]
-    along, across = px * d[0] + py * d[1], px * d[1] - py * d[0]
-    ruck = 0.055 * math.exp(-((across / 0.22) ** 2)) * (1 - _smoothstep(0.9, 2.8, along))
+    if RUCK is None:
+        # the ruck: a ridge that starts at the front edge and dies out toward the middle
+        p0, d = (-1.9, -SY / 2 - 0.1), (0.67, 0.74)
+        px, py = x - p0[0], y - p0[1]
+        along, across = px * d[0] + py * d[1], px * d[1] - py * d[0]
+        ruck = 0.055 * math.exp(-((across / 0.22) ** 2)) * (1 - _smoothstep(0.9, 2.8, along))
+    else:
+        # the chair's ruck, as the old one ran: a fold rising from the rug's end between the
+        # chair's back feet, where pushing back has shoved the edge in, and running diagonally
+        # into the rug until it dies out
+        fx, fy = RUCK
+        p0, d = (-SX / 2 - 0.1, fy), (0.9, 0.44)
+        n = math.hypot(*d)
+        d = (d[0] / n, d[1] / n)
+        px, py = x - p0[0], y - p0[1]
+        along, across = px * d[0] + py * d[1], px * d[1] - py * d[0]
+        ruck = 0.075 * math.exp(-((across / 0.22) ** 2)) * (1 - _smoothstep(1.2, 3.4, along))
     # the long sides never lie quite flat
     edge = 1 - _smoothstep(0.0, 0.25, SY / 2 - abs(y))
     wave = 0.007 * edge * (0.6 + 0.4 * math.sin(x * 2.3 + (1.7 if y > 0 else 0.0)))
@@ -200,8 +215,13 @@ def _unwrap_bake(o):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
-def rug(photo, material, out_dir, centre, turn):
-    """The rug and its fringe: two lit entries for build_room."""
+def rug(photo, material, out_dir, centre, turn, size=None, ruck=None):
+    """The rug and its fringe: two lit entries for build_room. size: (long, short) in scene units,
+    the photograph's own proportions or it stretches; ruck: see RUCK."""
+    global SX, SY, RUCK
+    if size:
+        SX, SY = size
+    RUCK = ruck
     me, src = _rug_mesh()
     o = bpy.data.objects.new("room_rug", me)
     bpy.context.scene.collection.objects.link(o)

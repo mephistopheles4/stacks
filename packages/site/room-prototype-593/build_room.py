@@ -21,6 +21,7 @@ import os
 import sys
 
 import bpy
+import numpy as np
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -35,6 +36,10 @@ ap.add_argument("--chair-res", type=int, default=0, help="the chair's own atlas 
 ap.add_argument("--lightmaps", action="store_true",
                 help="floor and rug: bake light only, and let the page lay their sharp textures over it")
 ap.add_argument("--rug-photo", default="", help="with --lightmaps: the rug's own texture (rug_from_photo.py)")
+ap.add_argument("--rug-span", type=float, nargs=4, metavar=("X0", "X1", "Y0", "Y1"),
+                help="the rug's rectangle in scene units, square to the walls (default: the Met carpet's 241 x 178 cm, turned 6 degrees)")
+ap.add_argument("--rug-ruck", type=float, nargs=2, metavar=("X", "Y"),
+                help="with --rug-span: where a chair's back feet stand on the rug, rucking it behind them")
 ap.add_argument("--lamp", choices=("arc", "hero"), default="arc",
                 help="hero: the bridge lamp of hero_lamp.py, behind the chair, lighting the room")
 ap.add_argument("--table", choices=("drum", "polyhaven"), default="drum",
@@ -53,6 +58,8 @@ ap.add_argument("--chair-yaw", type=float, default=0.0, help="degrees to turn an
 ap.add_argument("--chair-height", type=float, default=3.8, help="height an imported chair is scaled to")
 ap.add_argument("--chair-own-uv", action="store_true", help="bake an imported single-mesh chair into its own unwrap, not a new one")
 ap.add_argument("--chair-recolour", action="store_true", help="paint an imported chair's fabric the room's red")
+ap.add_argument("--dress", default="", help="a Python file whose dress(scene, repo) furnishes the room further and "
+                "returns [(mesh name, objects)]: each list is joined and baked, glossy seen from the site camera")
 args = ap.parse_args(argv)
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -236,7 +243,13 @@ if args.lightmaps:
     floor = shell.pop(0)
     lit.append(lightmaps.floor(floor, WALL_Y, material, out_dir))
     if args.rug_photo:
-        lit += rug.rug(args.rug_photo, material, out_dir, (2.2, -3.6), math.radians(-6))
+        if args.rug_span:
+            x0, x1, y0, y1 = args.rug_span
+            centre = ((x0 + x1) / 2, (y0 + y1) / 2)
+            ruck = (args.rug_ruck[0] - centre[0], args.rug_ruck[1] - centre[1]) if args.rug_ruck else None
+            lit += rug.rug(args.rug_photo, material, out_dir, centre, 0.0, (x1 - x0, y1 - y0), ruck)
+        else:
+            lit += rug.rug(args.rug_photo, material, out_dir, (2.2, -3.6), math.radians(-6))
     if papered:  # from the rail's top to the top of the old wall; WALLPAPER_TINT keeps the room dark
         lit.append(lightmaps.wallpaper(WALL_Y, (-17, 17), DADO + 0.08, 12, args.wallpaper,
                                        args.wallpaper_size, WALLPAPER_TINT, material, out_dir))
@@ -427,6 +440,13 @@ slots = [
     slot("slot_pile", (-2.6, -3.8, 0), -10, 2.0, 1.5, 1.5),
 ]
 
+# ── the rest of the room, from a dressing script (the #593 audition's furniture and lights) ──
+dressed = []
+if args.dress:
+    _dress = {"__name__": "dress", "__file__": os.path.abspath(args.dress)}
+    exec(open(args.dress, encoding="utf-8").read(), _dress)
+    dressed = _dress["dress"](scene, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")))
+
 
 # ── bake ───────────────────────────────────────────────────────────────────
 def apply_modifiers(objs):
@@ -508,13 +528,13 @@ def unwrap_packed(o):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
-def make_low(high, faces):
+def make_low(high, faces, name="room_chair"):
     """A decimated copy of the high-resolution chair. It ships; the high one only lights it.
     Invisible to every ray, so it neither shadows the room nor the chair it is baked from."""
     low = high.copy()
     low.data = high.data.copy()
     scene.collection.objects.link(low)
-    low.name = "room_chair"
+    low.name = name
     m = low.modifiers.new("decimate", "DECIMATE")
     m.ratio = min(1.0, faces / len(high.data.polygons))
     apply_modifiers([low])  # leaves low selected and active
@@ -592,6 +612,51 @@ def bake_to(o, res, also_select=(), glossy=False):
     return img
 
 
+def bake_albedo(o, res, samples=8):
+    """Colour only, no light, for a split mesh: the page lays its light map over it, as it does the
+    floor's planks. A metal has no diffuse colour and bakes black, so every metal is baked as its
+    base colour, matte: what a split mesh gives up is the sheen a camera-seen bake records."""
+    for m in o.data.materials:
+        p = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None) if m and m.use_nodes else None
+        if p:
+            for key in ("Metallic", "Transmission Weight"):
+                for link in list(p.inputs[key].links):
+                    m.node_tree.links.remove(link)
+                p.inputs[key].default_value = 0.0
+    img = bpy.data.images.new(f"{o.name}_albedo", res, res)
+    for m in o.data.materials:
+        n = m.node_tree.nodes.new("ShaderNodeTexImage")
+        n.image = img
+        m.node_tree.nodes.active = n
+    o.data.uv_layers.active = o.data.uv_layers["bake"]
+    bpy.ops.object.select_all(action="DESELECT")
+    o.select_set(True)
+    bpy.context.view_layer.objects.active = o
+    bake = scene.render.bake
+    bake.use_selected_to_active = False
+    bake.view_from = "ABOVE_SURFACE"
+    bake.use_pass_direct = False
+    bake.use_pass_indirect = False
+    bake.use_pass_color = True
+    bake.margin = 8
+    full, scene.cycles.samples = scene.cycles.samples, samples  # no light to converge, only edges
+    bpy.ops.object.bake(type="DIFFUSE")
+    scene.cycles.samples = full
+    return img
+
+
+def split_uvs(o):
+    """The split mesh ships two copies of its one unwrap: UV0 for the albedo, UV1 for the light."""
+    uvs = o.data.uv_layers
+    n = len(o.data.loops)
+    co = np.empty(n * 2, np.float32)
+    uvs["bake"].data.foreach_get("uv", co)
+    for layer in list(uvs):
+        uvs.remove(layer)
+    for name in ("UVMap", "bake"):
+        uvs.new(name=name).data.foreach_set("uv", co)
+
+
 def swap_to_baked(o, img):
     """One material, the baked image as base colour: the page draws it unlit."""
     m = bpy.data.materials.new(f"{o.name}_baked")
@@ -644,8 +709,32 @@ if candle_parts:
     bpy.data.objects.remove(cspace)
 meshes = ((shell_obj, chair_obj) + ((furn_obj,) if furn_obj else ()) + ((lamp_obj,) if lamp_obj else ())
           + ((table_obj,) if table_obj else ()) + ((candles_obj,) if candles_obj else ()))
+# a group's options: {"high": True, "faces": n} bakes it high to low as the hero chair is, "res" its atlas
+dress_opts, dress_high = {}, {}
+dressed_objs = ()
+split_objs = ()  # {"split": {"albedo": res, "light": res, "scale": s}}: colour and light baked apart
+for name, objs, *rest in dressed:
+    if not objs:
+        continue
+    opts = rest[0] if rest else {}
+    o = join(name, objs)
+    if opts.get("high"):
+        o.name = name + "_high"
+        high, o = o, make_low(o, opts.get("faces", args.chair_faces), name)
+        dress_high[o.name] = high
+        print(f"[room] dressed {name}: {len(high.data.polygons)} faces baked onto {len(o.data.polygons)}")
+    else:
+        print(f"[room] dressed {o.name}: {len(o.data.polygons)} faces, {len(o.data.materials)} materials")
+    dress_opts[o.name] = opts
+    if opts.get("split"):
+        split_objs += (o,)
+    else:
+        dressed_objs += (o,)
+meshes += dressed_objs
+for o in split_objs:
+    unwrap_packed(o)
 for o in meshes:
-    if (o is chair_obj and chair_high) or o is lamp_obj or o is candles_obj:
+    if (o is chair_obj and chair_high) or o is lamp_obj or o is candles_obj or o in dressed_objs:
         unwrap_packed(o)
     else:
         # the Poly Haven table's own unwrap is non-overlapping: bake into it
@@ -654,14 +743,36 @@ for o in meshes:
 baked = {}
 for o in meshes:
     t0 = time.time()
-    res = (args.chair_res or args.res) if o is chair_obj else args.res
+    res = (args.chair_res or args.res) if o is chair_obj else dress_opts.get(o.name, {}).get("res", args.res)
     if o is chair_obj and chair_high:
         baked[o.name] = bake_from_high(o, chair_high, res)
-    elif o is lamp_obj or o is table_obj or o is candles_obj:
+    elif o.name in dress_high:
+        baked[o.name] = bake_from_high(o, dress_high[o.name], res)
+    elif o is lamp_obj or o is table_obj or o is candles_obj or o in dressed_objs:
         baked[o.name] = bake_glossy(o, res)
     else:
         baked[o.name] = bake_to(o, res)
     print(f"[room] baked {o.name} ({len(o.data.polygons)} faces) at {res}² / {args.samples} spp in {time.time() - t0:.1f}s")
+
+# a split mesh is the floor's method on a model: its colour sharp in an atlas of its own, the
+# light soft beside it, so the throw's tartan and the books' spines are not spread over a shared atlas
+for o in split_objs:
+    t0 = time.time()
+    sp = dress_opts[o.name]["split"]
+    stem = os.path.splitext(os.path.basename(args.out))[0]
+    part = o.name.removeprefix("room_")
+    albedo = bake_albedo(o, sp.get("albedo", args.res))
+    albedo_rel = f"bake/{stem}-{part}.webp"
+    lightmaps.save_image(albedo, os.path.join(out_dir, albedo_rel), raw=True, quality=88)
+    light_rel = f"light/{stem}-{part}.webp"
+    scale = sp.get("scale", 2.0)
+    lightmaps.bake_light(o, sp.get("light", 1024), os.path.join(out_dir, light_rel), scale)
+    split_uvs(o)
+    extras = {"albedo": albedo_rel, "tint": [1.0, 1.0, 1.0]}
+    if scale != 2.0:
+        extras["light_scale"] = scale
+    lightmaps.finish(o, extras, light_rel)
+    print(f"[room] split {o.name} ({len(o.data.polygons)} faces): albedo {sp.get('albedo', args.res)}², light {sp.get('light', 1024)}² in {time.time() - t0:.1f}s")
 
 for o, extras in lit:  # while the proxy still casts the bookcase's shadow
     t0 = time.time()
@@ -677,6 +788,8 @@ for o, extras in lit:  # while the proxy still casts the bookcase's shadow
 bpy.data.objects.remove(proxy)
 if chair_high:
     bpy.data.objects.remove(chair_high)
+for high in dress_high.values():
+    bpy.data.objects.remove(high)
 for o in meshes:
     swap_to_baked(o, baked[o.name])
     baked[o.name].pack()
@@ -691,7 +804,7 @@ if args.save_blend:
 
 # ── export ─────────────────────────────────────────────────────────────────
 bpy.ops.object.select_all(action="DESELECT")
-for o in (*meshes, *(o for o, _ in lit), *slots, *flame_marks):
+for o in (*meshes, *split_objs, *(o for o, _ in lit), *slots, *flame_marks):
     o.select_set(True)
 bpy.ops.export_scene.gltf(
     filepath=args.out,
