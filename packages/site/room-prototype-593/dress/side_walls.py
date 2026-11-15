@@ -112,7 +112,7 @@ def _wall(scene, name, face_x, inward, y0, y1, top, paper):
     return root
 
 
-def dress_side_walls(scene, willow_path, left_x=-7.89, right_x=9.89, y0=-10.0, y1=0.5, top=9.33):
+def dress_side_walls(scene, willow_path, left_x=-7.89, right_x=9.89, y0=-10.0, y1=0.5, top=12.0):  # the back wall's height, up to the ceiling
     paper = _wallpaper_mat(willow_path)
     for w in ("L_left_wall", "L_right_wall"):   # the old block-out faces become the painted dado's backing
         o = scene.objects.get(w)

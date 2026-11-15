@@ -120,6 +120,7 @@ GROUPS = (  # mesh name -> roots (by name or prefix) whose meshes it joins
     ("room_globe", ("P_L_globe",)),
     ("room_floor_books", ("floor_books_",)),
     ("room_chandelier", ("chandelier",)),
+    ("room_ceiling", ("ceiling_dress",)),  # its own atlas: the popcorn's grain is the bake's
 )
 
 
@@ -206,6 +207,7 @@ def dress(scene, repo):
     clock = bpy.data.objects["P_L_clock"]
     clock.location.y -= 0.08  # its end stood past the box's
     _helper("side_walls")["dress_side_walls"](scene, os.path.join(repo, "packages", "site", "public", "room-prototype-593", "tex", "wallpaper-willow.webp"))
+    _helper("ceiling")["dress_ceiling"](scene)
     _helper("chandelier")["hang_chandelier"](scene, repo, fill_off=False)
 
     # ── light: the chandelier replaces the overhead fill; the banker's lamp pools on the desk ──

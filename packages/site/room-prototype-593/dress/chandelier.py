@@ -1,5 +1,5 @@
 """Poly Haven's Chandelier 03 (Kirill Sannikov, CC0) hung from the ceiling as the room's one fill light:
-its wrapped rod shortened so it clears a standing head, its 18 flame bulbs glowing, a small warm
+its wrapped rod stretched so its body hangs where it did under a lower ceiling, its 18 flame bulbs glowing, a small warm
 point light in each, and the faceless 'fill' area light turned off.
 
     exec(open("chandelier.py").read(), g); g["hang_chandelier"](scene, repo, (x, y))
@@ -9,7 +9,8 @@ import bpy
 from mathutils import Vector
 
 M = 3.11
-CEILING = 9.33      # scene units
+CEILING = 12.0      # scene units: ceiling.py TOP
+HUNG_UNDER = 9.33   # the old 3 m ceiling it was hung and lit under: its body stays where it was
 ROD = (-0.42, -0.10)  # the wrapped rod in the model's own metres, below its ceiling cup
 
 
@@ -45,7 +46,7 @@ def _flame_mat():
     return m
 
 
-def hang_chandelier(scene, repo, at=(-0.8, -4.5), shorten=0.24, watts=130.0, fill_off=True):
+def hang_chandelier(scene, repo, at=(-0.8, -4.5), shorten=0.24 - (CEILING - HUNG_UNDER) / M, watts=130.0, fill_off=True):
     """at: hung off the room's centre toward the desk, so it reaches Aristotle on the back wall's
     left end and still lights the chest and the storm on the right (the owner's pick)."""
     path = f"{repo}/.cache/polyhaven/Chandelier_03/Chandelier_03_2k.gltf"
@@ -62,7 +63,8 @@ def hang_chandelier(scene, repo, at=(-0.8, -4.5), shorten=0.24, watts=130.0, fil
     ch.name = "chandelier"
     bm = bmesh.new()
     bm.from_mesh(ch.data)
-    # the rod squeezed from 32 cm to 8: everything below it rises by `shorten`
+    # the rod's length changed by `shorten`, everything below it rising by as much: under the old 3 m
+    # ceiling it was squeezed from 32 cm to 8; under the 3.86 m one it is stretched to 94 cm
     lo, hi = ROD
     for v in bm.verts:
         z = v.co.z
