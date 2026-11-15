@@ -44,7 +44,7 @@ for a split group its colour in `bake/` and its light in `light/` (made here).
 | globe on a Victorian stand | <https://sketchfab.com/3d-models/54245a6f6f8a425d93dfa3892445cab4> | Rylae Shylna | CC BY 4.0 |
 | monstera | <https://sketchfab.com/3d-models/1ab9bf841df04c07b1819be596327629> | Giora | CC BY 4.0 |
 | banker's lamp | <https://sketchfab.com/3d-models/lamp-bankers-lamp-fb7b850b5aa04cb48999f4cd58d7eaca> | Patrick Matthew | CC BY 4.0 |
-| books, inkwell, pen and the world map above the desk, from "Vintage Desk Assets" | <https://sketchfab.com/3d-models/280db303f4d64354aa3e7b71f4652813> | Hobu | CC BY 4.0 |
+| books on the desk and in the floor's two stacks, inkwell, pen and the world map above the desk, from "Vintage Desk Assets" | <https://sketchfab.com/3d-models/280db303f4d64354aa3e7b71f4652813> | Hobu | CC BY 4.0 |
 | sealed letter | <https://sketchfab.com/3d-models/303b287819a84f7496bd92f5d69710c7> | Incg5764 | CC BY 4.0 |
 | spectacles | <https://sketchfab.com/3d-models/f9128bd394214539af2ac80e4204bd35> | rikokenz | CC BY 4.0 |
 | sand blotter (scan) | <https://sketchfab.com/3d-models/51ed4daff7a147ee859a85cbbbea1f09> | Portland Museum | CC BY 4.0 |

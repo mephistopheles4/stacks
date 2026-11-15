@@ -102,6 +102,7 @@ OPTS = {
     "room_shelf": _split(2048, 512),
     "room_globe": _split(2048, 512),
     "room_standins": {"res": 512},
+    "room_floor_books": _split(2048, 512, 4.0),
 }
 
 GROUPS = (  # mesh name -> roots (by name or prefix) whose meshes it joins
@@ -118,22 +119,22 @@ GROUPS = (  # mesh name -> roots (by name or prefix) whose meshes it joins
     ("room_chest", ("P_L_basket", "throw")),
     ("room_shelf", ("P_L_clock", "P_encyclopedia")),
     ("room_globe", ("P_L_globe",)),
-    ("room_standins", ("L_abandoned_shelf", "L_wishlist_stacks")),
+    ("room_standins", ("L_abandoned_shelf",)),
+    ("room_floor_books", ("floor_books_",)),
     ("room_chandelier", ("chandelier",)),
 )
 
 
 # (dx, dy) on a block-out box. The plant and Aristotle close in on the bookcase, Aristotle centred
 # on the wall between the bookcase's edge (x -1.79) and the left wall, and the picture group right of
-# the bookcase centred between its edge (x 1.79) and the right wall; the wishlist stacks come forward
-# to clear the plant, and the banker's lamp moves along the desk toward its right end
+# the bookcase centred between its edge (x 1.79) and the right wall, and the banker's lamp moves
+# along the desk toward its right end
 MOVES = {
     "L_plant": (1.325, 0.0),
     "L_melencolia_I.001": (0.7077, 0.0),
     "L_jerome": (-0.4575, 0.0),
     "L_melencolia_I": (-0.4575, 0.0),
     "L_knight": (-0.4575, 0.0),
-    "L_wishlist_stacks": (0.0, -0.45),
     "L_oil_lamp": (0.0, 0.4),
 }
 
@@ -155,15 +156,16 @@ def dress(scene, repo):
     bpy.context.view_layer.update()
     chest_yaw = math.degrees(bpy.data.objects["L_chair"].rotation_euler.z)
     # what build_room.py builds itself, and the bookcase (its proxy is build_room's)
-    for n in ("L_rug", "L_chair", "L_side_table", "L_floor_lamp", "L_back_wall", "L_floor", "L_bookcase"):
+    # and the wishlist's box, which two low stacks of books replace (desk_dress.dress_floor_books)
+    for n in ("L_rug", "L_chair", "L_side_table", "L_floor_lamp", "L_back_wall", "L_floor", "L_bookcase", "L_wishlist_stacks"):
         _drop(n)
-    # the wishlist stacks and the abandoned shelf will be live; until then, dark wood stand-ins that
-    # the clock and the encyclopedias can stand on
+    # the abandoned shelf will be live; until then, a dark wood stand-in that the clock and the
+    # encyclopedias can stand on
     wood = bpy.data.materials.new("standin_wood")
     wood.use_nodes = True
     wood.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.06, 0.03, 0.015, 1)
     wood.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.5
-    for n in ("L_wishlist_stacks", "L_abandoned_shelf"):
+    for n in ("L_abandoned_shelf",):
         o = bpy.data.objects[n]
         o.data.materials.clear()
         o.data.materials.append(wood)
@@ -207,6 +209,7 @@ def dress(scene, repo):
         _drop(n)
     dd = _helper("desk_dress")
     dd["dress_desk"](scene, repo)
+    dd["dress_floor_books"](scene, repo)
     dd["_group"]("P_encyclopedia", dd["_keep"](dd["_import"](os.path.join(PH, "book_encyclopedia_set_01", "book_encyclopedia_set_01_2k.gltf"), scene), ("book_encyclopedia",)),
                  scene, (9.5, -4.5), yaw_deg=-90, z=2.8)
     _helper("side_walls")["dress_side_walls"](scene, os.path.join(repo, "packages", "site", "public", "room-prototype-593", "tex", "wallpaper-willow.webp"))

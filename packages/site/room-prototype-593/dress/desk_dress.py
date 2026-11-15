@@ -7,6 +7,7 @@ at the front left. And Hobu's world map pinned to the wall above the desk, almos
 """
 import math
 import os
+import random
 
 import bmesh
 import bpy
@@ -158,6 +159,63 @@ def _written_page(scene, path, at, yaw_deg, width=0.19):
     return o
 
 
+BOOK_SIZE = 1.5  # Hobu's books at this scale match the bookcase's: their long side 0.87 units
+HOBU_BOOKS = ("Book1.1Blue.001", "Book1.1Yellow.001", "Book1.1Grey.001", "Book1Green.002", "Book1Red.002")
+# the floor's stacks, on the rug in front of the bookcase's left end, low enough to take the wishlist
+# on top: (x, y, the stack's yaw, how many books). They stand on the rug's pile (rug.TOP). Hobu's eight different books (each colour of each size)
+# are drawn from at random, so no two stacks are copies.
+FLOOR_STACKS = (
+    (-2.86, -2.85, 8.0, 5),
+    (-1.95, -1.71, -22.0, 5),
+)
+RUG_TOP = 0.03
+FLOOR_KINDS = ("Book1.1Blue_", "Book1.1Grey_", "Book1.1Red_", "Book1.1Yellow_", "Book1Blue_", "Book1Green_", "Book1Grey_", "Book1Red_")
+FLOOR_SEED = 593
+
+
+def dress_floor_books(scene, repo, seed=FLOOR_SEED):
+    """Stacks of Hobu's books on the floor, at the bookcase's scale, laid one book at a time as a
+    person stacks them: the bigger books low, every spine facing one of the stack's two ways, each a
+    degree or two and a centimetre off the one below, and now and then one crosswise. Seeded, so a
+    rebuild lays the same stacks. Returns the pivots, floor_books_<n>."""
+    hobu = os.path.join(repo, ".cache", "sketchfab", "vintage_desk_assets", "vintage_desk_assets.glb")
+    src = _keep(_import(hobu, scene), FLOOR_KINDS)
+    _darken(src)
+    rng = random.Random(seed)
+    shapes = []
+    for o in src:  # each book's own box, in its mesh's space, and its scale to scene units
+        pts = [Vector(c) for c in o.bound_box]
+        lo = Vector([min(p[i] for p in pts) for i in range(3)])
+        hi = Vector([max(p[i] for p in pts) for i in range(3)])
+        shapes.append((o, lo, hi, o.matrix_world.to_scale().x * M * BOOK_SIZE))
+    roots = []
+    for n, (x, y, yaw, count) in enumerate(FLOOR_STACKS):
+        picks = [rng.choice(shapes) for _ in range(count)]
+        picks.sort(key=lambda sh: -(sh[2].x - sh[1].x) * (sh[2].y - sh[1].y) * sh[3] ** 2 * rng.uniform(0.85, 1.2))
+        piv = bpy.data.objects.new(f"floor_books_{n}", None)
+        scene.collection.objects.link(piv)
+        piv.location = (x, y, 0.0)
+        z = RUG_TOP
+        for k, (o, lo, hi, scale) in enumerate(picks):
+            turn = 180.0 if rng.random() < 0.3 else 0.0
+            if k >= 2 and rng.random() < 0.15:
+                turn += 90.0
+            a = math.radians(yaw + turn + rng.gauss(0.0, 2.5))
+            at = Vector((x + rng.gauss(0.0, 0.03), y + rng.gauss(0.0, 0.03), z))
+            foot = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
+            b = o.copy()
+            for col in o.users_collection:
+                col.objects.link(b)
+            b.parent = piv
+            b.matrix_parent_inverse = Matrix.Translation((-x, -y, 0.0))  # cancels the pivot: the basis is the world
+            b.matrix_basis = Matrix.Translation(at) @ Matrix.Rotation(a, 4, "Z") @ Matrix.Scale(scale, 4) @ Matrix.Translation(-foot)
+            z += (hi.z - lo.z) * scale
+        roots.append(piv)
+    for o in src:
+        bpy.data.objects.remove(o, do_unlink=True)
+    return roots
+
+
 def dress_desk(scene, repo, frame_build=None):
     sf = os.path.join(repo, ".cache", "sketchfab")
     ph = os.path.join(repo, ".cache", "polyhaven")
@@ -167,7 +225,8 @@ def dress_desk(scene, repo, frame_build=None):
     # Hobu's books: the bottom five of the stack on his own desk, toned down
     objs = _keep(_import(hobu, scene), ("Book1.1Blue.001", "Book1.1Yellow.001", "Book1.1Grey.001", "Book1Green.002", "Book1Red.002"))
     _darken(objs)
-    roots.append(_group("desk_books", objs, scene, (-7.22, -6.8), yaw_deg=12))
+    # at BOOK_SIZE, his books stand as tall as the bookcase's own (0.78 to 0.95 units)
+    roots.append(_group("desk_books", objs, scene, (-7.12, -6.8), yaw_deg=12, size=BOOK_SIZE))  # off the dado rail at this size
     # his bronze inkwell, back centre, and the dip pen laid across the letter
     roots.append(_group("desk_inkwell", _keep(_import(hobu, scene), ("inkwell.001",)), scene, (-7.4, -5.75), yaw_deg=0))
     roots.append(_written_page(scene, os.path.join(repo, ".cache", "commons", "longfellow_1851", "letter_spread.jpg"), (-6.2, -5.45), yaw_deg=6))
