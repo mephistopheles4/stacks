@@ -36,9 +36,22 @@ SELVEDGE = 0.031  # the overcast binding down each long side, 1 cm
 KILIM = 0.05  # the flat-woven band across each end, 1.6 cm
 PILE_TILE = 0.31  # one pile tile covers about 10 cm
 RNG = np.random.default_rng(593)
-# rug(..., ruck=(x, y)): a chair's back feet stand there, in the rug's own axes, and pushing back
-# has bunched the carpet behind them into a ridge that bows away from them; None keeps the old ruck
+# rug(..., ruck=(x, y)): a chair's back feet stand there, in the rug's own axes, and pushing the
+# chair back (+x) has bunched the carpet just past them into a fold that lifts the front edge;
+# None keeps the old ruck
 RUCK = None
+# the chair's fold: its height at the front edge, how far in it dies out, and the ripple's height
+FOLD = (0.16, 4.2, 0.06)
+# with a ruck, the fold is simulated as cloth rather than drawn: the carpet from the rug's end to the
+# chair's back feet is shoved PUSH toward +x (most at the front edge), and the free carpet past the
+# feet buckles under it, seeded by the drawn fold at SEED of its height so it buckles there
+CLOTH = True
+PUSH = 0.14
+SEED = 0.5
+# the carpet as cloth (mass is per vertex: ~1 cm squares of a heavy rug), barely stretching, stiff enough to fold broadly; it grips the floor
+CLOTH_SET = {"mass": 0.005, "self": True, "tension": 200, "compression": 200, "shear": 50, "bending": 1.0, "friction": 10, "pin": 5}
+# once simulated: (x0, y0, step, displacement [i, j, xyz]) over a box round the fold, rug axes
+FIELD = None
 
 
 def _smoothstep(e0, e1, x):
@@ -55,21 +68,142 @@ def lift(x, y):
         px, py = x - p0[0], y - p0[1]
         along, across = px * d[0] + py * d[1], px * d[1] - py * d[0]
         ruck = 0.055 * math.exp(-((across / 0.22) ** 2)) * (1 - _smoothstep(0.9, 2.8, along))
+    elif FIELD is not None:
+        d = _field(x, y)
+        ruck = max(float(d[2]), 0.0) if d is not None else 0.0
     else:
-        # the chair's ruck, as the old one ran: a fold rising from the rug's end between the
-        # chair's back feet, where pushing back has shoved the edge in, and running diagonally
-        # into the rug until it dies out
-        fx, fy = RUCK
-        p0, d = (-SX / 2 - 0.1, fy), (0.9, 0.44)
-        n = math.hypot(*d)
-        d = (d[0] / n, d[1] / n)
-        px, py = x - p0[0], y - p0[1]
-        along, across = px * d[0] + py * d[1], px * d[1] - py * d[0]
-        ruck = 0.075 * math.exp(-((across / 0.22) ** 2)) * (1 - _smoothstep(1.2, 3.4, along))
+        ruck = _drawn_fold(x, y)
     # the long sides never lie quite flat
     edge = 1 - _smoothstep(0.0, 0.25, SY / 2 - abs(y))
     wave = 0.007 * edge * (0.6 + 0.4 * math.sin(x * 2.3 + (1.7 if y > 0 else 0.0)))
     return ruck + wave
+
+
+def _drawn_fold(x, y):
+    # the chair's ruck: pushed back from the desk (+x), its back feet shove the carpet ahead
+    # of them into one fold across the push, just past the feet. It is tallest where the
+    # front edge lifts off the floor in a rounded hump, and runs back into the rug, narrowing
+    # and leaning a little with the push, until it dies out past the feet
+    fx, _ = RUCK
+    along = y + SY / 2  # in from the front edge
+    centre = fx + 0.55 + 0.1 * along
+    width = 0.3 - 0.1 * _smoothstep(0.0, 3.0, along)
+    height = FOLD[0] * (1 - _smoothstep(0.4, FOLD[1], along))
+    ruck = height * math.exp(-(((x - centre) / width) ** 2))
+    # the push runs on: a lower ripple beyond the fold, shorter, where the carpet gave next
+    centre2 = centre + 0.75 + 0.05 * along
+    height2 = FOLD[2] * (1 - _smoothstep(0.2, 0.55 * FOLD[1], along))
+    ruck += height2 * math.exp(-(((x - centre2) / (0.8 * width)) ** 2))
+    return ruck
+
+
+def _push(x, y):
+    """How far the chair's feet shoved the carpet at (x, y) toward +x: the strip from the rug's end
+    to just past the feet moves as one, most at the front edge and not at all past the fold."""
+    fx = RUCK[0]
+    return PUSH * (1 - _smoothstep(0.4, FOLD[1], y + SY / 2)) * (1 - _smoothstep(fx + 0.1, fx + 0.3, x))
+
+
+def _field(x, y):
+    """The simulated displacement at (x, y), bilinear between the proxy's vertices; None outside it."""
+    x0, y0, h, d = FIELD
+    fi, fj = (x - x0) / h, (y - y0) / h
+    n, m = d.shape[0] - 1, d.shape[1] - 1
+    if fi < 0 or fj < 0 or fi > n or fj > m:
+        return None
+    i, j = min(int(fi), n - 1), min(int(fj), m - 1)
+    a, b = fi - i, fj - j
+    return d[i, j] * (1 - a) * (1 - b) + d[i + 1, j] * a * (1 - b) + d[i, j + 1] * (1 - a) * b + d[i + 1, j + 1] * a * b
+
+
+def _offset(x, y):
+    """How far the carpet at (x, y) slid on the floor, (dx, dy): the field inside its box, the
+    shoved strip as a whole to its left, nothing elsewhere."""
+    if FIELD is None:
+        return 0.0, 0.0
+    d = _field(x, y)
+    if d is not None:
+        return float(d[0]), float(d[1])
+    return (_push(x, y), 0.0) if x < FIELD[0] else (0.0, 0.0)
+
+
+def _simulate(frames=60, h=0.035):
+    """Shove the carpet and let it buckle: a proxy sheet over the fold's box, lying on a floor, its
+    shoved strip pinned to a shape key that slides it, its far sides pinned still and its front edge
+    free. Returns FIELD."""
+    fx = RUCK[0]
+    x0, x1 = fx - 0.3, fx + 3.2
+    y0, y1 = -SY / 2, -SY / 2 + 5.2
+    ni, nj = round((x1 - x0) / h), round((y1 - y0) / h)
+    rest = 0.01  # where a flat sheet settles over the floor's collision shell
+    scene = bpy.context.scene
+    bm = bmesh.new()
+    grid = [[bm.verts.new((x0 + i * h, y0 + j * h, rest + SEED * _drawn_fold(x0 + i * h, y0 + j * h)))
+             for j in range(nj + 1)] for i in range(ni + 1)]
+    for i in range(ni):
+        for j in range(nj):
+            bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+    me = bpy.data.meshes.new("rug_cloth")
+    bm.to_mesh(me)
+    bm.free()
+    sheet = bpy.data.objects.new("rug_cloth", me)
+    scene.collection.objects.link(sheet)
+    base = np.array([v.co[:] for v in me.vertices])
+    pin = sheet.vertex_groups.new(name="pin")
+    for v in me.vertices:
+        x, y = v.co.x, v.co.y
+        # pinned, or not: a partly pinned band soaks up the push like a spring and never folds
+        held = x < fx + 0.2 or x > x1 - 0.3 or y > y1 - 0.4
+        pin.add([v.index], 1.0 if held else 0.0, "REPLACE")
+    sheet.shape_key_add(name="Basis")
+    shove = sheet.shape_key_add(name="shove")
+    for v, k in zip(me.vertices, shove.data):
+        k.co.x = v.co.x + _push(v.co.x, v.co.y)
+    shove.value = 0.0
+    shove.keyframe_insert("value", frame=1)
+    shove.value = 1.0
+    shove.keyframe_insert("value", frame=int(frames * 0.6))
+    fme = bpy.data.meshes.new("rug_floor")
+    fme.from_pydata([(x0 - 1, y0 - 1, 0), (x1 + 1, y0 - 1, 0), (x1 + 1, y1 + 1, 0), (x0 - 1, y1 + 1, 0)], [], [(0, 1, 2, 3)])
+    floor = bpy.data.objects.new("rug_floor", fme)
+    scene.collection.objects.link(floor)
+    floor.modifiers.new("collision", "COLLISION")
+    floor.collision.thickness_outer = 0.005
+    floor.collision.cloth_friction = CLOTH_SET["friction"]  # it buckles near the push, not far off
+    cloth = sheet.modifiers.new("cloth", "CLOTH")
+    st = cloth.settings
+    st.quality = 10
+    st.mass = CLOTH_SET["mass"]
+    st.tension_stiffness = CLOTH_SET["tension"]
+    st.compression_stiffness = CLOTH_SET["compression"]  # it must buckle, not squash
+    st.shear_stiffness = CLOTH_SET["shear"]
+    st.bending_stiffness = CLOTH_SET["bending"]  # a wool pile on a cotton foundation: broad folds
+    st.air_damping = 1.0
+    st.vertex_group_mass = "pin"
+    st.pin_stiffness = CLOTH_SET["pin"]
+    cloth.collision_settings.collision_quality = 3
+    cloth.collision_settings.distance_min = 0.005
+    # a fold must not pass through itself and lie flat
+    cloth.collision_settings.use_self_collision = CLOTH_SET["self"]
+    cloth.collision_settings.self_distance_min = 0.008
+    cloth.point_cache.frame_start, cloth.point_cache.frame_end = 1, frames
+    f0 = scene.frame_current
+    for f in range(1, frames + 1):
+        scene.frame_set(f)
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = sheet.evaluated_get(dg).data
+    co = np.array([v.co[:] for v in ev.vertices])
+    scene.frame_set(f0)
+    disp = co - base
+    disp[:, 2] = co[:, 2] - rest  # the height off the flat, not off the seed
+    action = me.shape_keys.animation_data.action if me.shape_keys.animation_data else None
+    for o in (sheet, floor):
+        d = o.data
+        bpy.data.objects.remove(o, do_unlink=True)
+        bpy.data.meshes.remove(d)
+    if action:
+        bpy.data.actions.remove(action)
+    return (x0, y0, h, disp.reshape(ni + 1, nj + 1, 3))
 
 
 def _rug_mesh(nx=150, ny=112):
@@ -86,7 +220,8 @@ def _rug_mesh(nx=150, ny=112):
     for i in range(nx + 1):
         for j in range(ny + 1):
             x, y = -SX / 2 + SX * i / nx, -SY / 2 + SY * j / ny
-            top[i][j] = vert((x, y, TOP + lift(x, y)), (x, y))
+            dx, dy = _offset(x, y)  # where the carpet slid to; it still shows its own (x, y)
+            top[i][j] = vert((x + dx, y + dy, TOP + lift(x, y)), (x, y))
     for i in range(nx):
         for j in range(ny):
             bm.faces.new((top[i][j], top[i + 1][j], top[i + 1][j + 1], top[i][j + 1]))
@@ -106,7 +241,8 @@ def _rug_mesh(nx=150, ny=112):
             # the binding folds under: the roll reads the band the top ends on, inward, and
             # stays inside it
             s = 0.8 * (KILIM if sx else SELVEDGE) * k / ROLL
-            ring.append(vert((x + sx * out, y + sy * out, TOP + lift(x, y) - down), (x - sx * s, y - sy * s)))
+            dx, dy = _offset(x, y)
+            ring.append(vert((x + dx + sx * out, y + dy + sy * out, TOP + lift(x, y) - down), (x - sx * s, y - sy * s)))
         rings.append(ring)
     n = len(rim)
     for a_ring, b_ring in zip(rings, rings[1:]):
@@ -218,11 +354,13 @@ def _unwrap_bake(o):
 def rug(photo, material, out_dir, centre, turn, size=None, ruck=None):
     """The rug and its fringe: two lit entries for build_room. size: (long, short) in scene units,
     the photograph's own proportions or it stretches; ruck: see RUCK."""
-    global SX, SY, RUCK
+    global SX, SY, RUCK, FIELD
     if size:
         SX, SY = size
     RUCK = ruck
-    me, src = _rug_mesh()
+    FIELD = _simulate() if ruck and CLOTH else None
+    # a simulated fold needs the finer grid across it: a fold 20 cm wide over 2 cm steps
+    me, src = _rug_mesh(nx=240 if FIELD else 150)
     o = bpy.data.objects.new("room_rug", me)
     bpy.context.scene.collection.objects.link(o)
     o.location = (*centre, 0)
@@ -310,12 +448,14 @@ def _fringe(rug_obj, material, out_dir, tassel=0.075, cords=4, cord=0.009, segs=
                     px += end * length / segs * math.cos(b)
                     py += end * length / segs * math.sin(b)
                     pts.append((px, py, FLOOR + 0.002 + 0.004 * (1 - _smoothstep(0.0, 0.3, t))))
+                pts = [(px + _offset(px, py)[0], py + _offset(px, py)[1], pz) for px, py, pz in pts]  # shoved with the end
                 n = len(pts)
                 widths = [cord * (1 + 0.7 * _smoothstep(0.85, 1.0, k / (n - 1))) for k in range(n)]  # frays
                 _ribbon(bm, pts, widths, 0.0006 * c, 0.0, 1.0, uv_detail)  # a hair apart: no z-fight
             # the knot: a short, wider wrap over the gathered cords
             dx, dy = end * math.cos(heading), end * math.sin(heading)
             knot = [(kx - dx * 0.008, ky - dy * 0.008, knot_z), (kx, ky, knot_z + 0.002), (kx + dx * 0.008, ky + dy * 0.008, knot_z)]
+            knot = [(px + _offset(px, py)[0], py + _offset(px, py)[1], pz) for px, py, pz in knot]
             _ribbon(bm, knot, [0.017, 0.021, 0.017], 0.004, 0.35, 0.5, uv_detail)
             y += tassel * (0.85 + 0.3 * RNG.random())  # tied by hand, unevenly
     me = bpy.data.meshes.new("room_fringe")

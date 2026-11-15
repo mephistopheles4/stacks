@@ -93,7 +93,8 @@ OPTS = {
     "room_pictures": _split(4096, 512, 4.0),     # the lit paintings reach 4
     "room_map": _split(2048, 512, 4.0),
     "room_desk_chair": {"high": True, "faces": 60000, "res": 4096},  # as the armchair: its own 4096
-    "room_desk": _split(4096, 1024, 4.0),          # under the banker's lamp: light past 2 survives
+    "room_desk": _split(4096, 2048, 4.0),          # under the banker's lamp: light past 2 survives; its own 4096
+    "room_plant": _split(2048, 1024, 4.0),
     "room_desk_props": _split(4096, 1024, 4.0),
     # brass, glass and the watch read by their glints: one lit atlas, seen from the site camera
     "room_desk_glints": {"res": 2048},
@@ -110,7 +111,8 @@ GROUPS = (  # mesh name -> roots (by name or prefix) whose meshes it joins
     ("room_desk_chair", ("P_L_desk_chair",)),
     ("room_walls", ("left_wall_dress", "right_wall_dress", "L_left_wall", "L_right_wall")),
     ("room_frames", ("F_",)),
-    ("room_desk", ("P_L_desk", "P_L_plant")),
+    ("room_desk", ("P_L_desk",)),
+    ("room_plant", ("P_L_plant",)),  # its own atlas: sharing the desk's, its leaves came out soft
     ("room_desk_glints", ("P_L_oil_lamp", "desk_spectacles", "desk_pocket_watch", "desk_inkwell", "desk_pen")),
     ("room_desk_props", ("desk_",)),
     ("room_chest", ("P_L_basket", "throw")),
@@ -119,6 +121,21 @@ GROUPS = (  # mesh name -> roots (by name or prefix) whose meshes it joins
     ("room_standins", ("L_abandoned_shelf", "L_wishlist_stacks")),
     ("room_chandelier", ("chandelier",)),
 )
+
+
+# (dx, dy) on a block-out box. The plant and Aristotle close in on the bookcase, Aristotle centred
+# on the wall between the bookcase's edge (x -1.79) and the left wall, and the picture group right of
+# the bookcase centred between its edge (x 1.79) and the right wall; the wishlist stacks come forward
+# to clear the plant, and the banker's lamp moves along the desk toward its right end
+MOVES = {
+    "L_plant": (1.325, 0.0),
+    "L_melencolia_I.001": (0.7077, 0.0),
+    "L_jerome": (-0.4575, 0.0),
+    "L_melencolia_I": (-0.4575, 0.0),
+    "L_knight": (-0.4575, 0.0),
+    "L_wishlist_stacks": (0.0, -0.45),
+    "L_oil_lamp": (0.0, 0.4),
+}
 
 
 def dress(scene, repo):
@@ -132,6 +149,10 @@ def dress(scene, repo):
     for o in dst.objects:
         if o is not None:
             scene.collection.objects.link(o)
+    # the owner's moves since the block-out, once the real bookcase's width (3.58) was known
+    for n, d in MOVES.items():
+        bpy.data.objects[n].location += Vector((d[0], d[1], 0))
+    bpy.context.view_layer.update()
     chest_yaw = math.degrees(bpy.data.objects["L_chair"].rotation_euler.z)
     # what build_room.py builds itself, and the bookcase (its proxy is build_room's)
     for n in ("L_rug", "L_chair", "L_side_table", "L_floor_lamp", "L_back_wall", "L_floor", "L_bookcase"):
@@ -162,7 +183,8 @@ def dress(scene, repo):
         dm.node_tree.links.remove(link)
     dp.inputs["Alpha"].default_value = 1.0
     _place(scene, "L_desk_chair", os.path.join(SF, "chair_england_1750", "chair_4k.glb"), yaw=-90)
-    _helper("chair_texture")["texture_chair"](bpy.data.objects["P_L_desk_chair"])
+    chair = bpy.data.objects["P_L_desk_chair"]
+    _helper("chair_seat")["rebuild_seat"](chair, *_helper("chair_texture")["texture_chair"](chair))
     _place(scene, "L_globe", os.path.join(SF, "globe_victorian", "globe_victorian_4k.glb"), yaw=200)
     _place(scene, "L_basket", os.path.join(PH, "treasure_chest", "treasure_chest_2k.gltf"), real=True, yaw=chest_yaw)
     chest = bpy.data.objects["P_L_basket"]
@@ -170,7 +192,8 @@ def dress(scene, repo):
     bpy.context.view_layer.update()
     _helper("throw")["add_throw"](scene, chest, frames=45)
     _place(scene, "L_clock", os.path.join(PH, "mantel_clock_01", "mantel_clock_01_2k.gltf"), real=True, yaw=-90)
-    _place(scene, "L_oil_lamp", os.path.join(SF, "bankers_lamp", "bankers_lamp_1k.glb"), real=True, yaw=0)
+    # turned 45 degrees clockwise from square to the desk's front: a lamp set on a diagonal reads as placed by hand
+    _place(scene, "L_oil_lamp", os.path.join(SF, "bankers_lamp", "bankers_lamp_1k.glb"), real=True, yaw=-45)
     bpy.data.objects["P_L_oil_lamp"].scale *= 1.15
     brass = next(n for n in bpy.data.materials["gold"].node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     brass.inputs["Base Color"].default_value = (0.62, 0.44, 0.2, 1)
@@ -195,7 +218,8 @@ def dress(scene, repo):
     bl.energy, bl.color, bl.shadow_soft_size, bl.spot_size, bl.spot_blend = 160, (1.0, 0.72, 0.42), 0.04, 2.4, 0.6
     blo = bpy.data.objects.new("bankers_lamp", bl)
     scene.collection.objects.link(blo)
-    blo.location = (-7.2, -4.4, 3.26)
+    lamp = bpy.data.objects["P_L_oil_lamp"].location
+    blo.location = (lamp.x + 0.0707, lamp.y - 0.0707, 3.26)  # 0.1 in front of the lamp's post, under its shade as it turns
 
     # the page draws every baked mesh opaque, so baked glass hides what is behind it: the frames'
     # panes and the clock's face glass go

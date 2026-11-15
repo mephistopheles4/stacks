@@ -436,7 +436,7 @@ def slot(name, loc, facing_deg, width, depth, height_limit):
 
 slots = [
     slot("slot_bookcase", (0, 0, 0), 0, 6.4, CASE_D, 8.0),
-    slot("slot_stacks", (-4.6, -1.6, 0), 15, 3.0, 2.0, 3.0),
+    slot("slot_stacks", (-4.6, -2.05, 0), 15, 3.0, 2.0, 3.0),  # forward of the plant, with the stand-in stacks
     slot("slot_pile", (-2.6, -3.8, 0), -10, 2.0, 1.5, 1.5),
 ]
 

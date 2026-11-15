@@ -40,7 +40,7 @@ for a split group its colour in `bake/` and its light in `light/` (made here).
 | What | Source | Author | Licence |
 | --- | --- | --- | --- |
 | Victorian desk | <https://sketchfab.com/3d-models/ac061b3de2b9480d8ca175e9fdc0c785> | Faheem Yusuf | CC BY 4.0 |
-| desk chair, "Chair, England, 1750-60" (scan; no colour in the conversion, so its mahogany is painted here from Poly Haven's `american_walnut_veneer` and its seat from `leather_red_02`) | <https://sketchfab.com/3d-models/chair-england-1750-60-40688b848b6044f6af306ecdf2b8b105> | Smithsonian | CC0 |
+| desk chair, "Chair, England, 1750-60" (scan; it carries no colour, so its red walnut and dark carving are painted here after the Cooper Hewitt's photographs of the chair, and its upholstered seat is cut away and rebuilt here, padded damask and brass nails, by `dress/chair_seat.py`) | <https://sketchfab.com/3d-models/chair-england-1750-60-40688b848b6044f6af306ecdf2b8b105> | Smithsonian | CC0 |
 | globe on a Victorian stand | <https://sketchfab.com/3d-models/54245a6f6f8a425d93dfa3892445cab4> | Rylae Shylna | CC BY 4.0 |
 | monstera | <https://sketchfab.com/3d-models/1ab9bf841df04c07b1819be596327629> | Giora | CC BY 4.0 |
 | banker's lamp | <https://sketchfab.com/3d-models/lamp-bankers-lamp-fb7b850b5aa04cb48999f4cd58d7eaca> | Patrick Matthew | CC BY 4.0 |
@@ -54,7 +54,8 @@ for a split group its colour in `bake/` and its light in `light/` (made here).
 | postcards | <https://polyhaven.com/a/postcard_set_01> | James Ray Cock, Jurita Burger | CC0 |
 | mantel clock | <https://polyhaven.com/a/mantel_clock_01> | Yann Kervran, Rico Cilliers | CC0 |
 | encyclopedia set | <https://polyhaven.com/a/book_encyclopedia_set_01> | John Malcolm | CC0 |
-| walnut veneer (frames, desk chair) | <https://polyhaven.com/a/american_walnut_veneer> | Jenelle van Heerden | CC0 |
+| floral jacquard (the desk chair's damask, recoloured crimson) | <https://polyhaven.com/a/floral_jacquard> | colormass, Rico Cilliers | CC0 |
+| walnut veneer (frames) | <https://polyhaven.com/a/american_walnut_veneer> | Jenelle van Heerden | CC0 |
 | the half-written letter: Frances (Appleton) Longfellow to Emmeline (Austin) Wadsworth, 22 September 1851, its left page | <https://commons.wikimedia.org/wiki/File:Frances_(Appleton)_Longfellow_to_Emmeline_(Austin)_Wadsworth,_22_September_1851_(1a6fb63e-4035-449d-a2fb-c2110e3af2e6).jpg> (NPS, NPGallery) | Frances Longfellow | public domain |
 | Albrecht Dürer, "Melencolia I", 1514 | <https://www.metmuseum.org/art/collection/search/336228> | the Met | Open Access, public domain (CC0) |
 | Albrecht Dürer, "Saint Jerome in His Study", 1514 | <https://www.metmuseum.org/art/collection/search/336229> | the Met | Open Access, public domain (CC0) |
@@ -63,7 +64,8 @@ for a split group its colour in `bake/` and its light in `light/` (made here).
 | Winslow Homer, "The Gulf Stream", 1899 | <https://www.metmuseum.org/art/collection/search/11122> | the Met | Open Access, public domain (CC0) |
 
 The rug in this room is the Met's carpet above, 3.49 × 2.57 m here (`--rug-span`), with a
-fold where the desk chair's back feet stand on its end (`--rug-ruck`).
+fold where the desk chair's back feet stand on its end (`--rug-ruck`), shoved up by a cloth
+simulation (`rug.py`).
 
 ⚠️ **`room-trellis.glb` must not ship as it is, and is not committed**: it stays on
 the machine that made it. The Met photo had no alpha
