@@ -44,7 +44,7 @@ import { press, type Press } from './book-turn.ts';
 import { hashUnit } from './hash.ts';
 import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { pageStriationMap } from './page-edges.ts';
-import { receiveShadows } from './shadow-receivers.ts';
+import { isShielded, receiveShadows, withoutShadowFetch } from './shadow-receivers.ts';
 import { ContextRefused } from './shelf-notice.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
@@ -617,6 +617,15 @@ function assembleShelf(
       spare.group.traverse((part) => {
         part.castShadow = false;
         part.receiveShadow = false;
+        // `receiveShadow` is only a uniform: the woodwork's program still samples the map (see
+        // shadow-receivers.ts). Its own copy compiles without the fetch, so the main bookcase
+        // stays the one reader, in its two draws (G61, ADR-0088).
+        if (part instanceof THREE.Mesh && !Array.isArray(part.material)) {
+          const material = part.material as THREE.Material;
+          if (!(material instanceof THREE.MeshBasicMaterial) && !isShielded(material)) {
+            part.material = withoutShadowFetch(material.clone());
+          }
+        }
       });
       if (standAt(spare.group, room.slots, 'slot_abandoned')) scene.add(spare.group);
     });
