@@ -37,6 +37,11 @@ ap.add_argument("--lightmaps", action="store_true",
 ap.add_argument("--rug-photo", default="", help="with --lightmaps: the rug's own texture (rug_from_photo.py)")
 ap.add_argument("--lamp", choices=("arc", "hero"), default="arc",
                 help="hero: the bridge lamp of hero_lamp.py, behind the chair, lighting the room")
+ap.add_argument("--table", choices=("drum", "polyhaven"), default="drum",
+                help="polyhaven: Poly Haven's Side Table Tall 01 (CC0; fetch_textures.py --model side_table_tall_01)")
+ap.add_argument("--table-file", default=os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".cache", "polyhaven",
+    "side_table_tall_01", "side_table_tall_01_2k.gltf")))
 ap.add_argument("--chair-faces", type=int, default=40000, help="hero: faces in the decimated chair that ships")
 ap.add_argument("--chair-file", default="", help="model to import for --chair import (.glb/.gltf/.fbx/.blend)")
 ap.add_argument("--chair-yaw", type=float, default=0.0, help="degrees to turn an imported chair so it faces -y")
@@ -232,23 +237,69 @@ for p in chair_parts:
 chair.location = (5.2, -2.4, 0)
 chair.rotation_euler = (0, 0, math.radians(-62))  # faces toward the bookcase and a little toward the viewer
 
+def import_model(name, path, k, at):
+    """A glTF model as one mesh in its own metres, centred and standing on its origin, placed by
+    its object transform (scale k, at (x, y)) so its own UVs and textures come through intact."""
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=path)
+    new = [o for o in bpy.data.objects if o not in before]
+    parts = [o for o in new if o.type == "MESH"]
+    bpy.context.view_layer.update()
+    for o in parts:
+        mw = o.matrix_world.copy()
+        o.parent = None
+        o.matrix_world = mw
+    for o in new:
+        if o.type != "MESH":
+            bpy.data.objects.remove(o)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    if len(parts) > 1:
+        bpy.ops.object.join()
+    o = bpy.context.active_object
+    o.name = name
+    vs = [v.co for v in o.data.vertices]
+    lo = Vector([min(v[i] for v in vs) for i in range(3)])
+    hi = Vector([max(v[i] for v in vs) for i in range(3)])
+    shift = Vector((-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, -lo.z))
+    for v in o.data.vertices:
+        v.co += shift
+    o.scale = (k, k, k)
+    o.location = (at[0], at[1], 0)
+    bpy.context.view_layer.update()
+    return o
+
+
 # ── side table with two candles in glass, between chair and case ──────────
 furn = []
-tx, ty = 3.0, -0.9
-furn.append(cyl("table_top", 0.75, 0.1, (tx, ty, 2.0), M_DARKWOOD, verts=32))
-furn.append(cyl("table_stem", 0.09, 1.9, (tx, ty, 1.0), M_DARKWOOD, verts=12))
-furn.append(cyl("table_foot", 0.45, 0.08, (tx, ty, 0.04), M_DARKWOOD, verts=24))
+table_obj = None
+if args.table == "polyhaven":
+    # Poly Haven "Side Table Tall 01" (CC0), 38 × 38 × 76 cm, square to the wall, clear of the
+    # bookcase's end (x 1.79) and the chair's nearest edge (x 3.46)
+    tx, ty = 2.7, -1.2
+    table_obj = import_model("room_table", args.table_file, 3.11, (tx, ty))
+    top = max((table_obj.matrix_world @ v.co).z for v in table_obj.data.vertices)
+    print(f"[room] table: {len(table_obj.data.polygons)} faces, top at z {top:.2f}")
+else:
+    tx, ty = 3.0, -0.9
+    furn.append(cyl("table_top", 0.75, 0.1, (tx, ty, 2.0), M_DARKWOOD, verts=32))
+    furn.append(cyl("table_stem", 0.09, 1.9, (tx, ty, 1.0), M_DARKWOOD, verts=12))
+    furn.append(cyl("table_foot", 0.45, 0.08, (tx, ty, 0.04), M_DARKWOOD, verts=24))
+    top = 2.05
 for i, (dx, dy, h) in enumerate(((-0.25, 0.1, 0.55), (0.25, -0.15, 0.38))):
     cx, cy = tx + dx, ty + dy
-    furn.append(cyl(f"glass{i}", 0.19, h + 0.15, (cx, cy, 2.05 + (h + 0.15) / 2), M_GLASS, verts=20))
-    furn.append(cyl(f"wax{i}", 0.13, h, (cx, cy, 2.05 + h / 2), M_WAX, verts=16))
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.05, location=(cx, cy, 2.05 + h + 0.07))
+    furn.append(cyl(f"glass{i}", 0.19, h + 0.15, (cx, cy, top + (h + 0.15) / 2), M_GLASS, verts=20))
+    furn.append(cyl(f"wax{i}", 0.13, h, (cx, cy, top + h / 2), M_WAX, verts=16))
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.05, location=(cx, cy, top + h + 0.07))
     f = bpy.context.active_object
     f.name = f"flame{i}"
     f.scale = (1, 1, 2.0)
     f.data.materials.append(M_FLAME)
     furn.append(f)
-    point_light(f"candle{i}", (cx, cy, 2.05 + h + 0.12), 6, (1.0, 0.6, 0.3), radius=0.03)
+    point_light(f"candle{i}", (cx, cy, top + h + 0.12), 6, (1.0, 0.6, 0.3), radius=0.03)
 
 # ── the reading lamp: base behind the chair, arching over it ───────────────
 lamp_parts = []
@@ -531,12 +582,14 @@ if lamp_parts:
         c.matrix_world = mw
     bpy.data.objects.remove(space)
     print(f"[room] hero lamp joined: {len(lamp_obj.data.polygons)} faces")
-meshes = (shell_obj, furn_obj, chair_obj) + ((lamp_obj,) if lamp_obj else ())
+meshes = ((shell_obj, furn_obj, chair_obj) + ((lamp_obj,) if lamp_obj else ())
+          + ((table_obj,) if table_obj else ()))
 for o in meshes:
     if (o is chair_obj and chair_high) or o is lamp_obj:
         unwrap_packed(o)
     else:
-        unwrap(o, reuse=(o is chair_obj and args.chair_own_uv))
+        # the Poly Haven table's own unwrap is non-overlapping: bake into it
+        unwrap(o, reuse=(o is chair_obj and args.chair_own_uv) or o is table_obj)
 
 baked = {}
 for o in meshes:
@@ -544,7 +597,7 @@ for o in meshes:
     res = (args.chair_res or args.res) if o is chair_obj else args.res
     if o is chair_obj and chair_high:
         baked[o.name] = bake_from_high(o, chair_high, res)
-    elif o is lamp_obj:
+    elif o is lamp_obj or o is table_obj:
         baked[o.name] = bake_glossy(o, res)
     else:
         baked[o.name] = bake_to(o, res)
