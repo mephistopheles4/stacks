@@ -269,12 +269,14 @@ if args.lamp == "hero":
     bulb = space.matrix_world @ hero_lamp.BULB
     print(f"[room] hero lamp: {len(lamp_parts)} parts, {sum(len(o.data.polygons) for o in lamp_parts)} faces, "
           f"bulb at {tuple(round(c, 2) for c in bulb)} (three: x {bulb.x:.2f}, y {bulb.z:.2f}, z {-bulb.y:.2f})")
-    point_light("lamp_bulb", tuple(bulb), 1500, (1.0, 0.74, 0.5), radius=0.12)
-    # a warm wash from above, so the whole room reads, not only the pool under the shade
+    # 1500 W clipped the rug's lightmap under the shade (99.9th pct 2.56 against 2.0)
+    point_light("lamp_bulb", tuple(bulb), 1100, (1.0, 0.74, 0.5), radius=0.12)
+    # a warm wash from above, so the whole room reads, not only the pool under the shade;
+    # centred on the bookcase and wider than the room, so its far side is not left dark
     fill = bpy.data.lights.new("room_fill", "AREA")
-    fill.energy, fill.size, fill.color = 450, 12, (1.0, 0.82, 0.62)
+    fill.energy, fill.size, fill.color = 2400, 20, (1.0, 0.82, 0.62)
     fo = bpy.data.objects.new("room_fill", fill)
-    fo.location = (2.0, -5.0, 11.5)
+    fo.location = (0.0, -5.0, 11.5)
     scene.collection.objects.link(fo)
 if args.lamp == "arc":
     lx, ly = 7.0, 0.0

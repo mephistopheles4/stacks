@@ -175,12 +175,13 @@ def materials():
     attr.attribute_name = "glow"
     strength = nt.nodes.new("ShaderNodeMath")
     strength.operation = "MULTIPLY"
-    strength.inputs[1].default_value = 0.55  # brighter washes out to peach under AgX
+    strength.inputs[1].default_value = 0.8
+    # emission only: a diffuse term catches the bulb a hand's width away and bakes out to a
+    # clipped cream; the glass is the light, so its glow alone is what the eye sees.
+    # The colour is linear and the bake stores sRGB, which lifts it: (1, 0.42, 0.12) landed as
+    # peach. This one lands near Tiffany amber, sRGB about (0.9, 0.55, 0.2).
     emit = nt.nodes.new("ShaderNodeEmission")
-    emit.inputs["Color"].default_value = (1.0, 0.42, 0.12, 1)
-    diffuse = nt.nodes.new("ShaderNodeBsdfDiffuse")
-    diffuse.inputs["Color"].default_value = (0.35, 0.12, 0.03, 1)
-    lit = nt.nodes.new("ShaderNodeAddShader")
+    emit.inputs["Color"].default_value = (1.0, 0.3, 0.035, 1)
     through = nt.nodes.new("ShaderNodeBsdfTransparent")
     through.inputs["Color"].default_value = (0.95, 0.55, 0.22, 1)
     path = nt.nodes.new("ShaderNodeLightPath")
@@ -201,10 +202,8 @@ def materials():
     nt.links.new(span.outputs["Result"], glow.inputs[1])
     nt.links.new(glow.outputs[0], strength.inputs[0])
     nt.links.new(strength.outputs[0], emit.inputs["Strength"])
-    nt.links.new(diffuse.outputs[0], lit.inputs[0])
-    nt.links.new(emit.outputs[0], lit.inputs[1])
     nt.links.new(path.outputs["Is Shadow Ray"], mix.inputs["Fac"])
-    nt.links.new(lit.outputs[0], mix.inputs[1])
+    nt.links.new(emit.outputs[0], mix.inputs[1])
     nt.links.new(through.outputs[0], mix.inputs[2])
     nt.links.new(mix.outputs[0], out.inputs["Surface"])
     M["glass"] = m
