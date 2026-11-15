@@ -167,6 +167,8 @@ version: `pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render` is
 the contract, and a defect worth fixing is usually worth a gate that goes red.
 Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+This project is tested with BrowserStack.
+
 The repo also carries optional configuration for a set of
 [engineering skills](https://github.com/mattpocock/skills) under
 [`docs/agents/`](docs/agents/). **They are entirely optional** — nothing in the
