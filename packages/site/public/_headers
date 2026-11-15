@@ -94,3 +94,10 @@
 # `headers` rule in `scripts/lib/public-build.ts` requires this block (spec §3.3).
 /held-covers/*
   Cache-Control: public, max-age=0, must-revalidate
+
+# PROTOTYPE #593: the KTX2 transcoder's worker (room-prototype-593/make_ktx2_worker.mjs). Loaded from
+# its own URL, a dedicated worker takes its CSP from this response, not from the page's. Its embind
+# glue builds functions with `new Function`, so eval is allowed here and only here; it reaches no
+# network (the WebAssembly binary is handed to it by the page) and loads no other script.
+/room-prototype-593/basis/ktx2-worker.js
+  Content-Security-Policy: default-src 'none'; script-src 'unsafe-eval' 'wasm-unsafe-eval'

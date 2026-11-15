@@ -147,16 +147,21 @@ export async function addPrototypeRoom(
   const folder = url.slice(0, url.lastIndexOf('/') + 1);
   const textures = new THREE.TextureLoader(manager);
   // `?tex=etc1s` reads each texture as KTX2 (ETC1S) from `ktx-etc1s/`, transcoded to whichever packed
-  // format the GPU knows by three's basis transcoder (WebAssembly, in a worker started from a blob:
-  // URL); a GPU that knows none gets plain RGBA. They stay packed in GPU memory, about 190 MB for the
-  // room against about 1.5 GB for the WebPs unpacked. NOT the default: the transcoder's embind glue
-  // builds functions with `new Function`, which the site's CSP refuses, and the room drew white.
+  // format the GPU knows by three's basis transcoder (WebAssembly, in a worker of its own, see
+  // `ktx2Loader`); a GPU that knows none gets plain RGBA. They stay packed in GPU memory, about 190 MB
+  // for the room against about 1.5 GB for the WebPs unpacked.
   const codec = new URLSearchParams(location.search).get('tex') ?? 'webp';
   const ktx =
-    renderer && codec === 'etc1s'
-      ? new KTX2Loader(manager).setTranscoderPath(`${folder}basis/`).detectSupport(renderer)
-      : null;
+    renderer && codec === 'etc1s' ? ktx2Loader(manager, `${folder}basis/`, renderer) : null;
+  // The screen lifts once every texture is ON the room, not once its file has arrived: a KTX2 file
+  // still has to go through the transcoder's worker, and the screen faded over a half-dressed room.
   let asked = 0;
+  let settled = 0;
+  let walked = false;
+  const settle = (): void => {
+    settled += 1;
+    if (walked && settled === asked) screen.done();
+  };
   type Slot = 'map' | 'lightMap' | 'aoMap';
   /** Loads `path` into `material[slot]`; `set` tunes the texture once it exists. */
   const texture = (
@@ -176,13 +181,19 @@ export async function addPrototypeRoom(
       return t;
     };
     if (!ktx) {
-      material[slot] = tune(textures.load(folder + path));
+      material[slot] = tune(textures.load(folder + path, settle, undefined, settle));
       return;
     }
-    ktx.load(`${folder}ktx-${codec}/${path.replace(/\.webp$/, '.ktx2')}`, (t) => {
-      material[slot] = tune(t);
-      material.needsUpdate = true;
-    });
+    ktx.load(
+      `${folder}ktx-${codec}/${path.replace(/\.webp$/, '.ktx2')}`,
+      (t) => {
+        material[slot] = tune(t);
+        material.needsUpdate = true;
+        settle();
+      },
+      undefined,
+      settle, // a failed texture still ends its item, so the screen always lifts
+    );
   };
   gltf.scene.traverse((node) => {
     const extras = (node.userData.albedo ? node.userData : node.parent?.userData) as
@@ -258,15 +269,54 @@ export async function addPrototypeRoom(
   });
   draws += addCandleFlames(flames); // after the walk: it adds children to the nodes it found
   scene.add(gltf.scene);
-  // a failed texture still ends its item, so this always comes; the room's files are one origin
-  manager.onLoad = () => screen.done();
-  if (asked === 0) screen.done();
+  // the walk is done: lift the screen now if every texture already settled, else the last settle does
+  walked = true;
+  if (settled === asked) screen.done();
 
   const room = { bytes: buffer.byteLength, loadMs: performance.now() - started, draws, slots };
   window.__room = room;
   window.__roomScene = scene;
   console.info('[room-593]', room);
   return room;
+}
+
+/**
+ * three's KTX2Loader, with its transcoder worker started from `basis/ktx2-worker.js`
+ * (make_ktx2_worker.mjs) rather than from a blob: URL it builds in the page. A blob: worker takes the
+ * page's CSP, and the transcoder's embind glue builds functions with `new Function`, which that policy
+ * refuses: the room drew white. A worker loaded from its own URL takes its policy from its own
+ * response instead (`public/_headers`), so eval is allowed in the worker alone and the page keeps none.
+ */
+function ktx2Loader(
+  manager: THREE.LoadingManager,
+  basis: string,
+  renderer: THREE.WebGLRenderer,
+): KTX2Loader {
+  const loader = new KTX2Loader(manager).detectSupport(renderer);
+  // KTX2Loader's own members, which its types leave out; `load` waits on `init()` before each texture
+  const inner = loader as unknown as {
+    transcoderPending: Promise<void> | null;
+    workerConfig: unknown;
+    workerPool: { setWorkerCreator(create: () => Worker): void };
+    init(): Promise<void>;
+  };
+  inner.init = () => {
+    inner.transcoderPending ??= new THREE.FileLoader(manager)
+      .setResponseType('arraybuffer')
+      .loadAsync(`${basis}basis_transcoder.wasm`)
+      .then((binary) => {
+        inner.workerPool.setWorkerCreator(() => {
+          const worker = new Worker(`${basis}ktx2-worker.js`);
+          const transcoderBinary = (binary as ArrayBuffer).slice(0);
+          worker.postMessage({ type: 'init', config: inner.workerConfig, transcoderBinary }, [
+            transcoderBinary,
+          ]);
+          return worker;
+        });
+      });
+    return inner.transcoderPending;
+  };
+  return loader;
 }
 
 /** The GLB, its bytes counted as they arrive; `total` is 0 when the server sends no length. */

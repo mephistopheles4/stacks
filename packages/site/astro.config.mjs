@@ -85,10 +85,11 @@ export default defineConfig({
         // makes no request here; the policy is site-wide because Astro emits
         // one.
         'frame-src https://challenges.cloudflare.com',
-        // PROTOTYPE #593, KTX2 TRIAL: three's KTX2Loader starts its basis
-        // transcoder as a worker from a blob: URL it builds itself, which
-        // `default-src 'none'` refuses. A further widening, for the spec to weigh.
-        'worker-src blob:',
+        // PROTOTYPE #593, KTX2: the basis transcoder runs in a worker loaded
+        // from its own same-origin file (room-prototype-593.ts, `ktx2Loader`),
+        // which `default-src 'none'` refuses. Not blob:, which would hand the
+        // worker this page's policy; its own lives in `public/_headers`.
+        "worker-src 'self'",
       ],
       scriptDirective: {
         // static.cloudflareinsights.com is Cloudflare Web Analytics, injected
