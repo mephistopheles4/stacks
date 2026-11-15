@@ -35,6 +35,8 @@ ap.add_argument("--chair-res", type=int, default=0, help="the chair's own atlas 
 ap.add_argument("--lightmaps", action="store_true",
                 help="floor and rug: bake light only, and let the page lay their sharp textures over it")
 ap.add_argument("--rug-photo", default="", help="with --lightmaps: the rug's own texture (rug_from_photo.py)")
+ap.add_argument("--lamp", choices=("arc", "hero"), default="arc",
+                help="hero: the bridge lamp of hero_lamp.py, behind the chair, lighting the room")
 ap.add_argument("--chair-faces", type=int, default=40000, help="hero: faces in the decimated chair that ships")
 ap.add_argument("--chair-file", default="", help="model to import for --chair import (.glb/.gltf/.fbx/.blend)")
 ap.add_argument("--chair-yaw", type=float, default=0.0, help="degrees to turn an imported chair so it faces -y")
@@ -249,32 +251,58 @@ for i, (dx, dy, h) in enumerate(((-0.25, 0.1, 0.55), (0.25, -0.15, 0.38))):
     point_light(f"candle{i}", (cx, cy, 2.05 + h + 0.12), 6, (1.0, 0.6, 0.3), radius=0.03)
 
 # ── the reading lamp: base behind the chair, arching over it ───────────────
-lx, ly = 7.0, 0.0
-bulb = Vector((3.9, -1.9, 4.4))
-furn.append(cyl("lamp_foot", 0.5, 0.1, (lx, ly, 0.05), M_BRASS, verts=24))
-furn.append(cyl("lamp_pole", 0.06, 5.0, (lx, ly, 2.55), M_BRASS, verts=12))
-# arc: a chain of short segments from the pole top to above the bulb
-top = Vector((lx, ly, 5.05))
-end = bulb + Vector((0, 0, 0.75))
-ctrl = Vector((lx - 0.6, ly - 0.4, 6.0))
-prev = top
-for i in range(1, 11):
-    t = i / 10
-    pt = (1 - t) ** 2 * top + 2 * (1 - t) * t * ctrl + t ** 2 * end
-    seg = pt - prev
-    mid = (pt + prev) / 2
-    c = cyl(f"arc{i}", 0.05, seg.length + 0.03, mid, M_BRASS, verts=10)
-    c.rotation_mode = "QUATERNION"
-    c.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(seg.normalized())
-    furn.append(c)
-    prev = pt
-bpy.ops.mesh.primitive_cone_add(radius1=0.85, radius2=0.3, depth=0.8, location=(bulb.x, bulb.y, bulb.z + 0.25), end_fill_type="NOTHING")
-shade = bpy.context.active_object
-shade.name = "shade"
-shade.modifiers.new("solid", "SOLIDIFY").thickness = 0.03
-shade.data.materials.append(M_SHADE)
-furn.append(shade)
-point_light("lamp_bulb", tuple(bulb), 900, (1.0, 0.72, 0.45), radius=0.25)
+lamp_parts = []
+if args.lamp == "hero":
+    import hero_lamp
+
+    # behind the chair's back and toward the wall, the arm reaching over the seat
+    space = bpy.data.objects.new("lamp_space", None)
+    k = 3.11  # scene units per metre
+    space.scale = (k, k, k)
+    space.location = (6.67, -0.94, 0)
+    space.rotation_euler = (0, 0, math.radians(-45.4))
+    scene.collection.objects.link(space)
+    lamp_parts = hero_lamp.build()
+    for o in lamp_parts:
+        o.parent = space
+    bpy.context.view_layer.update()
+    bulb = space.matrix_world @ hero_lamp.BULB
+    print(f"[room] hero lamp: {len(lamp_parts)} parts, {sum(len(o.data.polygons) for o in lamp_parts)} faces, "
+          f"bulb at {tuple(round(c, 2) for c in bulb)} (three: x {bulb.x:.2f}, y {bulb.z:.2f}, z {-bulb.y:.2f})")
+    point_light("lamp_bulb", tuple(bulb), 1500, (1.0, 0.74, 0.5), radius=0.12)
+    # a warm wash from above, so the whole room reads, not only the pool under the shade
+    fill = bpy.data.lights.new("room_fill", "AREA")
+    fill.energy, fill.size, fill.color = 450, 12, (1.0, 0.82, 0.62)
+    fo = bpy.data.objects.new("room_fill", fill)
+    fo.location = (2.0, -5.0, 11.5)
+    scene.collection.objects.link(fo)
+if args.lamp == "arc":
+    lx, ly = 7.0, 0.0
+    bulb = Vector((3.9, -1.9, 4.4))
+    furn.append(cyl("lamp_foot", 0.5, 0.1, (lx, ly, 0.05), M_BRASS, verts=24))
+    furn.append(cyl("lamp_pole", 0.06, 5.0, (lx, ly, 2.55), M_BRASS, verts=12))
+    # arc: a chain of short segments from the pole top to above the bulb
+    top = Vector((lx, ly, 5.05))
+    end = bulb + Vector((0, 0, 0.75))
+    ctrl = Vector((lx - 0.6, ly - 0.4, 6.0))
+    prev = top
+    for i in range(1, 11):
+        t = i / 10
+        pt = (1 - t) ** 2 * top + 2 * (1 - t) * t * ctrl + t ** 2 * end
+        seg = pt - prev
+        mid = (pt + prev) / 2
+        c = cyl(f"arc{i}", 0.05, seg.length + 0.03, mid, M_BRASS, verts=10)
+        c.rotation_mode = "QUATERNION"
+        c.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(seg.normalized())
+        furn.append(c)
+        prev = pt
+    bpy.ops.mesh.primitive_cone_add(radius1=0.85, radius2=0.3, depth=0.8, location=(bulb.x, bulb.y, bulb.z + 0.25), end_fill_type="NOTHING")
+    shade = bpy.context.active_object
+    shade.name = "shade"
+    shade.modifiers.new("solid", "SOLIDIFY").thickness = 0.03
+    shade.data.materials.append(M_SHADE)
+    furn.append(shade)
+    point_light("lamp_bulb", tuple(bulb), 900, (1.0, 0.72, 0.45), radius=0.25)
 
 # ── slots: what the room tells the page about where things go ──────────────
 def slot(name, loc, facing_deg, width, depth, height_limit):
@@ -422,7 +450,18 @@ def bake_from_high(low, high, res):
     return img
 
 
-def bake_to(o, res, also_select=()):
+def bake_glossy(o, res):
+    """The hero lamp: bronze and brass read by their glints, so glossy is kept, seen from the
+    page's camera, as bake_from_high does for the chair."""
+    bake = scene.render.bake
+    bake.view_from = "ACTIVE_CAMERA"
+    scene.camera = scene.camera or site_camera()
+    img = bake_to(o, res, glossy=True)
+    bake.view_from = "ABOVE_SURFACE"
+    return img
+
+
+def bake_to(o, res, also_select=(), glossy=False):
     img = bpy.data.images.new(f"{o.name}_bake", res, res)
     for m in o.data.materials:
         nt = m.node_tree
@@ -440,7 +479,7 @@ def bake_to(o, res, also_select=()):
     bake.use_pass_indirect = True
     bake.use_pass_diffuse = True
     if not bake.use_selected_to_active:
-        bake.use_pass_glossy = False  # view-dependent; a lightmap must not carry it
+        bake.use_pass_glossy = glossy  # view-dependent; only a seen-from-the-camera bake carries it
     bake.use_pass_transmission = False
     bake.use_pass_emit = True
     bake.margin = 8
@@ -480,9 +519,19 @@ if args.chair == "hero":
     chair_high.name = "room_chair_high"
     chair_obj = make_low(chair_high, args.chair_faces)
     print(f"[room] hero chair decimated {len(chair_high.data.polygons)} → {len(chair_obj.data.polygons)} faces")
-meshes = (shell_obj, furn_obj, chair_obj)
+lamp_obj = None
+if lamp_parts:
+    lamp_obj = join_in_place("room_lamp", lamp_parts)  # metres, scaled by its transform
+    space = bpy.data.objects["lamp_space"]
+    for c in space.children:
+        mw = c.matrix_world.copy()
+        c.parent = None
+        c.matrix_world = mw
+    bpy.data.objects.remove(space)
+    print(f"[room] hero lamp joined: {len(lamp_obj.data.polygons)} faces")
+meshes = (shell_obj, furn_obj, chair_obj) + ((lamp_obj,) if lamp_obj else ())
 for o in meshes:
-    if o is chair_obj and chair_high:
+    if (o is chair_obj and chair_high) or o is lamp_obj:
         unwrap_packed(o)
     else:
         unwrap(o, reuse=(o is chair_obj and args.chair_own_uv))
@@ -493,6 +542,8 @@ for o in meshes:
     res = (args.chair_res or args.res) if o is chair_obj else args.res
     if o is chair_obj and chair_high:
         baked[o.name] = bake_from_high(o, chair_high, res)
+    elif o is lamp_obj:
+        baked[o.name] = bake_glossy(o, res)
     else:
         baked[o.name] = bake_to(o, res)
     print(f"[room] baked {o.name} ({len(o.data.polygons)} faces) at {res}² / {args.samples} spp in {time.time() - t0:.1f}s")

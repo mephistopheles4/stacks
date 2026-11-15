@@ -20,8 +20,9 @@ export function roomMode(params: URLSearchParams = new URLSearchParams(location.
   return params.get('room') === 'keep' ? 'keep' : 'match';
 }
 
-/** The room's lamp bulb, in three's coordinates (Blender (3.9, -1.9, 4.4)). */
-const BULB = { x: 3.9, y: 4.4, z: 1.9 };
+/** The hero lamp's bulb, in three's coordinates (Blender (5.31, -2.28, 4.85), printed by
+ * `build_room.py --lamp hero`). */
+const BULB = { x: 5.31, y: 4.85, z: 2.28 };
 
 /**
  * The light that goes with this room — the brief's "light settings live with
