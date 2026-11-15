@@ -86,26 +86,20 @@ def _wall(scene, name, face_x, inward, y0, y1, top, paper):
     trim.parent = root
     bev = trim.modifiers.new("soft", "BEVEL")
     bev.width, bev.segments, bev.limit_method = 0.012, 3, "ANGLE"
-    # the painted dado and the paper above: quads 1 mm proud of the old wall's face
+    # the painted dado: a quad 1 mm proud of the old wall's face. The paper above it is not made
+    # here: build_room.py makes it as it makes the back wall's (lightmaps.side_wallpaper), a sharp
+    # tiled repeat with its light baked apart, from what `scene["side_paper"]` records
     z0 = DADO + 0.08
     me = bpy.data.meshes.new(name + "_paper")
-    me.from_pydata([(0, 0.003, 0), (L, 0.003, 0), (L, 0.003, z0), (0, 0.003, z0),
-                    (0, 0.003, z0), (L, 0.003, z0), (L, 0.003, top), (0, 0.003, top)], [],
-                   [(0, 3, 2, 1), (4, 7, 6, 5)])
-    uv = me.uv_layers.new(name="UVMap")
-    for poly in me.polygons:
-        for li in poly.loop_indices:
-            co = me.vertices[me.loops[li].vertex_index].co
-            uv.data[li].uv = (co.x / TILE[0], (co.z - z0) / TILE[1])
+    me.from_pydata([(0, 0.003, 0), (L, 0.003, 0), (L, 0.003, z0), (0, 0.003, z0)], [], [(0, 3, 2, 1)])
+    me.uv_layers.new(name="UVMap")
     me.materials.append(_principled("side_dado_paint", WALL_TINT, 0.9))
-    me.materials.append(paper)
-    me.polygons[1].material_index = 1
     o = bpy.data.objects.new(name + "_paper", me)
     scene.collection.objects.link(o)
     o.parent = root
     # the faces must point into the room
     me.update()
-    world_n = (root.matrix_world.to_3x3() @ me.polygons[1].normal)
+    world_n = (root.matrix_world.to_3x3() @ me.polygons[0].normal)
     if world_n.x * inward < 0:
         for poly in me.polygons:
             poly.flip()
@@ -119,5 +113,11 @@ def dress_side_walls(scene, willow_path, left_x=-7.89, right_x=9.89, y0=-10.0, y
         if o:
             o.data.materials.clear()
             o.data.materials.append(_principled("side_dado_paint", WALL_TINT, 0.9))
+    # where each side's paper goes, 1 mm proud of the old wall's face: (name, face x, inward, y0, y1,
+    # z0, top), read by build_room.py
+    z0 = DADO + 0.08
+    import json  # an ID property holds no mixed list, so the records go as JSON
+    scene["side_paper"] = json.dumps([["room_wallpaper_left", left_x + 0.003, 1, y0, y1, z0, top],
+                                      ["room_wallpaper_right", right_x - 0.003, -1, y0, y1, z0, top]])
     return [_wall(scene, "left_wall_dress", left_x, 1, y0, y1, top, paper),
             _wall(scene, "right_wall_dress", right_x, -1, y0, y1, top, paper)]

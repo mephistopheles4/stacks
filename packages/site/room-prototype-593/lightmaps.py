@@ -107,6 +107,28 @@ def wallpaper(wall_y, x_span, z0, z1, scan, tile_m, tint, material, out_dir):
     return o, {"albedo": rel, "tint": list(tint)}
 
 
+def side_wallpaper(name, face_x, inward, y_span, z0, z1, scan, tile_m, tint, material, out_dir):
+    """A side wall's paper, made as the back wall's is (`wallpaper`): one quad in the plane x =
+    face_x facing the room (+x when `inward` > 0), UV0 tiling the paper at its real size from the
+    same row height as the back wall's, so the rows meet at the corners, read left to right from
+    the room; UV1 the quad itself, for the light bake."""
+    y0, y1 = y_span
+    me = bpy.data.meshes.new(name)
+    quad = [(face_x, y0, z0), (face_x, y1, z0), (face_x, y1, z1), (face_x, y0, z1)]
+    me.from_pydata(quad, [], [(0, 1, 2, 3) if inward > 0 else (3, 2, 1, 0)])
+    o = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(o)
+    me.uv_layers.new(name="UVMap")
+    me.uv_layers.new(name="bake")
+    tw, th = tile_m[0] * UNITS_PER_M, tile_m[1] * UNITS_PER_M
+    along = 1.0 if inward > 0 else -1.0  # facing -x the room's right is +y; facing +x it is -y
+    _set_uv(o, "UVMap", lambda co: (along * co.y / tw, (co.z - z0) / th))
+    _set_uv(o, "bake", lambda co: ((co.y - y0) / (y1 - y0), (co.z - z0) / (z1 - z0)))
+    o.data.materials.append(_image_material(material, name, scan, tint, rough=0.85))
+    rel = "tex/" + os.path.splitext(os.path.basename(scan))[0] + ".webp"
+    return o, {"albedo": rel, "tint": list(tint)}
+
+
 def save_image(img, path, raw=False, quality=85):
     """JPEG or WebP, by the path's extension. The room ships WebP: about a third smaller than
     JPEG at the same look, and a plain same-origin file the site's CSP allows (an image packed

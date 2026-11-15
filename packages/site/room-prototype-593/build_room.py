@@ -454,6 +454,12 @@ if args.dress:
         slots.remove(stacks)
         bpy.data.objects.remove(stacks)
     slots += made
+    # a dressing's side walls take their paper as the back wall does: tiled sharp, light apart
+    if papered:
+        import json
+        for name, face_x, inward, y0, y1, z0, z1 in json.loads(scene.get("side_paper", "[]")):
+            lit.append(lightmaps.side_wallpaper(name, face_x, inward, (y0, y1), z0, z1, args.wallpaper,
+                                                args.wallpaper_size, WALLPAPER_TINT, material, out_dir))
 
 
 # ── bake ───────────────────────────────────────────────────────────────────
@@ -786,7 +792,7 @@ for o, extras in lit:  # while the proxy still casts the bookcase's shadow
     t0 = time.time()
     part = o.name.removeprefix("room_")
     rel = f"light/{os.path.splitext(os.path.basename(args.out))[0]}-{part}.webp"
-    scale = 4.0 if part == "wallpaper" else 2.0  # the wall stands beside the lamp
+    scale = 4.0 if part.startswith("wallpaper") else 2.0  # the back wall stands beside the lamp
     if scale != 2.0:
         extras["light_scale"] = scale
     lightmaps.bake_light(o, 4096 if part == "floor" else 2048, os.path.join(out_dir, rel), scale)
