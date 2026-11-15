@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
-import { toRows, type ShelfBook } from './books.ts';
+import { toRows, wishlistBooks, type ShelfBook } from './books.ts';
 import {
   LIFT,
   makeBackboardShade,
@@ -26,6 +26,8 @@ import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
 import { addPrototypeRoom, frameRoom, roomMode } from './room-prototype-593.ts';
+import { ABANDONED_ROWS, abandonedShelf, standAt } from './room-abandoned-593.ts';
+import { layWishlist } from './room-wishlist-593.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
@@ -538,7 +540,12 @@ function assembleShelf(
   const fog = new THREE.Fog(settings.scene.background);
   scene.fog = settings.scene.fog.enabled ? fog : null;
 
-  const rows = toRows(books, settings.books);
+  // PROTOTYPE #593: in the room the abandoned books leave this shelf for a bookcase of their own
+  const inRoom = roomMode() !== 'off';
+  const rows = toRows(
+    inRoom ? books.filter((book) => book.status !== 'abandoned') : books,
+    settings.books,
+  );
   const rowCount = rowsForBookcase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 
@@ -586,8 +593,33 @@ function assembleShelf(
   scene.add(bookcase.group);
   const lights = addLighting(scene, unitHeight, settings);
   // PROTOTYPE #593
-  if (roomMode() !== 'off') {
-    void addPrototypeRoom(scene);
+  if (inRoom) {
+    // the wishlist lies on the room's floor stacks, made as the shelf makes a book; cover up, so
+    // its depth is its cover's width
+    void addPrototypeRoom(scene).then((room) => {
+      layWishlist(scene, room.slots, wishlistBooks(books, settings.books), (entry) =>
+        buildBook(entry, entry.coverWidth, COVERS, false, settings),
+      );
+      // the abandoned books' bookcase: this one built again, against the right wall, locked at two
+      // rows and spine out, and the abandoned books on it as the shelf places its own. Not painted,
+      // since its painters would paint at the shelf's place, and not yet clickable: the picker took
+      // its books at mount. It neither casts nor receives, so the shadow map keeps its one reader (G61)
+      const abandoned = abandonedShelf(books, settings.books);
+      if (abandoned.left > 0) {
+        console.warn(
+          `[room-593] ${abandoned.left} abandoned book(s) past two rows stay off the bookcase`,
+        );
+      }
+      const spare = buildShelf(ABANDONED_ROWS, settings);
+      const unpainted = { ...settings, shadows: { ...settings.shadows, painted: false } };
+      const shelved = buildBooks(scene, placeShelf(abandoned.rows), COVERS, new Map(), unpainted);
+      for (const { group } of shelved.placed) spare.group.add(group);
+      spare.group.traverse((part) => {
+        part.castShadow = false;
+        part.receiveShadow = false;
+      });
+      if (standAt(spare.group, room.slots, 'slot_abandoned')) scene.add(spare.group);
+    });
     window.__roomControls = controls; // the owner frames the opening view by hand; read it back
   }
 

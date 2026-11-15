@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
-import { MAX_HEIGHT, MIN_HEIGHT, toRows, type ShelfRow } from './books.ts';
+import { MAX_HEIGHT, MIN_HEIGHT, toRows, wishlistBooks, type ShelfRow } from './books.ts';
 import { SHELF, USABLE_WIDTH } from './bookcase.ts';
 import { rowExtent } from './placement.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
@@ -119,6 +119,23 @@ describe('toRows', () => {
     ]);
 
     expect(rows.flatMap((row) => row.books).map((entry) => entry.book.id)).toEqual(['owned']);
+  });
+
+  it('hands the room only the wishlist, in id order, made at the shelf scale (#593 prototype)', () => {
+    const wanted = wishlistBooks(
+      [
+        book('owned'),
+        book('zeta', { status: 'wishlist', finished: undefined }),
+        book('alpha', { status: 'wishlist', finished: undefined }),
+      ],
+      DEFAULT_SETTINGS.books,
+    );
+
+    expect(wanted.map((entry) => entry.book.id)).toEqual(['alpha', 'zeta']);
+    for (const entry of wanted) {
+      expect(entry.height).toBeGreaterThanOrEqual(MIN_HEIGHT);
+      expect(entry.height).toBeLessThanOrEqual(MAX_HEIGHT);
+    }
   });
 
   it('puts a book you are reading first, ahead of everything finished', () => {

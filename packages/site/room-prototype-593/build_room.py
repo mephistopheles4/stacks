@@ -446,6 +446,14 @@ if args.dress:
     _dress = {"__name__": "dress", "__file__": os.path.abspath(args.dress)}
     exec(open(args.dress, encoding="utf-8").read(), _dress)
     dressed = _dress["dress"](scene, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")))
+    # a dressing's own slots go to the page too; its wishlist slots on the floor's stacks replace
+    # the stand-in's one
+    made = [o for o in scene.objects if o.name.startswith("slot_") and o not in slots]
+    if any(o.name.startswith("slot_wishlist_") for o in made):
+        stacks = next(o for o in slots if o.name == "slot_stacks")
+        slots.remove(stacks)
+        bpy.data.objects.remove(stacks)
+    slots += made
 
 
 # ── bake ───────────────────────────────────────────────────────────────────

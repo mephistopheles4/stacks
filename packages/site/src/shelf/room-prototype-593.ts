@@ -18,7 +18,12 @@ import type { SettingsPatch } from './shelf-settings.ts';
 
 export type RoomMode = 'off' | 'match' | 'keep';
 
-export function roomMode(params: URLSearchParams = new URLSearchParams(location.search)): RoomMode {
+// no `location` outside a page (the mount tests): no room
+export function roomMode(
+  params: URLSearchParams = new URLSearchParams(
+    typeof location === 'undefined' ? '' : location.search,
+  ),
+): RoomMode {
   if (!params.has('room')) return 'off';
   return params.get('room') === 'keep' ? 'keep' : 'match';
 }
@@ -204,9 +209,12 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
     } else if (node.name.startsWith('flame_')) {
       flames.push(node);
     } else if (node.name.startsWith('slot_')) {
+      // the turn about y read off where +x went: an Euler's y alone folds any turn past a quarter
+      // into a half-turn about x and z, and the floor's stacks are turned every which way
+      const along = new THREE.Vector3(1, 0, 0).applyQuaternion(node.quaternion);
       slots[node.name] = {
         position: node.position.toArray(),
-        rotationY: node.rotation.y,
+        rotationY: Math.atan2(-along.z, along.x),
         ...node.userData,
       };
     }

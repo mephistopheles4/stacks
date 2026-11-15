@@ -143,6 +143,18 @@ export function toRows(books: readonly LibraryBook[], settings: BooksSettings): 
 }
 
 /**
+ * PROTOTYPE #593: the wishlist, for the room's floor stacks — the books `toRows` leaves off the
+ * shelf because you do not own them, made as the shelf makes a book so they lie at its scale.
+ * In id order, so the same library deals the same books to the same stacks.
+ */
+export function wishlistBooks(books: readonly LibraryBook[], settings: BooksSettings): ShelfBook[] {
+  return books
+    .filter((book) => book.status === 'wishlist')
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((book) => ({ ...toShelfBook(book, settings), faceOut: false }));
+}
+
+/**
  * Whether these books, placed as this row, stay inside the shelf.
  *
  * **The packer stopped estimating.** It used to price each book with

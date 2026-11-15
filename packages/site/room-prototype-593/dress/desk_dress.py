@@ -177,7 +177,9 @@ def dress_floor_books(scene, repo, seed=FLOOR_SEED):
     """Stacks of Hobu's books on the floor, at the bookcase's scale, laid one book at a time as a
     person stacks them: the bigger books low, every spine facing one of the stack's two ways, each a
     degree or two and a centimetre off the one below, and now and then one crosswise. Seeded, so a
-    rebuild lays the same stacks. Returns the pivots, floor_books_<n>."""
+    rebuild lays the same stacks. On each stack's top book stands `slot_wishlist_<n>`, where the page
+    lays the wishlist: turned a quarter from that book, so the slot's x runs along its long side, the
+    way a book lying flat on the page has its height along x. Returns the pivots, floor_books_<n>."""
     hobu = os.path.join(repo, ".cache", "sketchfab", "vintage_desk_assets", "vintage_desk_assets.glb")
     src = _keep(_import(hobu, scene), FLOOR_KINDS)
     _darken(src)
@@ -210,6 +212,13 @@ def dress_floor_books(scene, repo, seed=FLOOR_SEED):
             b.matrix_parent_inverse = Matrix.Translation((-x, -y, 0.0))  # cancels the pivot: the basis is the world
             b.matrix_basis = Matrix.Translation(at) @ Matrix.Rotation(a, 4, "Z") @ Matrix.Scale(scale, 4) @ Matrix.Translation(-foot)
             z += (hi.z - lo.z) * scale
+        slot = bpy.data.objects.new(f"slot_wishlist_{n}", None)
+        slot.empty_display_type = "ARROWS"
+        slot.location = (at.x, at.y, z)
+        slot.rotation_euler = (0.0, 0.0, a + math.pi / 2)
+        slot["width"] = (hi.y - lo.y) * scale
+        slot["depth"] = (hi.x - lo.x) * scale
+        scene.collection.objects.link(slot)
         roots.append(piv)
     for o in src:
         bpy.data.objects.remove(o, do_unlink=True)
