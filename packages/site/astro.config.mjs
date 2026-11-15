@@ -85,6 +85,10 @@ export default defineConfig({
         // makes no request here; the policy is site-wide because Astro emits
         // one.
         'frame-src https://challenges.cloudflare.com',
+        // PROTOTYPE #593, KTX2 TRIAL: three's KTX2Loader starts its basis
+        // transcoder as a worker from a blob: URL it builds itself, which
+        // `default-src 'none'` refuses. A further widening, for the spec to weigh.
+        'worker-src blob:',
       ],
       scriptDirective: {
         // static.cloudflareinsights.com is Cloudflare Web Analytics, injected

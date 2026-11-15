@@ -11,6 +11,7 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { FOV, type Framing } from './framing.ts';
 import { addCandleFlames } from './room-flames-593.ts';
@@ -112,7 +113,11 @@ declare global {
 }
 
 /** Fetches and adds the room; resolves once it is in the scene. */
-export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promise<LoadedRoom> {
+export async function addPrototypeRoom(
+  scene: THREE.Scene,
+  exposure = 1,
+  renderer?: THREE.WebGLRenderer,
+): Promise<LoadedRoom> {
   const started = performance.now();
   // `?chair=blocks|scripted|polyhaven|trellis|hero` picks which baked room to load.
   const chair = new URLSearchParams(location.search).get('chair') ?? 'blocks';
@@ -141,15 +146,42 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
   const flames: THREE.Object3D[] = [];
   const folder = url.slice(0, url.lastIndexOf('/') + 1);
   const textures = new THREE.TextureLoader(manager);
+  // Textures are KTX2 (ETC1S) by default, read from `ktx-etc1s/` and transcoded to whichever packed
+  // format the GPU knows by three's basis transcoder (WebAssembly, in a worker started from a blob:
+  // URL); a GPU that knows none gets plain RGBA. They stay packed in GPU memory, about 190 MB for the
+  // room against about 1.5 GB for the WebPs unpacked. `?tex=webp` loads the WebPs, to compare.
+  const codec = new URLSearchParams(location.search).get('tex') ?? 'etc1s';
+  const ktx =
+    renderer && codec === 'etc1s'
+      ? new KTX2Loader(manager).setTranscoderPath(`${folder}basis/`).detectSupport(renderer)
+      : null;
   let asked = 0;
-  const texture = (path: string, repeat: boolean): THREE.Texture => {
+  type Slot = 'map' | 'lightMap' | 'aoMap';
+  /** Loads `path` into `material[slot]`; `set` tunes the texture once it exists. */
+  const texture = (
+    material: THREE.MeshBasicMaterial,
+    slot: Slot,
+    path: string,
+    repeat: boolean,
+    set: (t: THREE.Texture) => void = () => undefined,
+  ): void => {
     asked += 1;
-    const t = textures.load(folder + path);
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.flipY = false; // the UVs come through glTF, which counts v from the top
-    t.anisotropy = 16;
-    if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    return t;
+    const tune = (t: THREE.Texture): THREE.Texture => {
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.flipY = false; // the UVs come through glTF, which counts v from the top
+      t.anisotropy = 16;
+      if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      set(t);
+      return t;
+    };
+    if (!ktx) {
+      material[slot] = tune(textures.load(folder + path));
+      return;
+    }
+    ktx.load(`${folder}ktx-${codec}/${path.replace(/\.webp$/, '.ktx2')}`, (t) => {
+      material[slot] = tune(t);
+      material.needsUpdate = true;
+    });
   };
   gltf.scene.traverse((node) => {
     const extras = (node.userData.albedo ? node.userData : node.parent?.userData) as
@@ -166,26 +198,26 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
       // Light-only bake (lightmaps.py): the sharp texture on UV0, the soft light on UV1,
       // stored at 1 / light_scale (half, or a quarter beside the lamp); MeshBasicMaterial
       // divides a light map by PI.
-      const lightMap = texture(extras.lightmap, false);
-      lightMap.channel = 1;
       const [r = 1, g = 1, b = 1] = extras.tint ?? [];
-      // the rug's pile grain (rug.py): a tiling occlusion finer than the photograph, on UV0
-      // with its own repeat; its average darkening is given back by the tint
-      let aoMap: THREE.Texture | null = null;
-      if (extras.pile) {
-        aoMap = texture(extras.pile, true);
-        aoMap.colorSpace = THREE.NoColorSpace;
-        const [ru = 1, rv = 1] = extras.pile_repeat ?? [];
-        aoMap.repeat.set(ru, rv);
-      }
       (node.material as THREE.Material).dispose();
-      node.material = new THREE.MeshBasicMaterial({
-        map: texture(extras.albedo, true),
-        lightMap,
+      const material = new THREE.MeshBasicMaterial({
         lightMapIntensity: (extras.light_scale ?? 2) * Math.PI,
-        aoMap,
         color: new THREE.Color(r * exposure, g * exposure, b * exposure),
       });
+      node.material = material;
+      texture(material, 'map', extras.albedo, true);
+      texture(material, 'lightMap', extras.lightmap, false, (t) => {
+        t.channel = 1;
+      });
+      // the rug's pile grain (rug.py): a tiling occlusion finer than the photograph, on UV0
+      // with its own repeat; its average darkening is given back by the tint
+      if (extras.pile) {
+        const [ru = 1, rv = 1] = extras.pile_repeat ?? [];
+        texture(material, 'aoMap', extras.pile, true, (t) => {
+          t.colorSpace = THREE.NoColorSpace;
+          t.repeat.set(ru, rv);
+        });
+      }
       node.castShadow = false;
       node.receiveShadow = false;
       draws += 1;
@@ -196,15 +228,16 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
       // `texture` sets the anisotropy: seen at a glancing angle, a mip chosen for the blurrier
       // axis smears the leather's grain into streaks along the other.
       const baked = (node.userData.baked ?? node.parent?.userData.baked) as string | undefined;
-      const map = baked ? texture(baked, false) : old.map;
-      if (map && !baked) {
-        map.colorSpace = THREE.SRGBColorSpace;
-        map.anisotropy = 16;
-      }
-      node.material = new THREE.MeshBasicMaterial({
-        map,
+      const material = new THREE.MeshBasicMaterial({
+        map: baked ? null : old.map,
         color: new THREE.Color(exposure, exposure, exposure),
       });
+      if (baked) texture(material, 'map', baked, false);
+      else if (old.map) {
+        old.map.colorSpace = THREE.SRGBColorSpace;
+        old.map.anisotropy = 16;
+      }
+      node.material = material;
       old.dispose();
       node.castShadow = false;
       node.receiveShadow = false;

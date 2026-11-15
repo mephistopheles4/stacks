@@ -596,7 +596,7 @@ function assembleShelf(
   if (inRoom) {
     // the wishlist lies on the room's floor stacks, made as the shelf makes a book; cover up, so
     // its depth is its cover's width
-    void addPrototypeRoom(scene).then((room) => {
+    void addPrototypeRoom(scene, 1, renderer).then((room) => {
       layWishlist(scene, room.slots, wishlistBooks(books, settings.books), (entry) =>
         buildBook(entry, entry.coverWidth, COVERS, false, settings),
       );
