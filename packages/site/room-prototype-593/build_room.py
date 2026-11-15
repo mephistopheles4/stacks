@@ -17,6 +17,7 @@ Three empties mark the slots the brief's comments ask for.
 """
 import argparse
 import math
+import os
 import sys
 
 import bpy
@@ -31,6 +32,9 @@ ap.add_argument("--rows", type=int, default=4)
 ap.add_argument("--save-blend", default="")
 ap.add_argument("--chair", choices=("blocks", "scripted", "import", "hero"), default="blocks")
 ap.add_argument("--chair-res", type=int, default=0, help="the chair's own atlas size (default: --res)")
+ap.add_argument("--lightmaps", action="store_true",
+                help="floor and rug: bake light only, and let the page lay their sharp textures over it")
+ap.add_argument("--rug-photo", default="", help="with --lightmaps: the rug's own texture (rug_from_photo.py)")
 ap.add_argument("--chair-faces", type=int, default=40000, help="hero: faces in the decimated chair that ships")
 ap.add_argument("--chair-file", default="", help="model to import for --chair import (.glb/.gltf/.fbx/.blend)")
 ap.add_argument("--chair-yaw", type=float, default=0.0, help="degrees to turn an imported chair so it faces -y")
@@ -38,7 +42,7 @@ ap.add_argument("--chair-height", type=float, default=3.8, help="height an impor
 ap.add_argument("--chair-own-uv", action="store_true", help="bake an imported single-mesh chair into its own unwrap, not a new one")
 ap.add_argument("--chair-recolour", action="store_true", help="paint an imported chair's fabric the room's red")
 args = ap.parse_args(argv)
-sys.path.insert(0, __import__("os").path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(__file__))
 
 ROW_HEIGHT = 1.12
 CASE_W = 3.4 + 0.09 * 2
@@ -195,7 +199,19 @@ shell = []
 shell.append(box("floor", (34, 22, 0.1), (0, WALL_Y - 11, -0.05), M_FLOOR))
 shell.append(box("wall", (34, 0.1, 12), (0, WALL_Y + 0.05, 6), M_WALL))
 shell.append(box("skirting", (34, 0.12, 0.45), (0, WALL_Y - 0.06, 0.225), M_SKIRT, bevel=0.02))
-shell.append(box("rug", (8.5, 5.5, 0.04), (2.2, -3.6, 0.02), M_RUG, bevel=0.015, rot=(0, 0, math.radians(-6))))
+lit = []  # (object, albedo file, tint): light-only bakes, textured on the page
+rug = None
+if args.lightmaps:
+    import lightmaps
+
+    out_dir = os.path.dirname(os.path.abspath(args.out))
+    floor = shell.pop(0)
+    lit.append(lightmaps.floor(floor, WALL_Y, material, out_dir))
+    if args.rug_photo:
+        rug = box("rug", lightmaps.RUG_SIZE, (2.2, -3.6, 0.02), M_RUG, bevel=0.015, rot=(0, 0, math.radians(-6)))
+        lit.append(lightmaps.rug(rug, args.rug_photo, material, out_dir, (2.2, -3.6), math.radians(-6)))
+if rug is None:
+    shell.append(box("rug", (8.5, 5.5, 0.04), (2.2, -3.6, 0.02), M_RUG, bevel=0.015, rot=(0, 0, math.radians(-6))))
 
 # The bookcase stand-in: casts the contact shadow during the bake, then goes.
 proxy = box("bookcase_proxy", (CASE_W, CASE_D, CASE_H), (0, 0, CASE_H / 2), M_PROXY)
@@ -482,6 +498,14 @@ for o in meshes:
         baked[o.name] = bake_to(o, res)
     print(f"[room] baked {o.name} ({len(o.data.polygons)} faces) at {res}² / {args.samples} spp in {time.time() - t0:.1f}s")
 
+for o, albedo, tint in lit:  # while the proxy still casts the bookcase's shadow
+    t0 = time.time()
+    part = o.name.removeprefix("room_")
+    rel = f"light/{os.path.splitext(os.path.basename(args.out))[0]}-{part}.jpg"
+    lightmaps.bake_light(o, 4096 if part == "floor" else 2048, os.path.join(out_dir, rel))
+    lightmaps.finish(o, albedo, rel, tint)
+    print(f"[room] baked light for {o.name} in {time.time() - t0:.1f}s")
+
 bpy.data.objects.remove(proxy)
 if chair_high:
     bpy.data.objects.remove(chair_high)
@@ -494,7 +518,7 @@ if args.save_blend:
 
 # ── export ─────────────────────────────────────────────────────────────────
 bpy.ops.object.select_all(action="DESELECT")
-for o in (*meshes, *slots):
+for o in (*meshes, *(o for o, _, _ in lit), *slots):
     o.select_set(True)
 bpy.ops.export_scene.gltf(
     filepath=args.out,

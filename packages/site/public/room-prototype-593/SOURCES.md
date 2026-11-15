@@ -12,6 +12,14 @@
 Everything else in each room (wall, floor, rug, table, candles, lamp) is built by
 `build_room.py`.
 
+With `--lightmaps`, the floor and the rug bake light only (`light/<room>-floor.jpg`,
+`light/<room>-rug.jpg`, made here), and the page lays these textures over it:
+
+| File | What | Source | Licence |
+| --- | --- | --- | --- |
+| `tex/plank_flooring_diff.jpg` | "Plank Flooring" scan, 2K diffuse, darkened on the page | <https://polyhaven.com/a/plank_flooring> | CC0 |
+| `tex/rug-met-446642.jpg` | the Met's Silk Animal Carpet, object 446642, second half of the 16th century, 241 × 178 cm, flattened from photo DP229989 by `rug_from_photo.py` | <https://www.metmuseum.org/art/collection/search/446642> | Open Access, public domain (CC0) |
+
 ⚠️ **`room-trellis.glb` must not ship as it is, and is not committed**: it stays on
 the machine that made it. The Met photo had no alpha
 channel, so the Space cut the chair out with `briaai/BRIA-RMBG-2.0`, which is

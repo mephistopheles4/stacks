@@ -67,15 +67,45 @@ export async function addPrototypeRoom(scene: THREE.Scene, exposure = 1): Promis
   // `?chair=blocks|scripted|polyhaven|trellis|hero` picks which baked room to load.
   const chair = new URLSearchParams(location.search).get('chair') ?? 'blocks';
   const file = /^[a-z]+$/.test(chair) ? `room-${chair}.glb` : 'room-blocks.glb';
-  const url = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/room-prototype-593/${file}`;
+  // `BASE_URL` is vite's; the root typecheck sees only the slice boot.ts declares
+  const base = (import.meta.env as unknown as { BASE_URL?: string }).BASE_URL ?? '/';
+  const url = `${base.replace(/\/$/, '')}/room-prototype-593/${file}`;
   const response = await fetch(url);
   const buffer = await response.arrayBuffer();
   const gltf = await new GLTFLoader().parseAsync(buffer, '');
 
   let draws = 0;
   const slots: Record<string, unknown> = {};
+  const folder = url.slice(0, url.lastIndexOf('/') + 1);
+  const textures = new THREE.TextureLoader();
+  const texture = (path: string, repeat: boolean): THREE.Texture => {
+    const t = textures.load(folder + path);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.flipY = false; // the UVs come through glTF, which counts v from the top
+    t.anisotropy = 16;
+    if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    return t;
+  };
   gltf.scene.traverse((node) => {
-    if (node instanceof THREE.Mesh) {
+    const extras = (node.userData.albedo ? node.userData : node.parent?.userData) as
+      { albedo?: string; lightmap?: string; tint?: number[] } | undefined;
+    if (node instanceof THREE.Mesh && extras?.albedo && extras.lightmap) {
+      // Light-only bake (lightmaps.py): the sharp texture on UV0, the soft light on UV1,
+      // stored at half scale; MeshBasicMaterial divides a light map by PI.
+      const lightMap = texture(extras.lightmap, false);
+      lightMap.channel = 1;
+      const [r = 1, g = 1, b = 1] = extras.tint ?? [];
+      (node.material as THREE.Material).dispose();
+      node.material = new THREE.MeshBasicMaterial({
+        map: texture(extras.albedo, true),
+        lightMap,
+        lightMapIntensity: 2 * Math.PI,
+        color: new THREE.Color(r * exposure, g * exposure, b * exposure),
+      });
+      node.castShadow = false;
+      node.receiveShadow = false;
+      draws += 1;
+    } else if (node instanceof THREE.Mesh) {
       const old = node.material as THREE.MeshStandardMaterial;
       const map = old.map;
       if (map) {
