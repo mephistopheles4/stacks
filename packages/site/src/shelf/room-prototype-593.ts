@@ -146,11 +146,12 @@ export async function addPrototypeRoom(
   const flames: THREE.Object3D[] = [];
   const folder = url.slice(0, url.lastIndexOf('/') + 1);
   const textures = new THREE.TextureLoader(manager);
-  // Textures are KTX2 (ETC1S) by default, read from `ktx-etc1s/` and transcoded to whichever packed
+  // `?tex=etc1s` reads each texture as KTX2 (ETC1S) from `ktx-etc1s/`, transcoded to whichever packed
   // format the GPU knows by three's basis transcoder (WebAssembly, in a worker started from a blob:
   // URL); a GPU that knows none gets plain RGBA. They stay packed in GPU memory, about 190 MB for the
-  // room against about 1.5 GB for the WebPs unpacked. `?tex=webp` loads the WebPs, to compare.
-  const codec = new URLSearchParams(location.search).get('tex') ?? 'etc1s';
+  // room against about 1.5 GB for the WebPs unpacked. NOT the default: the transcoder's embind glue
+  // builds functions with `new Function`, which the site's CSP refuses, and the room drew white.
+  const codec = new URLSearchParams(location.search).get('tex') ?? 'webp';
   const ktx =
     renderer && codec === 'etc1s'
       ? new KTX2Loader(manager).setTranscoderPath(`${folder}basis/`).detectSupport(renderer)
