@@ -87,6 +87,26 @@ def floor(o, wall_y, material, out_dir):
     return o, {"albedo": "tex/plank_flooring_diff.webp", "tint": list(FLOOR_TINT)}
 
 
+def wallpaper(wall_y, x_span, z0, z1, scan, tile_m, tint, material, out_dir):
+    """The papered wall above the dado rail: one quad facing the room. UV0: world units / one
+    repeat of the paper, so it tiles at its real size and stays sharp; UV1: the quad itself."""
+    x0, x1 = x_span
+    me = bpy.data.meshes.new("room_wallpaper")
+    # counter-clockwise seen from the room (-y), so the face points at it
+    me.from_pydata([(x0, wall_y, z0), (x1, wall_y, z0), (x1, wall_y, z1), (x0, wall_y, z1)], [], [(0, 1, 2, 3)])
+    o = bpy.data.objects.new("room_wallpaper", me)
+    bpy.context.scene.collection.objects.link(o)
+    me.uv_layers.new(name="UVMap")
+    me.uv_layers.new(name="bake")
+    tw, th = tile_m[0] * UNITS_PER_M, tile_m[1] * UNITS_PER_M
+    _set_uv(o, "UVMap", lambda co: (co.x / tw, (co.z - z0) / th))
+    _set_uv(o, "bake", lambda co: ((co.x - x0) / (x1 - x0), (co.z - z0) / (z1 - z0)))
+    o.data.materials.append(_image_material(material, "wallpaper", scan, tint, rough=0.85))
+    rel = "tex/" + os.path.splitext(os.path.basename(scan))[0] + ".webp"
+    save_image(bpy.data.images.load(scan), os.path.join(out_dir, rel), raw=True)
+    return o, {"albedo": rel, "tint": list(tint)}
+
+
 def save_image(img, path, raw=False, quality=85):
     """JPEG or WebP, by the path's extension. The room ships WebP: about a third smaller than
     JPEG at the same look, and a plain same-origin file the site's CSP allows (an image packed
@@ -105,8 +125,10 @@ def save_image(img, path, raw=False, quality=85):
         img.save_render(path)
 
 
-def bake_light(o, res, path):
-    """Light only: direct and indirect diffuse, the surface's own colour left out."""
+def bake_light(o, res, path, scale=2.0):
+    """Light only: direct and indirect diffuse, the surface's own colour left out. Stored as
+    irradiance / `scale`, so up to `scale` survives 8 bits; the page multiplies it back (the
+    wall beside the lamp reaches 3.4, and at 2 it clipped to a flat orange)."""
     img = bpy.data.images.new(f"{o.name}_light", res, res, float_buffer=True)
     for m in o.data.materials:
         n = m.node_tree.nodes.new("ShaderNodeTexImage")
@@ -127,10 +149,10 @@ def bake_light(o, res, path):
     img.pixels.foreach_get(px)
     px = px.reshape(-1, 4)
     peak = float(np.percentile(px[:, :3], 99.9))
-    px[:, :3] *= 0.5
+    px[:, :3] *= 1 / scale
     img.pixels.foreach_set(px.ravel())
     save_image(img, path)
-    print(f"[room] light {o.name}: 99.9th percentile irradiance {peak:.2f} (clips above 2.0)")
+    print(f"[room] light {o.name}: 99.9th percentile irradiance {peak:.2f} (clips above {scale})")
     return img
 
 

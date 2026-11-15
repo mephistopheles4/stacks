@@ -7,7 +7,7 @@ Run (headless):
 
 Coordinates: 1 Blender unit = 1 shelf unit (~0.31 m). Blender is Z-up; the glTF
 exporter maps Blender (x, y, z) to three (x, z, -y). The bookcase stands centred
-on the origin, its back at three z = -0.36, so the wall is at Blender y = +0.42.
+on the origin, its back at three z = -0.36, so the wall is at Blender y = +0.50.
 
 Two baked meshes come out: `room_shell` (floor, wall, skirting, rug) and
 `room_furniture` (chair, table, candles, lamp), each with one baked atlas, so the
@@ -44,7 +44,10 @@ ap.add_argument("--candles", choices=("glass", "hero"), default="glass",
 ap.add_argument("--table-file", default=os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".cache", "polyhaven",
     "side_table_tall_01", "side_table_tall_01_2k.gltf")))
-ap.add_argument("--chair-faces", type=int, default=40000, help="hero: faces in the decimated chair that ships")
+ap.add_argument("--wallpaper", default="", help="with --lightmaps: a seamless tile (wallpaper_from_scan.py) papering the wall above a dado rail")
+ap.add_argument("--wallpaper-size", default=(0.288, 0.450), type=lambda s: tuple(float(v) for v in s.split(",")),
+                help="one tile's width,height in metres (Morris's Willow: 0.288,0.450)")
+ap.add_argument("--chair-faces",type=int, default=40000, help="hero: faces in the decimated chair that ships")
 ap.add_argument("--chair-file", default="", help="model to import for --chair import (.glb/.gltf/.fbx/.blend)")
 ap.add_argument("--chair-yaw", type=float, default=0.0, help="degrees to turn an imported chair so it faces -y")
 ap.add_argument("--chair-height", type=float, default=3.8, help="height an imported chair is scaled to")
@@ -57,7 +60,11 @@ ROW_HEIGHT = 1.12
 CASE_W = 3.4 + 0.09 * 2
 CASE_D = 0.72
 CASE_H = args.rows * ROW_HEIGHT
-WALL_Y = 0.42
+# The wall stands 2 cm behind the bookcase's back (y 0.36) plus the skirting's 12 cm: at 0.42
+# the skirting ran 6 cm into the case, through its back panel, and showed as a black bar in the
+# bottom shelf.
+WALL_Y = 0.50
+DADO = 0.95 * 3.11  # the dado rail, 95 cm up: painted wall below, paper above
 
 # ── scene ──────────────────────────────────────────────────────────────────
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -156,6 +163,10 @@ def rug_material():
 
 
 M_WALL = material("wall", (0.035, 0.05, 0.045), rough=0.9)
+# Willow's ground is pale cream; at 0.42 the wall outshone everything under the amber lamp and
+# went flat orange. Smoked and aged to about the old painted wall's brightness, a little cool to
+# hold against the lamp, it reads as dark parchment and the room stays the dark one chosen.
+WALLPAPER_TINT = (0.15, 0.14, 0.135)
 M_SKIRT = material("skirting", (0.03, 0.04, 0.036), rough=0.6)
 M_FLOOR = floor_material()
 M_RUG = rug_material()
@@ -206,7 +217,15 @@ def point_light(name, loc, watts, colour, radius=0.1):
 # ── the shell ──────────────────────────────────────────────────────────────
 shell = []
 shell.append(box("floor", (34, 22, 0.1), (0, WALL_Y - 11, -0.05), M_FLOOR))
-shell.append(box("wall", (34, 0.1, 12), (0, WALL_Y + 0.05, 6), M_WALL))
+papered = bool(args.lightmaps and args.wallpaper)
+if papered:  # the painted dado below the rail; the paper above is its own light-only mesh
+    shell.append(box("wall", (34, 0.1, DADO), (0, WALL_Y + 0.05, DADO / 2), M_WALL))
+    # the rail: a flat board, a bead along its top and a cove under it, painted as the skirting
+    shell.append(box("dado_rail", (34, 0.06, 0.16), (0, WALL_Y - 0.03, DADO), M_SKIRT, bevel=0.012))
+    shell.append(cyl("dado_bead", 0.028, 34, (0, WALL_Y - 0.062, DADO + 0.045), M_SKIRT, rot=(0, math.pi / 2, 0), verts=16))
+    shell.append(box("dado_cove", (34, 0.03, 0.05), (0, WALL_Y - 0.015, DADO - 0.1), M_SKIRT, bevel=0.01))
+else:
+    shell.append(box("wall", (34, 0.1, 12), (0, WALL_Y + 0.05, 6), M_WALL))
 shell.append(box("skirting", (34, 0.12, 0.45), (0, WALL_Y - 0.06, 0.225), M_SKIRT, bevel=0.02))
 lit = []  # (object, extras): light-only bakes, textured on the page from what extras name
 if args.lightmaps:
@@ -218,6 +237,9 @@ if args.lightmaps:
     lit.append(lightmaps.floor(floor, WALL_Y, material, out_dir))
     if args.rug_photo:
         lit += rug.rug(args.rug_photo, material, out_dir, (2.2, -3.6), math.radians(-6))
+    if papered:  # from the rail's top to the top of the old wall; WALLPAPER_TINT keeps the room dark
+        lit.append(lightmaps.wallpaper(WALL_Y, (-17, 17), DADO + 0.08, 12, args.wallpaper,
+                                       args.wallpaper_size, WALLPAPER_TINT, material, out_dir))
 if not (args.lightmaps and args.rug_photo):
     shell.append(box("rug", (8.5, 5.5, 0.04), (2.2, -3.6, 0.02), M_RUG, bevel=0.015, rot=(0, 0, math.radians(-6))))
 
@@ -645,7 +667,10 @@ for o, extras in lit:  # while the proxy still casts the bookcase's shadow
     t0 = time.time()
     part = o.name.removeprefix("room_")
     rel = f"light/{os.path.splitext(os.path.basename(args.out))[0]}-{part}.webp"
-    lightmaps.bake_light(o, 4096 if part == "floor" else 2048, os.path.join(out_dir, rel))
+    scale = 4.0 if part == "wallpaper" else 2.0  # the wall stands beside the lamp
+    if scale != 2.0:
+        extras["light_scale"] = scale
+    lightmaps.bake_light(o, 4096 if part == "floor" else 2048, os.path.join(out_dir, rel), scale)
     lightmaps.finish(o, extras, rel)
     print(f"[room] baked light for {o.name} in {time.time() - t0:.1f}s")
 

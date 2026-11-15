@@ -25,7 +25,7 @@ import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
-import { addPrototypeRoom, roomMode } from './room-prototype-593.ts';
+import { addPrototypeRoom, frameRoom, roomMode } from './room-prototype-593.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
@@ -563,7 +563,10 @@ function assembleShelf(
   let framedAt = 0;
 
   const frameCamera = (aspect: number): void => {
-    const framing = frameBookcase(rowCount, aspect);
+    const framing =
+      roomMode() === 'off'
+        ? frameBookcase(rowCount, aspect)
+        : frameRoom(aspect, frameBookcase(rowCount, aspect)); // PROTOTYPE #593
     framedAt = framing.distance;
 
     const { position, target } = framing;
@@ -583,7 +586,10 @@ function assembleShelf(
   scene.add(bookcase.group);
   const lights = addLighting(scene, unitHeight, settings);
   // PROTOTYPE #593
-  if (roomMode() !== 'off') void addPrototypeRoom(scene);
+  if (roomMode() !== 'off') {
+    void addPrototypeRoom(scene);
+    window.__roomControls = controls; // the owner frames the opening view by hand; read it back
+  }
 
   /**
    * The shadow map is drawn **once**, not sixty times a second.
