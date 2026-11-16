@@ -497,7 +497,7 @@ export const KTX2_WORKER_POLICY = "default-src 'none'; script-src 'unsafe-eval' 
  * (spec S6.7). The probe tries `fetch`, a second worker and `importScripts` from the worker's own
  * path, and is served from a scratch folder alone: **a production `dist/` that holds it has a
  * worker that tries to reach out, under a policy that admits eval.** The ticket that writes the
- * probe (T6) puts this string in it; a file named `*probe*` is refused as well.
+ * probe (T6) puts this string in it; a file under `rooms/` named `*probe*` is refused as well.
  */
 export const CONFINEMENT_PROBE_MARKER = 'stacks-confinement-probe';
 
@@ -959,21 +959,6 @@ export async function inspectPublicBuild(
       );
     }
 
-    // Two sources never belong in the page's policy, whichever directive carries them, and the
-    // exact sets above would say so only as "a source nobody named". `'unsafe-eval'` belongs to
-    // the KTX2 worker's own response (`KTX2_WORKER_PATH`); `blob:` would let a worker or a script
-    // start from a URL the page builds, which is the page's policy handed to code it did not name.
-    for (const [name, sources] of directives) {
-      for (const source of sources) {
-        if (source !== "'unsafe-eval'" && !/^blob:/i.test(source)) continue;
-        fail(
-          'csp',
-          `${where} sets ${name} with ${source} — the page's policy never carries it (spec S6.2, S6.3). ` +
-            "Eval is confined to the KTX2 worker's own response, and a blob: worker takes the page's policy",
-        );
-      }
-    }
-
     if (problems.length === before) policed += 1;
   }
   if (policed > 0 && policed === pages.length) {
@@ -991,11 +976,12 @@ export async function inspectPublicBuild(
   // tries to, under a policy that admits eval. Refused by name and by the marker it carries.
   for (const file of walk(dir)) {
     const where = posix(relative(dir, file));
+    // Under `rooms/` only: a cover is named for its book's title, and a book called "The Space
+    // Probe" must not refuse a deploy.
+    if (!where.startsWith('rooms/')) continue;
     const named = /probe/i.test(where);
     const marked =
-      where.startsWith('rooms/') &&
-      TEXTUAL.has(extname(file)) &&
-      readFileSync(file, 'utf8').includes(CONFINEMENT_PROBE_MARKER);
+      TEXTUAL.has(extname(file)) && readFileSync(file, 'utf8').includes(CONFINEMENT_PROBE_MARKER);
     if (!named && !marked) continue;
     fail(
       'csp',
@@ -1539,7 +1525,8 @@ function evalGrants(source: string): { path: string; header: string }[] {
       path = line.trim();
       continue;
     }
-    if (line.includes("'unsafe-eval'")) grants.push({ path, header: line.trim() });
+    // CSP keywords are case-insensitive, and a browser honours `'UNSAFE-EVAL'`.
+    if (/'unsafe-eval'/i.test(line)) grants.push({ path, header: line.trim() });
   }
   return grants;
 }

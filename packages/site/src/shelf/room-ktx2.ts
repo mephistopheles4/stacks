@@ -16,8 +16,17 @@ import { KTX2_WASM_URL, KTX2_WORKER_URL } from './room-codec.ts';
  * **A failure here must not hang a texture.** three's `WorkerPool.postMessage` promise never
  * rejects, so a worker that will not start, or dies, leaves every transcode pending for ever; it is
  * turned into a rejection here, and `loadWithFallback` (`room-codec.ts`) answers it with the WebP
- * set. A transcoder that starts and never answers is the loading screen's 60 seconds (S3.4).
+ * set.
+ *
+ * **A worker that starts and never answers is a failure too.** Where a browser applies the page's
+ * policy to the worker and not its own, the transcoder's eval is refused inside the worker: nothing
+ * reaches the page, no `error` event fires, and every transcode waits for ever (measured in a real
+ * Chrome). So the first worker's first answer is waited for `KTX2_STALL_MS`, and silence is a
+ * failure, which is how spec S6.10's fallback to WebP happens there.
  */
+
+/** How long the first KTX2 worker may stay silent before KTX2 is given up for this page load. */
+export const KTX2_STALL_MS = 15_000;
 
 /** KTX2Loader's own members, which its types leave out. */
 export interface Ktx2Members {
@@ -39,6 +48,8 @@ export interface OwnWorkerOptions {
   readonly wasmUrl: string;
   readonly fetchWasm: (url: string) => Promise<ArrayBuffer>;
   readonly makeWorker: (url: string) => WorkerLike;
+  /** Defaults to `KTX2_STALL_MS`. */
+  readonly stallMs?: number;
 }
 
 export interface Ktx2Textures {
@@ -59,11 +70,25 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
   // Nobody may be loading when the worker dies, and a rejection nobody awaits is not an error.
   failed.catch(() => undefined);
 
+  // Armed when the first worker starts, and put down by the first answer, a texture or an error.
+  let stall: ReturnType<typeof setTimeout> | undefined;
+  let answered = false;
+  const answer = (): void => {
+    answered = true;
+    clearTimeout(stall);
+  };
+
   loader.init = () => {
     loader.transcoderPending ??= options.fetchWasm(options.wasmUrl).then(
       (binary) => {
         loader.workerPool.setWorkerCreator(() => {
           const worker = options.makeWorker(options.workerUrl);
+          if (!answered) {
+            clearTimeout(stall);
+            stall = setTimeout(() => {
+              fail(new Error('the KTX2 worker did not answer'));
+            }, options.stallMs ?? KTX2_STALL_MS);
+          }
           worker.addEventListener('error', () => {
             fail(new Error('the KTX2 worker failed'));
           });
@@ -85,7 +110,7 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
     return loader.transcoderPending;
   };
 
-  return { load: (url) => Promise.race([loader.loadAsync(url), failed]) };
+  return { load: (url) => Promise.race([loader.loadAsync(url).finally(answer), failed]) };
 }
 
 /**
@@ -97,7 +122,15 @@ export function ktx2Textures(
   renderer: THREE.WebGLRenderer,
 ): Ktx2Textures {
   const loader = new KTX2Loader(manager).detectSupport(renderer);
-  return ownWorkerTextures(loader, {
+  return ownWorkerTextures(loader, ktx2Options(manager));
+}
+
+/**
+ * What the room hands `ownWorkerTextures`: the two same-origin files and a plain `Worker` started
+ * from the first, never from a `blob:` URL. Apart from `ktx2Textures` so a test can read it.
+ */
+export function ktx2Options(manager: THREE.LoadingManager): OwnWorkerOptions {
+  return {
     workerUrl: KTX2_WORKER_URL,
     wasmUrl: KTX2_WASM_URL,
     // `setResponseType('arraybuffer')` makes `FileLoader` resolve an ArrayBuffer; its type says
@@ -107,5 +140,5 @@ export function ktx2Textures(
         .setResponseType('arraybuffer')
         .loadAsync(url) as Promise<ArrayBuffer>,
     makeWorker: (url) => new Worker(url),
-  });
+  };
 }

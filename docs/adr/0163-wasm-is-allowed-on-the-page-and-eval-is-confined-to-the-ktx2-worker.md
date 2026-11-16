@@ -27,8 +27,9 @@
    the committed bytes are the tested bytes and the served bytes.
 6. **Both texture sets ship and WebP is the default.** The default is one constant,
    `DEFAULT_ROOM_CODEC` in `room-codec.ts`, and the owner flips it to `'etc1s'` by a typed word, in a
-   commit of its own, after the device matrix passes. A KTX2 failure (the worker will not start, the
-   wasm does not load, a transcode fails) drops that page load to the WebP set and warns once.
+   commit of its own, after the device matrix passes. A KTX2 failure (the worker will not start or
+   stays silent, the wasm does not load, a transcode fails) drops that page load to the WebP set and
+   warns once.
 7. **G20 holds all of it** in `dist/`: the page's `script-src` with `'wasm-unsafe-eval'` and never
    `'unsafe-eval'`; `worker-src 'self'` and nothing else in it; no `blob:` in any directive;
    `'unsafe-eval'` in exactly one `_headers` block, keyed on exactly the worker's path, under
@@ -57,19 +58,31 @@ the worker can reach nothing, so what eval can do there is bounded by what the w
   carries it, and that the worker fails to `fetch`, start a worker or `importScripts`, is made once
   by hand on a preview (T6). Whether Safari on iOS applies the worker's response policy, and
   whether Cloudflare Pages serves the `_headers` block on that path, are unverified until then. If
-  Safari applies the page's policy instead, KTX2 falls back to WebP there and the flip waits for a
-  fix.
-- **`worker-src 'self'` admits any same-origin script as a worker.** That matters only after the
-  page is compromised, which the page's hashes are there to prevent.
+  a browser applies the page's policy instead, eval is refused inside the worker and nothing
+  reaches the page: no `error` event fires (measured in headless Chrome). The loader treats a first
+  worker silent for 15 seconds (`KTX2_STALL_MS`) as a KTX2 failure and drops that page load to
+  WebP, and the flip waits for a fix.
+- **`worker-src 'self'` admits any same-origin script as a worker.** Before this change a worker
+  fell back to `script-src`, which admitted the same origin and two Cloudflare origins, so this
+  narrows the page and was already true of it. It matters only after the page is compromised,
+  which the page's hashes are there to prevent.
 - **`'wasm-unsafe-eval'` is on every page**, because Astro emits one policy. It admits
   `WebAssembly.compile` and nothing that turns a string into JavaScript.
 - **Nothing binds the generated worker and wasm to three byte for byte.** An accepted risk under
   the Hardening limit of 0 (spec S23, E42): a three upgrade that is not followed by a rerun leaves
   the older worker in place. The page's policy and the worker's response policy do not change with
-  it.
-- **A transcoder that starts and never answers** is not turned into a failure here: three's
-  `WorkerPool` never rejects, so the loader turns a worker `error`, a `messageerror` and a wasm
-  fetch failure into rejections, and a hang is the room's loading screen's 60 seconds (spec S3.4).
+  it. The loader also reaches into three's own members (`transcoderPending`,
+  `workerPool.setWorkerCreator`, `workerConfig`) and the worker's `init` message, which its tests
+  fake; a three release that renames them is the same accepted risk.
+- **`_headers` rules that detach a header.** G20 reads the worker's own block, not a later, broader
+  one that removes headers with `!` (Cloudflare applies rules in file order). Such an edit could
+  strip the worker's policy with G20 green. It matters only after the page is compromised, so it is
+  an accepted-risk candidate under the Hardening limit of 0 and nothing guards it.
+- **Three's `WorkerPool` never rejects**, so a worker that fails to start, dies or sends an unreadable
+  message, and a wasm that does not load, would leave every transcode pending. The loader turns
+  each into a rejection, and the silent worker into one after `KTX2_STALL_MS`, so a KTX2 failure
+  always reaches `loadWithFallback`. A silence on a slow device that is not a failure costs only
+  the WebP download.
 
 ## Provenance
 

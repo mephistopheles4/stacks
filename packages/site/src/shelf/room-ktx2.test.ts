@@ -1,7 +1,13 @@
-import type * as THREE from 'three';
-import { describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { KTX2_WASM_URL, KTX2_WORKER_URL } from './room-codec.ts';
-import { ownWorkerTextures, type Ktx2Members, type WorkerLike } from './room-ktx2.ts';
+import {
+  ktx2Options,
+  KTX2_STALL_MS,
+  ownWorkerTextures,
+  type Ktx2Members,
+  type WorkerLike,
+} from './room-ktx2.ts';
 
 type Listener = () => void;
 
@@ -63,6 +69,32 @@ function harness(options: { wasm?: () => Promise<ArrayBuffer> } = {}) {
     },
   };
 }
+
+describe('the room’s own wiring (spec S6.2)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('starts a plain Worker from the same-origin file and fetches the wasm from the same-origin constant', () => {
+    const started: string[] = [];
+    vi.stubGlobal(
+      'Worker',
+      class {
+        constructor(url: string) {
+          started.push(url);
+        }
+      },
+    );
+    const options = ktx2Options(new THREE.LoadingManager());
+
+    options.makeWorker(options.workerUrl);
+
+    expect(options.workerUrl).toBe(KTX2_WORKER_URL);
+    expect(options.wasmUrl).toBe(KTX2_WASM_URL);
+    expect(started).toEqual([KTX2_WORKER_URL]);
+    expect(started[0]).not.toMatch(/^blob:/);
+  });
+});
 
 describe('the KTX2 worker is a file of its own (spec S6.2)', () => {
   it('replaces three’s init, which would start a blob: worker', async () => {
@@ -142,6 +174,63 @@ describe('a failure rejects the load and never leaves it pending (spec S5.4)', (
     h.loadAsync.mockReturnValue(new Promise(() => undefined));
     await expect(h.textures.load('b.ktx2')).rejects.toThrow(/wasm did not load/);
     expect(h.fetchWasm).toHaveBeenCalledTimes(1);
+  });
+
+  describe('a worker that starts and never answers (spec S6.10)', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('is a failure once the first worker has been silent for the stall time', async () => {
+      vi.useFakeTimers();
+      const h = harness();
+      h.loadAsync.mockReturnValue(new Promise(() => undefined));
+      await h.loader.init();
+      h.startWorker();
+
+      let state = 'pending';
+      const pending = h.textures.load('stuck.ktx2').catch((error: unknown) => {
+        state = error instanceof Error ? error.message : 'other';
+      });
+      await vi.advanceTimersByTimeAsync(KTX2_STALL_MS - 1);
+      expect(state).toBe('pending');
+      await vi.advanceTimersByTimeAsync(1);
+      await pending;
+      expect(state).toMatch(/did not answer/);
+    });
+
+    it('is put down by the first answer, so a slow later texture is not a failure', async () => {
+      vi.useFakeTimers();
+      const h = harness();
+      h.loadAsync.mockResolvedValueOnce({} as THREE.CompressedTexture);
+      await h.loader.init();
+      h.startWorker();
+      await h.textures.load('first.ktx2');
+
+      h.loadAsync.mockReturnValue(new Promise(() => undefined));
+      let state = 'pending';
+      h.textures.load('slow.ktx2').then(
+        () => (state = 'resolved'),
+        () => (state = 'rejected'),
+      );
+      await vi.advanceTimersByTimeAsync(KTX2_STALL_MS * 4);
+      expect(state).toBe('pending');
+    });
+
+    it('counts a rejected first load as an answer too: the worker is alive', async () => {
+      vi.useFakeTimers();
+      const h = harness();
+      h.loadAsync.mockRejectedValueOnce('transcode: bad file');
+      await h.loader.init();
+      h.startWorker();
+      await expect(h.textures.load('bad.ktx2')).rejects.toBe('transcode: bad file');
+
+      h.loadAsync.mockReturnValue(new Promise(() => undefined));
+      let state = 'pending';
+      h.textures.load('next.ktx2').catch(() => (state = 'rejected'));
+      await vi.advanceTimersByTimeAsync(KTX2_STALL_MS * 4);
+      expect(state).toBe('pending');
+    });
   });
 
   it('gives a load its own failure when three rejects it, a transcode that failed', async () => {

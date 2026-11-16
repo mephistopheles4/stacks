@@ -1,22 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  chooseCodec,
-  codecSession,
-  DEFAULT_ROOM_CODEC,
-  KTX2_WASM_URL,
-  KTX2_WORKER_URL,
-  loadWithFallback,
-} from './room-codec.ts';
+import { chooseCodec, codecSession, DEFAULT_ROOM_CODEC, loadWithFallback } from './room-codec.ts';
 
 describe('the default set (spec S5.2)', () => {
   it('is WebP until the owner flips it', () => {
     expect(DEFAULT_ROOM_CODEC).toBe('webp');
-  });
-
-  it('serves the worker and the wasm from same-origin files, never a blob: URL', () => {
-    for (const url of [KTX2_WORKER_URL, KTX2_WASM_URL]) {
-      expect(url).toMatch(/^\/rooms\/basis\/[a-z0-9_-]+\.(js|wasm)$/);
-    }
   });
 });
 

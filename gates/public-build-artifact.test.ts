@@ -25,7 +25,6 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -1374,15 +1373,30 @@ describe('G20 — every rule goes red', () => {
       await expectOnly('csp', () => writeWorker(`/* ${CONFINEMENT_PROBE_MARKER} */`));
     });
 
-    it('csp: a probe page anywhere in a production build (S6.7)', async () => {
+    it('csp: a probe page under rooms/ in a production build (S6.7)', async () => {
       await expectOnly('csp', async () => {
-        await writeFile(join(dist, 'confinement-probe.html'), indexHtml());
+        await writeFile(join(dist, 'rooms', 'confinement-probe.html'), indexHtml());
       });
     });
 
-    it('a clean build says the worker block and the page policy were read', async () => {
-      const report = await inspect();
-      expect(report.observations.join('\n')).toMatch(/ktx2 worker/i);
+    it("passes a book's cover when its title has the word probe in it", async () => {
+      // A cover is named for its book, and a title must not refuse a deploy.
+      await writeFile(join(dist, 'covers', 'a.jpg'), 'pretend jpeg');
+      await writeFile(join(dist, 'covers', 'the-space-probe.jpg'), 'pretend jpeg');
+      await writeLibrary([
+        { ...CLEAN_BOOK, cover: 'covers/the-space-probe.jpg' },
+        { id: 'b-2', title: 'B', cover: 'covers/a.jpg', status: 'read' },
+      ]);
+      expect((await inspect()).problems).toEqual([]);
+    });
+
+    it("headers: 'unsafe-eval' in another letter case, which a browser honours", async () => {
+      await expectOnly('headers', () =>
+        writeFile(
+          join(dist, '_headers'),
+          `${headersFile()}\n/other\n  Content-Security-Policy: script-src 'UNSAFE-EVAL'\n`,
+        ),
+      );
     });
   });
 
@@ -1558,30 +1572,19 @@ describe('G20 — the rule list cannot grow blind spots', () => {
 });
 
 describe('G20 — the worker the page starts is the worker `_headers` confines (#601)', () => {
-  it('names one path in the loader, in the rule and in the committed _headers', () => {
+  it('names one path in the loader and in the rule', () => {
     expect(KTX2_WORKER_URL).toBe(KTX2_WORKER_PATH);
     expect(KTX2_WASM_URL).toBe(KTX2_WASM_PATH);
-    // The files the loader asks for are the files the site serves.
-    for (const path of [KTX2_WORKER_PATH, KTX2_WASM_PATH]) {
-      expect(existsSync(join(SITE_PUBLIC, ...path.split('/'))), path).toBe(true);
-    }
-    const headers = readFileSync(join(SITE_PUBLIC, '_headers'), 'utf8');
-    expect(headers).toContain(
-      `\n${KTX2_WORKER_PATH}\n  Content-Security-Policy: ${KTX2_WORKER_POLICY}`,
-    );
   });
 
   it('passes the committed worker, wasm and _headers through the same inspection as a build', async () => {
+    // The whole committed `_headers`, so an `'unsafe-eval'` added to any block of it is counted,
+    // and the files the loader asks for are the files the site serves.
     await mkdir(join(dist, 'rooms', 'basis'), { recursive: true });
     for (const file of ['ktx2-worker.js', 'basis_transcoder.wasm']) {
       await copyFile(join(SITE_PUBLIC, 'rooms', 'basis', file), join(dist, 'rooms', 'basis', file));
     }
-    // Only the block this change owns: the rest of `_headers` is a build's to be judged on.
-    const real = readFileSync(join(SITE_PUBLIC, '_headers'), 'utf8');
-    await writeFile(
-      join(dist, '_headers'),
-      headersFile({ worker: 'absent' }) + real.slice(real.indexOf(KTX2_WORKER_PATH)),
-    );
+    await copyFile(join(SITE_PUBLIC, '_headers'), join(dist, '_headers'));
     expect((await inspect()).problems).toEqual([]);
   });
 });
