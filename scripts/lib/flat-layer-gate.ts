@@ -37,6 +37,8 @@ export interface FlatRestRead {
   /** Which page each box above is (`left` or `right`), so a page is held to its own slot. */
   readonly pageSides: readonly string[];
   readonly slotSides: readonly string[];
+  /** The sides this viewport draws: both on desktop, the right page alone on a phone. */
+  readonly expectedSides: readonly string[];
   /** Each slot's computed `pointer-events`. */
   readonly slotEvents: readonly string[];
   /** Both paper sheets drawn. */
@@ -63,6 +65,9 @@ export function flatRestFailures(read: FlatRestRead): string[] {
     failures.push(
       `${at}: ${String(read.flatCount)} pages in .held-flat and ${String(read.layerCount)} in .held-layer, not 2 and 0`,
     );
+  }
+  for (const side of read.expectedSides) {
+    if (!read.pageSides.includes(side)) failures.push(`${at}: the ${side} page was not drawn`);
   }
   if (read.ancestors.length === 0) failures.push(`${at}: no ancestor of a page was read`);
   for (const ancestor of read.ancestors) {
@@ -155,6 +160,8 @@ export function flatOpenedFailures(read: FlatOpenedRead): string[] {
     const numbers = /^matrix\((.*)\)$/.exec(transform)?.[1]?.split(', ').map(Number) ?? [];
     if (numbers.length !== 6 || numbers.some((n) => !Number.isFinite(n))) {
       failures.push(`${at}: a page is not placed by a 2D matrix (${transform})`);
+    } else if (numbers[0]! * numbers[3]! - numbers[1]! * numbers[2]! === 0) {
+      failures.push(`${at}: a page is collapsed by its 2D matrix (${transform})`);
     } else if (numbers[4] === 0 && numbers[5] === 0) {
       failures.push(`${at}: a page sits at the layer's corner (${transform})`);
     }
@@ -162,13 +169,13 @@ export function flatOpenedFailures(read: FlatOpenedRead): string[] {
   return failures;
 }
 
-/** What the frames of a put-back showed, sampled once a frame until the hand emptied. */
+/** What the frames of a put-back showed, sampled once a frame until the book was home. */
 export interface FlatPutBackRead {
   readonly label: string;
   /** Frames sampled, and those in which the book was off its open rest with a page in the flat layer. */
   readonly frames: number;
   readonly violations: number;
-  /** Whether the hand emptied within the sampling window. */
+  /** Whether the book came home, hand empty and nothing in motion, within the sampling window. */
   readonly ended: boolean;
 }
 
@@ -181,7 +188,7 @@ export interface FlatPutBackRead {
 export function flatPutBackFailures(read: FlatPutBackRead): string[] {
   const at = `flat layer, put-back, ${read.label}`;
   const failures: string[] = [];
-  if (!read.ended) failures.push(`${at}: the hand never emptied while sampled`);
+  if (!read.ended) failures.push(`${at}: the book never came home while sampled`);
   if (read.violations > 0) {
     failures.push(
       `${at}: ${String(read.violations)} of ${String(read.frames)} frames had a page in .held-flat while the book moved`,

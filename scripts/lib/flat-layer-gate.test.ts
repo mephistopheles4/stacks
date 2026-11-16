@@ -28,6 +28,7 @@ const REST: FlatRestRead = {
   slots: [box(100.4, 80, 560, 719.5), box(580, 80.8, 1040.2, 720)],
   pageSides: ['left', 'right'],
   slotSides: ['left', 'right'],
+  expectedSides: ['left', 'right'],
   slotEvents: ['none', 'none'],
   sheetsVisible: true,
 };
@@ -47,6 +48,12 @@ describe('flatRestFailures — the open book at rest (#599, C2, C3, C7, C11)', (
     expect(flatRestFailures({ ...REST, ancestors: preserved })).toHaveLength(1);
     const matrix = [{ name: 'div.cam', transformStyle: 'flat', transform: 'matrix3d(1,0,0,0)' }];
     expect(flatRestFailures({ ...REST, ancestors: matrix })).toHaveLength(1);
+  });
+
+  it('fails a side the viewport draws and the read lacks, such as a hidden left page on desktop', () => {
+    const rightOnly = { ...REST, pages: [REST.pages[1]!], pageSides: ['right'] };
+    expect(flatRestFailures(rightOnly)).toHaveLength(1);
+    expect(flatRestFailures({ ...rightOnly, expectedSides: ['right'] })).toEqual([]);
   });
 
   it('fails a run that read no ancestor at all, which would pass the 3D rule vacuously', () => {
@@ -70,11 +77,12 @@ describe('flatRestFailures — the open book at rest (#599, C2, C3, C7, C11)', (
   });
 
   it('holds the right page alone to the right slot, as the phone draws it', () => {
-    expect(flatRestFailures({ ...REST, pages: [REST.pages[1]!], pageSides: ['right'] })).toEqual(
+    const phone = { ...REST, expectedSides: ['right'] };
+    expect(flatRestFailures({ ...phone, pages: [REST.pages[1]!], pageSides: ['right'] })).toEqual(
       [],
     );
     expect(
-      flatRestFailures({ ...REST, pages: [REST.pages[0]!], pageSides: ['right'] }),
+      flatRestFailures({ ...phone, pages: [REST.pages[0]!], pageSides: ['right'] }),
     ).toHaveLength(1);
   });
 
@@ -141,6 +149,21 @@ describe('flatOpenedFailures — the call that opened the book (#599, C3)', () =
     );
   });
 
+  it('fails a collapsed page: a zero-area matrix with a translation, and passes a quarter turn', () => {
+    expect(
+      flatOpenedFailures({
+        ...OPENED,
+        transforms: ['matrix(0, 0, 0, 0, 100, 80)', OPENED.transforms[1]!],
+      }),
+    ).toHaveLength(1);
+    expect(
+      flatOpenedFailures({
+        ...OPENED,
+        transforms: ['matrix(0, 1, -1, 0, 100, 80)', OPENED.transforms[1]!],
+      }),
+    ).toEqual([]);
+  });
+
   it('fails a page at the layer’s corner, and a matrix that is not a 2D one', () => {
     expect(
       flatOpenedFailures({
@@ -165,7 +188,7 @@ describe('flatPutBackFailures — the frames of a put-back (#599, C4)', () => {
     expect(flatPutBackFailures({ ...read, violations: 3 })).toHaveLength(1);
   });
 
-  it('fails a window that never saw the hand empty, which would pass without a frame to read', () => {
+  it('fails a window that never saw the book come home, which would pass without a frame to read', () => {
     expect(flatPutBackFailures({ ...read, ended: false })).toHaveLength(1);
   });
 });

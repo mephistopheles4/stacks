@@ -2022,7 +2022,11 @@ const FLAT_REST = `(() => {
   };
 })()`;
 
-/** A put-back, sampled once a frame until the hand empties: a frame off the open rest with a page flat. */
+/**
+ * A put-back, sampled once a frame until the book is home on the shelf: a frame
+ * off the open rest with a page flat. The hand empties as the return begins, so
+ * the end is read from the book in motion, which outlasts it.
+ */
 const PUT_BACK_FRAMES = `new Promise((resolve) => {
   window.__shelf.putBack();
   let frames = 0;
@@ -2033,7 +2037,8 @@ const PUT_BACK_FRAMES = `new Promise((resolve) => {
     const atRest = held !== undefined && held.phase === 'held' && held.opened === true &&
       Math.abs(held.boardAngle - 180) < 1;
     if (!atRest && document.querySelectorAll('.held-flat .held-page').length > 0) violations += 1;
-    if (held === undefined || frames > 600) resolve({ frames, violations, ended: held === undefined });
+    const home = held === undefined && window.__shelf.current() === undefined;
+    if (home || frames > 600) resolve({ frames, violations, ended: home });
     else requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -2043,6 +2048,8 @@ interface FlatCase {
   readonly label: string;
   readonly turned: boolean;
   readonly reduced: boolean;
+  /** The upright viewport, where only the right-hand page is drawn. */
+  readonly phone: boolean;
 }
 
 /**
@@ -2128,7 +2135,11 @@ async function runFlatCase(
 
   const rest = (await page.evaluate(FLAT_REST)) as FlatRestRead;
   if (rest.pages.length === 0) failures.push(`${at}: no page was drawn at rest`);
-  const restFailures = flatRestFailures({ ...rest, label: one.label });
+  const restFailures = flatRestFailures({
+    ...rest,
+    label: one.label,
+    expectedSides: one.phone ? ['right'] : ['left', 'right'],
+  });
   failures.push(...restFailures);
   if (restFailures.length > 0) {
     // Where everything stood, for a failure that is a distance and not a count.
@@ -2193,7 +2204,7 @@ async function checkFlatLayer(browser: Browser, origin: string): Promise<LinesAn
     await page.setViewport(VIEWPORT);
     await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
-    const cases: readonly (FlatCase & { readonly phone: boolean })[] = [
+    const cases: readonly FlatCase[] = [
       { label: 'desktop', turned: false, reduced: false, phone: false },
       { label: 'desktop, turned', turned: true, reduced: false, phone: false },
       { label: 'desktop, reduced motion', turned: false, reduced: true, phone: false },
