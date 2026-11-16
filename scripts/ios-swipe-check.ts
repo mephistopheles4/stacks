@@ -62,7 +62,6 @@ async function main(): Promise<void> {
   const options = parseSwipeArgs(process.argv.slice(2));
   if (typeof options === 'string') fail(options);
   if (options.local || options.checkServed) fail('--local and --check-served are not built yet');
-  if (!options.premise) fail('only --premise is built so far');
 
   let text: string;
   try {
