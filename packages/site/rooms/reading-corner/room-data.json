@@ -1,0 +1,35 @@
+{
+  "note": "What the page reads off the room's GLB instead of keeping in code (spec S7.2, S7.3, S8): the opening camera, the camera's box and the live lights, written into the GLB as named empties by shared/add_room_data.mjs. A position is in the GLB's own coordinates (three's: y up). `view_open` is where the camera opens, its `target`, the `span` the room is framed across and the `height` it is framed up (world units) at the `aspect` the owner framed it in by hand, 2026-11-15 (the view the prototype's ROOM_VIEW held). `bounds_min` and `bounds_max` are the box the camera stays in: inside the side walls (-7.89 and 9.89), clear of the back wall (z -0.5), above the floor and below the ceiling (12), and as far forward as the open corner is worth looking from. Each light carries the values the prototype's room lighting held, which agree with the lamp that baked the room: the key stands on the line from the bookcase's middle through the bulb (5.31, 4.85, 2.28), so the books' shadows fall the way the baked ones do. A light's height is `of_height` times the bookcase's height, plus the position's y, as the shelf's own lights are. Only the key casts.",
+  "view_open": {
+    "position": [-5.267, 4.306, 14.331],
+    "target": [2.334, 1.504, 1.335],
+    "span": 11,
+    "height": 8,
+    "aspect": 0.99
+  },
+  "bounds_min": [-7.4, 0.5, 0.8],
+  "bounds_max": [9.4, 10.5, 18],
+  "lights": {
+    "live_ambient": { "colour": "ffd9b0", "intensity": 0.28 },
+    "live_key": {
+      "position": [11.151, 4.6, 5.988],
+      "of_height": 0.5,
+      "colour": "ffc890",
+      "intensity": 2.3
+    },
+    "live_fill": {
+      "position": [-5, 0, 4.5],
+      "of_height": 0.6,
+      "colour": "3a4a66",
+      "intensity": 0.3
+    },
+    "live_lamp": {
+      "position": [5.31, 4.85, 2.28],
+      "of_height": 0,
+      "colour": "ffb070",
+      "intensity": 38,
+      "distance": 18,
+      "decay": 2
+    }
+  }
+}

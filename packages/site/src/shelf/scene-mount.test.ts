@@ -152,6 +152,21 @@ describe('a mount that throws', () => {
   });
 });
 
+describe('a mount asked for a room that throws (spec S16)', () => {
+  it('starts no room: nothing is fetched, no screen is raised, and no listener is left', () => {
+    const fetched: unknown[] = [];
+    vi.stubGlobal('fetch', (url: unknown) => {
+      fetched.push(url);
+      return Promise.reject(new Error('no network here'));
+    });
+    const page = listeningCanvas();
+    expect(() => mountShelf(page.canvas, [], { room: { id: 'reading-corner' } })).toThrow(LATE);
+
+    expect(fetched).toEqual([]);
+    expect(page.live()).toEqual([]);
+  });
+});
+
 describe('a context the browser refused', () => {
   it('is thrown as `ContextRefused`, with three’s error as its cause', () => {
     three.refuse = true;

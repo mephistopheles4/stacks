@@ -3,6 +3,7 @@ import { attempted, type Attempt } from '../analytics/events.ts';
 import { onPickUpRequest } from '../ask/bridge.ts';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
+import { pageMode, roomIdFrom } from './room-mode.ts';
 import {
   createPickup,
   loopPickups,
@@ -13,7 +14,7 @@ import {
   type SpreadReading,
   type SwapReading,
 } from './pickup.ts';
-import { mountShelf, type ShelfHandle, type ShelfStats } from './scene.ts';
+import { mountShelf, type RoomRequest, type ShelfHandle, type ShelfStats } from './scene.ts';
 import {
   browserStore,
   describeFallback,
@@ -96,6 +97,8 @@ declare global {
       /** Where the lost-context fallback stands. See `shadow-fallback.ts`. */
       fallback(): FallbackKind;
       projectBook(index: number): { x: number; y: number } | undefined;
+      /** Where the room stands on this page, and what it cost: `none` for `?shelf` and the fallback. */
+      room(): ShelfHandle['room'];
       /**
        * Every analytics event asked for since load, sent or not, so `smoke:render`
        * can count call sites with the tracker never started
@@ -228,6 +231,36 @@ export async function boot(
   /** The sentence for the last mount that threw, read only right after one did. */
   let failure = UNAVAILABLE_MESSAGE;
 
+  /**
+   * The room this page asks for, until it is given up (#602, spec S2). `?shelf`, `?solo` and a browser
+   * that asked for reduced data ask for none. **It is asked for once and never again after a loss:**
+   * a lost context, and a room that failed, end with the plain shelf painted and no room, and the
+   * page does not reload the room (S2.5, C13). The panel's rebuild keeps it.
+   */
+  const mode = pageMode(
+    window.location.search,
+    matchMedia('(prefers-reduced-data: reduce)').matches,
+  );
+  let roomWanted: RoomRequest | undefined =
+    mode === 'room'
+      ? {
+          id: roomIdFrom(window.location.search),
+          // The room's lights are in the settings now: the panel shows them.
+          onDressed: () => {
+            if (handle !== undefined) showPanel?.(handle);
+          },
+          // The plain shelf, painted, as after a lost context (S2.5, C13) — drawn again once the
+          // failing load has finished with its own mount. No record is written: a room that would
+          // not load says nothing about this GPU, so the next visit tries the room again.
+          onFailed: () => {
+            roomWanted = undefined;
+            queueMicrotask(() => {
+              if (handle?.room.state === 'failed') remount('same');
+            });
+          },
+        }
+      : undefined;
+
   const mount = (
     settings: ShelfSettings,
     target: HTMLCanvasElement = surface,
@@ -237,6 +270,7 @@ export async function boot(
     try {
       return mountShelf(target, books, {
         settings,
+        ...(roomWanted === undefined ? {} : { room: roomWanted }),
         onSelect: (book, prevented) => {
           // A click the drawer closed on leaves a held book alone; with an empty
           // hand it still picks up. A click on the book in hand opens it.
@@ -338,6 +372,7 @@ export async function boot(
   const remount = (where: Surface): boolean => {
     const old = handle;
     const painted = paintedOf(old?.settings ?? resolveSettings(asked, base));
+    roomWanted = undefined; // the plain shelf, painted: the room is not reloaded on this page
     old?.dispose();
     handle = undefined;
     base = PAINTED_BASE;
@@ -491,6 +526,13 @@ export async function boot(
     try {
       const { mountDebugPane } = await import('./debug-pane.ts');
       const pane = mountDebugPane(host, {
+        mode: {
+          current: mode,
+          search: () => window.location.search,
+          open: (search) => {
+            window.location.assign(search);
+          },
+        },
         tunable: live.tunable,
         blackbox,
         base: () => base,
@@ -544,6 +586,7 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind, pickup?: Pic
     },
     fallback,
     projectBook: (index) => handle.projectBook(index),
+    room: () => handle.room,
     attempted: () => attempted(),
     stats: () => handle.stats(),
     held: () => pickup?.held(),

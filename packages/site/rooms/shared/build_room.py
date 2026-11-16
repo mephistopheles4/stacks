@@ -879,3 +879,10 @@ if args.pack:
                     "-si", "0.5", "-slb"], check=True)
     os.remove(raw)
     print(f"[room] packed {args.out}: {os.path.getsize(args.out) / 1e6:.1f} MB")
+    # The camera and the live lights go in last, as empties, so a rebake carries them (spec S7.2,
+    # S7.3, S8): the room's data is `packages/site/rooms/<room>/room-data.json`, and this leaves
+    # every mesh alone. A room with no such file has none.
+    data_file = os.path.join(room_paths.REPO, "packages", "site", "rooms", args.room, "room-data.json")
+    if os.path.isfile(data_file):
+        subprocess.run([node, os.path.join(os.path.dirname(os.path.abspath(__file__)), "add_room_data.mjs"),
+                        args.room], check=True)

@@ -14,6 +14,7 @@ All five phases are green and tagged (`phase-0` to `phase-4`). The tool runs aga
 
 | | |
 | --- | --- |
+| **Room** | [ADR-0164](./adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md) |
 | **O'Reilly provider removed (#450), in review** | Lookups go Open Library, then Google, with Apple for covers only. `oreilly_ourn` and `cover_source: oreilly` stay as provenance on older notes and no provider writes them. A cover added by hand needs `cover_source: unknown` written by hand. [ADR-0147](./adr/0147-oreilly-is-removed.md); the spec is [revision 4 on #450](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728372984) |
 | **Notice modals (#536), in review (PR #570)** | The Attribution link on the shelf and the Privacy link in the Ask drawer open their notice in one modal over the shelf; `/attribution` and `/privacy` stay as pages. G35, G61 and G20's `privacy` rule read it; `scripts/phone-check.ts --notice <name>` is the owner's phone run. [ADR-0146](./adr/0146-the-notices-open-in-one-modal-over-the-shelf.md), [spec](./spec/notice-modals.md). Waiting on the owner: the phone run and the screenshot review |
 | **Mutation dry run on every pull request (#558), draft** | G70 (`mutation-dry-run`): a `mutation-dry-run` job in `gates.yml` runs `pnpm exec stryker run --dryRunOnly` on every event and is listed in the `gates` aggregator. The structural gate (the issue's option 2) is not built and waits with the owner. [#558](https://github.com/mephistopheles4/stacks/issues/558) carries the record |
