@@ -33,7 +33,7 @@ import {
   summariseTrace,
   toolMismatch,
 } from './lib/ask-evals.ts';
-import { browserstackRootRefusalsOnDisk } from './lib/browserstack-key.ts';
+import { browserstackRootRefusalsOnDisk, dropBrowserstack } from './lib/browserstack-key.ts';
 import { capture, type CallCapture } from './lib/ask-reasoning.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
@@ -99,6 +99,7 @@ if (looksLikeFixture(library, fixtureTitles)) {
 // wrangler's own login, held in memory and never printed.
 const token = spawnSync('pnpm exec wrangler auth token', {
   cwd: REPO_ROOT,
+  env: dropBrowserstack(process.env),
   shell: true,
   encoding: 'utf8',
 });

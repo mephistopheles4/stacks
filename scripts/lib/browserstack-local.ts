@@ -173,7 +173,10 @@ export function sweepStaleConfigs(root: string = tmpdir()): number {
  */
 export function scrubLogFile(path: string, key: Key): void {
   if (!existsSync(path)) return;
-  writeFileSync(path, scrub(readFileSync(path, 'utf8'), [key.accessKey, key.username]));
+  const text = readFileSync(path, 'utf8');
+  // Not `scrub`: that one cuts a message to 200 characters, which would leave no log to read.
+  const clean = text.split(key.accessKey).join('[key]').split(key.username).join('[user]');
+  writeFileSync(path, clean);
 }
 
 /** What a printed line may carry: the binary's own output, scrubbed of the key. */

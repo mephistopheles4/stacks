@@ -16,7 +16,7 @@
  * Ctrl-C stops it. See `docs/commands.md`.
  */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { dropBrowserstack, browserstackRootRefusalsOnDisk } from './lib/browserstack-key.ts';
@@ -83,6 +83,12 @@ const v6 = await serveDist({
 const logDir = join(SCRATCH_ROOT, 'launcher');
 mkdirSync(logDir, { recursive: true });
 const logFile = join(logDir, 'tunnel.log');
+// A log a killed run left was never scrubbed, and a rotated key would no longer match it.
+rmSync(logFile, { force: true });
+// A hard exit skips the `finally` below; an `exit` listener still runs.
+process.on('exit', () => {
+  scrubLogFile(logFile, key);
+});
 
 let stopTunnel: (() => void) | undefined;
 const stop = (): void => {

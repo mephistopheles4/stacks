@@ -144,11 +144,15 @@ describe('scrubLogFile', () => {
     const root = mkdtempSync(join(tmpdir(), 'scrub-'));
     try {
       const log = join(root, 'tunnel.log');
-      writeFileSync(log, `start as ${USER}\nconfig key ${KEY}\nfine line\n`);
+      const filler = 'a long diagnostic line '.repeat(20);
+      writeFileSync(log, `start as ${USER}\nconfig key ${KEY}\n${filler}\nfine line\n`);
       scrubLogFile(log, key);
       const text = readFileSync(log, 'utf8');
       expect(text).not.toContain(KEY);
       expect(text).not.toContain(USER);
+      // The log keeps its lines and its length: it is what the owner reads when the tunnel fails.
+      expect(text.split('\n')).toHaveLength(5);
+      expect(text).toContain(filler);
       expect(text).toContain('fine line');
       expect(() => {
         scrubLogFile(join(root, 'absent.log'), key);

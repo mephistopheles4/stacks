@@ -129,7 +129,9 @@ describe('G9 — the BrowserStack key stays out of the root .env and out of wran
   it.each(entries)('%s refuses a root .env that names a BROWSERSTACK_ variable', (entry) => {
     const code = codeOf(entry);
     expect(code).toContain('browserstackRootRefusalsOnDisk()');
-    expect(code).toMatch(/if \(keyInRootEnv\.length > 0\) (\{\n\s+console\.error|fail\()/);
+    expect(code).toMatch(
+      /if \(keyInRootEnv\.length > 0\) (\{\n\s+console\.error[\s\S]*?process\.exit\(1\)|fail\()/,
+    );
   });
 
   it('hands wrangler an environment without one, through the one function every upload uses', () => {

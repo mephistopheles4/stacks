@@ -550,7 +550,7 @@ The preview branch is the constant `preview-fixture`; `main` and the production 
 the `_headers` block on `/rooms/basis/ktx2-worker.js`, the probe (`/probe.html`: green is `eval` reached and
 `fetch`, `worker` and `importScripts` blocked) and the room's transfer size there. The launcher's `--only`
 names `localhost`, `127.0.0.1` and `bs-local.com` on one port, and sends the key by a temp `--config-file`
-(its key name `key` is unconfirmed). **Set the key without typing it**, or the shell keeps it in its history: PowerShell `$env:BROWSERSTACK_ACCESS_KEY = Read-Host -MaskInput`, bash `read -rs BROWSERSTACK_ACCESS_KEY; export BROWSERSTACK_ACCESS_KEY`; likewise the username. **The key** lives in the launcher's own environment only: the
+(its key name `key` is unconfirmed). **Set the key without typing it**, or the shell keeps it in its history: PowerShell `$env:BROWSERSTACK_ACCESS_KEY = Read-Host -MaskInput`, bash `read -rs BROWSERSTACK_ACCESS_KEY; export BROWSERSTACK_ACCESS_KEY`; likewise the username, and clear both in that shell when the run ends, as every later command in it inherits them. **The key** is otherwise read by the launcher alone: the
 deploys, `preview:fixture` and the launcher refuse a root `.env` or `.env.local` naming a `BROWSERSTACK_`
 variable, and `uploadEnv` drops them (G9). ⚠️ The binary's ports (45690, 45691) are fixed: on a machine
 with a hidden Windows reservation over them it dies with `SYS_CONFLICT`, though nothing shows as using them.
