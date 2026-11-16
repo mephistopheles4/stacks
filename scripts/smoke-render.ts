@@ -33,6 +33,7 @@ import {
   judgeAnalyticsCalls,
   type Attempt,
 } from './lib/analytics-gate.ts';
+import { LONG_BOOK_PARAGRAPHS, LONG_BOOK_TITLE } from './lib/fixture-books.ts';
 import { lightingOf, litFailures, type Frame, type Lighting } from './lib/large-library-lit.ts';
 import {
   CLOSED_HINT,
@@ -1792,10 +1793,10 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
  * landed and the links row comes into reach, and GSAP's own ticker stays asleep
  * through the pickup (ADR-0103, commit `019add5`).
  *
- * The Thoughts are planted by request interception rather than a fixture, so
- * no vault carries them: every `notes/<id>.json` the page asks for answers with
- * `LONG_THOUGHTS`, invented prose far taller than the page. The page fetches
- * exactly what it would have; only the answer differs.
+ * The Thoughts are the generated vaults' own long book, `LONG_BOOK_TITLE`
+ * (`scripts/lib/fixture-books.ts`, #599): invented prose far taller than the
+ * page at either viewport, fetched from the real `/notes/` file the publisher
+ * wrote, so the page is the one a visitor gets and nothing is intercepted.
  *
  * The ticker is read as `COUNT_FRAMES` reads G60's loops: GSAP's ticker is a
  * `requestAnimationFrame` loop of its own, so awake it shows as a second
@@ -1803,17 +1804,6 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
  * of the pickup, while the motion runs and before GSAP would auto-sleep, so a
  * slow runner only stretches the sample in time, never shortens it.
  */
-const LONG_THOUGHTS = {
-  paragraphs: Array.from(
-    { length: 14 },
-    (_, index) =>
-      `Paragraph ${String(index + 1)} of a note planted by the gate. The lamp was low and the ` +
-      'margins filled with small arrows pointing nowhere in particular, which is how a reader ' +
-      'marks a page they mean to come back to and never does. Nothing here is quoted; the gate ' +
-      'wrote every word so the page has something tall enough to scroll.',
-  ),
-};
-
 interface AtRestChecked {
   readonly lines: readonly string[];
   readonly failures: readonly string[];
@@ -1827,28 +1817,14 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     const page = await context.newPage();
     await page.setViewport(VIEWPORT);
     await page.evaluateOnNewDocument(COUNT_FRAMES);
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      if (new URL(request.url()).pathname.startsWith('/notes/')) {
-        void request.respond({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(LONG_THOUGHTS),
-        });
-      } else {
-        void request.continue();
-      }
-    });
     await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
 
     const library = (await page.evaluate(
       `fetch('/library.json').then((response) => response.json())`,
     )) as { books: LibraryBook[] };
-    const count = new Map<string, number>();
-    for (const book of library.books) count.set(book.title, (count.get(book.title) ?? 0) + 1);
     const ordered = shelfOrder(library.books);
-    const index = ordered.findIndex((b) => b.thoughts === true && count.get(b.title) === 1);
+    const index = ordered.findIndex((b) => b.thoughts === true && b.title === LONG_BOOK_TITLE);
     // An early stop says why under the check's own heading, not only in the closing list.
     const stop = (why: string): AtRestChecked => {
       lines.push(`STOPPED          ${why}`);
@@ -1856,7 +1832,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       return { lines, failures };
     };
     if (index === -1) {
-      return stop('library.json flags no uniquely titled book with Thoughts');
+      return stop('library.json flags no long-Thoughts book');
     }
 
     await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
@@ -1874,7 +1850,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     if (!(await until(page, HELD_OPEN, 'the long-Thoughts book to open'))) {
       return stop('the book never opened');
     }
-    const planted = LONG_THOUGHTS.paragraphs.length;
+    const planted = LONG_BOOK_PARAGRAPHS;
     if (
       !(await until(
         page,
