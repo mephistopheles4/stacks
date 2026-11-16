@@ -2399,18 +2399,30 @@ async function orbitUntil(
     await page.mouse.down();
     await page.mouse.move(size.w / 2 + dx, size.h * 0.2, { steps: 6 });
     await page.mouse.up();
-    // The damped camera keeps gliding after the drag: wait until two polls in a row agree.
-    await searchFor(
+    // The damped camera keeps gliding after the drag and moves only when a frame is drawn, so two
+    // polls between frames prove nothing: compare readings at least three drawn frames apart, within
+    // a small tolerance, and take the point only from a camera that has settled.
+    const settled = await searchFor(
       page,
       `(() => {
-        const now = window.__shelf.room().camera.join();
-        const still = window.__orbitSeen === now;
-        window.__orbitSeen = now;
+        window.__frameTick ??= (() => {
+          const tick = { n: 0 };
+          const count = () => { tick.n += 1; requestAnimationFrame(count); };
+          requestAnimationFrame(count);
+          return tick;
+        })();
+        const camera = window.__shelf.room().camera;
+        const seen = window.__orbitSeen;
+        if (seen === undefined) { window.__orbitSeen = { camera, frames: window.__frameTick.n }; return false; }
+        if (window.__frameTick.n - seen.frames < 3) return false;
+        const still = camera.every((v, i) => Math.abs(v - seen.camera[i]) < 1e-3);
+        window.__orbitSeen = { camera, frames: window.__frameTick.n };
         return still;
       })()`,
-      4000,
+      15_000,
     );
-    found = await read();
+    await page.evaluate('window.__orbitSeen = undefined');
+    found = settled ? await read() : undefined;
   }
   return found;
 }
@@ -2450,7 +2462,12 @@ async function readStacks(page: Page, viewport: string): Promise<StackRead> {
     read.baseFound = true;
     await page.mouse.click(Math.round(base.x), Math.round(base.y));
     // Absence, so a fixed wait that outlasts the pickup's start: a slower runner makes it weaker, never flaky.
-    read.baseClickPickedNothing = !(await searchFor(page, HELD, STAYS_CLOSED_MS));
+    // Any reading at all, so a pickup still lifting counts, whatever the animation's speed.
+    read.baseClickPickedNothing = !(await searchFor(
+      page,
+      'window.__shelf.held() !== undefined',
+      STAYS_CLOSED_MS,
+    ));
     if (!read.baseClickPickedNothing) await putBackAndSettle(page);
   }
 
