@@ -79,6 +79,12 @@ const NARROW_ASPECT = 0.9;
 /** The layer the veil is drawn on, and the one the held book is drawn on. */
 const VEIL_LAYER = 2;
 const HELD_LAYER = 1;
+/**
+ * In a room (#602, spec S7.5): the light a held book takes in place of the room's, and the room's
+ * veil. The room is dark already, so the veil over it goes less far (0.3).
+ */
+const HAND_LIGHT = { colour: 0xfff2e2, key: 2.2, fill: 0.9 } as const;
+const ROOM_DIM = 0.3;
 
 /** What a book carries once it has been picked up the first time. */
 interface Rigged {
@@ -287,6 +293,17 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   veil.layers.set(VEIL_LAYER);
   veil.frustumCulled = false;
   veil.position.set(0, 0, -0.2);
+
+  // A held book in a room leaves the room's light for a light of its own, riding with the camera, from
+  // above and left of the visitor, casting nothing. It fades in as the book comes up and the room's
+  // lights fade out of the held book's pass, so a dark room cannot swallow it. Not visible, and so not
+  // counted by any program, on a shelf with no room.
+  const handKey = new THREE.DirectionalLight(HAND_LIGHT.colour, 0);
+  handKey.position.set(-0.7, 0.9, 0.6);
+  handKey.target.position.set(0, 0, -2);
+  const handFill = new THREE.AmbientLight(HAND_LIGHT.colour, 0);
+  for (const object of [handKey, handKey.target, handFill]) object.layers.set(HELD_LAYER);
+  handKey.visible = handFill.visible = false;
 
   const reduced = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const staged = (book: LibraryBook): StagedBook | undefined =>
@@ -906,7 +923,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         return;
       }
       const { renderer, scene, camera } = current;
-      veil.material.opacity = motion.dim * rest;
+      const inRoom = current.inRoom();
+      veil.material.opacity = (inRoom ? ROOM_DIM : motion.dim) * rest;
       // Three passes: the shelf without the held books, the veil over it, then
       // the held books — depth kept, so a book still in its slot stays behind
       // the upright beside it.
@@ -922,7 +940,18 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       camera.layers.set(VEIL_LAYER);
       renderer.render(scene, camera);
       camera.layers.set(HELD_LAYER);
+      const roomLights = inRoom
+        ? scene.children.filter((child): child is THREE.Light => child instanceof THREE.Light)
+        : [];
+      const kept = roomLights.map((light) => light.intensity);
+      for (const light of roomLights) light.intensity *= 1 - rest;
+      handKey.visible = handFill.visible = inRoom;
+      handKey.intensity = HAND_LIGHT.key * rest;
+      handFill.intensity = HAND_LIGHT.fill * rest;
       renderer.render(scene, camera);
+      roomLights.forEach((light, i) => {
+        light.intensity = kept[i] ?? light.intensity;
+      });
       camera.layers.set(0);
       renderer.autoClear = autoClear;
       scene.background = background;
@@ -947,6 +976,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     next.scene.traverse((object) => {
       if (object instanceof THREE.Light) object.layers.enableAll();
     });
+    // After that, so they stay on the held layer alone.
+    next.camera.add(handKey, handKey.target, handFill);
     next.setFrame(hooks);
     sizeLayer();
     observer.disconnect();

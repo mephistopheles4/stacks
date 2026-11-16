@@ -42,6 +42,7 @@ function harness(options: { wasm?: () => Promise<ArrayBuffer> } = {}) {
     },
     init: () => Promise.reject(new Error("three's own init, which builds a blob: worker")),
     loadAsync,
+    dispose: () => undefined,
   };
   const fetchWasm = vi.fn(options.wasm ?? (() => Promise.resolve(wasm)));
   const makeWorker = vi.fn((url: string) => {
@@ -241,5 +242,38 @@ describe('a failure rejects the load and never leaves it pending (spec S5.4)', (
     const h = harness();
     h.loadAsync.mockRejectedValue('transcode: bad file');
     await expect(h.textures.load('bad.ktx2')).rejects.toBe('transcode: bad file');
+  });
+});
+
+describe('a disposed room starts no worker', () => {
+  it('ends the loader’s workers, and refuses a load and a worker after that', async () => {
+    const h = harness();
+    const dispose = vi.spyOn(h.loader, 'dispose');
+    await h.loader.init();
+
+    h.textures.dispose();
+
+    expect(dispose).toHaveBeenCalledOnce();
+    await expect(h.textures.load('late.ktx2')).rejects.toThrow('disposed');
+    expect(() => h.startWorker()).toThrow('disposed');
+    expect(h.makeWorker).not.toHaveBeenCalled();
+  });
+
+  it('leaves a wasm still in flight no pool to start a worker in', async () => {
+    let arrive!: (bytes: ArrayBuffer) => void;
+    const h = harness({
+      wasm: () =>
+        new Promise<ArrayBuffer>((resolve) => {
+          arrive = resolve;
+        }),
+    });
+    const pending = h.loader.init();
+
+    h.textures.dispose();
+    arrive(h.wasm);
+    await pending;
+
+    expect(() => h.startWorker()).toThrow('no worker creator');
+    expect(h.makeWorker).not.toHaveBeenCalled();
   });
 });

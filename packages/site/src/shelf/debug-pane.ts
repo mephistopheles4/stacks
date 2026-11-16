@@ -25,6 +25,7 @@ import * as EssentialsPlugin from '@tweakpane/plugin-essentials';
 import tunerCss from '../generated/tuner.css?url';
 import { createSlots, startsExpanded, type PaneHost, type Slot, type Slots } from './pane-slots.ts';
 import { blackboxReadout } from './blackbox-readout.ts';
+import { modeSwitch, type ModeSwitchSources } from './mode-switch.ts';
 import type { DiagnosticsPort } from './diagnostics.ts';
 import { pickupTuner, type TunablePickup } from './pickup-tuner.ts';
 import type { ShelfHandle } from './scene.ts';
@@ -33,6 +34,8 @@ import { tuningPanel } from './tuning-panel.ts';
 
 /** What the instruments are given to work on. */
 export interface PaneSources {
+  /** The page's modes: the room, `?shelf` and `?solo`, each a button that opens that page. */
+  readonly mode: ModeSwitchSources;
   readonly tunable: TunablePickup | undefined;
   /** The settings this page started from; a getter, because a fallback moves it. */
   readonly base: () => ShelfSettings;
@@ -91,6 +94,7 @@ export function mountDebugPane(host: HTMLElement, sources: PaneSources): DebugPa
   pane.registerPlugin(EssentialsPlugin);
 
   const slots = createSlots(pane);
+  slots.add(modeSwitch(sources.mode));
   slots.add(pickupTuner(sources.tunable));
   if (sources.blackbox !== undefined) slots.add(blackboxReadout(sources.blackbox));
   let tuning: Slot | undefined;

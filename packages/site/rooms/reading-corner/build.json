@@ -168,11 +168,15 @@
     "light/room-audition-wallpaper.webp": "5751cc43a0bc7b9fed74927321748c803a3229e2404b9753e0827785ae691720",
     "light/room-audition-wallpaper_left.webp": "2417e3112f9af383d053ed48ebffd6404432f429efdf9d21b0ef14d88d17ec65",
     "light/room-audition-wallpaper_right.webp": "ab466378f2623fd516907eb142c056cfd210deecfb5e2c41ac30a36e2de05f9b",
-    "room-audition.glb": "b6b3afd52dd6d20994611134c3fbf605937a263cbc223b415c3ffbe0d72882f0",
+    "room-audition.glb": "fe56bf9f50e8e29a693be11dd041dcaa70e99de8b511070f16c9d55fafe4c533",
     "tex/plank_flooring_diff.webp": "86ac440fd2538adce738df6b4330d50ebdd1ecf95e220f34655d2151b34eb06a",
     "tex/rug-fringe.webp": "815122c9ec76e62c54b164d42f474f58bcd6720b682f3fce24f80031ada793be",
     "tex/rug-met-446642.webp": "b47bc965e2c2c0541548964d771c91507cd5a39a2a5b1832305415062f70e84e",
     "tex/rug-pile.webp": "191fbd468fa938cfc6d49d91ba2b7b8b0fb10675594b30a5d28049f6dae95c8b",
     "tex/wallpaper-willow.webp": "97ec1b634cdbdbbe80608cc61e60b206f83d1b65e7a400a98efcc6d5c2930466"
+  },
+  "finish": {
+    "command": "node packages/site/rooms/shared/add_room_data.mjs reading-corner",
+    "what": "The T3 ticket (#602) added the camera and live-light empties to the packed GLB without a rebake: this writes room-data.json into the GLB's JSON chunk and leaves the binary chunk, every mesh and every texture byte for byte. build_room.py --pack now runs it as its last step, so a rebake carries them."
   }
 }

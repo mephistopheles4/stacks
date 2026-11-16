@@ -96,6 +96,8 @@ import {
 
 const ARTIFACTS = join(REPO_ROOT, 'artifacts');
 const OUTPUT = join(ARTIFACTS, 'shelf.png');
+/** The room page's screenshot (#602): what the owner signs off the room's look from. */
+const ROOM_OUTPUT = join(ARTIFACTS, 'room.png');
 const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 const LIBRARY = join(REPO_ROOT, 'packages', 'site', 'public', 'library.json');
 
@@ -246,7 +248,7 @@ async function main(): Promise<void> {
       // Before the navigation, so the covers' requests are counted from the first.
       const settle = watchSettle(page);
       const bootStarted = performance.now();
-      await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
       try {
         await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
@@ -298,6 +300,7 @@ async function main(): Promise<void> {
       const spread = await timed('open spread', () => checkSpread(browser, origin));
       const atRest = await timed('G35 held at rest', () => checkHeldAtRest(browser, origin));
       const flatLayer = await timed('G35 flat layer (#599)', () => checkFlatLayer(browser, origin));
+      const room = await timed('room page (#602)', () => checkRoom(browser, origin));
       const controls = await timed('G35 closed book controls', () =>
         checkClosedControls(browser, origin),
       );
@@ -346,6 +349,7 @@ async function main(): Promise<void> {
         spread,
         atRest,
         flatLayer,
+        room,
         controls,
         drawerCells,
         overlap,
@@ -416,9 +420,9 @@ async function checkLargeLibraryLit(
   const seed = `woodSeed=${LIT_SEED}`;
   const plant = `debug=${encodeURIComponent(JSON.stringify(FOG_OVER_THE_BOOKCASE))}`;
 
-  const control = await grabFrame(browser, `${main}/?${seed}`, failures);
-  const largePage = await grabFrame(browser, `${large}/?${seed}`, failures);
-  const planted = await grabFrame(browser, `${large}/?${seed}&${plant}`, failures);
+  const control = await grabFrame(browser, `${main}/?shelf&${seed}`, failures);
+  const largePage = await grabFrame(browser, `${large}/?shelf&${seed}`, failures);
+  const planted = await grabFrame(browser, `${large}/?shelf&${seed}&${plant}`, failures);
 
   const library = JSON.parse(readFileSync(LARGE_LIBRARY, 'utf8')) as { books: LibraryBook[] };
   const rows = rowsForBookcase(toRows(library.books, DEFAULT_SETTINGS.books).length);
@@ -1730,7 +1734,7 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
   try {
     const page = await context.newPage();
     await page.setViewport(SPREAD_VIEWPORT);
-    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     for (const index of SPREAD_BOOKS) {
       await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
@@ -1800,7 +1804,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     const page = await context.newPage();
     await page.setViewport(VIEWPORT);
     await page.evaluateOnNewDocument(COUNT_FRAMES);
-    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
 
     const library = (await page.evaluate(
@@ -2202,7 +2206,7 @@ async function checkFlatLayer(browser: Browser, origin: string): Promise<LinesAn
       if (message.type() === 'warn') warnings.push(message.text().slice(0, 160));
     });
     await page.setViewport(VIEWPORT);
-    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     const cases: readonly FlatCase[] = [
       { label: 'desktop', turned: false, reduced: false, phone: false },
@@ -2251,6 +2255,86 @@ const PHONE = { width: 375, height: 812, hasTouch: true } as const;
 interface LinesAndFailures {
   readonly lines: readonly string[];
   readonly failures: readonly string[];
+}
+
+/** How many nodes of the committed room carry a mesh: read from its JSON chunk, so the page cannot lie about it. */
+function bakedMeshCount(): number {
+  const glb = readFileSync(
+    join(REPO_ROOT, 'packages/site/public/rooms/reading-corner/room-audition.glb'),
+  );
+  const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8')) as {
+    nodes: { mesh?: number }[];
+  };
+  return json.nodes.filter((node) => node.mesh !== undefined).length;
+}
+
+/**
+ * The default page, the room round the bookcase (#602, claims C1, C2, C7): dressed with no page
+ * error, the loading screen gone, the camera inside the room's box, a book picks up and puts back,
+ * and the picture the owner reads the room's look from.
+ */
+async function checkRoom(browser: Browser, origin: string): Promise<LinesAndFailures> {
+  const context = await browser.createBrowserContext();
+  const lines: string[] = [];
+  const failures: string[] = [];
+  try {
+    const page = await context.newPage();
+    await page.setViewport(VIEWPORT);
+    page.on('pageerror', (error: unknown) => {
+      failures.push(`room page error: ${error instanceof Error ? error.message : String(error)}`);
+    });
+    page.on('console', (message) => {
+      if (message.type() === 'error' || message.type() === 'warn') {
+        failures.push(`room console ${message.type()}: ${message.text().slice(0, 200)}`);
+      }
+    });
+    const settle = watchSettle(page);
+    const started = performance.now();
+    await visit(page, origin, '/');
+    const seconds = ((performance.now() - started) / 1000).toFixed(1);
+    if (!(await settle())) failures.push('the room page never settled');
+    const state = await readState(page);
+    lines.push(`dressed in ${seconds}s   ${String(state.roomDraws)} draws`);
+    if (state.roomDraws === 0) failures.push('the room drew nothing');
+    // C1, the room as the prototype dressed it: a mesh the loader dropped or hid is a piece of the room
+    // gone, so the room draws at least every mesh the committed GLB holds.
+    const baked = bakedMeshCount();
+    if (state.roomDraws < baked) {
+      failures.push(
+        `the room draws ${String(state.roomDraws)} meshes, fewer than the ${String(baked)} in its GLB`,
+      );
+    }
+    lines.push(`${String(baked)} meshes in the GLB, ${String(state.roomDraws)} drawn`);
+    if (state.loadingScreen) failures.push('the loading screen is still up on a dressed room');
+
+    const inside = (await page.evaluate(`(() => {
+      const r = window.__shelf.room();
+      if (!r.bounds) return 'the room has no bounds';
+      const { min, max } = r.bounds;
+      const bad = r.camera.map((v, i) => (v < min[i] - 1e-3 || v > max[i] + 1e-3 ? 'xyz'[i] : '')).join('');
+      return bad === '' ? 'inside' : 'outside on ' + bad;
+    })()`)) as string;
+    lines.push(`camera ${inside}`);
+    if (inside !== 'inside') failures.push(`the room's camera is ${inside}`);
+
+    mkdirSync(ARTIFACTS, { recursive: true });
+    writeFileSync(ROOM_OUTPUT, await page.screenshot({ type: 'png' }));
+    lines.push(`screenshot ${ROOM_OUTPUT}`);
+
+    const picked = await clickToPickUp(page, HELD);
+    if (picked === undefined) {
+      failures.push('no book could be picked up in the room');
+    } else {
+      await page.evaluate('window.__shelf.putBack()');
+      if (!(await until(page, NOTHING_HELD, 'the book to go back in the room'))) {
+        failures.push('the book picked up in the room never went back');
+      }
+      lines.push('a book picks up and goes back');
+    }
+  } finally {
+    await context.close();
+  }
+  return { lines, failures };
 }
 
 /** The held book, closed at rest, picked up through the shelf's hook. */
@@ -2441,7 +2525,7 @@ async function checkClosedControls(browser: Browser, origin: string): Promise<Li
       `window.__csp = []; document.addEventListener('securitypolicyviolation', (event) => window.__csp.push(event.violatedDirective));`,
     );
     await page.setViewport(DESKTOP);
-    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
 
     const desktop = await readViewport(page, 'held-closed.png');
@@ -2766,7 +2850,7 @@ async function checkDrawerCells(browser: Browser, origin: string): Promise<Drawe
   try {
     const page = await context.newPage();
     await page.setViewport({ width: 1280, height: 800 });
-    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
 
     /** A held book, closed or open, with the drawer opened over it. */
@@ -3219,7 +3303,7 @@ async function checkOverlap(browser: Browser, origin: string): Promise<LinesAndF
   try {
     const page = await context.newPage();
     await page.setViewport({ ...OVERLAP_SIZES[0], hasTouch: true });
-    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     const library = (await page.evaluate(
       `fetch('/library.json').then((response) => response.json())`,
@@ -3311,7 +3395,7 @@ async function checkLostWithBookHeld(browser: Browser, origin: string): Promise<
     try {
       const page = await context.newPage();
       await page.setViewport(DESKTOP);
-      await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
       await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
       if (!(await holdClosed(page, 3, `the ${state} book to lose`))) continue;
       if (state === 'open' && !(await openBook(page, 'the book to lose'))) continue;
@@ -3422,7 +3506,7 @@ interface FallbackChecked {
  * off the same constant the page reads, so a case cannot quietly go on testing
  * a painted page.
  */
-const REAL_TIME_PATH = DEFAULT_SETTINGS.shadows.enabled ? '/' : '/?shadows=1';
+const REAL_TIME_PATH = DEFAULT_SETTINGS.shadows.enabled ? '/?shelf' : '/?shelf&shadows=1';
 
 /**
  * Counts `requestAnimationFrame` callbacks per frame, installed before any page
@@ -3478,6 +3562,13 @@ const REFUSE_NEW_CONTEXTS = `(() => {
  * case cannot go green refused for some other reason.
  */
 const REFUSED_BY_THREE = 'THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.';
+
+/** What Chrome logs for a file the gate staged as missing: the one console error those cases cause. */
+const NOT_FOUND = 'Failed to load resource: the server responded with a status of 404 (Not Found)';
+
+/** The room's GLB, and one of its textures, by the end of their URLs: what the room cases take away. */
+const ROOM_GLB = '/rooms/reading-corner/room-audition.glb';
+const ROOM_TEXTURE = 'light/room-audition-chest'; // the stem, so the KTX2 file and its WebP fallback both go
 
 /**
  * Breaks programs the way a driver that will not link them does, installed
@@ -3541,6 +3632,11 @@ interface PageState {
    * live one must be.
    */
   readonly canvasShown: boolean;
+  /** The room's state on the live shelf (`none` on a shelf that has none), and its draws. */
+  readonly room: string;
+  readonly roomDraws: number;
+  /** Whether the room's loading screen is still up. It must never outlive a load. */
+  readonly loadingScreen: boolean;
 }
 
 const READ_STATE = `(() => ({
@@ -3554,6 +3650,9 @@ const READ_STATE = `(() => ({
     document
       .getElementById('shelf-canvas')
       ?.checkVisibility({ visibilityProperty: true, opacityProperty: true }) ?? false,
+  room: window.__shelf?.room().state ?? 'none',
+  roomDraws: window.__shelf?.room().draws ?? 0,
+  loadingScreen: document.querySelector('[data-loading-screen]') !== null,
 }))()`;
 
 async function checkContextLossFallback(
@@ -3575,6 +3674,9 @@ async function checkContextLossFallback(
     ['probe loss', probeLoss],
     ['redraw halts', redrawHalts, LINK_FAILED],
     ['link failure', linkFailure, LINK_FAILED],
+    ['room loss', roomLoss],
+    ['failed room', failedRoom, NOT_FOUND],
+    ['texture 404', textureNotFound, NOT_FOUND],
   ];
 
   for (const [name, run, expected] of cases) {
@@ -3654,14 +3756,14 @@ async function restoreThenReload(page: Page, origin: string): Promise<string> {
   must(restored.canvasShown, 'the shelf was redrawn on a canvas that is still hidden');
   const loops = await oneLoop(page, 'after the restore');
 
-  await visit(page, origin, '/');
+  await visit(page, origin, '/?shelf');
   const reloaded = await readState(page);
   must(
     reloaded.fallback === 'remembered' && reloaded.profile.includes('shadows=off'),
     `a reload did not start painted from the record: ${JSON.stringify(reloaded)}`,
   );
 
-  await visit(page, origin, '/?shadows=1');
+  await visit(page, origin, '/?shelf&shadows=1');
   const probed = await readState(page);
   must(
     probed.fallback === 'probe-override' && !probed.profile.includes('shadows=off'),
@@ -3775,7 +3877,7 @@ async function storageRefused(page: Page, origin: string): Promise<string> {
 
 /** (F) a painted shelf's loss writes nothing, rebuilds nothing, and resumes in place. */
 async function paintedLoss(page: Page, origin: string): Promise<string> {
-  await visit(page, origin, '/?shadows=0');
+  await visit(page, origin, '/?shelf&shadows=0');
 
   await page.evaluate(LOSE);
   await waitForState(page, `document.querySelector('.shelf-notice') !== null`, 5000, 'lost notice');
@@ -3882,7 +3984,7 @@ async function probeLoss(page: Page, origin: string): Promise<string> {
     "black-box line saying the probe's loss is not remembered",
   );
 
-  await visit(page, origin, '/');
+  await visit(page, origin, '/?shelf');
   const plain = await readState(page);
   must(
     plain.fallback === 'none' &&
@@ -3965,7 +4067,7 @@ async function linkFailure(page: Page, origin: string): Promise<string> {
   );
   const loops = await oneLoop(page, 'after the painted redraw');
 
-  await visit(page, origin, '/');
+  await visit(page, origin, '/?shelf');
   const reloaded = await readState(page);
   must(
     reloaded.fallback === 'remembered' && reloaded.profile.includes('shadows=off'),
@@ -3979,7 +4081,117 @@ async function linkFailure(page: Page, origin: string): Promise<string> {
   return `redrawn painted in place (${loops}), record written, reload remembered`;
 }
 
-async function visit(page: Page, origin: string, path: string): Promise<void> {
+/**
+ * (K) a lost context on the room page ends with the plain shelf, painted, and no room (spec S2.5,
+ * claim C13): the page does not reload the room, and no loading screen is left over the shelf.
+ */
+async function roomLoss(page: Page, origin: string): Promise<string> {
+  const fetched: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/rooms/')) fetched.push(new URL(request.url()).pathname);
+  });
+  await visit(page, origin, '/');
+  await mustSample(page);
+  const dressed = await readState(page);
+  must(
+    dressed.room === 'dressed' && dressed.roomDraws > 0,
+    `the room page is not dressed: ${dressed.room}`,
+  );
+  const before = fetched.length;
+
+  await page.evaluate(`window.__oldCanvas = document.getElementById('shelf-canvas')`);
+  await page.evaluate(LOSE);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'fresh-canvas'`,
+    RESTORE_WAIT_MS + 3000,
+    'painted rebuild on a new canvas',
+  );
+  const state = await readState(page);
+  must(state.room === 'none', `the page still has a room after a loss: ${state.room}`);
+  must(
+    state.roomDraws === 0,
+    `the room still draws after a loss: ${String(state.roomDraws)} draws`,
+  );
+  must(!state.loadingScreen, 'a loading screen was left up over the plain shelf');
+  must(state.profile.includes('shadows=off'), `the plain shelf samples the map: ${state.profile}`);
+  must(state.canvasShown, 'the plain shelf is on a canvas that is still hidden');
+  must(state.notice === '', `a notice stayed over the plain shelf: "${state.notice}"`);
+  // A beat past the page's own window, so a reload of the room that should not happen has had its chance.
+  await new Promise((resolve) => setTimeout(resolve, RESTORE_WAIT_MS + 500));
+  must(
+    fetched.length === before,
+    `the room was fetched again after the loss: ${fetched.slice(before).join(', ')}`,
+  );
+  const loops = await oneLoop(page, 'on the plain shelf');
+  return `plain shelf painted, no room, no reload (${loops})`;
+}
+
+/**
+ * (L) a room whose GLB is gone ends with the plain shelf and one warning (spec S3.4, claims C2,
+ * C13): the screen lifts, the shelf is the page's own, clickable, and nothing throws.
+ */
+async function failedRoom(page: Page, origin: string): Promise<string> {
+  const warnings: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'warn') warnings.push(message.text());
+  });
+  await page.setRequestInterception(true);
+  page.on('request', (request) => {
+    if (request.url().endsWith(ROOM_GLB)) void request.respond({ status: 404, body: 'gone' });
+    else void request.continue();
+  });
+  await visit(page, origin, '/', true);
+  const state = await readState(page);
+  // The page rebuilt the plain shelf, painted: its new mount has no room (spec S2.5, claim C13).
+  must(state.room === 'none', `the failed room was not replaced by the plain shelf: ${state.room}`);
+  must(state.profile.includes('shadows=off'), `the plain shelf is not painted: ${state.profile}`);
+  must(!state.loadingScreen, 'the loading screen was left up after the room failed');
+  must(state.roomDraws === 0, 'a failed room still draws');
+  must(state.canvasShown, 'the plain shelf is hidden');
+  must(state.visibility === 'visible', `the page is ${state.visibility}`);
+  must(state.notice === '', `a notice stayed over the plain shelf: "${state.notice}"`);
+  const said = warnings.filter((text) => text.includes('drawing the plain shelf'));
+  must(
+    said.length === 1,
+    `${String(said.length)} warnings for the failed room, not 1: ${warnings.join(' | ')}`,
+  );
+  const loops = await oneLoop(page, 'on the plain shelf');
+  must(
+    (await clickToPickUp(page, 'window.__shelf.held() !== undefined')) !== undefined,
+    'no book on the plain shelf can be picked up',
+  );
+  return `plain shelf, one warning, screen lifted, a book picks up (${loops})`;
+}
+
+/**
+ * (M) one texture that is missing neither holds the screen up nor throws (spec S3.3, claim C2): it
+ * counts as settled, the room is dressed, and exactly one warning names the file.
+ */
+async function textureNotFound(page: Page, origin: string): Promise<string> {
+  const warnings: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'warn') warnings.push(message.text());
+  });
+  await page.setRequestInterception(true);
+  page.on('request', (request) => {
+    if (request.url().includes(ROOM_TEXTURE)) void request.respond({ status: 404, body: 'gone' });
+    else void request.continue();
+  });
+  await visit(page, origin, '/');
+  const state = await readState(page);
+  must(state.room === 'dressed', `one missing texture ended the room: ${state.room}`);
+  must(!state.loadingScreen, 'the loading screen was left up for one missing texture');
+  // The KTX2 file and its WebP fallback both 404, and the codec drop warns once on its own: the
+  // room counts the texture itself once, when its last source is gone.
+  const named = warnings.filter(
+    (text) => text.includes(ROOM_TEXTURE) && text.includes('did not load'),
+  );
+  must(named.length === 1, `${String(named.length)} warnings name the missing texture, not 1`);
+  return 'dressed, screen lifted, one warning names the file';
+}
+
+async function visit(page: Page, origin: string, path: string, roomMayFail = false): Promise<void> {
   // Ready is the state every case needs, and then the settle helper: the covers
   // in, the counts still. On the runner's software renderer `networkidle0` inside
   // 30 s failed one case of eight on one Node version of two, with the shelf
@@ -3990,6 +4202,7 @@ async function visit(page: Page, origin: string, path: string): Promise<void> {
   await page.goto(`${origin}${path}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
   const ready = performance.now();
+  if (asksForRoom(path)) await roomSettled(page, path, roomMayFail);
   must(await settle(), `${path} never settled`);
   // A hidden page's loss is not the fallback's, by design — so make sure the
   // one under test is the one in front.
@@ -3997,6 +4210,35 @@ async function visit(page: Page, origin: string, path: string): Promise<void> {
   VISITS.count += 1;
   VISITS.toReady += (ready - started) / 1000;
   VISITS.toSettled += (performance.now() - ready) / 1000;
+}
+
+/** Whether a path draws the room: any page but `?shelf` and `?solo` does, by default (spec S2). */
+function asksForRoom(path: string): boolean {
+  return !/[?&](shelf|solo)(&|=|$)/.test(path);
+}
+
+/** The room's own wait: the page is `ready` as soon as the shelf is up, and the room comes after it. */
+const ROOM_WAIT_MS = 120_000;
+
+async function roomSettled(page: Page, what: string, mayFail: boolean): Promise<void> {
+  try {
+    await page.waitForFunction("window.__shelf.room().state !== 'loading'", {
+      timeout: ROOM_WAIT_MS,
+      polling: 100,
+    });
+    // The cover dissolves after the room is dressed (about 1.75 s) and must be gone before it is read.
+    await page.waitForFunction("document.querySelector('[data-loading-screen]') === null", {
+      timeout: ROOM_WAIT_MS,
+      polling: 100,
+    });
+  } catch {
+    throw new Error(`the room at ${what} was still loading after ${String(ROOM_WAIT_MS)}ms`);
+  }
+  const state = await readState(page);
+  must(
+    state.room === 'dressed' || (mayFail && (state.room === 'failed' || state.room === 'none')),
+    `the room at ${what} ended ${state.room}, not dressed`,
+  );
 }
 
 /**
@@ -4142,20 +4384,22 @@ interface SamplingPage {
 const SAMPLING_PAGES: readonly SamplingPage[] = [
   {
     name: 'default, 50 books',
+    url: (main) => `${main}/?shelf`,
+    role: 'gate',
+    library: LIBRARY,
+    minRows: 0,
+  },
+  {
+    // The room page (#602, claim C12): the default page, with the room round the bookcase, with
+    // and without a book held. The room reads no shadow map, so the count is the bookcase's alone.
+    name: 'room, 50 books',
     url: (main) => `${main}/`,
     role: 'gate',
     library: LIBRARY,
     minRows: 0,
   },
   {
-    name: `default, ${String(LARGE_BOOKS)} books`,
-    url: (_main, large) => `${large}/`,
-    role: 'gate',
-    library: LARGE_LIBRARY,
-    minRows: MIN_SAMPLING_ROWS,
-  },
-  {
-    name: 'a book held closed, 50 books',
+    name: 'room, a book held closed',
     url: (main) => `${main}/`,
     role: 'gate',
     library: LIBRARY,
@@ -4163,7 +4407,7 @@ const SAMPLING_PAGES: readonly SamplingPage[] = [
     hold: 'closed',
   },
   {
-    name: 'a book held open, 50 books',
+    name: 'room, a book held open',
     url: (main) => `${main}/`,
     role: 'gate',
     library: LIBRARY,
@@ -4171,8 +4415,31 @@ const SAMPLING_PAGES: readonly SamplingPage[] = [
     hold: 'open',
   },
   {
+    name: `default, ${String(LARGE_BOOKS)} books`,
+    url: (_main, large) => `${large}/?shelf`,
+    role: 'gate',
+    library: LARGE_LIBRARY,
+    minRows: MIN_SAMPLING_ROWS,
+  },
+  {
+    name: 'a book held closed, 50 books',
+    url: (main) => `${main}/?shelf`,
+    role: 'gate',
+    library: LIBRARY,
+    minRows: 0,
+    hold: 'closed',
+  },
+  {
+    name: 'a book held open, 50 books',
+    url: (main) => `${main}/?shelf`,
+    role: 'gate',
+    library: LIBRARY,
+    minRows: 0,
+    hold: 'open',
+  },
+  {
     name: 'a notice open, 50 books',
-    url: (main) => `${main}/`,
+    url: (main) => `${main}/?shelf`,
     role: 'gate',
     library: LIBRARY,
     minRows: 0,
@@ -4181,7 +4448,7 @@ const SAMPLING_PAGES: readonly SamplingPage[] = [
   },
   {
     name: 'a notice over a held book, 50 books',
-    url: (main) => `${main}/`,
+    url: (main) => `${main}/?shelf`,
     role: 'gate',
     library: LIBRARY,
     minRows: 0,
@@ -4194,7 +4461,7 @@ const SAMPLING_PAGES: readonly SamplingPage[] = [
     // the product's own switch. It measured 5 programs and 302 sampling draws
     // a frame on the 50-book fixture when this gate was written.
     name: '?receivers=all (control)',
-    url: (main) => `${main}/?receivers=all`,
+    url: (main) => `${main}/?shelf&receivers=all`,
     role: 'control',
     library: LIBRARY,
     minRows: 0,
@@ -4361,6 +4628,13 @@ async function measureSampling(
     // stalled on this machine's GPU for a reason never isolated. A page that never
     // settles is recorded among the page's errors, and still judged on the frames
     // the sampling settle requires.
+    // The room page: ready is the shelf, and the room comes after it. Counting before it is dressed
+    // would read a page the visitor never sees.
+    if (asksForRoom(url)) {
+      await roomSettled(page, url, false).catch((error: unknown) => {
+        errors.push(error instanceof Error ? error.message : String(error));
+      });
+    }
     if (!(await settle())) errors.push('the page never settled: textures or image requests moved');
     SAMPLING_BOOTS.count += 1;
     SAMPLING_BOOTS.toReady += (ready - started) / 1000;
@@ -4459,9 +4733,9 @@ async function checkTuner(browser: Browser, origin: string): Promise<TunerChecke
   const lines: string[] = [];
   const failures: string[] = [];
 
-  const plain = await visitForTuner(browser, `${origin}/`);
-  const debug = await visitForTuner(browser, `${origin}/?debug`);
-  const narrow = await visitForTuner(browser, `${origin}/?debug`, PANE_NARROW_VIEWPORT);
+  const plain = await visitForTuner(browser, `${origin}/?shelf`);
+  const debug = await visitForTuner(browser, `${origin}/?debug&shelf`);
+  const narrow = await visitForTuner(browser, `${origin}/?debug&shelf`, PANE_NARROW_VIEWPORT);
 
   const tunerOn = (page: TunerVisit, kind: Fetched['kind']): number =>
     page.fetched.filter((asset) => asset.kind === kind && asset.tuner).length;
@@ -4878,7 +5152,7 @@ async function visitReadout(
         )})`,
       );
     }
-    await page.goto(`${origin}/?debug`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.goto(`${origin}/?debug&shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     if (how.awaitPane) {
       await until(page, `document.querySelector('${TUNER_MARKER}') !== null`, 'the pane to load');
@@ -4999,7 +5273,10 @@ async function checkTuningPanel(browser: Browser, origin: string): Promise<Tuner
       page.on('pageerror', (error: unknown) => {
         fail(`page error at ${query}: ${error instanceof Error ? error.message : String(error)}`);
       });
-      await page.goto(`${origin}/${query}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.goto(`${origin}/${query}${query.includes('?') ? '&' : '?'}shelf`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60_000,
+      });
       await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
       // The pane is drawn by a lazy chunk, after the shelf is ready.
       await wait(page, TUNING_HELPERS, 'the folder to be drawn');
@@ -5124,7 +5401,7 @@ async function checkTuningPanel(browser: Browser, origin: string): Promise<Tuner
       gloss: string | undefined;
       exposure: string | undefined;
     };
-    if (after.titles.join('|') !== `Pickup tuner|Black box|${TUNING_TITLE}`) {
+    if (after.titles.join('|') !== `Page mode|Pickup tuner|Black box|${TUNING_TITLE}`) {
       fail(`after a rebuild the pane holds ${after.titles.join(' | ')}`);
     }
     if (!after.tunerKept) fail("a rebuild replaced the pickup tuner's folder");
@@ -5166,7 +5443,8 @@ async function checkTuningPanel(browser: Browser, origin: string): Promise<Tuner
       );
     }
     const url = decodeURIComponent((await page.evaluate('location.search')) as string);
-    if (url !== '?debug') fail(`after a reset the address is "${url}", not "?debug"`);
+    // `?shelf` is this page's own mode and survives the reset; the writer spells a bare key `shelf=`.
+    if (url !== '?debug&shelf=') fail(`after a reset the address is "${url}", not "?debug&shelf="`);
     lines.push(
       'tuning panel   exposure 5 and walnut planted: label, value, disabled, options, status, monitors, rebuild, copy, reset',
     );
@@ -5335,6 +5613,7 @@ function report(result: {
   spread: SpreadChecked;
   atRest: AtRestChecked;
   flatLayer: LinesAndFailures;
+  room: LinesAndFailures;
   controls: LinesAndFailures;
   drawerCells: DrawerChecked;
   overlap: LinesAndFailures;
@@ -5363,6 +5642,7 @@ function report(result: {
     spread,
     atRest,
     flatLayer,
+    room,
     controls,
     drawerCells,
     overlap,
@@ -5482,6 +5762,8 @@ function report(result: {
   for (const line of atRest.lines) console.log(`  ${line}`);
   console.log('the open book in a flat layer at rest (#599)');
   for (const line of flatLayer.lines) console.log(`  ${line}`);
+  console.log('room page (#602)');
+  for (const line of room.lines) console.log(`  ${line}`);
   console.log('the closed book and its controls (#531)');
   for (const line of controls.lines) console.log(`  ${line}`);
   console.log('the Ask drawer over a held book (#531)');
@@ -5561,6 +5843,7 @@ function report(result: {
     ...spread.failures,
     ...atRest.failures,
     ...flatLayer.failures,
+    ...room.failures,
     ...controls.failures,
     ...drawerCells.failures,
     ...notices.failures,
@@ -5708,7 +5991,7 @@ async function checkAnalyticsCalls(
       if (message.type() === 'error') consoleErrors.push(message.text());
     });
     const settle = watchSettle(page);
-    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     if (!(await settle())) failures.push('analytics: the shelf never settled');
 
@@ -6068,7 +6351,7 @@ async function checkNoticeModal(
     try {
       const page = await context.newPage();
       await page.setViewport({ width: viewport.width, height: viewport.height });
-      await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
       await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
       await page.evaluate('window.__noticeSentinel = 7');
       let navigations = 0;
@@ -6268,7 +6551,7 @@ async function checkNoticeOverDrawer(browser: Browser, origin: string): Promise<
     try {
       const page = await context.newPage();
       await page.setViewport({ width: 1280, height: 800 });
-      await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.goto(`${origin}/?shelf`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
       await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
       const say = (what: string, ok: boolean): void => {
         if (!ok) failures.push(`${where}: ${what}`);

@@ -35,6 +35,7 @@ export interface Ktx2Members {
   workerPool: { setWorkerCreator(create: () => WorkerLike): void };
   init(): Promise<void>;
   loadAsync(url: string): Promise<THREE.CompressedTexture>;
+  dispose(): void;
 }
 
 /** The part of a `Worker` this file uses, so a test can stand one in. */
@@ -55,6 +56,8 @@ export interface OwnWorkerOptions {
 export interface Ktx2Textures {
   /** One KTX2 file as a texture, rejecting if the worker could not start or died. */
   readonly load: (url: string) => Promise<THREE.CompressedTexture>;
+  /** Ends the transcoder workers this loader started. */
+  readonly dispose: () => void;
 }
 
 /**
@@ -79,10 +82,16 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
     clearTimeout(stall);
   };
 
+  // Once the room is disposed nothing may start a worker: a load or a wasm fetch still in flight
+  // would otherwise start one after `loader.dispose()` ended the others, with no owner to end it.
+  let disposed = false;
+
   loader.init = () => {
     loader.transcoderPending ??= options.fetchWasm(options.wasmUrl).then(
       (binary) => {
+        if (disposed) return;
         loader.workerPool.setWorkerCreator(() => {
+          if (disposed) throw new Error('the KTX2 loader was disposed');
           const worker = options.makeWorker(options.workerUrl);
           if (!answered) {
             clearTimeout(stall);
@@ -112,7 +121,16 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
     return loader.transcoderPending;
   };
 
-  return { load: (url) => Promise.race([loader.loadAsync(url), failed]) };
+  return {
+    load: (url) =>
+      disposed
+        ? Promise.reject(new Error('the KTX2 loader was disposed'))
+        : Promise.race([loader.loadAsync(url), failed]),
+    dispose: () => {
+      disposed = true;
+      loader.dispose();
+    },
+  };
 }
 
 /**

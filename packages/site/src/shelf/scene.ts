@@ -25,6 +25,11 @@ import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
+import { clampInto, frameRoom, lightsPatch, type RoomData } from './room-data.ts';
+import { roomAssets, type LoadedRoom } from './room-assets.ts';
+import { runRoomLoad } from './room-load.ts';
+import { showLoadingScreen } from './room-loading.ts';
+import { ROOMS, type RoomId } from './room-mode.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
@@ -32,6 +37,7 @@ import {
   DEFAULT_SETTINGS,
   heightOf,
   type LightPosition,
+  resolveSettings,
   type ShadowSettings,
   type ShadowTypeName,
   type ShelfSettings,
@@ -181,6 +187,8 @@ export interface ShelfStage {
   redrawShadows(): void;
   /** Installs the frame hooks, or removes them with `undefined`. */
   setFrame(hooks: FrameHooks | undefined): void;
+  /** Whether a room is dressed round the bookcase: a held book leaves its light for a hand light. */
+  inRoom(): boolean;
 }
 
 /** The names `buildBook` gives the parts that swing open with the front board. */
@@ -347,6 +355,16 @@ export interface ShelfHandle {
   projectBook(index: number): { x: number; y: number } | undefined;
   /** What picking a book up reaches into. See `pickup.ts`. */
   readonly stage: ShelfStage;
+  /** Where the room stands, and what it cost: for the smoke gates and the black box. */
+  readonly room: {
+    readonly state: RoomState;
+    readonly draws: number;
+    readonly bytes: number;
+    readonly codec: string;
+    /** Where the camera stands now, and the box a room keeps it in: for the gates. */
+    readonly camera: readonly [number, number, number];
+    readonly bounds: RoomData['bounds'] | undefined;
+  };
 }
 
 export interface MountOptions {
@@ -393,7 +411,25 @@ export interface MountOptions {
    * dispose this shelf synchronously. See `context-recovery.ts`.
    */
   readonly onShaderFailure?: (report: readonly string[], running: ShelfSettings) => void;
+  /**
+   * Draw this room round the bookcase (#602, spec S2.1). Absent, the shelf is the plain shelf, laid
+   * out as `?shelf` and the page's fallback lay it out: no loading screen, no file under `/rooms/`.
+   * The room is an upgrade over the plain shelf and never a condition of it: a room that fails to
+   * load leaves the shelf as it stands (spec S2.5).
+   */
+  readonly room?: RoomRequest;
 }
+
+export interface RoomRequest {
+  readonly id: RoomId;
+  /** The room is on, its lights and camera in: the panel shows the room's values. */
+  readonly onDressed?: () => void;
+  /** The room failed to load, or stalled: the page is drawing the plain shelf and will not retry. */
+  readonly onFailed?: () => void;
+}
+
+/** Where a mount's room stands. `none` for a shelf that was never asked for one. */
+export type RoomState = 'none' | 'loading' | 'dressed' | 'failed';
 
 /** Anything a mount makes that outlives a throw unless it is let go of. */
 interface Releasable {
@@ -560,9 +596,14 @@ function assembleShelf(
    */
   let framed = false;
   let framedAt = 0;
+  /** Set once a room is dressed: the camera then opens at the room's view and stays in its box. */
+  let roomData: RoomData | undefined;
 
   const frameCamera = (aspect: number): void => {
-    const framing = frameBookcase(rowCount, aspect);
+    const framing =
+      roomData === undefined
+        ? frameBookcase(rowCount, aspect)
+        : frameRoom(aspect, roomData.view, roomData.bounds, FOV);
     framedAt = framing.distance;
 
     const { position, target } = framing;
@@ -690,11 +731,26 @@ function assembleShelf(
   /** A pickup's hooks, when one is installed. See `FrameHooks`. */
   let hooks: FrameHooks | undefined;
 
+  /**
+   * The camera cannot stand past the room's box (spec S8.2, C7): in front of the open corner, never
+   * behind a wall, the floor or the ceiling. A drag or a zoom that pushes it out leaves it against
+   * the face, so zoom keeps the one rate the orbit gives it all the way to the bound and stops there.
+   */
+  const keepInRoom = (): void => {
+    if (roomData === undefined) return;
+    const { x, y, z } = camera.position;
+    const [cx, cy, cz] = clampInto(roomData.bounds, [x, y, z]);
+    if (cx !== x || cy !== y || cz !== z) camera.position.set(cx, cy, cz);
+  };
+
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
     // A held book owns the camera; the orbit's damping would fight it.
-    if (hooks?.holdsCamera() !== true) controls.update();
+    if (hooks?.holdsCamera() !== true) {
+      controls.update();
+      keepInRoom();
+    }
     renderer.info.reset();
     if (hooks === undefined) renderFrame();
     else hooks.draw(renderFrame);
@@ -842,6 +898,90 @@ function assembleShelf(
   const changes: string[] = [];
   const MAX_CHANGES = 24;
 
+  const applySettings = (next: ShelfSettings): ApplyReport => {
+    const report = applyLive(
+      renderer,
+      scene,
+      background,
+      fog,
+      lights,
+      bookcase,
+      painters,
+      post,
+      next,
+      settings,
+      mountedWith,
+      unitHeight,
+      framedAt,
+    );
+    settings = next;
+
+    for (const entry of report.applied) {
+      if (changes.length < MAX_CHANGES) changes.push(entry);
+      else if (changes.length === MAX_CHANGES) changes.push('(more changes followed)');
+    }
+
+    return report;
+  };
+
+  // ---- the room (#602): an upgrade over the plain shelf, never a condition of it -------------------
+  //
+  // The shelf above is complete without it. A room that loads is put in under the loading screen and
+  // dressed once every texture is on: its lights through the panel's own path, so it shows what is
+  // drawn, then its camera and its box. A room that fails, or stalls past a minute, is taken out and
+  // the shelf stands as it was built (spec S2.5, S3.4).
+  let room: LoadedRoom | undefined;
+  let roomState: RoomState = options.room === undefined ? 'none' : 'loading';
+  const leaving = new AbortController();
+  const request = options.room;
+  if (request !== undefined) {
+    void runRoomLoad(
+      roomAssets({
+        id: request.id,
+        renderer,
+        search: window.location.search,
+        warn: (message) => {
+          console.warn(message);
+        },
+      }),
+      {
+        add: (loaded) => {
+          room = loaded;
+          scene.add(loaded.group);
+        },
+        ready: (loaded) => {
+          roomData = loaded.data;
+          applySettings(
+            resolveSettings(
+              lightsPatch(loaded.data.lights, ROOMS[request.id].background),
+              settings,
+            ),
+          );
+          frameCamera(camera.aspect);
+          roomState = 'dressed';
+          request.onDressed?.();
+        },
+        abandon: (loaded) => {
+          loaded?.group.removeFromParent();
+          room = undefined;
+          roomData = undefined;
+          // A cancelled load is not a failed room: the page that cancelled it has the shelf it wants.
+          if (!leaving.signal.aborted) {
+            roomState = 'failed';
+            request.onFailed?.();
+          }
+        },
+      },
+      showLoadingScreen(),
+      {
+        warn: (message) => {
+          console.warn(message);
+        },
+        signal: leaving.signal,
+      },
+    );
+  }
+
   const stage: ShelfStage = {
     scene,
     camera,
@@ -860,6 +1000,7 @@ function assembleShelf(
     setFrame: (next) => {
       hooks = next;
     },
+    inRoom: () => roomState === 'dressed',
   };
 
   return {
@@ -869,6 +1010,17 @@ function assembleShelf(
     gpu: describeGpu(renderer),
     bookcaseOverflow: measureBookcaseOverflow(scene, placed),
     shaderErrors,
+
+    get room() {
+      return {
+        state: roomState,
+        draws: room?.draws ?? 0,
+        bytes: room?.bytes ?? 0,
+        codec: room?.codec() ?? '',
+        camera: camera.position.toArray(),
+        bounds: roomData?.bounds,
+      };
+    },
 
     /**
      * Read live, not captured at mount.
@@ -905,31 +1057,7 @@ function assembleShelf(
       return changes;
     },
 
-    applySettings(next: ShelfSettings): ApplyReport {
-      const report = applyLive(
-        renderer,
-        scene,
-        background,
-        fog,
-        lights,
-        bookcase,
-        painters,
-        post,
-        next,
-        settings,
-        mountedWith,
-        unitHeight,
-        framedAt,
-      );
-      settings = next;
-
-      for (const entry of report.applied) {
-        if (changes.length < MAX_CHANGES) changes.push(entry);
-        else if (changes.length === MAX_CHANGES) changes.push('(more changes followed)');
-      }
-
-      return report;
-    },
+    applySettings,
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -965,6 +1093,8 @@ function assembleShelf(
     dispose(): void {
       disposed = true;
       post?.dispose();
+      leaving.abort();
+      room?.dispose();
       cancelAnimationFrame(frame);
       canvas.removeEventListener('webglcontextlost', handleContextLost);
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);

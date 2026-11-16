@@ -174,3 +174,4 @@ Two other files hold what these deliberately do not:
 | [0161](./0161-the-room-is-committed-baked-with-a-record-and-fetchable-inputs.md) | The room is committed baked, with a build record and fetchable inputs |
 | [0162](./0162-the-rooms-directory-is-allowed-on-its-sources-file.md) | The rooms directory is allowed on its SOURCES.md, and G13 admits CC BY (proposed) |
 | [0163](./0163-wasm-is-allowed-on-the-page-and-eval-is-confined-to-the-ktx2-worker.md) | WebAssembly is allowed on the page, and eval is confined to the KTX2 worker (amends 0065) |
+| [0164](./0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md) | The room is the default page, and the GLB carries its camera and lights (answers #602) |
