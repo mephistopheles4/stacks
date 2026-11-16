@@ -75,6 +75,11 @@ import fetch_inputs  # noqa: E402
 import room_paths  # noqa: E402
 
 os.chdir(room_paths.REPO)
+# Blender's own loaders read a relative path against the .blend, not the shell's folder, so every
+# path argument is made absolute here, from the repo.
+for _name in ("out", "rug_photo", "wallpaper", "dress", "table_file", "chair_file", "save_blend"):
+    if getattr(args, _name):
+        setattr(args, _name, os.path.abspath(getattr(args, _name)))
 if not fetch_inputs.verify_room(args.room):
     sys.exit("[room] refusing to bake: the inputs failed fetch_inputs.py's check (above). "
              f"Run `python packages/site/rooms/shared/fetch_inputs.py {args.room}` and place the hand-placed ones.")
