@@ -56,7 +56,7 @@ import {
   type HeldPages,
 } from './held-page.ts';
 import { loadThoughts } from './notes.ts';
-import { paperMaterial, sheetGeometry } from './gutter-sheet.ts';
+import { paintedPieces, paperMaterial, sheetMesh } from './gutter-sheet.ts';
 import { openSpread, type OpenSpread } from './open-spread.ts';
 import { bezier, openAngle, schedule, textOpacity } from './pickup-motion.ts';
 import { noticeIsOpen } from '../notice/open.ts';
@@ -656,10 +656,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     current.lookup.set(rightSheet, entry.book);
     current.lookup.set(leftSheet, entry.book);
 
-    const painted = group.children.filter(
-      (child): child is THREE.Mesh =>
-        child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial,
-    );
+    // Never the sheets, which are basic materials too (`isSheet`).
+    const painted = paintedPieces(group.children);
 
     const rig: Rigged = {
       spread,
@@ -1127,18 +1125,6 @@ function screenBoxOf(entry: Lifted, stage: ShelfStage): ScreenBox {
  */
 function asMesh(object: THREE.Object3D | undefined): THREE.Mesh | undefined {
   return object instanceof THREE.Mesh ? object : undefined;
-}
-
-/**
- * One of the two paper sheets: lit, reading no shadow map, casting none, and
- * darkening into the fold — see gutter-sheet.ts.
- */
-function sheetMesh(material: THREE.MeshStandardMaterial, page: 'left' | 'right'): THREE.Mesh {
-  const mesh = new THREE.Mesh(sheetGeometry(page), material);
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
-  mesh.visible = false;
-  return mesh;
 }
 
 /** For a book the shelf no longer has: a track that goes nowhere. */

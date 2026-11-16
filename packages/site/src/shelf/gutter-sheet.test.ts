@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { GUTTER_DARKEN } from './gutter-shade.ts';
-import { paperMaterial, sheetGeometry } from './gutter-sheet.ts';
-import { isShielded } from './shadow-receivers.ts';
+import { isSheet, paintedPieces, paperMaterial, sheetGeometry, sheetMesh } from './gutter-sheet.ts';
 
 /** Each vertex's x and its shade, read back off the built geometry. */
 function vertices(geometry: THREE.BufferGeometry): { x: number; z: number; shade: number }[] {
@@ -64,11 +63,32 @@ describe.each([
 });
 
 describe('the paper', () => {
-  it('multiplies the vertex colours in', () => {
-    expect(paperMaterial().vertexColors).toBe(true);
+  it('is unlit, takes no fog, and multiplies the vertex colours in', () => {
+    const paper = paperMaterial();
+    expect(paper).toBeInstanceOf(THREE.MeshBasicMaterial);
+    expect(paper.vertexColors).toBe(true);
+    expect(paper.fog).toBe(false);
+  });
+});
+
+describe('the sheets and the painted set', () => {
+  const plane = (): THREE.Mesh =>
+    new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
+
+  it('start hidden, cast no shadow, and are marked as sheets', () => {
+    const sheet = sheetMesh(paperMaterial(), 'right');
+    expect(sheet.visible).toBe(false);
+    expect(sheet.castShadow).toBe(false);
+    expect(sheet.receiveShadow).toBe(false);
+    expect(isSheet(sheet)).toBe(true);
+    expect(isSheet(plane())).toBe(false);
   });
 
-  it('reads no shadow map, as G61 requires of every book part', () => {
-    expect(isShielded(paperMaterial())).toBe(true);
+  it('keep the paint and leave the paper, whichever was added first', () => {
+    const paint = plane();
+    const lit = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
+    const sheet = sheetMesh(paperMaterial(), 'right');
+    expect(paintedPieces([paint, lit, sheet])).toEqual([paint]);
+    expect(paintedPieces([sheet, lit, paint])).toEqual([paint]);
   });
 });
