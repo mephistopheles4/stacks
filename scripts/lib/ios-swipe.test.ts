@@ -5,7 +5,9 @@ import {
   DEFAULT_PORT,
   FIND_AND_OPEN,
   judge,
+  judgeServed,
   LIVE_URL,
+  servedLibraryUrl,
   MOVE_CLONE_TO_FLAT,
   parseSwipeArgs,
   READ_AFTER,
@@ -164,6 +166,37 @@ describe('judge', () => {
 
   it('says which fallback the shelf reports when it reports one', () => {
     expect(judge(ARMED, { ...AFTER, fallback: 'lost' }, true).line).toContain('fallback lost');
+  });
+});
+
+describe('judgeServed', () => {
+  const book = (title: unknown): { title: unknown } => ({ title });
+
+  it('passes a library of fixture titles, and counts them', () => {
+    const served = judgeServed({
+      books: [book('Tidal Engine'), book('Marginalia for a Long Winter')],
+    });
+    expect(served).toEqual({ ok: true, line: 'served build is the fixture build: 2 books' });
+  });
+
+  it('refuses one title that is not the generator’s, and never quotes it', () => {
+    const served = judgeServed({ books: [book('Tidal Engine'), book('A Real Private Reading')] });
+    expect(served.ok).toBe(false);
+    expect(served.line).toBe("served build refused: 1 of 2 titles are not the fixture's");
+    expect(served.line).not.toContain('Private');
+  });
+
+  it('refuses a library with no books, a title that is not text, and a shape that is not a library', () => {
+    expect(judgeServed({ books: [] }).ok).toBe(false);
+    expect(judgeServed({ books: [book(42)] }).ok).toBe(false);
+    expect(judgeServed({ books: [null] }).ok).toBe(false);
+    expect(judgeServed({}).ok).toBe(false);
+    expect(judgeServed(null).ok).toBe(false);
+    expect(judgeServed('books').ok).toBe(false);
+  });
+
+  it('reads this machine on the tunnel’s one port', () => {
+    expect(servedLibraryUrl(8766)).toBe('http://127.0.0.1:8766/library.json');
   });
 });
 

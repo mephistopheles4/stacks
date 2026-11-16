@@ -5,7 +5,10 @@
  * desktop engine shows it, so the shelf's own gates cannot (G35's held-at-rest
  * check sets `scrollTop` from script, which scrolls even when a finger cannot).
  *
- *     pnpm exec tsx scripts/ios-swipe-check.ts --premise   the live site, the page moved to a flat layer
+ *     pnpm exec tsx scripts/ios-swipe-check.ts --premise        the live site, the page moved to a flat layer
+ *     pnpm exec tsx scripts/ios-swipe-check.ts                  the live site as it is: the control
+ *     pnpm exec tsx scripts/ios-swipe-check.ts --check-served   is the build on the port the fixture build? no session
+ *     pnpm exec tsx scripts/ios-swipe-check.ts --local          swipe the fixture build through the tunnel
  *
  *     --device <name>    the device (iPhone 16 Pro)
  *     --os <version>     its OS version (18)
@@ -13,9 +16,14 @@
  *     --url <address>    the page to load (the live site)
  *     --premise          the S3 check: clone the open book's right page into a flat layer
  *                        in the page and swipe the clone
+ *     --local            load http://bs-local.com:<port> through BrowserStack Local, which the
+ *                        owner starts and stops; checks the served build first, always
+ *     --check-served     read http://127.0.0.1:<port>/library.json and refuse unless every title
+ *                        is one the fixture generator writes; opens no session
+ *     --port <number>    the port the fixture build is served on, and the tunnel's one port (8766)
  *
  * **Not a `pnpm` script, and not a gate**: it needs the owner's BrowserStack
- * account, which no CI runner and no contributor has. See `docs/commands.md`.
+ * account, which no CI runner and no contributor has. See `docs/ios-swipe-check.md`.
  *
  * ⚠️ **The credential**: read from `~/.config/browserstack.env`
  * (`%USERPROFILE%\.config\browserstack.env` on Windows) into this process,
@@ -34,8 +42,10 @@ import {
   ARM_SCROLL_COUNT,
   FIND_AND_OPEN,
   judge,
+  judgeServed,
   MOVE_CLONE_TO_FLAT,
   parseSwipeArgs,
+  servedLibraryUrl,
   READ_AFTER,
   swipePath,
   readAfter,
@@ -61,7 +71,28 @@ function fail(message: string): never {
 async function main(): Promise<void> {
   const options = parseSwipeArgs(process.argv.slice(2));
   if (typeof options === 'string') fail(options);
-  if (options.local || options.checkServed) fail('--local and --check-served are not built yet');
+
+  // A tunnel serves whatever is on the port to a device cloud: before one is
+  // opened, the build there must be the fixture build. `--local` always checks,
+  // and `--check-served` alone checks and stops, with no credential and no session.
+  if (options.local || options.checkServed) {
+    let library: unknown;
+    try {
+      const reply = await fetch(servedLibraryUrl(options.port));
+      if (!reply.ok) fail(`nothing is serving a library on port ${String(options.port)}`);
+      library = await reply.json();
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('nothing is serving')) throw error;
+      return fail(`nothing is serving a library on port ${String(options.port)}`);
+    }
+    const served = judgeServed(library);
+    console.log(served.line);
+    if (!served.ok) {
+      process.exitCode = 1;
+      return;
+    }
+    if (!options.local) return;
+  }
 
   let text: string;
   try {

@@ -4,6 +4,8 @@
  * (#599, S3 and S8). Pure, so a test reaches all of it.
  */
 
+import { isFixtureTitle } from './fixture-books.ts';
+
 /** The deployed site: the default page, and the only one the premise check loads. */
 export const LIVE_URL = 'https://stacks.aymandiab.com';
 
@@ -72,6 +74,38 @@ export function parseSwipeArgs(argv: readonly string[]): SwipeOptions | string {
     checkServed: on.has('--check-served'),
     port,
   };
+}
+
+/** The address `--check-served` reads: this machine only, on the one port the tunnel is limited to. */
+export function servedLibraryUrl(port: number): string {
+  return `http://127.0.0.1:${String(port)}/library.json`;
+}
+
+/**
+ * Whether the build about to be served through the tunnel is the fixture build
+ * (S8): every title in its `library.json` is one the generator could have
+ * written (`isFixtureTitle`), and there is at least one. A tunnel serves what is
+ * on the port to a device cloud, so a real vault's covers and titles must never
+ * be what answers. The line counts and never quotes: a title that is not a
+ * fixture's may be a real one.
+ */
+export function judgeServed(library: unknown): { readonly ok: boolean; readonly line: string } {
+  const books = (library as { books?: unknown } | null)?.books;
+  if (!Array.isArray(books) || books.length === 0) {
+    return { ok: false, line: 'served build refused: its library.json lists no books' };
+  }
+  let foreign = 0;
+  for (const book of books as unknown[]) {
+    const title = (book as { title?: unknown } | null)?.title;
+    if (typeof title !== 'string' || !isFixtureTitle(title)) foreign += 1;
+  }
+  if (foreign > 0) {
+    return {
+      ok: false,
+      line: `served build refused: ${String(foreign)} of ${String(books.length)} titles are not the fixture's`,
+    };
+  }
+  return { ok: true, line: `served build is the fixture build: ${String(books.length)} books` };
 }
 
 /** What `FIND_AND_OPEN` answers: the book it opened, or why it could not. */
