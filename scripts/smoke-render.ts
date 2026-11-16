@@ -2470,7 +2470,9 @@ async function readStacks(page: Page, viewport: string): Promise<StackRead> {
   const book = await orbitUntil(page, bookAt);
   if (book === undefined) return read;
   await page.mouse.click(Math.round(book.x), Math.round(book.y));
-  read.picked = await searchFor(page, HELD, 4000);
+  // As long as the other cells wait for a pickup: the runner draws at a few frames a second, and the
+  // pickup is stepped from the shelf's own frame, so 4 s was one slow run short (CI, #616).
+  read.picked = await searchFor(page, HELD, 12_000);
   if (!read.picked) return read;
 
   read.arrivedClosed = await until(
