@@ -72,7 +72,7 @@ export default defineConfig({
       directives: [
         // Deny by default and name every exception. The shelf loads covers, an
         // island bundle, its own stylesheet and one JSON file; there are no
-        // fonts, no `data:` URIs, no workers, no forms and no frames.
+        // fonts, no `data:` URIs, no forms and no frames, and one worker (below).
         "default-src 'none'",
         "img-src 'self'",
         connectSrc,
@@ -85,6 +85,14 @@ export default defineConfig({
         // makes no request here; the policy is site-wide because Astro emits
         // one.
         'frame-src https://challenges.cloudflare.com',
+        // The KTX2 transcoder's dedicated worker (#601, spec S6.3), loaded from
+        // its own same-origin file `public/rooms/basis/ktx2-worker.js` and never
+        // from a `blob:` URL. A `blob:` worker takes THIS policy, whose
+        // `default-src 'none'` would refuse the transcoder's eval; a worker
+        // loaded from a URL takes its policy from its own response, which
+        // `public/_headers` gives alone to that path. Nothing but `'self'`, and
+        // never `blob:`: G20 holds both. Site-wide because Astro emits one policy.
+        "worker-src 'self'",
       ],
       scriptDirective: {
         // static.cloudflareinsights.com is Cloudflare Web Analytics, injected
@@ -114,8 +122,16 @@ export default defineConfig({
         // `challenges.cloudflare.com` is the second named origin: Turnstile's
         // script (S8 of the Ask the library spec). It is the first origin this
         // project chose to add rather than one Cloudflare injects.
+        // `'wasm-unsafe-eval'` (#601, spec S6.1): the meshopt decoder and the
+        // basis transcoder compile WebAssembly, which a CSP refuses without it.
+        // It is not `'unsafe-eval'`: it admits `WebAssembly.compile` and nothing
+        // that turns a string into JavaScript, and the hashes still keep out any
+        // script they do not name. Astro emits one policy for the site, so it
+        // reaches every page, Turnstile's and the analytics script's included.
+        // The page never gains `'unsafe-eval'`; the worker's own response does.
         resources: [
           "'self'",
+          "'wasm-unsafe-eval'",
           'https://static.cloudflareinsights.com',
           'https://challenges.cloudflare.com',
         ],
