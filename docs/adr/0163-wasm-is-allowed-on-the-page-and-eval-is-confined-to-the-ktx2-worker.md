@@ -91,6 +91,14 @@ LLC, Apache-2.0) as three 0.185.1 ships it under `examples/jsm/libs/basis/`; the
 three's own (MIT). Both licences allow redistribution. Neither file is a binary the G13
 (`no-third-party-material`) extension list reads, and the room's own `SOURCES.md` is T1's.
 
+Apache-2.0 §4(a) makes a copy of the licence part of redistributing the binary, so the licence
+text is served beside it, as `/rooms/basis/LICENSE-basis-universal.txt`, and G20 refuses a build
+that serves the wasm without it. The file also carries the repository's `NOTICE`, which asks
+redistributions to include it (§4(d)), and the BSD-3-Clause text for Zstandard, which the
+transcoder contains and whose binary redistribution must reproduce it. The wasm is served as
+three ships it, so §4(b) has nothing to mark. The licence file is copied by hand from the
+repository, so it moves with a three upgrade, as the wasm does.
+
 ## Not built here
 
 The confinement probe (it tries `fetch`, a second worker and `importScripts`, and is served from a

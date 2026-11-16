@@ -36,6 +36,7 @@ import {
   CONFINEMENT_PROBE_MARKER,
   HELD_EDGE_CAP,
   inspectPublicBuild,
+  KTX2_LICENCE_PATH,
   KTX2_WASM_PATH,
   KTX2_WORKER_PATH,
   KTX2_WORKER_POLICY,
@@ -120,6 +121,7 @@ async function writeWorker(contents = '/* a worker */'): Promise<void> {
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, contents);
   await writeFile(join(dirname(file), 'basis_transcoder.wasm'), 'pretend wasm');
+  await writeFile(join(dist, ...KTX2_LICENCE_PATH.split('/')), 'pretend licence');
 }
 
 /**
@@ -1369,6 +1371,10 @@ describe('G20 — every rule goes red', () => {
       );
     });
 
+    it('headers: the Apache-2.0 wasm served without its licence beside it', async () => {
+      await expectOnly('headers', () => rm(join(dist, ...KTX2_LICENCE_PATH.split('/'))));
+    });
+
     it('csp: a confinement probe script served at the worker path in a production build (S6.7)', async () => {
       await expectOnly('csp', () => writeWorker(`/* ${CONFINEMENT_PROBE_MARKER} */`));
     });
@@ -1581,7 +1587,7 @@ describe('G20 — the worker the page starts is the worker `_headers` confines (
     // The whole committed `_headers`, so an `'unsafe-eval'` added to any block of it is counted,
     // and the files the loader asks for are the files the site serves.
     await mkdir(join(dist, 'rooms', 'basis'), { recursive: true });
-    for (const file of ['ktx2-worker.js', 'basis_transcoder.wasm']) {
+    for (const file of ['ktx2-worker.js', 'basis_transcoder.wasm', 'LICENSE-basis-universal.txt']) {
       await copyFile(join(SITE_PUBLIC, 'rooms', 'basis', file), join(dist, 'rooms', 'basis', file));
     }
     await copyFile(join(SITE_PUBLIC, '_headers'), join(dist, '_headers'));

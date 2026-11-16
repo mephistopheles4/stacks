@@ -490,6 +490,12 @@ export const KTX2_WORKER_PATH = '/rooms/basis/ktx2-worker.js';
 /** The wasm the page fetches and posts into the worker. It sits beside the worker. */
 export const KTX2_WASM_PATH = '/rooms/basis/basis_transcoder.wasm';
 
+/**
+ * The wasm is Apache-2.0, and §4(a) of that licence makes a copy of it part of redistributing the
+ * binary, so a build that serves the wasm serves this beside it.
+ */
+export const KTX2_LICENCE_PATH = '/rooms/basis/LICENSE-basis-universal.txt';
+
 export const KTX2_WORKER_POLICY = "default-src 'none'; script-src 'unsafe-eval' 'wasm-unsafe-eval'";
 
 /**
@@ -1129,6 +1135,16 @@ export async function inspectPublicBuild(
         'headers',
         `${path} did not reach the build — the room's textures would not transcode, and a block ` +
           'that keys eval on a path serving nothing is a grant to whatever lands there',
+      );
+    }
+    if (
+      existsSync(join(dir, ...KTX2_WASM_PATH.split('/'))) &&
+      !existsSync(join(dir, ...KTX2_LICENCE_PATH.split('/')))
+    ) {
+      fail(
+        'headers',
+        `${KTX2_WASM_PATH} is served without ${KTX2_LICENCE_PATH} — it is Apache-2.0, whose §4(a) ` +
+          'requires a copy of the licence to go with every copy of the binary',
       );
     }
     if (grants.length === 1 && workerBlock !== undefined) {
