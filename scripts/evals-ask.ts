@@ -33,6 +33,7 @@ import {
   summariseTrace,
   toolMismatch,
 } from './lib/ask-evals.ts';
+import { browserstackRootRefusalsOnDisk } from './lib/browserstack-key.ts';
 import { capture, type CallCapture } from './lib/ask-reasoning.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
@@ -42,6 +43,8 @@ function fail(message: string): never {
   console.error(`\nFAILED: ${message}`);
   process.exit(1);
 }
+const keyInRootEnv = browserstackRootRefusalsOnDisk();
+if (keyInRootEnv.length > 0) fail(keyInRootEnv.join('\n'));
 const flag = (name: string): string | undefined => {
   const at = process.argv.indexOf(name);
   return at < 0 ? undefined : process.argv[at + 1];

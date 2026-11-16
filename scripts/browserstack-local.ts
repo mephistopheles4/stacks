@@ -68,6 +68,17 @@ const { server, origin } = await serveDist({
   headers: { 'Cache-Control': 'no-store' },
 });
 console.log(`serving the fixture build on ${origin}`);
+// `localhost` may resolve to ::1: serve the same folder there, so another server on that address
+// fails this run instead of answering the tunnel. A machine without IPv6 loopback is fine.
+const v6 = await serveDist({
+  root: scratch,
+  port: args.port,
+  host: '::1',
+  headers: { 'Cache-Control': 'no-store' },
+}).catch((error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRNOTAVAIL' || error.code === 'EAFNOSUPPORT') return undefined;
+  throw error;
+});
 
 const logDir = join(SCRATCH_ROOT, 'launcher');
 mkdirSync(logDir, { recursive: true });
@@ -77,6 +88,7 @@ let stopTunnel: (() => void) | undefined;
 const stop = (): void => {
   stopTunnel?.();
   server.close();
+  v6?.server.close();
 };
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK'] as const) process.on(signal, stop);
 
@@ -126,4 +138,5 @@ try {
 } finally {
   scrubLogFile(logFile, key);
   server.close();
+  v6?.server.close();
 }

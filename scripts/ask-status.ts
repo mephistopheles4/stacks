@@ -28,6 +28,7 @@ import {
   runDays,
   type QueryName,
 } from './lib/ask-status.ts';
+import { browserstackRootRefusalsOnDisk } from './lib/browserstack-key.ts';
 import { renderAskDay } from './lib/metrics.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { uploadEnv } from './lib/upload.ts';
@@ -37,6 +38,9 @@ function fail(message: string): never {
   console.error(`\nFAILED: ${message}`);
   process.exit(1);
 }
+
+const keyInRootEnv = browserstackRootRefusalsOnDisk();
+if (keyInRootEnv.length > 0) fail(keyInRootEnv.join('\n'));
 
 const parsed = parseArgs(process.argv.slice(2), daysToRead(Date.now()));
 if ('error' in parsed) fail(parsed.error);

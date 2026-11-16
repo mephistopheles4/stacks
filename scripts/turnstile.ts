@@ -22,6 +22,7 @@ import { join } from 'node:path';
 import { mainCheckout } from '../packages/cli/src/env.ts';
 import { gitOutput } from './lib/git.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
+import { browserstackRootRefusalsOnDisk } from './lib/browserstack-key.ts';
 import { shellCommand } from './lib/run.ts';
 import {
   EMPTY_ENV_FILE,
@@ -148,6 +149,12 @@ for (const event of ['uncaughtException', 'unhandledRejection'] as const) {
     console.error(unexpectedLine(error));
     process.exit(1);
   });
+}
+
+const keyInRootEnv = browserstackRootRefusalsOnDisk();
+if (keyInRootEnv.length > 0) {
+  console.error(`\nREFUSED: ${keyInRootEnv.join('\n')}`);
+  process.exit(1);
 }
 
 const parsed = parseTurnstileArgs(process.argv.slice(2), process.env);
