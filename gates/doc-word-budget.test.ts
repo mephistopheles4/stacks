@@ -28,7 +28,7 @@ const BUDGETS: Readonly<Record<string, number>> = {
   'CONTRIBUTING.md': 1_750,
   'docs/agents/issue-tracker.md': 2_750,
   'docs/commands.md': 15_300,
-  'docs/gates.md': 32_250, // +450: G73-G75 and the rooms directory in G13 (#600), rules that are new
+  'docs/gates.md': 32_350, // +550: G73-G75 and the rooms directory in G13 (#600), rules that are new, beside #609's wasm clause
   'docs/notes-on-the-shelf.md': 1_350,
   'docs/progress.md': 3_500,
   'docs/shelf-inspectors.md': 2_500,

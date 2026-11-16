@@ -72,9 +72,18 @@ optional-Plausible spec).
   from the next deployment only.
 - *Repo.* G20 (`public-build-artifact`) inspects the real `dist/` before upload
   for private books, orphan covers, vault paths and unknown keys, and holds the
-  site's CSP (`connect-src 'self'` unless analytics is on). It reads key names,
+  site's CSP (`connect-src 'self'` unless analytics is on; `script-src` with
+  `'wasm-unsafe-eval'` and never `'unsafe-eval'`; `worker-src 'self'`; no `blob:`).
+  It reads key names,
   never values, and its note-body canary exists only in the fixture vault, so on
   a real vault invariant 2 rests on structure.
+- *Repo.* The room's texture transcoder needs eval, and gets it in one place: a
+  dedicated worker loaded from its own file, under its own response policy in
+  `_headers` (`default-src 'none'`, so it can fetch nothing). The page keeps no
+  `'unsafe-eval'` and no `blob:`; G20 counts the `'unsafe-eval'` grants in
+  `_headers` and reads that policy back. It does not hold in a browser that
+  applies neither policy, and it is checked once by hand on a preview, so a
+  later change in how the host serves that header is not seen (ADR-0163).
 - *Repo.* All vault access goes through the adapter (invariant 4, G1). G1 reads
   import specifiers under `packages/` and `scripts/`, not `gates/` or run-time reach.
 - *Host.* None. Whatever is uploaded is public.

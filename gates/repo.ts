@@ -66,7 +66,7 @@ export function trackedFiles(): string[] {
  * rows, which is the direction to fail in.
  */
 export const BINARY =
-  /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip|glb|ktx2)$/i;
+  /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip|wasm|glb|ktx2)$/i;
 
 /** Reads a repo-relative file. */
 export function readRepoFile(path: string): string {
@@ -305,3 +305,10 @@ export function imagesNamedBy(glb: Buffer): string[] {
 
 /** Where a room serves the KTX2 twin of one of its WebP textures. */
 export const ktx2Of = (webp: string): string => `ktx-etc1s/${webp.replace(/\.webp$/i, '.ktx2')}`;
+
+/**
+ * Folders under `packages/site/public/rooms/` that are shared support and not a room: the KTX2
+ * transcoder and its worker (ADR-0163). A room gate that walked the served folders would take
+ * one for a room with no record, and G13 holds its wasm by filename and not on a `SOURCES.md`.
+ */
+export const ROOM_SUPPORT_FOLDERS: readonly string[] = ['basis'];

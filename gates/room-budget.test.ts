@@ -38,7 +38,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, expectFound, imagesNamedBy, ktx2Of } from './repo.ts';
+import { REPO_ROOT, ROOM_SUPPORT_FOLDERS, expectFound, imagesNamedBy, ktx2Of } from './repo.ts';
 
 const SERVED = 'packages/site/public/rooms';
 
@@ -49,7 +49,7 @@ const MAX_FILE = 25 * 1024 * 1024;
 /** The served room folders: what a visitor can fetch, so a folder with no record is measured too. */
 function roomIds(): string[] {
   return readdirSync(join(REPO_ROOT, SERVED), { withFileTypes: true })
-    .filter((e) => e.isDirectory())
+    .filter((e) => e.isDirectory() && !ROOM_SUPPORT_FOLDERS.includes(e.name))
     .map((e) => e.name)
     .sort();
 }

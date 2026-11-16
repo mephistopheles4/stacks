@@ -21,7 +21,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { BINARY, expectFound, REPO_ROOT, trackedFiles } from './repo.ts';
+import { BINARY, expectFound, REPO_ROOT, ROOM_SUPPORT_FOLDERS, trackedFiles } from './repo.ts';
 
 function isIgnored(path: string): boolean {
   try {
@@ -179,6 +179,11 @@ const CC0_BINARY_FILES = [
  */
 const ROOM_BINARY_DIR = 'packages/site/public/rooms/';
 
+/** A path inside a room's folder: under `rooms/`, and not in the shared support folders. */
+const inRoom = (path: string): boolean =>
+  path.startsWith(ROOM_BINARY_DIR) &&
+  !ROOM_SUPPORT_FOLDERS.some((folder) => path.startsWith(`${ROOM_BINARY_DIR}${folder}/`));
+
 describe('G5 — library.json is a build artifact', () => {
   it('is not tracked by git', () => {
     const tracked = trackedFiles();
@@ -220,14 +225,35 @@ describe('G5 — library.json is a build artifact', () => {
   });
 });
 
+/**
+ * A binary copied from a dependency's own release, allowed by **filename** and on its **licence**.
+ *
+ * `basis_transcoder.wasm` is the Basis Universal transcoder (Binomial LLC, Apache-2.0) exactly as
+ * three 0.185.1 ships it under `examples/jsm/libs/basis/`. The page fetches it and posts the bytes
+ * into the KTX2 worker, which may fetch nothing itself ([ADR-0163](../docs/adr/0163-wasm-is-allowed-on-the-page-and-eval-is-confined-to-the-ktx2-worker.md),
+ * #601). It is code and not somebody's picture, and the same bytes sit in `node_modules`; they are
+ * committed because the worker beside them is generated from that three and the pair is what is
+ * tested and served. Apache-2.0 permits redistribution.
+ *
+ * ⚠️ **A named file and never a directory**, for the reason the brand list gives: the room spec
+ * (#593, S16) asks the owner to admit `packages/site/public/rooms/` as a directory for the room's
+ * own baked files, which is T1's decision to make and widens nothing this list holds. `.wasm` joined
+ * `BINARY` with this entry, because G66 would otherwise read it as text.
+ */
+const DEPENDENCY_BINARY_FILES = ['packages/site/public/rooms/basis/basis_transcoder.wasm'];
+
 describe('G13 — no third-party material is committed', () => {
   it('tracks no binary outside the generated fixture covers and the brand art', () => {
-    const allowedFiles = new Set([...BRAND_BINARY_FILES, ...CC0_BINARY_FILES]);
+    const allowedFiles = new Set([
+      ...BRAND_BINARY_FILES,
+      ...CC0_BINARY_FILES,
+      ...DEPENDENCY_BINARY_FILES,
+    ]);
     const offenders = trackedFiles().filter(
       (path) =>
         BINARY.test(path) &&
         !GENERATED_BINARY_DIRS.some((dir) => path.startsWith(dir)) &&
-        !path.startsWith(ROOM_BINARY_DIR) &&
+        !inRoom(path) &&
         !allowedFiles.has(path),
     );
 
@@ -297,7 +323,7 @@ describe('G13 — no third-party material is committed', () => {
     // baked files with none beside them is a standing permission with no claim
     // behind it, which is the thing this row exists to refuse.
     const tracked = trackedFiles();
-    const inRooms = tracked.filter((path) => path.startsWith(ROOM_BINARY_DIR));
+    const inRooms = tracked.filter(inRoom);
     const withBinaries = new Set(
       inRooms
         .filter((path) => BINARY.test(path))
@@ -319,6 +345,20 @@ describe('G13 — no third-party material is committed', () => {
       (path) => BINARY.test(path) && !path.slice(ROOM_BINARY_DIR.length).includes('/'),
     );
     expect(loose, `binaries directly in ${ROOM_BINARY_DIR}, outside any room folder`).toEqual([]);
+  });
+
+  it('tracks every allowlisted dependency binary', () => {
+    // The permission outliving the file is the failure this row exists to refuse, and the file
+    // vanishing is a 404 on the transcoder's wasm that leaves every KTX2 texture on its WebP
+    // fallback without anything saying so.
+    const tracked = new Set(trackedFiles());
+    const missing = DEPENDENCY_BINARY_FILES.filter((path) => !tracked.has(path));
+
+    expect(
+      missing,
+      'allowlisted as a dependency binary but not tracked — the page fetches it for the KTX2 ' +
+        `worker: ${missing.join(', ')}`,
+    ).toEqual([]);
   });
 
   it('keeps docs/images to exactly the generated screenshot', () => {

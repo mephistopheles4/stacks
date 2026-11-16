@@ -38,7 +38,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, expectFound, imagesNamedBy, ktx2Of } from './repo.ts';
+import { REPO_ROOT, ROOM_SUPPORT_FOLDERS, expectFound, imagesNamedBy, ktx2Of } from './repo.ts';
 
 const ROOMS = 'packages/site/rooms';
 const SERVED = 'packages/site/public/rooms';
@@ -54,7 +54,7 @@ function roomIds(): string[] {
 /** The folders under the served `rooms/`: what a visitor can fetch, whatever the scripts say. */
 function servedRoomFolders(): string[] {
   return readdirSync(join(REPO_ROOT, SERVED), { withFileTypes: true })
-    .filter((e) => e.isDirectory())
+    .filter((e) => e.isDirectory() && !ROOM_SUPPORT_FOLDERS.includes(e.name))
     .map((e) => e.name)
     .sort();
 }
@@ -149,7 +149,8 @@ function recordFaults(
       faults.push(`${room}: the record holds input ${dest}, which inputs.json does not name`);
   }
 
-  for (const text of strings(record)) {
+  for (const quoted of strings(record)) {
+    const text = quoted.replace(/["']/g, '');
     if (/(^|[\s=:"'])[A-Za-z]:[\\/]/.test(text))
       faults.push(`${room}: a drive letter in "${text.slice(0, 60)}"`);
     if (/(^|[\s=:"'])\/[A-Za-z0-9._-]/.test(text))
@@ -160,7 +161,14 @@ function recordFaults(
     if (text.includes('\\')) faults.push(`${room}: a backslash in "${text.slice(0, 60)}"`);
   }
 
-  const bake = typeof record.bake?.command === 'string' ? record.bake.command : '';
+  const encode = record.encode?.command;
+  if (typeof encode !== 'string' || encode.trim() === '') {
+    faults.push(`${room}: no encode command is recorded, so the KTX2 set has no way to be made`);
+  }
+  const bake = (typeof record.bake?.command === 'string' ? record.bake.command : '').replace(
+    /["']/g,
+    '',
+  );
   // what follows ` -- ` is the script's own arguments: Blender never reads a flag there
   const blenderArgs = bake.split(/\s--\s/)[0] ?? '';
   if (!/(^|\s)--factory-startup(\s|$)/.test(blenderArgs))
@@ -254,6 +262,17 @@ describe('G73 — a room serves what its build record says', () => {
         'room.glb',
       ),
     ).toEqual(['bake/cover.webp', 'x.blend']);
+  });
+
+  it('exempts exactly one served folder, basis, and every other one is a room with a record', () => {
+    // The room gates skip the shared support folders, so the list is pinned: a second entry is a
+    // second folder the build record, the budget and the inputs check would never read.
+    expect(ROOM_SUPPORT_FOLDERS).toEqual(['basis']);
+    const allFolders = readdirSync(join(REPO_ROOT, SERVED), { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+    const skipped = allFolders.filter((name) => !servedRoomFolders().includes(name));
+    expect(skipped, `folders under ${SERVED}/ the room gates skip`).toEqual(['basis']);
   });
 
   it('is shown red on a served folder with no record', () => {
@@ -372,6 +391,27 @@ describe('G73 — a room serves what its build record says', () => {
         (r.inputs as Record_)['commons/not_in_inputs_json.jpg'] = '2'.repeat(64);
       });
       expect(faults.join('\n')).toMatch(/which inputs.json does not name/);
+    });
+
+    it('a flag or path hidden by quotes, which the shell strips', () => {
+      const bakeWith = (command: string) =>
+        faultsWith((r) => {
+          r.bake = { command };
+        }).join('\n');
+      expect(bakeWith('blender -b --factory-startup "-y" -P x.py')).toMatch(/auto-run/);
+      expect(bakeWith('blender -b --factory-startup -P "../build_room.py"')).toMatch(
+        /\.\. segment/,
+      );
+      expect(bakeWith('blender -b --factory-startup -P x.py --out=../outside')).toMatch(
+        /\.\. segment/,
+      );
+    });
+
+    it('a record with no encode command', () => {
+      const faults = faultsWith((r) => {
+        delete r.encode;
+      });
+      expect(faults.join('\n')).toMatch(/no encode command is recorded/);
     });
 
     it('a tool with no recorded version', () => {

@@ -38,7 +38,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, expectFound } from './repo.ts';
+import { REPO_ROOT, ROOM_SUPPORT_FOLDERS, expectFound } from './repo.ts';
 
 const ROOMS = 'packages/site/rooms';
 const SERVED = 'packages/site/public/rooms';
@@ -58,7 +58,7 @@ interface Entry {
 /** The served room folders: a folder with no inputs.json is red here and not skipped. */
 function roomIds(): string[] {
   return readdirSync(join(REPO_ROOT, SERVED), { withFileTypes: true })
-    .filter((e) => e.isDirectory())
+    .filter((e) => e.isDirectory() && !ROOM_SUPPORT_FOLDERS.includes(e.name))
     .map((e) => e.name)
     .sort();
 }
@@ -121,7 +121,8 @@ function entryFaults(entry: Entry, hosts: ReadonlySet<string>, sources: string):
     let host = '';
     try {
       const u = new URL(String(entry.url));
-      host = u.protocol === 'https:' ? u.hostname : '';
+      // fetch_inputs.check_url refuses a URL with credentials, so a manifest that has one cannot fetch
+      host = u.protocol === 'https:' && u.username === '' && u.password === '' ? u.hostname : '';
     } catch {
       /* host stays empty */
     }
@@ -222,6 +223,11 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
       ['a drive letter', { dest: 'C:/x.bin' }, /escapes/],
       ['a backslash', { dest: 'a\\b.bin' }, /escapes/],
       ['a fetch host off the list', { url: 'https://example.com/x.bin' }, /fetch url is not https/],
+      [
+        'a fetch url with credentials',
+        { url: 'https://user:secret@dl.polyhaven.org/x.bin' },
+        /fetch url is not https/,
+      ],
       [
         'a plain-http fetch url',
         { url: 'http://dl.polyhaven.org/x.bin' },
