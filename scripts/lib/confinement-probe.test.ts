@@ -44,6 +44,10 @@ describe('judgeProbe', () => {
     const { fetch: _omitted, ...partial } = GREEN;
     expect(judgeProbe(partial).ok).toBe(false);
     expect(judgeProbe({ ...GREEN, fetch: 'yes' }).ok).toBe(false);
+    // A nested worker that never answered is not a blocked one.
+    const silent = judgeProbe({ ...GREEN, worker: 'timeout' });
+    expect(silent.ok).toBe(false);
+    expect(silent.line).toContain('no answer for worker');
     for (const shape of [undefined, null, 'x', 3]) expect(judgeProbe(shape).ok).toBe(false);
   });
 });

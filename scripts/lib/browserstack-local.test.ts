@@ -128,7 +128,11 @@ describe('sweepStaleConfigs', () => {
       mkdirSync(join(root, 'other'));
       writeFileSync(join(root, 'other', 'local.yml'), 'key: "x"\n');
       writeFileSync(join(root, 'bs-local-file'), 'not a folder');
-      expect(sweepStaleConfigs(root)).toBe(1);
+      // A folder this minute may belong to a launcher that has not started its binary yet.
+      expect(sweepStaleConfigs(root)).toBe(0);
+      expect(existsSync(join(root, 'bs-local-aaa'))).toBe(true);
+      // Ten minutes on, it is abandoned.
+      expect(sweepStaleConfigs(root, Date.now() + 10 * 60 * 1000)).toBe(1);
       expect(existsSync(join(root, 'bs-local-aaa'))).toBe(false);
       expect(existsSync(join(root, 'bs-local-bbb', 'notes.txt'))).toBe(true);
       expect(existsSync(join(root, 'other', 'local.yml'))).toBe(true);

@@ -23,6 +23,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -145,18 +146,25 @@ export function writeConfigFile(accessKey: string): ConfigFile {
   return { path, remove };
 }
 
+const SWEEP_MIN_AGE_MS = 5 * 60 * 1000;
+
 /**
  * Removes config folders an earlier run left behind. A run that was killed outright (a closed
  * terminal, a pipe that ended, `kill -9`) cannot run its own cleanup, and its folder holds the key.
  * Only a folder this launcher made is touched: named `bs-local-`, holding `local.yml` and nothing
- * else. Returns how many it removed. It runs before the port is bound, so a second launcher started
- * beside a live one removes the live run's config file: that only shortens the key's time on disk.
+ * else, and older than five minutes: a launcher's binary reads its config in the first seconds, so a
+ * younger folder may belong to a run that has not started it yet. Returns how many it removed.
  */
-export function sweepStaleConfigs(root: string = tmpdir()): number {
+export function sweepStaleConfigs(
+  root: string = tmpdir(),
+  now: number = Date.now(),
+  minAgeMs: number = SWEEP_MIN_AGE_MS,
+): number {
   let removed = 0;
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     if (!entry.isDirectory() || !entry.name.startsWith('bs-local-')) continue;
     const dir = join(root, entry.name);
+    if (now - statSync(dir).mtimeMs < minAgeMs) continue;
     const files = readdirSync(dir);
     if (files.length === 1 && files[0] === 'local.yml') {
       rmSync(dir, { recursive: true, force: true });

@@ -30,7 +30,12 @@ import {
   type Tunnel,
 } from './lib/browserstack-local.ts';
 import { scrub } from './lib/browserstack-driver.ts';
-import { buildFixtureDist, judgeFixtureDist, SCRATCH_ROOT } from './lib/fixture-dist.ts';
+import {
+  buildFixtureDist,
+  judgeFixtureDist,
+  runScratch,
+  SCRATCH_ROOT,
+} from './lib/fixture-dist.ts';
 import { serveDist } from './lib/serve-dist.ts';
 
 function fail(message: string): never {
@@ -55,7 +60,9 @@ if (!existsSync(args.binary)) fail('the --binary path does not exist');
 const swept = sweepStaleConfigs();
 if (swept > 0) console.log(`removed ${String(swept)} config folder(s) an earlier run left behind`);
 
-const scratch = join(SCRATCH_ROOT, 'launcher', 'dist');
+const run = runScratch('launcher');
+const scratch = run.dist;
+process.on('exit', run.remove);
 buildFixtureDist(scratch);
 const judged = await judgeFixtureDist(scratch);
 for (const line of judged.lines) console.log(line);

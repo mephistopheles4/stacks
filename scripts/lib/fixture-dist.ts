@@ -22,6 +22,20 @@ import { runShell } from './run.ts';
 /** Under `artifacts/`, which is gitignored: a scratch folder is never a tracked file. */
 export const SCRATCH_ROOT = join(REPO_ROOT, 'artifacts', 'room-devices');
 
+/**
+ * A scratch folder for this run alone, so a second invocation cannot replace what this one judged
+ * before it serves or uploads it. `remove` deletes the run's folder; callers call it on exit.
+ */
+export function runScratch(kind: 'launcher' | 'preview'): { dist: string; remove: () => void } {
+  const dir = join(SCRATCH_ROOT, kind, `run-${String(process.pid)}`);
+  return {
+    dist: join(dir, 'dist'),
+    remove: () => {
+      rmSync(dir, { recursive: true, force: true });
+    },
+  };
+}
+
 /** The origin the fixture build is made for: no real host, so no share tag points at the owner's. */
 export const FIXTURE_ORIGIN = 'https://stacks.fixture.example';
 

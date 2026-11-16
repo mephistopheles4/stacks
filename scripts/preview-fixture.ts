@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { browserstackRootRefusalsOnDisk } from './lib/browserstack-key.ts';
 import { writeProbe } from './lib/confinement-probe.ts';
-import { buildFixtureDist, judgeFixtureDist, SCRATCH_ROOT } from './lib/fixture-dist.ts';
+import { buildFixtureDist, judgeFixtureDist, runScratch } from './lib/fixture-dist.ts';
 import {
   branchRefusal,
   parsePreviewArgs,
@@ -67,52 +67,68 @@ if (wranglerRefusal !== undefined) fail(wranglerRefusal);
 if (args.remove) {
   // Only the preview branch's own preview deployments: the list is read, and every id it names is
   // checked against the branch and the environment before anything is deleted.
-  const listed = spawnSync(
-    shellCommand('pnpm', [
-      'exec',
-      'wrangler',
-      'pages',
-      'deployment',
-      'list',
-      '--project-name',
-      project,
-      '--environment',
-      'preview',
-      '--json',
-    ]),
-    {
-      cwd: REPO_ROOT,
-      shell: true,
-      encoding: 'utf8',
-      env: uploadEnv(process.env, loadedEnvKeys),
-    },
-  );
-  if (listed.status !== 0) fail('could not list the preview deployments');
-  const ids = previewDeploymentIds(listed.stdout);
-  if (ids === undefined)
-    fail('the deployment list is not in the shape wrangler prints; nothing was deleted');
-  console.log(`${String(ids.length)} preview deployment(s) on ${PREVIEW_BRANCH}`);
-  for (const id of ids) {
-    runShell(
-      'pnpm',
-      [
+  // Wrangler's list is one request with no page argument, so a project with more previews than a
+  // page holds shows only the first. List again after each round of deletions, up to a limit, until
+  // none of this branch's previews is left; fail if some remain.
+  const listIds = (): string[] => {
+    const listed = spawnSync(
+      shellCommand('pnpm', [
         'exec',
         'wrangler',
         'pages',
         'deployment',
-        'delete',
-        id,
+        'list',
         '--project-name',
         project,
-        '--force',
-      ],
-      { wholeEnv: uploadEnv(process.env, loadedEnvKeys) },
+        '--environment',
+        'preview',
+        '--json',
+      ]),
+      {
+        cwd: REPO_ROOT,
+        shell: true,
+        encoding: 'utf8',
+        env: uploadEnv(process.env, loadedEnvKeys),
+      },
     );
+    if (listed.status !== 0) fail('could not list the preview deployments');
+    const ids = previewDeploymentIds(listed.stdout);
+    if (ids === undefined)
+      fail('the deployment list is not in the shape wrangler prints; nothing more was deleted');
+    return ids;
+  };
+  const ROUNDS = 10;
+  for (let round = 1; round <= ROUNDS + 1; round += 1) {
+    const ids = listIds();
+    console.log(`${String(ids.length)} preview deployment(s) on ${PREVIEW_BRANCH}`);
+    if (ids.length === 0) break;
+    if (round > ROUNDS)
+      fail(`previews of ${PREVIEW_BRANCH} are still listed after ${String(ROUNDS)} rounds`);
+    for (const id of ids) {
+      runShell(
+        'pnpm',
+        [
+          'exec',
+          'wrangler',
+          'pages',
+          'deployment',
+          'delete',
+          id,
+          '--project-name',
+          project,
+          '--force',
+        ],
+        { wholeEnv: uploadEnv(process.env, loadedEnvKeys) },
+      );
+    }
   }
   process.exit(0);
 }
 
-const scratch = join(SCRATCH_ROOT, 'preview', 'dist');
+const scratchRun = runScratch('preview');
+const scratch = scratchRun.dist;
+// A dry run leaves its folder to be looked at; any other run removes it on exit.
+if (!args.dryRun) process.on('exit', scratchRun.remove);
 buildFixtureDist(scratch);
 const judged = await judgeFixtureDist(scratch);
 for (const line of judged.lines) console.log(line);
@@ -133,9 +149,14 @@ if (args.dryRun) {
   console.log(
     `checked: the installed wrangler is ${wranglerInstalled ?? 'missing'}, equal to its pin`,
   );
+  // G67 holds this file to printing the wrangler command, as the deploys do. It is not the one to
+  // run by hand: a shell that holds a BrowserStack key would hand it to wrangler, which the command
+  // below does not (root `.env` refusal, `uploadEnv`, installed-version check).
   console.log(
     `to publish: pnpm exec wrangler pages deploy ${scratch} --project-name ${project} --branch ${PREVIEW_BRANCH}`,
   );
+  const switches = [args.probe ? ' --probe' : '', args.control ? ' --control' : ''].join('');
+  console.log(`to publish with its guards, run: pnpm preview:fixture${switches}`);
   process.exit(0);
 }
 

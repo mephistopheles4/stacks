@@ -41,7 +41,7 @@ export const PROBE_WORKER_SOURCE = `// ${CONFINEMENT_PROBE_MARKER}
     return Promise.resolve()
       .then(fn)
       .then(
-        function (reached) { results[name] = reached ? 'reached' : 'blocked'; },
+        function (reached) { results[name] = reached === 'timeout' ? 'timeout' : reached ? 'reached' : 'blocked'; },
         function () { results[name] = 'blocked'; },
       );
   };
@@ -61,9 +61,10 @@ export const PROBE_WORKER_SOURCE = `// ${CONFINEMENT_PROBE_MARKER}
             resolve(false);
             return;
           }
-          nested.onmessage = function () { resolve(true); };
-          nested.onerror = function () { resolve(false); };
-          setTimeout(function () { resolve(false); }, 1500);
+          nested.onmessage = function () { nested.terminate(); resolve(true); };
+          nested.onerror = function () { nested.terminate(); resolve(false); };
+          // No answer is not a refusal: it is recorded as such and the probe cannot pass on it.
+          setTimeout(function () { nested.terminate(); resolve('timeout'); }, 1500);
         });
       });
     })
