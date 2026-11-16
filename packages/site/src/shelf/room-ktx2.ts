@@ -82,10 +82,16 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
     clearTimeout(stall);
   };
 
+  // Once the room is disposed nothing may start a worker: a load or a wasm fetch still in flight
+  // would otherwise start one after `loader.dispose()` ended the others, with no owner to end it.
+  let disposed = false;
+
   loader.init = () => {
     loader.transcoderPending ??= options.fetchWasm(options.wasmUrl).then(
       (binary) => {
+        if (disposed) return;
         loader.workerPool.setWorkerCreator(() => {
+          if (disposed) throw new Error('the KTX2 loader was disposed');
           const worker = options.makeWorker(options.workerUrl);
           if (!answered) {
             clearTimeout(stall);
@@ -116,8 +122,12 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
   };
 
   return {
-    load: (url) => Promise.race([loader.loadAsync(url), failed]),
+    load: (url) =>
+      disposed
+        ? Promise.reject(new Error('the KTX2 loader was disposed'))
+        : Promise.race([loader.loadAsync(url), failed]),
     dispose: () => {
+      disposed = true;
       loader.dispose();
     },
   };
