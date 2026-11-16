@@ -135,7 +135,7 @@ Free-form notes, [[backlinks]], highlights…
 
 - **Blocking (decide in Phase 0):** Astro island with react-three-fiber vs. vanilla Three.js in a plain Vite page? R3F is nicer for interaction; vanilla is lighter. Recommend R3F, but decide before scaffolding. *(Owner: you)*
 - **Non-blocking:** Open Library cover quality varies — is Google Books' API quota acceptable as the fallback for a personal tool? Resolve during Phase 1.
-- **Non-blocking:** Should `wishlist` books render as ghosted/translucent on the shelf or be excluded? Taste call, decide when the shelf exists.
+- **Non-blocking:** Should `wishlist` books render as ghosted/translucent on the shelf or be excluded? Taste call, decide when the shelf exists. *(Decided: excluded from the shelf; they lie on the room's floor stacks, and a public build publishes one unless it is `private` — ADR-0170.)*
 
 ---
 

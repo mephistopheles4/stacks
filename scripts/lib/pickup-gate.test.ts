@@ -12,6 +12,7 @@ import {
   phoneFailures,
   pickupFailures,
   spreadFailures,
+  stackFailures,
   turnFailures,
   type AtRestRead,
   type Box,
@@ -27,6 +28,7 @@ import {
   type PhoneRead,
   type PickupRead,
   type SpreadRead,
+  type StackRead,
   type TurnRead,
   type ViewportControls,
 } from './pickup-gate.ts';
@@ -862,5 +864,52 @@ describe('arrowFailures — the back arrow keeps its place (#553, C4)', () => {
     ],
   ])('fails on %s', (_name, patch, message) => {
     expect(arrowFailures(patch).join(' / ')).toMatch(message);
+  });
+});
+
+describe('stackFailures — a wishlist book picked up from a floor stack (#603, C11)', () => {
+  const clean: StackRead = {
+    viewport: '1440x900',
+    stacked: 1,
+    picked: true,
+    arrivedClosed: true,
+    turned: true,
+    opened: true,
+    pagesShown: true,
+    closedAgain: true,
+    wentBack: true,
+    hrefUnchanged: true,
+    baseFound: true,
+    baseClickPickedNothing: true,
+  };
+
+  it('is clean for a stack book that picks up, turns, opens, closes and goes back', () => {
+    expect(stackFailures(clean)).toEqual([]);
+  });
+
+  it('is red with no read at all', () => {
+    expect(stackFailures(undefined)).toHaveLength(1);
+  });
+
+  it.each<[string, Partial<StackRead>, RegExp]>([
+    ['no book on a stack', { stacked: 0 }, /no wishlist book lay on a stack/],
+    ['a click that picked nothing up', { picked: false }, /click on a stack book/],
+    ['a book that arrived open', { arrivedClosed: false }, /arrive closed/],
+    ['a book that would not turn', { turned: false }, /turn the book/],
+    ['a book that would not open', { opened: false }, /open control/],
+    ['pages that never showed', { pagesShown: false }, /pages are not visible/],
+    ['a book that would not close', { closedAgain: false }, /would not close/],
+    ['a book that stayed in the hand', { wentBack: false }, /go back/],
+    ['an address that moved', { hrefUnchanged: false }, /location\.href/],
+    ['no bare stack base to aim at', { baseFound: false }, /no stack base could be reached/],
+    ['a stack base that picked a book up', { baseClickPickedNothing: false }, /stack base picked/],
+  ])('fails on %s', (_name, patch, message) => {
+    expect(stackFailures({ ...clean, ...patch }).join(' / ')).toMatch(message);
+  });
+
+  it('names the viewport it failed at', () => {
+    expect(stackFailures({ ...clean, viewport: '375x812', picked: false }).join()).toContain(
+      '375x812',
+    );
   });
 });

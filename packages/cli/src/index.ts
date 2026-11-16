@@ -13,7 +13,9 @@ import {
   measureCover,
   compareShelfPosition,
   createCachedHttpGet,
+  describeNewWishlist,
   enrichBook,
+  listNewWishlist,
   importBooks,
   missingFields,
   isBookStatus,
@@ -35,6 +37,14 @@ const DEFAULT_ASSETS = 'packages/site/public';
 interface GlobalOptions {
   readonly vault?: string;
   readonly cache?: string;
+}
+
+interface BuildOptions {
+  readonly public?: boolean;
+  readonly out?: string;
+  readonly assets?: string;
+  readonly watch?: boolean;
+  readonly listNewWishlist?: boolean;
 }
 
 const program = new Command();
@@ -105,8 +115,15 @@ program
     '--assets <dir>',
     `where --public stages library.json, covers/ and notes/ (default: ${DEFAULT_ASSETS})`,
   )
+  .option(
+    '--list-new-wishlist',
+    'with --public: print, in the terminal only, each wishlist book this build publishes (a one-off for #603)',
+  )
   .option('--watch', 'rebuild whenever the vault changes')
-  .action(async (options: { public?: boolean; out?: string; assets?: string; watch?: boolean }) => {
+  .action(async (options: BuildOptions) => {
+    if (options.listNewWishlist === true && options.public !== true) {
+      fail('--list-new-wishlist reads a public build: add --public');
+    }
     const { vault, vaultPath } = context();
 
     const rebuild = async (): Promise<void> => {
@@ -130,6 +147,11 @@ program
           console.warn(
             `  missing   ${result.coversMissing.length} cover(s): ${result.coversMissing.join(', ')}`,
           );
+        }
+        // Read back from the folder this run just staged, never from a second filter, and
+        // printed here alone: titles go to the terminal and to no file (#603, spec S10.1).
+        if (options.listNewWishlist === true) {
+          for (const line of describeNewWishlist(await listNewWishlist(assets))) console.log(line);
         }
         return;
       }

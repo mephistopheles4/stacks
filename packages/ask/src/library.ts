@@ -31,8 +31,10 @@ export function toCatalogue(raw: unknown): CatalogueBook[] {
   for (const entry of books as unknown[]) {
     const b = (entry ?? {}) as Record<string, unknown>;
     // A public build carries none of these. A local build does: refuse it whole,
-    // so private and wishlist books can never reach the model (invariant 2).
-    if ('sourcePath' in b || 'private' in b || b.status === 'wishlist') {
+    // so private books can never reach the model (invariant 2). A wishlist book is
+    // no longer one of the signs: `private` is the only control (#603, ADR-0170),
+    // and a public build now publishes one that is not private.
+    if ('sourcePath' in b || 'private' in b) {
       throw new DataError('library.json looks like a local build, not a public one');
     }
     const id = str(b.id);

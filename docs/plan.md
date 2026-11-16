@@ -309,7 +309,9 @@ Nothing blocking. Recorded so they aren't rediscovered:
 
 - Google Books needs a personal API key; unauthenticated it 429s on a shared
   quota. Configured via `GOOGLE_BOOKS_API_KEY`.
-- `wishlist` books are excluded from the shelf, not ghosted. Owner's call.
+- `wishlist` books are excluded from the shelf, not ghosted. Owner's call. They lie
+  on the room's floor stacks instead, and a public build publishes one unless it is
+  `private` ([ADR-0170](adr/0170-private-is-the-only-control-on-a-wishlist-book.md)).
 - One mesh per book, not InstancedMesh — 49 books render fine. **Still unmeasured
   at the brief's 200-book target.**
 

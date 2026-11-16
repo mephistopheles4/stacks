@@ -18,8 +18,8 @@
  * **Checking the artifact, not the code path.** `gate:public` proves the code
  * cannot leak, using fixtures. It says nothing about the folder actually about
  * to be uploaded. The pre-flight below re-asserts the same properties against
- * the real `dist/` — no private books, no wishlist books, no orphan covers, no
- * vault paths, every shipped key a named field, an absolute og:image — because
+ * the real `dist/` — no private books, no orphan covers, no cover carrying
+ * camera metadata, no vault paths, every shipped key a named field, an absolute og:image — because
  * the thing that gets published is the thing worth checking.
  *
  * ⚠️ **One of those rules does not survive the trip, and this comment used to

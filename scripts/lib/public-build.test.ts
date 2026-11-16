@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { notesPresence, THOUGHTS_SHIP_PHRASE } from './public-build.ts';
+import { notesPresence, THOUGHTS_SHIP_PHRASE, WISHLIST_SHIP_PHRASE } from './public-build.ts';
 
 /**
  * `gate:public`'s presence half, both ways round.
@@ -25,6 +25,16 @@ describe('notesPresence', () => {
     for (const files of [[], [other]]) {
       expect(notesPresence(files, true).problem).toMatch(/reached no file under dist\/notes/);
     }
+  });
+
+  it('looks for the wishlist phrase when asked, and the split phrase does not stand in for it', () => {
+    expect(notesPresence([split], true, WISHLIST_SHIP_PHRASE).problem).toMatch(
+      new RegExp(`"${WISHLIST_SHIP_PHRASE}" reached no file under dist/notes`),
+    );
+    const wished = { name: 'notes/w-1.json', text: `{"paragraphs":["${WISHLIST_SHIP_PHRASE}"]}` };
+    expect(notesPresence([split, wished], true, WISHLIST_SHIP_PHRASE)).toEqual({
+      observation: 'ship phrase present in notes/w-1.json',
+    });
   });
 
   it('passes the stage off, with no file at all', () => {

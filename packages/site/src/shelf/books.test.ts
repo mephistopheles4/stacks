@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
-import { MAX_HEIGHT, MIN_HEIGHT, toRows, type ShelfRow } from './books.ts';
+import { MAX_HEIGHT, MIN_HEIGHT, toRows, wishlistBooks, type ShelfRow } from './books.ts';
 import { SHELF, USABLE_WIDTH } from './bookcase.ts';
 import { rowExtent } from './placement.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
@@ -119,6 +119,28 @@ describe('toRows', () => {
     ]);
 
     expect(rows.flatMap((row) => row.books).map((entry) => entry.book.id)).toEqual(['owned']);
+  });
+
+  it('hands the wishlist to the floor stacks in title order, then id, whatever order it came in', () => {
+    const wanted = (id: string, title: string): LibraryBook =>
+      book(id, { status: 'wishlist', title, finished: undefined });
+    const library = [
+      book('owned'),
+      wanted('c', 'Beta'),
+      wanted('b', 'Alpha'),
+      wanted('a', 'Beta'),
+      wanted('d', 'alpha'),
+    ];
+
+    const order = (books: readonly LibraryBook[]): string[] =>
+      wishlistBooks(books, DEFAULT_SETTINGS.books).map((entry) => entry.book.id);
+
+    // Case does not decide the order, so "alpha" sits beside "Alpha"; a tie is the id's.
+    expect(order(library)).toEqual(['b', 'd', 'a', 'c']);
+    expect(order([...library].reverse())).toEqual(order(library));
+    expect(wishlistBooks(library, DEFAULT_SETTINGS.books).every((entry) => !entry.faceOut)).toBe(
+      true,
+    );
   });
 
   it('puts a book you are reading first, ahead of everything finished', () => {

@@ -45,10 +45,11 @@ describe('publish', () => {
     // card with a generated one at the same path, at the same size, silently.
     expect(staged).not.toContain('og.png');
 
-    // Six of the books a public build ships carry a cover; `Lantern Work`
-    // deliberately does not. The private and wishlist books carry one each,
-    // for the held tier, and are filtered out before anything is copied.
-    expect(result.coversCopied).toBe(6);
+    // Seven of the books a public build ships carry a cover, the wishlist
+    // book's among them (#603: `private` is the only control); `Lantern Work`
+    // deliberately does not. The private book carries one too, for the held
+    // tier, and is filtered out before anything is copied.
+    expect(result.coversCopied).toBe(7);
     expect(result.coversMissing).toEqual([]);
   });
 
@@ -95,12 +96,10 @@ describe('publish', () => {
 
   it('reports a missing cover instead of failing the build', async () => {
     const books = await vault.listBooks();
-    // Cloned from a book that actually ships: cloning the wishlist or the
-    // `private: true` fixture would make the ghost be filtered out, and the
-    // test would pass while asserting nothing.
-    const shippable = books.find(
-      (book) => book.status !== 'wishlist' && book.private !== true && book.cover !== undefined,
-    );
+    // Cloned from a book that actually ships: cloning the `private: true`
+    // fixture would make the ghost be filtered out, and the test would pass
+    // while asserting nothing.
+    const shippable = books.find((book) => book.private !== true && book.cover !== undefined);
     expect(shippable).toBeDefined();
     const withGhost = [...books, { ...shippable!, cover: 'covers/not-here.png', title: 'Ghost' }];
 
@@ -108,10 +107,10 @@ describe('publish', () => {
     expect(result.coversMissing).toEqual(['not-here.png']);
 
     // Every shipping book still ships — a cover the vault lost costs the book
-    // its picture, not its place. Two kinds never ship: wishlist (you do not
-    // own them) and `private: true` (the owner said no), so count against
-    // those rather than against everything handed in.
-    const shelved = withGhost.filter((book) => book.status !== 'wishlist' && book.private !== true);
+    // its picture, not its place. One kind never ships: `private: true` (the
+    // owner said no), so count against that rather than against everything
+    // handed in.
+    const shelved = withGhost.filter((book) => book.private !== true);
     expect(result.library.bookCount).toBe(shelved.length);
   });
 
@@ -120,7 +119,7 @@ describe('publish', () => {
     // A book that actually ships, so the traversal is genuinely attempted —
     // cloning the private fixture would filter it out before publish ever
     // resolved the path, and the test would pass having tested nothing.
-    const shipping = books.find((book) => book.status !== 'wishlist' && book.private !== true);
+    const shipping = books.find((book) => book.private !== true);
     const escaping = [{ ...shipping!, cover: '../../../../etc/passwd', title: 'Escaping' }];
 
     const result = await publish(escaping, vault, out, { isPublic: true });
@@ -213,14 +212,23 @@ describe('publish — the notes stage', () => {
       expect(result.library.books.filter((b) => b.thoughts !== undefined)).toEqual([]);
     });
 
-    it('writes nothing for a private or a wishlist book', async () => {
+    it('writes nothing for a private book, or for one marked private: yes', async () => {
       await note('P.md', ['title: P', 'private: true'], '## Thoughts', '', 'Held back.');
-      await note('W.md', ['title: W', 'status: wishlist'], '## Thoughts', '', 'Not owned.');
+      await note('Y.md', ['title: Y', 'private: yes'], '## Thoughts', '', 'Held back too.');
 
       const result = await build(isPublic);
 
       expect(await notesFiles()).toEqual([]);
       expect(result.library.books.filter((b) => b.thoughts !== undefined)).toEqual([]);
+    });
+
+    it('writes the Thoughts of a wishlist book that is not private, like any other', async () => {
+      await note('W.md', ['title: W', 'status: wishlist'], '## Thoughts', '', 'Wanted.');
+
+      const result = await build(isPublic);
+
+      expect(await notesFiles()).toHaveLength(1);
+      expect(result.library.books.filter((b) => b.thoughts === true)).toHaveLength(1);
     });
 
     it('never puts a private duplicate’s Thoughts in the public book’s file', async () => {
@@ -550,11 +558,30 @@ describe('publish — the held stage', () => {
     });
   });
 
-  it('stages no held copy for a private or a wishlist book in a public build', async () => {
+  it('stages no held copy for a private book, or one marked private: yes, in a public build', async () => {
     await cover('kept.png', await image(1400, 2100));
-    await cover('wanted.png', await image(1400, 2100));
+    await cover('also-kept.png', await image(1400, 2100));
     await note('Kept', 'private: true', 'cover: covers/kept.png');
+    await note('Also Kept', 'private: yes', 'cover: covers/also-kept.png');
+
+    await build(true);
+
+    expect(await heldFiles()).toEqual([]);
+  });
+
+  it('stages a held copy for a wishlist book that is not private, in a public build', async () => {
+    await cover('wanted.png', await image(1400, 2100));
     await note('Wanted', 'status: wishlist', 'cover: covers/wanted.png');
+
+    const result = await build(true);
+
+    expect(await heldFiles()).toEqual(['wanted.png']);
+    expect(result.library.books[0]?.heldCover).toBe('held-covers/wanted.png');
+  });
+
+  it('stages no held copy for a private wishlist book', async () => {
+    await cover('wanted.png', await image(1400, 2100));
+    await note('Wanted', 'status: wishlist', 'private: true', 'cover: covers/wanted.png');
 
     await build(true);
 

@@ -97,6 +97,10 @@ declare global {
       /** Where the lost-context fallback stands. See `shadow-fallback.ts`. */
       fallback(): FallbackKind;
       projectBook(index: number): { x: number; y: number } | undefined;
+      /** Wishlist books on the room's floor stacks, and each stack top on screen (#603). */
+      readonly stacked: number;
+      projectStack(slot: number): { x: number; y: number } | undefined;
+      projectStackBase(): { x: number; y: number } | undefined;
       /** Where the room stands on this page, and what it cost: `none` for `?shelf` and the fallback. */
       room(): ShelfHandle['room'];
       /**
@@ -587,6 +591,11 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind, pickup?: Pic
     },
     fallback,
     projectBook: (index) => handle.projectBook(index),
+    get stacked(): number {
+      return handle.stacked;
+    },
+    projectStack: (slot) => handle.projectStack(slot),
+    projectStackBase: () => handle.projectStackBase(),
     room: () => handle.room,
     attempted: () => attempted(),
     stats: () => handle.stats(),

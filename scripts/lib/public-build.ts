@@ -34,6 +34,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
+import type { Metadata } from 'sharp';
 import type { LibraryBook } from '../../packages/core/src/library.ts';
 import type { BookRecord } from '../../packages/core/src/types.ts';
 import { walk } from './walk.ts';
@@ -50,10 +51,14 @@ export const PUBLIC_BUILD_RULES = [
   'note-body',
   'vault-path',
   'empty-library',
+  // `private` is the only control on a book (#603, ADR-0170): the `wishlist-book` rule that held an
+  // unowned book back is gone, and this one still refuses a private wishlist book as any other.
   'private-book',
-  'wishlist-book',
   'foreign-cover',
   'orphan-cover',
+  // A cover within the shelf cap is copied byte for byte, so it can carry what a camera wrote. Read in
+  // `covers/` as `held-metadata` reads `held-covers/` (#603, spec S10.7).
+  'cover-metadata',
   'orphan-note',
   'notes-shape',
   // The held tier: one larger cover per book, in `held-covers/` (spec §3.3).
@@ -152,6 +157,14 @@ export const NOTE_BODY_CANARY = 'NOTE_BODY_CANARY_do_not_ship';
 export const THOUGHTS_SHIP_PHRASE = 'THOUGHTS SHIP PHRASE must reach the page';
 
 /**
+ * The same, planted inside a **wishlist** fixture's `## Thoughts` (#603): a wishlist book that is
+ * not private publishes its Thoughts like any other, and `gate:public` requires this phrase in
+ * `dist/notes/` to prove it. Under `THOUGHTS_SHIP_PHRASE`'s two warnings, and for the same reason
+ * never a rule in this module.
+ */
+export const WISHLIST_SHIP_PHRASE = 'WISHLIST SHIP PHRASE must reach the page';
+
+/**
  * `gate:public`'s presence half, read off the files a fixture build left under
  * `dist/notes/`, each as its path under `dist/` and its text.
  *
@@ -165,6 +178,7 @@ export const THOUGHTS_SHIP_PHRASE = 'THOUGHTS SHIP PHRASE must reach the page';
 export function notesPresence(
   files: readonly { readonly name: string; readonly text: string }[],
   publishThoughts: boolean,
+  phrase: string = THOUGHTS_SHIP_PHRASE,
 ): { readonly problem?: string; readonly observation?: string } {
   if (!publishThoughts) {
     return files.length === 0
@@ -173,11 +187,11 @@ export function notesPresence(
           problem: `the notes stage is switched off, yet ${String(files.length)} file(s) sit under dist/notes`,
         };
   }
-  const shipped = files.find((file) => file.text.includes(THOUGHTS_SHIP_PHRASE));
+  const shipped = files.find((file) => file.text.includes(phrase));
   return shipped === undefined
     ? {
         problem:
-          `the ship phrase "${THOUGHTS_SHIP_PHRASE}" reached no file under dist/notes — the split ` +
+          `the ship phrase "${phrase}" reached no file under dist/notes — the split ` +
           'shipped nothing, or Astro dropped the notes folder',
       }
     : { observation: `ship phrase present in ${shipped.name}` };
@@ -736,8 +750,6 @@ export async function inspectPublicBuild(
       if (!SHIPPABLE_KEYS.has(key) && !unnamed.has(key)) unnamed.set(key, name);
     }
     if (book.private === true) fail('private-book', `private book would be published: ${name}`);
-    if (book.status === 'wishlist')
-      fail('wishlist-book', `wishlist book would be published: ${name}`);
     if (book.sourcePath !== undefined) fail('vault-path', `vault path would be published: ${name}`);
     // A hand-edited or imported note may carry an absolute URL, and the shelf
     // passes `cover` straight to an <img> src — which has a visitor's browser
@@ -805,6 +817,11 @@ export async function inspectPublicBuild(
   const notesProblems = inspectNotes(dir, books ?? []);
   problems.push(...notesProblems.problems);
   observations.push(...notesProblems.observations);
+
+  // ── The shelf's covers, read for metadata ─────────────────────────────────
+  const coverProblems = await inspectCoverMetadata(dir);
+  problems.push(...coverProblems.problems);
+  observations.push(...coverProblems.observations);
 
   // ── Held copies ───────────────────────────────────────────────────────────
   const heldProblems = await inspectHeld(dir, books ?? []);
@@ -1319,6 +1336,109 @@ function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildRe
 }
 
 /**
+ * The five kinds of embedded metadata sharp reports that can name a place or a person: EXIF, XMP,
+ * IPTC, PNG text and a Photoshop block. One list for the shelf's covers and the held copies. The
+ * shelf's rule adds a JPEG comment segment (`hasJpegComment`); a held copy is always re-encoded, so
+ * it needs only these five.
+ */
+function embeddedMetadata(metadata: Metadata): string[] {
+  return [
+    metadata.exif === undefined ? undefined : 'EXIF',
+    metadata.xmp === undefined ? undefined : 'XMP',
+    metadata.iptc === undefined ? undefined : 'IPTC',
+    (metadata.comments?.length ?? 0) === 0 ? undefined : 'PNG text',
+    metadata.tifftagPhotoshop === undefined ? undefined : 'a Photoshop block',
+  ].filter((kind): kind is string => kind !== undefined);
+}
+
+/**
+ * Whether a JPEG carries a comment (COM) segment, which sharp does not report. A walk over the file's
+ * marker segments, through the entropy-coded data between scans: a marker is an 0xFF followed by a
+ * byte that is not 0x00, 0xFF or a restart (0xD0 to 0xD7). A file that is not a JPEG has none.
+ */
+export function hasJpegComment(bytes: Uint8Array): boolean {
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return false;
+  let at = 2;
+  while (at + 1 < bytes.length) {
+    if (bytes[at] !== 0xff) {
+      at += 1;
+      continue;
+    }
+    const marker = bytes[at + 1] ?? 0;
+    if (marker === 0xff) {
+      at += 1;
+    } else if (marker === 0x00 || (marker >= 0xd0 && marker <= 0xd8) || marker === 0x01) {
+      at += 2;
+    } else if (marker === 0xd9) {
+      return false;
+    } else if (marker === 0xfe) {
+      return true;
+    } else {
+      at += 2 + (((bytes[at + 2] ?? 0) << 8) | (bytes[at + 3] ?? 0));
+    }
+  }
+  return false;
+}
+
+/**
+ * The shelf's `covers/` folder, read for embedded metadata: `cover-metadata` (#603, spec S10.7).
+ *
+ * A cover within the shelf cap is copied **byte for byte**, so a cover the owner photographed
+ * reaches the site with whatever its camera wrote, location included; only a cover over the cap is
+ * re-encoded, and `held-covers/` always is. Until a wishlist book could publish, the byte copy had
+ * only covers a provider supplied. It lives here, in the inspector, so `gate:public` and
+ * `deploy:site`'s re-check of the real `dist/` both run it, and a cover that carries any of the
+ * five, or a JPEG comment segment, refuses the deploy until it is saved again without it — wishlist
+ * or not.
+ *
+ * A file sharp cannot read fails too, for `held-metadata`'s reason: nothing can vouch for what it
+ * carries. ⚠️ **It reads what sharp reports, and a JPEG's comment segments**: bytes after the end of
+ * the image are still not read.
+ */
+async function inspectCoverMetadata(dir: string): Promise<PublicBuildReport> {
+  const coversDir = join(dir, 'covers');
+  if (!existsSync(coversDir)) return { problems: [], observations: [] };
+
+  // Loaded here, never at the top of the module: see `inspectHeld`.
+  const { default: sharp } = await import('sharp');
+
+  const problems: BuildProblem[] = [];
+  const staged = walk(coversDir).map((file) => ({ file, name: posix(relative(coversDir, file)) }));
+  for (const { file, name } of staged) {
+    let metadata;
+    try {
+      metadata = await sharp(file).metadata();
+    } catch {
+      problems.push({
+        rule: 'cover-metadata',
+        message: `covers/${name} cannot be read as an image, so nothing can vouch for what it carries`,
+      });
+      continue;
+    }
+    const carried = embeddedMetadata(metadata);
+    if (hasJpegComment(readFileSync(file))) carried.push('a JPEG comment');
+    if (carried.length > 0) {
+      problems.push({
+        rule: 'cover-metadata',
+        message:
+          `covers/${name} carries ${carried.join(' and ')} — camera metadata, location included, ` +
+          'ships with it; save the cover again without its metadata',
+      });
+    }
+  }
+
+  // Counted, not assumed: said only when every file was read and none carried any.
+  const observations =
+    problems.length === 0 && staged.length > 0
+      ? [
+          `${String(staged.length)} cover file(s), none carrying EXIF, XMP, IPTC, PNG text, a ` +
+            'Photoshop block or a JPEG comment',
+        ]
+      : [];
+  return { problems, observations };
+}
+
+/**
  * The `held-covers/` folder: `orphan-held`, `held-oversize` and `held-metadata`.
  *
  * A held copy is a second published file per book, larger than the shelf's,
@@ -1401,13 +1521,7 @@ async function inspectHeld(dir: string, books: readonly ShippedBook[]): Promise<
       });
     }
 
-    const carried = [
-      metadata.exif === undefined ? undefined : 'EXIF',
-      metadata.xmp === undefined ? undefined : 'XMP',
-      metadata.iptc === undefined ? undefined : 'IPTC',
-      (metadata.comments?.length ?? 0) === 0 ? undefined : 'PNG text',
-      metadata.tifftagPhotoshop === undefined ? undefined : 'a Photoshop block',
-    ].filter((kind): kind is string => kind !== undefined);
+    const carried = embeddedMetadata(metadata);
     if (carried.length > 0) {
       problems.push({
         rule: 'held-metadata',

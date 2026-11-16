@@ -36,7 +36,7 @@ Nothing in this folder is third-party.
 | `Compilers for the Impatient.md` | hand-set `spine_color` must beat the auto-extracted one |
 | `Signal and Sediment.md` | `abandoned` + `started` with **no `finished`** — year grouping must cope |
 | `Nine Ways of Seeing a Warehouse.md` | 9 authors; no `isbn`, identified by an extra `asin` key; an [unclosed fence](#the-thoughts-split) in its Thoughts |
-| `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras; [wishlist Thoughts](#the-thoughts-split); a [held-size cover](#the-held-tier) it must never ship |
+| `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras; `status: wishlist`, not private, so it [publishes with its own Thoughts](#the-thoughts-split); a [held-size cover](#the-held-tier) a public build stages a copy of |
 | `Lantern Work.md` | **reordered keys**; no cover; `status: reading` (fallback spine, face-out); an [embed](#the-thoughts-split) in its Thoughts |
 | `A Book Kept Back.md` | `private: true` — must never reach a public build; [private Thoughts](#the-thoughts-split); a [held-size cover](#the-held-tier) it must never ship |
 | `The Salt Road Ledger.md` | print edition; started 2025, finished 2026 (crosses a year boundary); plants a quoted description under a demoted `### About` in its Thoughts (below) |
@@ -128,7 +128,7 @@ rather than new ones, so the book count above does not move.
 | --- | --- | --- |
 | `The Tidal Engine.md` | the **ship phrase** in `## Thoughts`, the canary below it under `## Notes` | ship the phrase in its notes file, and the canary nowhere |
 | `A Book Kept Back.md` | `private: true`, the canary inside its Thoughts | no notes file, in a public build or a local one |
-| `The Quiet Protocol.md` | `status: wishlist`, the canary inside its Thoughts | no notes file, in either build |
+| `The Quiet Protocol.md` | `status: wishlist` and not private, the **wishlist ship phrase** in `## Thoughts`, the canary below it under `## Notes` | ship the phrase in its notes file, and the canary nowhere |
 | `Lantern Work.md` | an embed in its Thoughts, the canary beside it | withhold the whole section: no notes file |
 | `Nine Ways of Seeing a Warehouse.md` | a fence opened in its Thoughts and never closed, the canary under `## Notes` below it | withhold the whole section: no notes file |
 | `Compilers for the Impatient.md` | no Thoughts, the canary under `## Notes` | no notes file |
@@ -156,7 +156,7 @@ because a check over a property no fixture exhibits passes by construction.
 | `the-tidal-engine.png`, 1400x2100 | published, over the held cap | stage a copy resized to 1200px |
 | `signal-and-sediment.png`, 800x1200, EXIF + XMP | published, between the two caps | stage a copy at native size, **re-encoded**, carrying neither |
 | `a-book-kept-back.png`, 1400x2100 | the private book | no held copy in a public build |
-| `the-quiet-protocol.png`, 1400x2100 | the wishlist book | no held copy in a public build |
+| `the-quiet-protocol.png`, 1400x2100 | the wishlist book, not private | stage a copy resized to 1200px: `private` is the only control |
 
 The EXIF and XMP are invented — an `ImageDescription` and a `dc:creator` that
 name no real camera or person — and planted by the cover script, so
