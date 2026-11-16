@@ -42,10 +42,12 @@ where the page stands.
 
 | Alternative | Why it was refused |
 | --- | --- |
-| Scroll the page by script on `touchmove` (a hand-rolled scroller) | It reimplements momentum, rubber-banding and the keyboard's scroll, badly, and the finger's own scroll is what the visitor expects. |
-| Drop the 3D layer and place the book in 2D throughout | The pickup's whole motion is the book turning in 3D; this was not the question. |
-| Take the pages out only on iOS | A user-agent branch is a code path the gates never run. One path, on every device, is the one G35 holds. |
-| Lift the pages out of `CSS3DRenderer` and keep them lit | The DOM page and the scene's paper would disagree on colour as soon as the light moved. Unlit paper makes them the same colour by construction. |
+| Scroll the page by script | It loses the native momentum iOS gives a finger. |
+| Flatten `preserve-3d` on the layer's ancestors | Untested, and it may not work: the premise run measured a page in a flat layer, not a page in a flattened 3D one. |
+| Take the pages out only on iOS | The owner decided phone and desktop behave the same, with no user-agent test. One path on every device also lets Chromium test the path iOS needs. |
+
+Chrome on iOS needs no run of its own: every iOS browser is WebKit, and the
+owner reproduced the bug in Edge as well as Safari.
 
 ## What it costs
 
@@ -59,7 +61,6 @@ where the page stands.
   the owner's BrowserStack account. `scripts/ios-swipe-check.ts` is its manual
   check, listed beside G35 as not gated in [`gates.md`](../gates.md).
 
-**Chrome on iOS needs no run of its own**: every browser on iOS is WebKit.
 
 ## How this was decided
 
