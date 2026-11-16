@@ -160,6 +160,11 @@ const ALLOWED = [
   // library the last build staged, through `lib/serve-dist.ts`; it never opens
   // a note and could not name a vault.
   'scripts/phone-check.ts',
+  // Reads one file outside the repository, `~/.config/browserstack.env`, for the
+  // owner's device-cloud credential, and writes nothing. The page it drives is
+  // a fixture build or the live site, read through a browser; it never opens a
+  // note and could not name a vault.
+  'scripts/ios-swipe-check.ts',
   // Rasterises the committed brand SVGs into the icon PNGs. Its inputs are two
   // files it names literally and its output is `packages/site/public/` — it
   // takes no path from anywhere and has no way to reach a vault.
