@@ -162,6 +162,12 @@ export interface HeldReading {
   /** The front board's angle to the page block, in degrees: 0 with the book closed. */
   readonly boardAngle: number;
   /**
+   * Whether both paper sheets are drawn: they are while a book is held, and the
+   * unlit paper must stay visible once the pages stand in the flat layer
+   * (#599, C7).
+   */
+  readonly sheetsVisible: boolean;
+  /**
    * Where the book stands on screen, in CSS pixels: what a gate needs to say
    * that the X leaves a closed book room, which no DOM element can tell it.
    */
@@ -337,6 +343,10 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         const entry = lifted.get(book.id);
         entry?.pages.setScrollable(true);
         current.redrawShadows();
+        // Under reduced motion the open is a cut that never plays `opening`, so a
+        // turned book would be left turned at rest, its pages skewed on screen and
+        // unable to leave the 3D layer. Square it here, as `opening` would have.
+        if (entry !== undefined && reduced()) setTurn(entry, { yaw: 0, pitch: 0 });
         // A hidden page cannot take focus: pose it visible first.
         pose();
         // At rest the pages leave the 3D layer, placed in this call and not on the
@@ -462,6 +472,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   const flatten = (entry: Lifted): void => {
     entry.staged.group.updateMatrixWorld(true);
     current.camera.updateMatrixWorld(true);
+    entry.flat.wanted = true;
     moveIn(flatLayer, entry.flat, screenOf());
   };
 
@@ -771,6 +782,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       ],
       box: { width: PAGE_PX, height: Number.parseFloat(pages.right.style.height) },
       flat: false,
+      wanted: false,
       warned: false,
     };
     return { objects: [right, left], flat };
@@ -911,7 +923,9 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       // The render has brought every world matrix up to this frame: a page at rest
       // is re-placed from them, and written only when its matrix changed.
       for (const entry of lifted.values()) {
-        if (entry.flat.flat) updateFlat(entry.flat, screenOf());
+        const { flat } = entry;
+        if (flat.flat) updateFlat(flat, screenOf());
+        else if (flat.wanted) moveIn(flatLayer, flat, screenOf());
       }
     },
   };
@@ -1146,6 +1160,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         easing: entry?.ease !== undefined,
         cover: coverReading(entry),
         boardAngle: entry === undefined ? 0 : boardAngleOf(entry),
+        sheetsVisible:
+          entry !== undefined && entry.rig.rightSheet.visible && entry.rig.leftSheet.visible,
         screen: entry === undefined ? EMPTY_BOX : screenBoxOf(entry, current),
         turn: {
           yaw: THREE.MathUtils.radToDeg(entry?.turn.yaw ?? 0),

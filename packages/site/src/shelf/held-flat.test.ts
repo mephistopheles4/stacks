@@ -60,6 +60,7 @@ function book(turned = 0): { book: FlatBook; layer: Box; pages: Box[]; slots: Bo
       pages: [made[0], made[1]] as [FlatPage, FlatPage],
       box: BOX,
       flat: false,
+      wanted: false,
       warned: false,
     },
     layer,
@@ -161,5 +162,30 @@ describe('moveOut', () => {
     const { book: held, pages } = book();
     moveOut(held);
     expect(pages[1]?.scrollTop).toBe(250);
+  });
+
+  it('stops wanting the pages in the flat layer, flat or not, so a retry cannot undo it', () => {
+    const idle = book();
+    idle.book.wanted = true;
+    moveOut(idle.book);
+    expect(idle.book.wanted).toBe(false);
+
+    const { book: held, layer } = book();
+    held.wanted = true;
+    moveIn(asElement(layer), held, screen());
+    moveOut(held);
+    expect(held.wanted).toBe(false);
+  });
+
+  it('lets a refused move succeed once the page is square, as the shelf retries it each frame', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { book: held, layer } = book(0.5);
+    expect(moveIn(asElement(layer), held, screen())).toBe(false);
+    for (const { object } of held.pages) {
+      object.rotation.y = 0;
+      object.updateMatrixWorld(true);
+    }
+    expect(moveIn(asElement(layer), held, screen())).toBe(true);
+    expect(held.flat).toBe(true);
   });
 });

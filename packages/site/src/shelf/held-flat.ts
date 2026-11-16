@@ -37,6 +37,13 @@ export interface FlatBook {
   readonly box: PageBox;
   /** Whether the pages are in the flat layer now. */
   flat: boolean;
+  /**
+   * Whether the book is open at rest, so the pages belong in the flat layer. A
+   * book reaches rest a frame or more before it is square to the camera (a turned
+   * book squares as it opens, and a cut under reduced motion lands its pose on the
+   * next frame), so a refused move is retried each frame while this holds.
+   */
+  wanted: boolean;
   /** Whether the skew warning has been said for this book. */
   warned: boolean;
 }
@@ -113,6 +120,7 @@ export function update(book: FlatBook, screen: Screen): void {
  * scroll to the top. Safe on a book that is not flat.
  */
 export function moveOut(book: FlatBook): void {
+  book.wanted = false;
   if (!book.flat) return;
   for (const entry of book.pages) {
     entry.slot.append(entry.page);
