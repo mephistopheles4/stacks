@@ -3,8 +3,11 @@
  * matrix (room spec S13.2, S13.3, S13.6). **Not a `pnpm` script and not a gate**: it needs the
  * owner's BrowserStack account and a downloaded binary, and it is the owner's to start and stop.
  *
- *     BROWSERSTACK_USERNAME=… BROWSERSTACK_ACCESS_KEY=… \
- *       pnpm exec tsx scripts/browserstack-local.ts --binary <path> [--port 8766]
+ *     pnpm exec tsx scripts/browserstack-local.ts --binary <path> [--port 8766]
+ *
+ * with `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` already in this shell's environment,
+ * set without typing the value (`Read-Host -MaskInput`, `read -rs`): a typed line is kept in the
+ * shell's history file.
  *
  * It refuses to run while a root `.env` names a `BROWSERSTACK_` variable, builds the 50-book
  * fixture site into a scratch folder of its own, judges it (G20's rules and the fixture marker),
@@ -21,6 +24,8 @@ import {
   parseLauncherArgs,
   readKey,
   runTunnel,
+  scrubLogFile,
+  sweepStaleConfigs,
   writeConfigFile,
   type Tunnel,
 } from './lib/browserstack-local.ts';
@@ -46,6 +51,10 @@ const key = readKey({
 if (typeof key === 'string') fail(key);
 if (!existsSync(args.binary)) fail('the --binary path does not exist');
 
+// A run that was killed outright left its config folder, and the key in it, behind.
+const swept = sweepStaleConfigs();
+if (swept > 0) console.log(`removed ${String(swept)} config folder(s) an earlier run left behind`);
+
 const scratch = join(SCRATCH_ROOT, 'launcher', 'dist');
 buildFixtureDist(scratch);
 const judged = await judgeFixtureDist(scratch);
@@ -69,7 +78,7 @@ const stop = (): void => {
   stopTunnel?.();
   server.close();
 };
-for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, stop);
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK'] as const) process.on(signal, stop);
 
 try {
   const code = await runTunnel(
@@ -115,5 +124,6 @@ try {
   console.log(`the tunnel ended (exit ${String(code)})`);
   process.exitCode = code;
 } finally {
+  scrubLogFile(logFile, key);
   server.close();
 }

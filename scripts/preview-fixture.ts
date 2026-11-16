@@ -89,6 +89,8 @@ if (args.remove) {
   );
   if (listed.status !== 0) fail('could not list the preview deployments');
   const ids = previewDeploymentIds(listed.stdout);
+  if (ids === undefined)
+    fail('the deployment list is not in the shape wrangler prints; nothing was deleted');
   console.log(`${String(ids.length)} preview deployment(s) on ${PREVIEW_BRANCH}`);
   for (const id of ids) {
     runShell(

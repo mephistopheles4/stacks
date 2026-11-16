@@ -543,16 +543,17 @@ the fixture-marker check on it, and serves or uploads that folder alone. ⚠️ 
 pnpm preview:fixture --dry-run           # build, judge, print the upload command
 pnpm preview:fixture [--probe [--control]]   # upload; the probe at the worker's path; --control must come back RED
 pnpm preview:fixture --delete            # a preview is public until deleted: delete it once read
-BROWSERSTACK_USERNAME=… BROWSERSTACK_ACCESS_KEY=… pnpm exec tsx scripts/browserstack-local.ts --binary <path> [--port 8766]
+pnpm exec tsx scripts/browserstack-local.ts --binary <path> [--port 8766]   # the key is already in this shell, see below
 ```
 
 The preview branch is the constant `preview-fixture`; `main` and the production branch are refused. Read
 the `_headers` block on `/rooms/basis/ktx2-worker.js`, the probe (`/probe.html`: green is `eval` reached and
 `fetch`, `worker` and `importScripts` blocked) and the room's transfer size there. The launcher's `--only`
 names `localhost`, `127.0.0.1` and `bs-local.com` on one port, and sends the key by a temp `--config-file`
-(its key name `key` is unconfirmed). **The key** lives in the launcher's own environment only: the
+(its key name `key` is unconfirmed). **Set the key without typing it**, or the shell keeps it in its history: PowerShell `$env:BROWSERSTACK_ACCESS_KEY = Read-Host -MaskInput`, bash `read -rs BROWSERSTACK_ACCESS_KEY; export BROWSERSTACK_ACCESS_KEY`; likewise the username. **The key** lives in the launcher's own environment only: the
 deploys, `preview:fixture` and the launcher refuse a root `.env` or `.env.local` naming a `BROWSERSTACK_`
-variable, and `uploadEnv` drops them (G9).
+variable, and `uploadEnv` drops them (G9). ⚠️ The binary's ports (45690, 45691) are fixed: on a machine
+with a hidden Windows reservation over them it dies with `SYS_CONFLICT`, though nothing shows as using them.
 
 ## `pnpm worktree <branch>`
 

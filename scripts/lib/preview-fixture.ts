@@ -50,7 +50,7 @@ export function parsePreviewArgs(argv: readonly string[]): PreviewArgs | string 
   const on = new Set(argv);
   const known = new Set(['--probe', '--control', '--dry-run', '--delete']);
   for (const arg of argv) {
-    if (!known.has(arg)) return `unknown argument ${JSON.stringify(arg.slice(0, 40))}`;
+    if (!known.has(arg)) return `unknown argument at position ${String(argv.indexOf(arg) + 1)}`;
   }
   if (on.size !== argv.length) return 'an argument is given twice';
   if (on.has('--control') && !on.has('--probe')) return '--control needs --probe';
@@ -72,33 +72,30 @@ export function projectRefusal(project: string): string | undefined {
 
 /**
  * The deployments `wrangler pages deployment list --environment preview --json` printed that
- * belong to the preview branch, as ids. **Fails closed**: an answer that is not a list, an entry
- * with no string id, or a branch that is not read as a string leaves that entry out, so a shape
- * nobody expected deletes nothing.
+ * belong to the preview branch, as ids, or `undefined` when the output is not a list of what
+ * wrangler 4.x prints (`Id`, `Environment` title-cased, `Branch`): the caller stops rather than
+ * report "0 deployments" and leave a public preview up. **Fails closed** within a readable list: an
+ * entry with no string id, another environment or another branch is left out.
  */
-export function previewDeploymentIds(listJson: string): string[] {
+export function previewDeploymentIds(listJson: string): string[] | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(listJson);
   } catch {
-    return [];
+    return undefined;
   }
-  if (!Array.isArray(parsed)) return [];
+  if (!Array.isArray(parsed)) return undefined;
   const ids: string[] = [];
   for (const entry of parsed as unknown[]) {
-    const record = entry as {
-      id?: unknown;
-      environment?: unknown;
-      deployment_trigger?: { metadata?: { branch?: unknown } };
-    } | null;
-    const branch = record?.deployment_trigger?.metadata?.branch;
+    const record = entry as { Id?: unknown; Environment?: unknown; Branch?: unknown } | null;
+    if (typeof record?.Id !== 'string' || typeof record.Branch !== 'string') return undefined;
     if (
-      typeof record?.id === 'string' &&
-      /^[0-9a-f-]{8,64}$/i.test(record.id) &&
-      record.environment === 'preview' &&
-      branch === PREVIEW_BRANCH
+      /^[0-9a-f-]{8,64}$/i.test(record.Id) &&
+      typeof record.Environment === 'string' &&
+      record.Environment.toLowerCase() === 'preview' &&
+      record.Branch === PREVIEW_BRANCH
     ) {
-      ids.push(record.id);
+      ids.push(record.Id);
     }
   }
   return ids;

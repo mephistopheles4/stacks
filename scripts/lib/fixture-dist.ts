@@ -12,6 +12,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { gateBuildEnv } from './analytics-gate.ts';
+import { dropBrowserstack } from './browserstack-key.ts';
 import { FIXTURE_MARKER_ID } from './fixture-books.ts';
 import { judgeServed } from './ios-swipe.ts';
 import { inspectPublicBuild } from './public-build.ts';
@@ -60,7 +61,7 @@ export function judgeFixtureLibrary(library: unknown): Judged {
  * `packages/site/dist` after the copy, and nothing outside `artifacts/` is written.
  */
 export function buildFixtureDist(scratch: string): void {
-  const env = gateBuildEnv({ ...process.env, SITE_URL: FIXTURE_ORIGIN });
+  const env = gateBuildEnv(dropBrowserstack({ ...process.env, SITE_URL: FIXTURE_ORIGIN }));
   runShell('pnpm', ['fixtures:50'], { wholeEnv: env });
   runShell(
     'pnpm',

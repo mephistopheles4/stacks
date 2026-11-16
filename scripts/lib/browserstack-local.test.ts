@@ -2,8 +2,17 @@
  * The launcher's decisions (room spec S13, C14), with a fake key and a fake binary: the key is
  * in the config file and in nothing else, and the config file does not outlive the run.
  */
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { dirname } from 'node:path';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   binaryArgs,
@@ -12,6 +21,8 @@ import {
   parseLauncherArgs,
   readKey,
   runTunnel,
+  scrubLogFile,
+  sweepStaleConfigs,
   writeConfigFile,
   type ConfigFile,
   type Tunnel,
@@ -102,6 +113,49 @@ describe('writeConfigFile', () => {
     expect(() => {
       config.remove();
     }).not.toThrow();
+  });
+});
+
+describe('sweepStaleConfigs', () => {
+  it('removes a launcher folder holding only local.yml, and leaves every other folder alone', () => {
+    const root = mkdtempSync(join(tmpdir(), 'sweep-'));
+    try {
+      mkdirSync(join(root, 'bs-local-aaa'));
+      writeFileSync(join(root, 'bs-local-aaa', 'local.yml'), 'key: "x"\n');
+      mkdirSync(join(root, 'bs-local-bbb'));
+      writeFileSync(join(root, 'bs-local-bbb', 'local.yml'), 'key: "x"\n');
+      writeFileSync(join(root, 'bs-local-bbb', 'notes.txt'), 'mine');
+      mkdirSync(join(root, 'other'));
+      writeFileSync(join(root, 'other', 'local.yml'), 'key: "x"\n');
+      writeFileSync(join(root, 'bs-local-file'), 'not a folder');
+      expect(sweepStaleConfigs(root)).toBe(1);
+      expect(existsSync(join(root, 'bs-local-aaa'))).toBe(false);
+      expect(existsSync(join(root, 'bs-local-bbb', 'notes.txt'))).toBe(true);
+      expect(existsSync(join(root, 'other', 'local.yml'))).toBe(true);
+      expect(existsSync(join(root, 'bs-local-file'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('scrubLogFile', () => {
+  it('removes the key and the username from the binary’s own log, and tolerates no log', () => {
+    const root = mkdtempSync(join(tmpdir(), 'scrub-'));
+    try {
+      const log = join(root, 'tunnel.log');
+      writeFileSync(log, `start as ${USER}\nconfig key ${KEY}\nfine line\n`);
+      scrubLogFile(log, key);
+      const text = readFileSync(log, 'utf8');
+      expect(text).not.toContain(KEY);
+      expect(text).not.toContain(USER);
+      expect(text).toContain('fine line');
+      expect(() => {
+        scrubLogFile(join(root, 'absent.log'), key);
+      }).not.toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

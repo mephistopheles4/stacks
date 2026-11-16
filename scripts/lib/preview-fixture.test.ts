@@ -78,27 +78,41 @@ describe('projectRefusal', () => {
 });
 
 describe('previewDeploymentIds', () => {
-  const entry = (id: string, branch: unknown, environment = 'preview') => ({
-    id,
-    environment,
-    deployment_trigger: { metadata: { branch } },
+  /** The shape `wrangler pages deployment list --json` prints (wrangler 4.149.0). */
+  const entry = (id: string, branch: unknown, environment = 'Preview') => ({
+    Id: id,
+    Environment: environment,
+    Branch: branch,
+    Source: 'abc1234',
+    Deployment: 'https://x.pages.dev',
   });
 
   it('keeps preview deployments of the preview branch and nothing else', () => {
     const list = JSON.stringify([
       entry('aaaaaaaa-1111', PREVIEW_BRANCH),
       entry('bbbbbbbb-2222', 'main'),
-      entry('cccccccc-3333', 'main', 'production'),
-      entry('dddddddd-4444', PREVIEW_BRANCH, 'production'),
-      entry('eeeeeeee-5555', 7),
+      entry('cccccccc-3333', 'main', 'Production'),
+      entry('dddddddd-4444', PREVIEW_BRANCH, 'Production'),
     ]);
     expect(previewDeploymentIds(list)).toEqual(['aaaaaaaa-1111']);
   });
 
-  it('fails closed on a shape nobody expected', () => {
-    for (const odd of ['', 'not json', '{}', '"x"', '[null, 3, {}]', '[{"id": 4}]']) {
-      expect(previewDeploymentIds(odd), odd).toEqual([]);
+  it('answers undefined on a shape nobody expected, so the command stops and deletes nothing', () => {
+    for (const odd of [
+      '',
+      'not json',
+      '{}',
+      '"x"',
+      '[null]',
+      '[{"id": "aaaaaaaa-1111"}]',
+      '[{"Id": 4}]',
+    ]) {
+      expect(previewDeploymentIds(odd), odd).toBeUndefined();
     }
+  });
+
+  it('leaves out an id that is not a plain id', () => {
     expect(previewDeploymentIds(JSON.stringify([entry('x y; rm', PREVIEW_BRANCH)]))).toEqual([]);
+    expect(previewDeploymentIds('[]')).toEqual([]);
   });
 });

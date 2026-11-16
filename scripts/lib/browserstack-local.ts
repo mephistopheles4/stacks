@@ -16,7 +16,15 @@
  * ⚠️ **The config file's key name is not confirmed**: BrowserStack's page for `--config-file`
  * names no YAML keys (2026-11). `key` mirrors the `--key` flag; the first real run settles it.
  */
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { scrub } from './browserstack-driver.ts';
@@ -48,7 +56,7 @@ export function parseLauncherArgs(argv: readonly string[]): LauncherArgs | strin
       port = parsed;
       at += 1;
     } else {
-      return `unknown argument ${JSON.stringify(String(arg).slice(0, 40))}`;
+      return `unknown argument at position ${String(at + 1)}`;
     }
   }
   if (binary === undefined) return '--binary <path to the BrowserStack Local binary> is required';
@@ -137,6 +145,37 @@ export function writeConfigFile(accessKey: string): ConfigFile {
   return { path, remove };
 }
 
+/**
+ * Removes config folders an earlier run left behind. A run that was killed outright (a closed
+ * terminal, a pipe that ended, `kill -9`) cannot run its own cleanup, and its folder holds the key.
+ * Only a folder this launcher made is touched: named `bs-local-`, holding `local.yml` and nothing
+ * else. Returns how many it removed. The launcher runs one tunnel at a time (the binary's ports are
+ * fixed), so none of them can belong to a live run.
+ */
+export function sweepStaleConfigs(root: string = tmpdir()): number {
+  let removed = 0;
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith('bs-local-')) continue;
+    const dir = join(root, entry.name);
+    const files = readdirSync(dir);
+    if (files.length === 1 && files[0] === 'local.yml') {
+      rmSync(dir, { recursive: true, force: true });
+      removed += 1;
+    }
+  }
+  return removed;
+}
+
+/**
+ * Rewrites the binary's own log with the key and the username scrubbed out. The binary writes that
+ * file itself, so nothing else has seen it; a missing file is fine (the binary may not have
+ * started). Run after the tunnel ends.
+ */
+export function scrubLogFile(path: string, key: Key): void {
+  if (!existsSync(path)) return;
+  writeFileSync(path, scrub(readFileSync(path, 'utf8'), [key.accessKey, key.username]));
+}
+
 /** What a printed line may carry: the binary's own output, scrubbed of the key. */
 export function printable(line: string, key: Key): string {
   return scrub(line, [key.accessKey, key.username]);
@@ -172,6 +211,8 @@ export async function runTunnel(
   onStarted: (stop: () => void) => void = () => undefined,
 ): Promise<number> {
   const config = deps.writeConfig(key.accessKey);
+  // A hard exit (a console closed, a crash) skips `finally`; an `exit` listener still runs.
+  process.on('exit', config.remove);
   try {
     const tunnel = deps.start(
       args.binary,
@@ -184,6 +225,7 @@ export async function runTunnel(
     const code = await tunnel.exited;
     return code ?? 1;
   } finally {
+    process.removeListener('exit', config.remove);
     config.remove();
   }
 }

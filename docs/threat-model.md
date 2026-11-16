@@ -111,7 +111,7 @@ Cloudflare Pages (`pnpm deploy:site`), the Worker bundle and its two secrets
 - *Repo.* `deploy:ask` reads the live AI switch first and refuses to turn AI
   back on without `--ai-on`, and refuses log sampling below every line. It checks
   the Worker's own settings and never the gateway's.
-- *Repo.* `preview:fixture` uploads a fixture build to a preview branch, never `main`; it is public until deleted.
+- *Repo.* `preview:fixture` uploads its own fixture build to a preview branch, never `main`.
 
 **Residual:** What you publish. The rule it rests on: the Cloudflare
 token for Terraform has an expiry, is set only on the command, and never enters
@@ -261,8 +261,9 @@ page's replies to `scripts/ios-swipe-check.ts`.
 - *Repo.* The probe reads `~/.config/browserstack.env`, sends the credential only
   to a constant HTTPS address, masks it and the session id in every error, and
   never prints page text. Not the file at rest, or the tunnel's command line.
-- *Repo.* `--serve`, the launcher and `preview:fixture` carry a checked fixture build
-  only. The key goes by a temp `--config-file`; a root `.env` naming it is refused.
+- *Repo.* `--serve` serves `packages/site/dist` on 127.0.0.1 only; `--check-served`
+  and `--local` refuse unless every title is a fixture title, at one moment only.
+  The launcher builds its own fixture; its key goes by a temp file.
 - *Owner's hand.* The tunnel runs with `--only` one port and `--force-local` off.
 
 **Residual:** A device cloud runs the probe.
