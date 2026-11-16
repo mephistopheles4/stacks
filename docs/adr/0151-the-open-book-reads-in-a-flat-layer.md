@@ -61,7 +61,6 @@ owner reproduced the bug in Edge as well as Safari.
   the owner's BrowserStack account. `scripts/ios-swipe-check.ts` is its manual
   check, listed beside G35 as not gated in [`gates.md`](../gates.md).
 
-
 ## How this was decided
 
 The owner's issue, [#599](https://github.com/mephistopheles4/stacks/issues/599):

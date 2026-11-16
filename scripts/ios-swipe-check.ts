@@ -9,6 +9,7 @@
  *     pnpm exec tsx scripts/ios-swipe-check.ts                  the live site as it is: the control
  *     pnpm exec tsx scripts/ios-swipe-check.ts --check-served   is the build on the port the fixture build? no session
  *     pnpm exec tsx scripts/ios-swipe-check.ts --local          swipe the fixture build through the tunnel
+ *     pnpm exec tsx scripts/ios-swipe-check.ts --serve          serve the built fixture site on 127.0.0.1 for the tunnel
  *
  *     --device <name>    the device (iPhone 16 Pro)
  *     --os <version>     its OS version (18)
@@ -20,6 +21,8 @@
  *                        owner starts and stops; checks the served build first, always
  *     --check-served     read http://127.0.0.1:<port>/library.json and refuse unless every title
  *                        is one the fixture generator writes; opens no session
+ *     --serve            serve packages/site/dist on 127.0.0.1:<port> after judging its library.json
+ *                        from disk, and nothing else; takes no argument but --port
  *     --port <number>    the port the fixture build is served on, and the tunnel's one port (8766)
  *
  * **Not a `pnpm` script, and not a gate**: it needs the owner's BrowserStack
@@ -30,7 +33,8 @@
  * sent in an `Authorization` header and nowhere else. It is never printed,
  * never on a command line and never written to the repository or a log; an
  * error prints an HTTP status and the hub's message, cut short, with the
- * session id masked (`scripts/lib/browserstack-driver.ts`).
+ * session id masked (`scripts/lib/browserstack-driver.ts`). A page's own
+ * strings are never printed: its errors are this tool's fixed sentences.
  *
  * One verdict line, and a non-zero exit when the page did not scroll.
  */
@@ -38,8 +42,11 @@ import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createDriver, parseCredentials, scrub } from './lib/browserstack-driver.ts';
+import { REPO_ROOT } from './lib/repo-root.ts';
+import { serveDist } from './lib/serve-dist.ts';
 import {
   ARM_SCROLL_COUNT,
+  CLOSE_AND_READ_FALLBACK,
   FIND_AND_OPEN,
   judge,
   judgeServed,
@@ -50,6 +57,7 @@ import {
   swipePath,
   readAfter,
   readArmed,
+  readClosing,
   readOpened,
 } from './lib/ios-swipe.ts';
 
@@ -57,6 +65,9 @@ const CREDENTIAL_FILE = join(homedir(), '.config', 'browserstack.env');
 const SETTLE_MS = 400;
 const DRAG_MS = 700;
 const MOMENTUM_MS = 1500;
+/** The built site `--serve` serves: the fixture build, after `pnpm --filter @stacks/site build`. */
+const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
+
 /** The longest script, finding and opening the book, outlasts WebDriver's 30 s default. */
 const SCRIPT_TIMEOUT_MS = 90_000;
 const UNEXPECTED = 'the page returned an answer of a shape this check did not ask for';
@@ -72,13 +83,38 @@ async function main(): Promise<void> {
   const options = parseSwipeArgs(process.argv.slice(2));
   if (typeof options === 'string') fail(options);
 
+  // The one way to serve the fixture build for a tunnel: the built site, judged
+  // from disk first, on this machine's loopback address and nothing else.
+  if (options.serve) {
+    let library: unknown;
+    try {
+      library = JSON.parse(readFileSync(join(DIST, 'library.json'), 'utf8'));
+    } catch {
+      return fail('packages/site/dist has no library.json: build the fixture site first');
+    }
+    const built = judgeServed(library);
+    console.log(built.line);
+    if (!built.ok) {
+      process.exitCode = 1;
+      return;
+    }
+    const { origin } = await serveDist({
+      root: DIST,
+      port: options.port,
+      headers: { 'Cache-Control': 'no-store' },
+    });
+    console.log(`serving the fixture build on ${origin}; Ctrl-C stops it`);
+    return;
+  }
+
   // A tunnel serves whatever is on the port to a device cloud: before one is
   // opened, the build there must be the fixture build. `--local` always checks,
   // and `--check-served` alone checks and stops, with no credential and no session.
   if (options.local || options.checkServed) {
     let library: unknown;
     try {
-      const reply = await fetch(servedLibraryUrl(options.port));
+      // A redirect would let one server answer the check and another the tunnel.
+      const reply = await fetch(servedLibraryUrl(options.port), { redirect: 'error' });
       if (!reply.ok) fail(`nothing is serving a library on port ${String(options.port)}`);
       library = await reply.json();
     } catch (error) {
@@ -119,7 +155,8 @@ async function main(): Promise<void> {
     await driver.setScriptTimeout(SCRIPT_TIMEOUT_MS);
     await driver.navigate(options.url);
     // What a page hands back is outside text: each answer is checked for the
-    // shape asked for, and the page's own strings are never echoed.
+    // shape asked for, and a page's own string is never echoed: an `error` is
+    // one of this tool's own sentences or "the page script failed".
     const opened = readOpened(await driver.runAsync(FIND_AND_OPEN));
     if (opened === undefined) fail(UNEXPECTED);
     if ('error' in opened) fail(opened.error);
@@ -139,7 +176,14 @@ async function main(): Promise<void> {
     const after = readAfter(await driver.run(READ_AFTER));
     if (after === undefined) fail(UNEXPECTED);
 
-    const verdict = judge(armed, after, options.premise);
+    let closing = '';
+    if (!options.premise) {
+      const closed = readClosing(await driver.runAsync(CLOSE_AND_READ_FALLBACK));
+      if (closed === undefined) fail(UNEXPECTED);
+      closing = closed;
+    }
+
+    const verdict = judge(armed, after, options.premise, closing);
     console.log(verdict.line);
     if (!verdict.scrolled) process.exitCode = 1;
   } finally {

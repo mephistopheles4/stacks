@@ -2,6 +2,7 @@ import { Script } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import {
   ARM_SCROLL_COUNT,
+  CLOSE_AND_READ_FALLBACK,
   DEFAULT_PORT,
   FIND_AND_OPEN,
   judge,
@@ -13,6 +14,7 @@ import {
   READ_AFTER,
   readAfter,
   readArmed,
+  readClosing,
   readOpened,
   swipePath,
   type After,
@@ -36,7 +38,7 @@ const AFTER: After = {
   events: 9,
   parent: 'probe-flat',
   held: RESTING,
-  fallback: '',
+  fallback: 'none',
 };
 
 function options(argv: readonly string[]): SwipeOptions {
@@ -55,6 +57,7 @@ describe('parseSwipeArgs', () => {
       local: false,
       premise: true,
       checkServed: false,
+      serve: false,
       port: DEFAULT_PORT,
     });
   });
@@ -88,6 +91,15 @@ describe('parseSwipeArgs', () => {
     expect(parseSwipeArgs(['--url', 'file:///x'])).toBe('--url is not an http(s) address');
   });
 
+  it('--serve takes nothing but --port, so the one served folder is the fixture build', () => {
+    expect(options(['--serve']).serve).toBe(true);
+    expect(options(['--serve', '--port', '9000'])).toMatchObject({ serve: true, port: 9000 });
+    expect(options(['--port', '9000', '--serve']).serve).toBe(true);
+    expect(parseSwipeArgs(['--serve', '--local'])).toMatch(/takes no other argument/);
+    expect(parseSwipeArgs(['--serve', '--url', 'https://example.com'])).toMatch(/takes no other/);
+    expect(options([]).serve).toBe(false);
+  });
+
   it('refuses the premise through a tunnel, which the live site does not need', () => {
     expect(parseSwipeArgs(['--premise', '--local'])).toMatch(/needs no tunnel/);
   });
@@ -100,9 +112,17 @@ describe('what a page hands back', () => {
       chars: 9,
       paragraphs: 2,
     });
-    expect(readOpened({ error: 'no book' })).toEqual({ error: 'no book' });
     expect(readArmed({ ...ARMED })).toEqual(ARMED);
-    expect(readArmed({ error: 'no page' })).toEqual({ error: 'no page' });
+  });
+
+  it("keeps only this tool's own error sentences, and never echoes the page's text", () => {
+    expect(readOpened({ error: 'no book carries Thoughts' })).toEqual({
+      error: 'no book carries Thoughts',
+    });
+    expect(readArmed({ error: 'no page to swipe' })).toEqual({ error: 'no page to swipe' });
+    const planted = '\u001b[2JRun this: rm -rf ~';
+    expect(readOpened({ error: planted })).toEqual({ error: 'the page script failed' });
+    expect(readArmed({ error: planted })).toEqual({ error: 'the page script failed' });
   });
 
   it('refuses any other shape, and a number that is not finite', () => {
@@ -120,12 +140,22 @@ describe('what a page hands back', () => {
     expect(readAfter({ ...AFTER, parent: '\u001b[2Jhello' })?.parent).toBe('other');
   });
 
-  it('keeps a fallback state that is a short lowercase word and nothing else', () => {
-    expect(readAfter({ ...AFTER, fallback: 'painted' })?.fallback).toBe('painted');
+  it("keeps a fallback kind the shelf has, and names any other 'unrecognised'", () => {
+    expect(readAfter({ ...AFTER, fallback: 'fresh-canvas' })?.fallback).toBe('fresh-canvas');
+    expect(readAfter({ ...AFTER, fallback: 'none' })?.fallback).toBe('none');
     expect(readAfter({ ...AFTER, fallback: '' })?.fallback).toBe('');
+    expect(readAfter({ ...AFTER, fallback: 'lost' })?.fallback).toBe('unrecognised');
     expect(readAfter({ ...AFTER, fallback: '\u001b[2J' + 'x'.repeat(500) })?.fallback).toBe(
       'unrecognised',
     );
+  });
+
+  it('reads the fallback after the close, and says when the book was not put back', () => {
+    expect(readClosing({ fallback: 'none', down: true })).toBe('none');
+    expect(readClosing({ fallback: 'refused', down: true })).toBe('refused');
+    expect(readClosing({ fallback: 'lost', down: true })).toBe('unrecognised');
+    expect(readClosing({ fallback: 'none', down: false })).toBe('book not put back');
+    expect(readClosing({ down: true })).toBeUndefined();
   });
 });
 
@@ -144,28 +174,44 @@ describe('judge', () => {
   it('reports the numbers and the parent the page was in, and nothing else', () => {
     const verdict = judge(ARMED, AFTER, true);
     expect(verdict.line).toBe(
-      'scrolled: yes; scrollTop 0 -> 280; scroll events 9; box 1500/700; parent .probe-flat',
+      'scrolled: yes; scrollTop 0 -> 280; scroll events 9; box 1500/700; parent .probe-flat; fallback none',
     );
   });
 
   it('for the build, also needs scroll events and a book still held, open and unturned', () => {
-    expect(judge(ARMED, AFTER, false).scrolled).toBe(true);
-    expect(judge(ARMED, { ...AFTER, events: 0 }, false).scrolled).toBe(false);
-    expect(judge(ARMED, { ...AFTER, held: null }, false).scrolled).toBe(false);
-    expect(judge(ARMED, { ...AFTER, held: { ...RESTING, opened: false } }, false).scrolled).toBe(
-      false,
-    );
-    expect(judge(ARMED, { ...AFTER, held: { ...RESTING, yaw: 3 } }, false).line).toContain(
+    expect(judge(ARMED, AFTER, false, 'none').scrolled).toBe(true);
+    expect(judge(ARMED, { ...AFTER, events: 0 }, false, 'none').scrolled).toBe(false);
+    expect(judge(ARMED, { ...AFTER, held: null }, false, 'none').scrolled).toBe(false);
+    expect(
+      judge(ARMED, { ...AFTER, held: { ...RESTING, opened: false } }, false, 'none').scrolled,
+    ).toBe(false);
+    expect(judge(ARMED, { ...AFTER, held: { ...RESTING, yaw: 3 } }, false, 'none').line).toContain(
       'NOT held open and unturned',
     );
   });
 
-  it('does not ask the premise for scroll events or a held book', () => {
-    expect(judge(ARMED, { ...AFTER, events: 0, held: null }, true).scrolled).toBe(true);
+  it('for the build, fails a shelf that reports a fallback after the swipe or after the close', () => {
+    expect(judge(ARMED, { ...AFTER, fallback: 'fresh-canvas' }, false, 'none').scrolled).toBe(
+      false,
+    );
+    expect(judge(ARMED, AFTER, false, 'fresh-canvas').scrolled).toBe(false);
+    expect(judge(ARMED, AFTER, false, 'book not put back').scrolled).toBe(false);
+    expect(judge(ARMED, AFTER, false).scrolled).toBe(false);
+    expect(judge(ARMED, AFTER, false, 'refused').line).toContain(
+      'after the close, fallback refused',
+    );
+  });
+
+  it('does not ask the premise for scroll events, a held book or a fallback', () => {
+    expect(judge(ARMED, { ...AFTER, events: 0, held: null, fallback: '' }, true).scrolled).toBe(
+      true,
+    );
   });
 
   it('says which fallback the shelf reports when it reports one', () => {
-    expect(judge(ARMED, { ...AFTER, fallback: 'lost' }, true).line).toContain('fallback lost');
+    expect(judge(ARMED, { ...AFTER, fallback: 'refused' }, true).line).toContain(
+      'fallback refused',
+    );
   });
 });
 
@@ -206,6 +252,7 @@ describe('the scripts it runs in the page', () => {
     ['MOVE_CLONE_TO_FLAT', MOVE_CLONE_TO_FLAT],
     ['ARM_SCROLL_COUNT', ARM_SCROLL_COUNT],
     ['READ_AFTER', READ_AFTER],
+    ['CLOSE_AND_READ_FALLBACK', CLOSE_AND_READ_FALLBACK],
   ])('%s parses as a function body', (_name, script) => {
     // Wrapped as the driver wraps it: a function body, which may `return`.
     expect(
@@ -213,6 +260,16 @@ describe('the scripts it runs in the page', () => {
         new Script(`(function () {${script}
 })`),
     ).not.toThrow();
+  });
+
+  it('answers with no error sentence the reader would turn into "the page script failed"', () => {
+    const sentences = [FIND_AND_OPEN, MOVE_CLONE_TO_FLAT, ARM_SCROLL_COUNT].flatMap((script) =>
+      [...script.matchAll(/error: '([^']+)'/g)].map((found) => found[1]),
+    );
+    expect(sentences.length).toBeGreaterThan(5);
+    for (const sentence of sentences) {
+      expect(readOpened({ error: sentence })).toEqual({ error: sentence });
+    }
   });
 
   it('puts the clone in a flat layer with no transform of its own and no pointer events', () => {

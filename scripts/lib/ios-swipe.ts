@@ -23,11 +23,13 @@ export interface SwipeOptions {
   readonly local: boolean;
   readonly premise: boolean;
   readonly checkServed: boolean;
+  /** Serve the built fixture site on 127.0.0.1 for a tunnel, and nothing else. */
+  readonly serve: boolean;
   readonly port: number;
 }
 
 const VALUE_FLAGS = ['--device', '--os', '--browser', '--url', '--port'] as const;
-const SWITCHES = ['--local', '--premise', '--check-served'] as const;
+const SWITCHES = ['--local', '--premise', '--check-served', '--serve'] as const;
 
 /** The arguments, or the sentence that says why they are refused. */
 export function parseSwipeArgs(argv: readonly string[]): SwipeOptions | string {
@@ -51,6 +53,10 @@ export function parseSwipeArgs(argv: readonly string[]): SwipeOptions | string {
   if (!Number.isInteger(port) || port < 1024 || port > 65535) return '--port is not a usable port';
   const local = on.has('--local');
   const premise = on.has('--premise');
+  const serve = on.has('--serve');
+  if (serve && argv.length !== (values.has('--port') ? 3 : 1)) {
+    return '--serve only serves the fixture build: it takes no other argument but --port';
+  }
   if (local && premise) {
     return '--premise loads the live site, which needs no tunnel: it cannot be run with --local';
   }
@@ -72,6 +78,7 @@ export function parseSwipeArgs(argv: readonly string[]): SwipeOptions | string {
     local,
     premise,
     checkServed: on.has('--check-served'),
+    serve,
     port,
   };
 }
@@ -246,6 +253,62 @@ return {
 };
 `;
 
+/**
+ * Puts the book back and reports the shelf's fallback once it is down, so a run
+ * judges the context across an open and a close (C10). Runs as an async script.
+ */
+export const CLOSE_AND_READ_FALLBACK = `
+var done = arguments[arguments.length - 1];
+var shelf = window.__shelf;
+if (!shelf) { done({ fallback: '' }); return; }
+shelf.putBack();
+var end = Date.now() + 8000;
+(function poll() {
+  if (shelf.held() === undefined || Date.now() > end) {
+    done({ fallback: String(shelf.fallback()), down: shelf.held() === undefined });
+  } else { setTimeout(poll, 100); }
+})();
+`;
+
+/**
+ * The shelf's own fallback kinds (`shadow-fallback.ts`), the only words the
+ * verdict repeats from a page. `none` is the one that passes.
+ */
+const FALLBACKS = [
+  'none',
+  'remembered',
+  'probe-override',
+  'retired',
+  'waiting',
+  'restored',
+  'fresh-canvas',
+  'link-failed',
+  'refused',
+] as const;
+
+/** The only sentences a page script answers with; any other string is the page's own text. */
+const PAGE_ERRORS = [
+  'the shelf never reported ready',
+  'no book carries Thoughts',
+  'the longest-Thoughts book is not under any projected point',
+  'the book never reached its closed rest',
+  'the book never rested open with its Thoughts showing',
+  'picked up a different book than the one chosen',
+  'no open book to clone',
+  'no page to swipe',
+] as const;
+
+/** A page's `error` as one of this tool's own sentences, never the page's text. */
+const knownError = (text: string): string =>
+  PAGE_ERRORS.find((sentence) => sentence === text) ?? 'the page script failed';
+
+/** The fallback a close script handed back: a kind the shelf has, or a word for any other. */
+export function readClosing(value: unknown): string | undefined {
+  if (!isRecord(value) || typeof value.fallback !== 'string') return undefined;
+  if (value.down !== true) return 'book not put back';
+  return FALLBACKS.find((kind) => kind === value.fallback) ?? 'unrecognised';
+}
+
 export interface Armed {
   readonly left: number;
   readonly width: number;
@@ -282,7 +345,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /** What a script handed back, or `undefined` for any shape this tool did not ask for. */
 export function readOpened(value: unknown): Opened | undefined {
   if (!isRecord(value)) return undefined;
-  if (typeof value.error === 'string') return { error: value.error };
+  if (typeof value.error === 'string') return { error: knownError(value.error) };
   if (!isNumber(value.chars) || !isNumber(value.paragraphs) || typeof value.title !== 'string') {
     return undefined;
   }
@@ -292,7 +355,7 @@ export function readOpened(value: unknown): Opened | undefined {
 /** The armed page's box and scroll numbers, or the script's own error. */
 export function readArmed(value: unknown): Armed | { readonly error: string } | undefined {
   if (!isRecord(value)) return undefined;
-  if (typeof value.error === 'string') return { error: value.error };
+  if (typeof value.error === 'string') return { error: knownError(value.error) };
   const { left, width, top, bottom, scrollTop, scrollHeight, clientHeight } = value;
   if (
     !isNumber(left) ||
@@ -327,11 +390,8 @@ export function readAfter(value: unknown): After | undefined {
   }
   const parent = PARENTS.find((name) => name === value.parent) ?? 'other';
   const fallback =
-    typeof value.fallback === 'string' && /^[a-z-]{1,24}$/.test(value.fallback)
-      ? value.fallback
-      : value.fallback === ''
-        ? ''
-        : 'unrecognised';
+    FALLBACKS.find((kind) => kind === value.fallback) ??
+    (value.fallback === '' ? '' : 'unrecognised');
   return { scrollTop: value.scrollTop, events: value.events, parent, held, fallback };
 }
 
@@ -359,7 +419,12 @@ export interface Verdict {
  * and for the build it also holds the book to be still held, open and unturned.
  * No account name, no session address.
  */
-export function judge(before: Armed, after: After, premise: boolean): Verdict {
+export function judge(
+  before: Armed,
+  after: After,
+  premise: boolean,
+  closing: string = '',
+): Verdict {
   const rose = after.scrollTop - before.scrollTop;
   const held = after.held;
   const stayed =
@@ -368,7 +433,9 @@ export function judge(before: Armed, after: After, premise: boolean): Verdict {
     held.opened &&
     Math.abs(held.yaw) < 0.5 &&
     Math.abs(held.pitch) < 0.5;
-  const scrolled = rose >= SCROLL_MIN_PX && (premise || (after.events > 0 && stayed));
+  // A build run also holds the shelf to no fallback across the open and the close (C10).
+  const kept = after.fallback === 'none' && closing === 'none';
+  const scrolled = rose >= SCROLL_MIN_PX && (premise || (after.events > 0 && stayed && kept));
   const parts = [
     scrolled ? 'scrolled: yes' : 'scrolled: no',
     `scrollTop ${String(Math.round(before.scrollTop))} -> ${String(Math.round(after.scrollTop))}`,
@@ -378,5 +445,6 @@ export function judge(before: Armed, after: After, premise: boolean): Verdict {
   ];
   if (!premise) parts.push(stayed ? 'held, open, unturned' : 'NOT held open and unturned');
   if (after.fallback !== '') parts.push(`fallback ${after.fallback}`);
+  if (!premise) parts.push(`after the close, fallback ${closing === '' ? 'unread' : closing}`);
   return { scrolled, line: parts.join('; ') };
 }
