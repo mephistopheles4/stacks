@@ -2382,6 +2382,10 @@ async function checkStacks(browser: Browser, origin: string): Promise<LinesAndFa
  * stand left of the default view, so on a phone they begin off screen. A drag starts high on the
  * screen, off the books, and a drag is never a click.
  */
+/** The most drawn frames a drag's glide is waited on, and the longest, in time, on a slow runner. */
+const SETTLE_ORBIT_FRAMES = 12;
+const SETTLE_ORBIT_MS = 10_000;
+
 async function orbitUntil(
   page: Page,
   expression: string,
@@ -2399,10 +2403,13 @@ async function orbitUntil(
     await page.mouse.down();
     await page.mouse.move(size.w / 2 + dx, size.h * 0.2, { steps: 6 });
     await page.mouse.up();
-    // The damped camera keeps gliding after the drag and moves only when a frame is drawn, so two
-    // polls between frames prove nothing: compare readings at least three drawn frames apart, within
-    // a small tolerance, and take the point only from a camera that has settled.
-    const settled = await searchFor(
+    // The damped camera keeps gliding after the drag, and it moves only when a frame is drawn, so two
+    // polls between the same frames prove nothing. Wait for a point that holds still, compared at
+    // least three drawn frames apart within 2px (the camera while there is none), but only for a
+    // bounded number of drawn frames: the damping's tail is far longer than any wait on a slow
+    // runner, so a strict rest never comes there, and the point the click takes is chosen to survive
+    // the residual drift (an interior cell, with no book within 3px) rather than to need none.
+    await searchFor(
       page,
       `(() => {
         window.__frameTick ??= (() => {
@@ -2411,18 +2418,22 @@ async function orbitUntil(
           requestAnimationFrame(count);
           return tick;
         })();
+        const at = (${expression});
         const camera = window.__shelf.room().camera;
         const seen = window.__orbitSeen;
-        if (seen === undefined) { window.__orbitSeen = { camera, frames: window.__frameTick.n }; return false; }
-        if (window.__frameTick.n - seen.frames < 3) return false;
-        const still = camera.every((v, i) => Math.abs(v - seen.camera[i]) < 1e-3);
-        window.__orbitSeen = { camera, frames: window.__frameTick.n };
-        return still;
+        const frames = window.__frameTick.n;
+        if (seen === undefined) { window.__orbitSeen = { at, camera, frames, start: frames }; return false; }
+        if (frames - seen.frames < 3) return false;
+        const still = at !== undefined && seen.at !== undefined
+          ? Math.hypot(at.x - seen.at.x, at.y - seen.at.y) < 2
+          : at === seen.at && camera.every((v, i) => Math.abs(v - seen.camera[i]) < 0.02);
+        window.__orbitSeen = { at, camera, frames, start: seen.start };
+        return still || frames - seen.start >= ${String(SETTLE_ORBIT_FRAMES)};
       })()`,
-      15_000,
+      SETTLE_ORBIT_MS,
     );
     await page.evaluate('window.__orbitSeen = undefined');
-    found = settled ? await read() : undefined;
+    found = await read();
   }
   return found;
 }
