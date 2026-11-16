@@ -25,21 +25,28 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
+import { KTX2_WASM_URL, KTX2_WORKER_URL } from '../packages/site/src/shelf/room-codec.ts';
 import { HELD_COVER_EDGE } from '../packages/core/src/covers/cover-budget.ts';
 import { plantedCover, type PlantedCoverOptions } from '../packages/core/src/test-support.ts';
 import {
+  CONFINEMENT_PROBE_MARKER,
   HELD_EDGE_CAP,
   inspectPublicBuild,
+  KTX2_LICENCE_PATH,
+  KTX2_WASM_PATH,
+  KTX2_WORKER_PATH,
+  KTX2_WORKER_POLICY,
   NOTE_BODY_CANARY,
   PUBLIC_BUILD_RULES,
   type PublicBuildRule,
 } from '../scripts/lib/public-build.ts';
 
 const ORIGIN = 'https://stacks.gate.example';
+const SITE_PUBLIC = join(import.meta.dirname, '..', 'packages', 'site', 'public');
 
 let dist: string;
 
@@ -105,6 +112,16 @@ async function writeCleanBuild(): Promise<void> {
   await writeFile(join(dist, 'og.png'), 'x'.repeat(4096));
   await writeFile(join(dist, '_headers'), headersFile());
   await writeFile(join(dist, 'robots.txt'), 'User-agent: *\nAllow: /\n');
+  await writeWorker();
+}
+
+/** The KTX2 worker and the wasm beside it, at the path `_headers` keys its block on. */
+async function writeWorker(contents = '/* a worker */'): Promise<void> {
+  const file = join(dist, ...KTX2_WORKER_PATH.split('/'));
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, contents);
+  await writeFile(join(dirname(file), 'basis_transcoder.wasm'), 'pretend wasm');
+  await writeFile(join(dist, ...KTX2_LICENCE_PATH.split('/')), 'pretend licence');
 }
 
 /**
@@ -122,8 +139,22 @@ function headersFile(
     held?: 'revalidate' | 'stale' | 'absent';
     frameOptions?: boolean;
     frameAncestors?: boolean;
+    /** The worker's block: its key, its policy line, a second block carrying eval, or none. */
+    worker?: 'ok' | 'absent' | { key?: string; policy?: string; also?: string };
   } = {},
 ): string {
+  const worker = options.worker ?? 'ok';
+  const workerBlock =
+    worker === 'absent'
+      ? []
+      : [
+          typeof worker === 'string' ? KTX2_WORKER_PATH : (worker.key ?? KTX2_WORKER_PATH),
+          `  Content-Security-Policy: ${typeof worker === 'string' ? KTX2_WORKER_POLICY : (worker.policy ?? KTX2_WORKER_POLICY)}`,
+          ...(typeof worker === 'string' || worker.also === undefined
+            ? []
+            : ['', worker.also, `  Content-Security-Policy: ${KTX2_WORKER_POLICY}`]),
+          '',
+        ];
   const revalidate = '  Cache-Control: public, max-age=0, must-revalidate';
   return [
     '# Cloudflare Pages reads this file.',
@@ -154,6 +185,7 @@ function headersFile(
           options.held === 'stale' ? '  X-Content-Type-Options: nosniff' : revalidate,
           '',
         ]),
+    ...workerBlock,
   ].join('\n');
 }
 
@@ -172,6 +204,7 @@ function cspMeta(
     connectSrc?: string;
     scriptSrc?: string;
     frameSrc?: string;
+    workerSrc?: string;
     omit?: string;
     extra?: string;
   } = {},
@@ -191,13 +224,14 @@ function cspMeta(
     ['base-uri', "'none'"],
     ['form-action', "'none'"],
     ['frame-src', options.frameSrc ?? 'https://challenges.cloudflare.com'],
+    ['worker-src', options.workerSrc ?? "'self'"],
   ] as const;
 
   // The two Astro generates, each carrying a hash it computed for this page.
   const generated = [
     [
       'script-src',
-      `${options.scriptSrc ?? "'self' https://static.cloudflareinsights.com https://challenges.cloudflare.com"} ` +
+      `${options.scriptSrc ?? "'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://challenges.cloudflare.com"} ` +
         `'sha256-BF0290pkb3jxQsE7z00xR8Imp8X34FLC88L0lkMnrGw='`,
     ],
     ['style-src', "'self' 'sha256-eZThLoRNDbx6YobQlsGZA8+qespsZfD/YQEGSwT5BvU='"],
@@ -1187,7 +1221,7 @@ describe('G20 — every rule goes red', () => {
         indexHtml({
           csp: cspMeta({
             scriptSrc:
-              "'self' https://static.cloudflareinsights.com https://challenges.cloudflare.com https://cdn.example",
+              "'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://challenges.cloudflare.com https://cdn.example",
           }),
         }),
       );
@@ -1220,8 +1254,160 @@ describe('G20 — every rule goes red', () => {
     await expectOnly('csp', async () => {
       await writeIndex(
         indexHtml({
-          csp: cspMeta({ scriptSrc: "'self' https://static.cloudflareinsights.com" }),
+          csp: cspMeta({
+            scriptSrc: "'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com",
+          }),
         }),
+      );
+    });
+  });
+
+  describe('#601 — WebAssembly and the KTX2 worker (spec S6)', () => {
+    const scriptSrcWith = (extra: string): string =>
+      `'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://challenges.cloudflare.com ${extra}`;
+
+    it("csp: script-src without 'wasm-unsafe-eval' — the meshopt decoder and the transcoder cannot compile", async () => {
+      await expectOnly('csp', async () => {
+        await writeIndex(
+          indexHtml({
+            csp: cspMeta({
+              scriptSrc:
+                "'self' https://static.cloudflareinsights.com https://challenges.cloudflare.com",
+            }),
+          }),
+        );
+      });
+    });
+
+    it("csp: the page gains 'unsafe-eval', which belongs to the worker's response alone (C5)", async () => {
+      await expectOnly('csp', async () => {
+        await writeIndex(
+          indexHtml({ csp: cspMeta({ scriptSrc: scriptSrcWith("'unsafe-eval'") }) }),
+        );
+      });
+    });
+
+    it('csp: worker-src dropped, so the worker file would fall to default-src none', async () => {
+      await expectOnly('csp', async () => {
+        await writeIndex(indexHtml({ csp: cspMeta({ omit: 'worker-src' }) }));
+      });
+    });
+
+    it('csp: worker-src widened past self', async () => {
+      await expectOnly('csp', async () => {
+        await writeIndex(indexHtml({ csp: cspMeta({ workerSrc: "'self' https://cdn.example" }) }));
+      });
+    });
+
+    it('csp: worker-src gains blob:, which would hand the worker the page policy (C5)', async () => {
+      await expectOnly('csp', async () => {
+        await writeIndex(indexHtml({ csp: cspMeta({ workerSrc: "'self' blob:" }) }));
+      });
+    });
+
+    it('csp: blob: in any other directive', async () => {
+      await expectOnly('csp', async () => {
+        await writeIndex(indexHtml({ csp: cspMeta({ connectSrc: "'self' blob:" }) }));
+      });
+    });
+
+    it("headers: the worker's block is absent, so nothing lets it use eval", async () => {
+      await expectOnly('headers', () =>
+        writeFile(join(dist, '_headers'), headersFile({ worker: 'absent' })),
+      );
+    });
+
+    it("headers: the worker's policy is not exactly S6.4's", async () => {
+      await expectOnly('headers', () =>
+        writeFile(
+          join(dist, '_headers'),
+          headersFile({ worker: { policy: "script-src 'unsafe-eval' 'wasm-unsafe-eval'" } }),
+        ),
+      );
+    });
+
+    it("headers: the worker's policy may fetch (connect-src widened)", async () => {
+      await expectOnly('headers', () =>
+        writeFile(
+          join(dist, '_headers'),
+          headersFile({ worker: { policy: `${KTX2_WORKER_POLICY}; connect-src *` } }),
+        ),
+      );
+    });
+
+    it("headers: 'unsafe-eval' keyed on a wider path than the worker's", async () => {
+      await expectOnly('headers', () =>
+        writeFile(join(dist, '_headers'), headersFile({ worker: { key: '/rooms/*' } })),
+      );
+    });
+
+    it("headers: 'unsafe-eval' in a second block, even one that repeats the worker's policy", async () => {
+      await expectOnly('headers', () =>
+        writeFile(join(dist, '_headers'), headersFile({ worker: { also: '/index.html' } })),
+      );
+    });
+
+    it("headers: 'unsafe-eval' on the catch-all block", async () => {
+      await expectOnly('headers', async () => {
+        await writeFile(
+          join(dist, '_headers'),
+          headersFile().replace(
+            '  X-Frame-Options: DENY',
+            "  X-Frame-Options: DENY\n  Content-Security-Policy: script-src 'unsafe-eval'",
+          ),
+        );
+      });
+    });
+
+    it('headers: the worker file is missing from the build its block names', async () => {
+      await expectOnly('headers', () =>
+        rm(join(dist, ...KTX2_WORKER_PATH.split('/')), { force: true }),
+      );
+    });
+
+    it('headers: the wasm the page hands the worker is missing', async () => {
+      await expectOnly('headers', () =>
+        rm(join(dist, ...KTX2_WASM_PATH.split('/')), { force: true }),
+      );
+    });
+
+    it('headers: the Apache-2.0 wasm served without its licence beside it', async () => {
+      await expectOnly('headers', () => rm(join(dist, ...KTX2_LICENCE_PATH.split('/'))));
+    });
+
+    it('csp: a confinement probe script served at the worker path in a production build (S6.7)', async () => {
+      await expectOnly('csp', () => writeWorker(`/* ${CONFINEMENT_PROBE_MARKER} */`));
+    });
+
+    it('csp: a probe page under rooms/ in a production build (S6.7)', async () => {
+      await expectOnly('csp', async () => {
+        await writeFile(join(dist, 'rooms', 'confinement-probe.html'), indexHtml());
+      });
+    });
+
+    it('csp: the probe marker in a script outside rooms/ in a production build (S6.7)', async () => {
+      await expectOnly('csp', () =>
+        writeFile(join(dist, 'probe-loader.js'), `/* ${CONFINEMENT_PROBE_MARKER} */`),
+      );
+    });
+
+    it("passes a book's cover when its title has the word probe in it", async () => {
+      // A cover is named for its book, and a title must not refuse a deploy.
+      await writeFile(join(dist, 'covers', 'a.jpg'), 'pretend jpeg');
+      await writeFile(join(dist, 'covers', 'the-space-probe.jpg'), 'pretend jpeg');
+      await writeLibrary([
+        { ...CLEAN_BOOK, cover: 'covers/the-space-probe.jpg' },
+        { id: 'b-2', title: 'B', cover: 'covers/a.jpg', status: 'read' },
+      ]);
+      expect((await inspect()).problems).toEqual([]);
+    });
+
+    it("headers: 'unsafe-eval' in another letter case, which a browser honours", async () => {
+      await expectOnly('headers', () =>
+        writeFile(
+          join(dist, '_headers'),
+          `${headersFile()}\n/other\n  Content-Security-Policy: script-src 'UNSAFE-EVAL'\n`,
+        ),
       );
     });
   });
@@ -1394,5 +1580,23 @@ describe('G20 — the rule list cannot grow blind spots', () => {
       `rules with no planted defect above: ${missing.join(', ')}. A rule nobody has ` +
         'watched go red is not yet gated.',
     ).toEqual([]);
+  });
+});
+
+describe('G20 — the worker the page starts is the worker `_headers` confines (#601)', () => {
+  it('names one path in the loader and in the rule', () => {
+    expect(KTX2_WORKER_URL).toBe(KTX2_WORKER_PATH);
+    expect(KTX2_WASM_URL).toBe(KTX2_WASM_PATH);
+  });
+
+  it('passes the committed worker, wasm and _headers through the same inspection as a build', async () => {
+    // The whole committed `_headers`, so an `'unsafe-eval'` added to any block of it is counted,
+    // and the files the loader asks for are the files the site serves.
+    await mkdir(join(dist, 'rooms', 'basis'), { recursive: true });
+    for (const file of ['ktx2-worker.js', 'basis_transcoder.wasm', 'LICENSE-basis-universal.txt']) {
+      await copyFile(join(SITE_PUBLIC, 'rooms', 'basis', file), join(dist, 'rooms', 'basis', file));
+    }
+    await copyFile(join(SITE_PUBLIC, '_headers'), join(dist, '_headers'));
+    expect((await inspect()).problems).toEqual([]);
   });
 });

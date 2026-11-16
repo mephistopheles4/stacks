@@ -74,3 +74,15 @@ survivors/
 *.tfplan
 .dev.vars*
 .wrangler/
+
+# The room's Blender pipeline (packages/site/rooms/, spec #593 S4.3). The scenes
+# are rebuilt by the scripts and too large to keep in history; the TRELLIS
+# helpers name the owner's password-manager entry and are never committed. A
+# rule with a slash inside it anchors to this file's folder, so the helpers are
+# written with a leading `**/`.
+*.blend
+*.blend1
+__pycache__/
+**/trellis/trellis.env
+**/trellis/check-token.cmd
+**/trellis/run-trellis.cmd

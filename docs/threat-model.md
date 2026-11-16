@@ -72,9 +72,18 @@ optional-Plausible spec).
   from the next deployment only.
 - *Repo.* G20 (`public-build-artifact`) inspects the real `dist/` before upload
   for private books, orphan covers, vault paths and unknown keys, and holds the
-  site's CSP (`connect-src 'self'` unless analytics is on). It reads key names,
+  site's CSP (`connect-src 'self'` unless analytics is on; `script-src` with
+  `'wasm-unsafe-eval'` and never `'unsafe-eval'`; `worker-src 'self'`; no `blob:`).
+  It reads key names,
   never values, and its note-body canary exists only in the fixture vault, so on
   a real vault invariant 2 rests on structure.
+- *Repo.* The room's texture transcoder needs eval, and gets it in one place: a
+  dedicated worker loaded from its own file, under its own response policy in
+  `_headers` (`default-src 'none'`, so it can fetch nothing). The page keeps no
+  `'unsafe-eval'` and no `blob:`; G20 counts the `'unsafe-eval'` grants in
+  `_headers` and reads that policy back. It does not hold in a browser that
+  applies neither policy, and it is checked once by hand on a preview, so a
+  later change in how the host serves that header is not seen (ADR-0163).
 - *Repo.* All vault access goes through the adapter (invariant 4, G1). G1 reads
   import specifiers under `packages/` and `scripts/`, not `gates/` or run-time reach.
 - *Host.* None. Whatever is uploaded is public.
@@ -108,8 +117,10 @@ token for Terraform has an expiry, is set only on the command, and never enters
 ### Outside lookups and imports
 
 **Crosses:** in: replies and cover bytes from Open Library, Google Books and
-Apple Books (cover URLs come out of those replies), and a Libation export of an Audible
-library, given to `stacks import audible`. Out: each looked-up book's ISBN, title and author, private
+Apple Books (cover URLs come out of those replies), a Libation export of an Audible
+library, given to `stacks import audible`, and a room's bake inputs: files from
+`dl.polyhaven.org`, `images.metmuseum.org` and `upload.wikimedia.org`, fetched
+by `fetch_inputs.py` on the owner's machine alone, plus models placed by hand (a bake-input fetch sends the owner's address and the asset URL to those hosts). Out: each looked-up book's ISBN, title and author, private
 and wishlist ones included, and the Google key, to the providers' HTTPS endpoints
 (approved by `AGENTS.md`'s tech decisions); and, on an Audible import, the
 export's picture ids and the owner's address to Amazon's image CDN, which no
@@ -131,7 +142,15 @@ record approves.
   `Description`. The adapter creates the note, never overwrites, and strips path
   characters from the title. Both trust the file's own fields.
 
-**Residual:** Provider bytes are trusted.
+- *Repo.* A bake input is fetched over HTTPS from those three hosts only, a
+  redirect is re-checked against them, and each file is held to the SHA-256 in
+  `inputs.json`: a fetched file that differs is deleted and refused, a hand-placed
+  one is refused and kept, and a name that would leave the inputs folder is
+  refused. G75 holds each entry to a licence and, for CC BY, a credit.
+
+**Residual:** Provider bytes are trusted. A bake input's hash is the owner's
+record of the first fetch and its licence is typed, not read from the host again;
+a model the baker opens is third-party content, run with Blender's auto-run off.
 
 ### Tracker and PRs
 

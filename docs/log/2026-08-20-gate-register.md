@@ -6762,3 +6762,45 @@ stayed green under both, which is the reason the gate exists.
 - **Routing around** — **exposed.** A second threat-model file, or a section moved to another document, keeps this one short while the content grows elsewhere, and nothing reads the other file. `AGENTS.md` names `docs/threat-model.md` as the one. Disposition `accepted`.
 - **Vacuous green** — **gated.** An empty file, a renamed one and a misspelt path all satisfy a cap, so the read is floored at 500 words and a missing file throws. A second test hands the cap check the real text padded past the cap and requires it to report the file over. Disposition `gated`.
 - **Decay** — **clean.** The count reads the file as it stands and holds no number of its own except the cap and the floor.
+
+### G73 — `room-build-record`
+
+**Gate:** [`gates/room-build-record.test.ts`](../../gates/room-build-record.test.ts)
+**Date:** 2026-11-16
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real files and each reverted: a byte appended to `bake/room-audition-shell.webp` turned the room's case red with `reading-corner: bake/room-audition-shell.webp does not match the record's SHA-256`; a `stray.txt` added beside the room (staged, as the container reads what git tracks) turned it red with `stray.txt is served and the record does not list it`; and the other twelve cases stayed green both times. With both reverted all 13 passed.
+
+- **Weakening** — **gated** for a file the room should not hold, **exposed** for one it should. Refreshing the record with `record_build.mjs` turns the hash rows green, and that is what the script is for; it refuses an input whose bytes differ from `inputs.json`. But a served file that is not the GLB, `SOURCES.md` or an image the GLB names (or its KTX2 twin) is red whatever the record says: a copy of `bake/room-audition-shell.webp` saved as `bake/cover.webp` and refreshed into the record turned the row red with `served files the GLB does not name`. A changed texture the GLB does name is accepted by design: the diff of `build.json` is where a reviewer sees the hash move. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The record's hashes prove the files are the recorded ones and not that the bake command made them, so a record can name a command that never ran. `verified` says what was run to check it, in prose. Disposition `accepted`.
+- **Routing around** — **gated.** A file left in the room's folder and not listed is red, and an escape or auto-run flag in any string of the record is planted and refused. A served room folder with no `build.json` is red in this row, and `room-budget` and `room-inputs` walk the served folders and not the scripts' folders, so none of the three can be walked past by a folder nobody recorded: a planted `public/rooms/attic/a.txt` turned all three red. Disposition `gated`.
+- **Vacuous green** — **gated.** At least one room must be found, with at least ten recorded files and ten recorded inputs, and each judgement is planted red on a copy of the real record. Disposition `gated`.
+- **Decay** — **exposed.** The tool versions are bare numbers the row checks the shape of and cannot check against the machine that baked. Disposition `accepted`.
+
+### G74 — `room-budget`
+
+**Gate:** [`gates/room-budget.test.ts`](../../gates/room-budget.test.ts)
+**Date:** 2026-11-16
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real room: 3,000,000 zero bytes appended to `room-audition.glb` turned the room's case red with `reading-corner: the packed GLB is 5985488 bytes, over 5000000`, and the other five cases stayed green. The GLB was restored and all six passed.
+
+- **Weakening** — **exposed.** The three caps are constants in the test file, and raising one passes every other gate. The room spec says a future room may revise its own; a diff that changes `MAX_GLB` is visible to a reviewer. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The row reads committed bytes and not the transfer size, which is compressed and which the Pages fixture preview reads in T6. A room can sit under the cap here and over it on the wire, or the reverse. Disposition `accepted`.
+- **Routing around** — **gated.** A texture the GLB names that is not served is red instead of zero, so deleting a texture does not make the budget look met; a second GLB in the folder is red. Disposition `gated`.
+- **Vacuous green** — **gated.** The GLB's image list is floored at ten and every cap is planted red on numbers. Disposition `gated`.
+- **Decay** — **clean.** The row reads the files as they stand and holds no number of its own except the three caps.
+
+### G75 — `room-inputs`
+
+**Gate:** [`gates/room-inputs.test.ts`](../../gates/room-inputs.test.ts)
+**Date:** 2026-11-16
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real files and both reverted: the first licence in `inputs.json` changed to `CC BY-NC 4.0` and `Faheem Yusuf` replaced in `SOURCES.md` turned the room's case red with `licence "CC BY-NC 4.0" is not CC0, public domain or CC BY` and `sketchfab/victorian_desk/victorian_desk_2k.glb: is CC BY and SOURCES.md does not credit its author`. With both restored all 18 passed.
+
+- **Weakening** — **exposed.** Editing a licence in `inputs.json` to one on the list turns the row green and the file is a reviewed diff, but nothing re-asks the host. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The credit check looks for the author's string and the page URL anywhere in `SOURCES.md`, so a credit in the wrong table, or in a sentence, passes. Disposition `accepted`.
+- **Routing around** — **exposed.** A destination with a `..`, a drive letter, a backslash or a leading slash, a signed-looking page URL, and a fetch URL off the list or over http are each planted and refused. But a bake input that `inputs.json` does not name is invisible to the row: nothing reads the scripts for the paths they open, and `build_room.py` checks the named inputs and not that nothing else is read. The scratch rebake from a clean inputs folder is the check that would show it. Disposition `accepted`.
+- **Vacuous green** — **gated.** At least ten entries and one CC BY per room, and at least three fetch hosts read out of the script. Disposition `gated`.
+- **Decay** — **exposed.** A licence that a host changes later is not seen; the audit is a date. Disposition `accepted`.

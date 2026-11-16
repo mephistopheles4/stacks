@@ -141,7 +141,10 @@ blurb, not a real note body. Everything in `fixtures/` is invented —
 see [`fixtures/README.md`](fixtures/README.md). Real covers exist at runtime
 only, downloaded into a vault that is gitignored. This is the easiest rule to
 break by accident and the most expensive to undo, so it is also a gate: G13
-fails on any committed binary outside the generated fixture covers.
+fails on any committed binary outside the generated fixture covers, the named
+brand and CC0 files, and the baked rooms in `packages/site/public/rooms/`, which
+are credited in their own `SOURCES.md`
+([ADR-0162](docs/adr/0162-the-rooms-directory-is-allowed-on-its-sources-file.md)).
 
 **No note bodies anywhere near a build.** The vault is somebody's private
 reading notes. Only what invariant 2 allows leaves the vault, and the parser
