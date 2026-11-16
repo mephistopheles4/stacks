@@ -78,6 +78,7 @@ import {
   type FlatOpenedRead,
   type FlatRestRead,
 } from './lib/flat-layer-gate.ts';
+import { PAGES_HIDDEN, WATCH_PAGES } from './lib/page-watch.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
 import { samplingHookSource } from './lib/sampling-hook.ts';
@@ -759,36 +760,6 @@ async function clickToPickUp(
   return undefined;
 }
 
-/**
- * Watches every held page from the moment it is added: each must arrive hidden
- * by `visibility`, and no page may ever be visible while its opacity is still 0,
- * which is what text showing through the closing cover looks like in the DOM.
- * Watched rather than sampled once after the click, because on a slow runner the
- * one sample could land after the fade and prove nothing.
- */
-const WATCH_PAGES = `(() => {
-  const seen = [];
-  window.__pageVisibility = seen;
-  const record = (page, event) => seen.push({ event, visibility: page.style.visibility, opacity: page.style.opacity });
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node instanceof HTMLElement && node.classList.contains('held-page')) record(node, 'added');
-      }
-      const target = mutation.target;
-      if (mutation.type === 'attributes' && target instanceof HTMLElement && target.classList.contains('held-page')) record(target, 'style');
-    }
-  });
-  observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
-})()`;
-
-const PAGES_HIDDEN = `(() => {
-  const seen = window.__pageVisibility ?? [];
-  const added = seen.filter((entry) => entry.event === 'added');
-  return added.length >= 2 &&
-    added.every((entry) => entry.visibility === 'hidden') &&
-    !seen.some((entry) => entry.visibility === 'visible' && Number(entry.opacity) === 0);
-})()`;
 /**
  * The closed book at rest, read before anything opens it (#531): the board lies
  * flat to the block in the scene, the pages are hidden from sight and from the
