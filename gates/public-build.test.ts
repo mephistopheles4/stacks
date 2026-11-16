@@ -567,14 +567,23 @@ describe('G2 — a wishlist book publishes unless it is private (#603, C8)', () 
     }
   }
 
-  it('publishes a wishlist book that is not private: its entry, cover, held cover and notes', async () => {
+  it('publishes a wishlist book that is not private: its entry, cover and held cover', async () => {
     const built = await buildCopy();
 
     expect(built.titles).toContain('The Quiet Protocol');
     expect(built.covers).toContain(WISHLIST_COVER);
     expect(built.held).toContain(WISHLIST_COVER);
-    expect(built.notes).toContain(`${built.ids.get(PLANTED.wishlist) ?? ''}.json`);
   });
+
+  // The notes stage follows `PUBLISH_THOUGHTS`, as the notes tests above do.
+  it.runIf(PUBLISH_THOUGHTS)(
+    'publishes the notes of a wishlist book that is not private',
+    async () => {
+      const built = await buildCopy();
+
+      expect(built.notes).toContain(`${built.ids.get(PLANTED.wishlist) ?? ''}.json`);
+    },
+  );
 
   it.each([
     ['private: true', undefined],

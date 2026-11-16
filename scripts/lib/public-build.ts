@@ -1351,6 +1351,35 @@ function embeddedMetadata(metadata: Metadata): string[] {
 }
 
 /**
+ * Whether a JPEG carries a comment (COM) segment, which sharp does not report. A walk over the file's
+ * marker segments, through the entropy-coded data between scans: a marker is an 0xFF followed by a
+ * byte that is not 0x00, 0xFF or a restart (0xD0 to 0xD7). A file that is not a JPEG has none.
+ */
+export function hasJpegComment(bytes: Uint8Array): boolean {
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return false;
+  let at = 2;
+  while (at + 1 < bytes.length) {
+    if (bytes[at] !== 0xff) {
+      at += 1;
+      continue;
+    }
+    const marker = bytes[at + 1] ?? 0;
+    if (marker === 0xff) {
+      at += 1;
+    } else if (marker === 0x00 || (marker >= 0xd0 && marker <= 0xd8) || marker === 0x01) {
+      at += 2;
+    } else if (marker === 0xd9) {
+      return false;
+    } else if (marker === 0xfe) {
+      return true;
+    } else {
+      at += 2 + (((bytes[at + 2] ?? 0) << 8) | (bytes[at + 3] ?? 0));
+    }
+  }
+  return false;
+}
+
+/**
  * The shelf's `covers/` folder, read for embedded metadata: `cover-metadata` (#603, spec S10.7).
  *
  * A cover within the shelf cap is copied **byte for byte**, so a cover the owner photographed
@@ -1358,10 +1387,12 @@ function embeddedMetadata(metadata: Metadata): string[] {
  * re-encoded, and `held-covers/` always is. Until a wishlist book could publish, the byte copy had
  * only covers a provider supplied. It lives here, in the inspector, so `gate:public` and
  * `deploy:site`'s re-check of the real `dist/` both run it, and a cover that carries any of the
- * five refuses the deploy until it is saved again without it — wishlist or not.
+ * five, or a JPEG comment segment, refuses the deploy until it is saved again without it — wishlist
+ * or not.
  *
  * A file sharp cannot read fails too, for `held-metadata`'s reason: nothing can vouch for what it
- * carries. ⚠️ **It reads what sharp reports and nothing else**, as `held-metadata` does.
+ * carries. ⚠️ **It reads what sharp reports, and a JPEG's comment segments**: bytes after the end of
+ * the image are still not read.
  */
 async function inspectCoverMetadata(dir: string): Promise<PublicBuildReport> {
   const coversDir = join(dir, 'covers');
@@ -1384,6 +1415,7 @@ async function inspectCoverMetadata(dir: string): Promise<PublicBuildReport> {
       continue;
     }
     const carried = embeddedMetadata(metadata);
+    if (hasJpegComment(readFileSync(file))) carried.push('a JPEG comment');
     if (carried.length > 0) {
       problems.push({
         rule: 'cover-metadata',
@@ -1398,8 +1430,8 @@ async function inspectCoverMetadata(dir: string): Promise<PublicBuildReport> {
   const observations =
     problems.length === 0 && staged.length > 0
       ? [
-          `${String(staged.length)} cover file(s), none carrying EXIF, XMP, IPTC, PNG text or a ` +
-            'Photoshop block',
+          `${String(staged.length)} cover file(s), none carrying EXIF, XMP, IPTC, PNG text, a ` +
+            'Photoshop block or a JPEG comment',
         ]
       : [];
   return { problems, observations };

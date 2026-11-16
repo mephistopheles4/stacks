@@ -34,6 +34,7 @@ import { HELD_COVER_EDGE, MAX_COVER_EDGE } from '../packages/core/src/covers/cov
 import { plantedCover, type PlantedCoverOptions } from '../packages/core/src/test-support.ts';
 import {
   CONFINEMENT_PROBE_MARKER,
+  hasJpegComment,
   HELD_EDGE_CAP,
   inspectPublicBuild,
   KTX2_LICENCE_PATH,
@@ -663,6 +664,28 @@ describe('G20 — every rule goes red', () => {
     exercised.add('cover-metadata');
   });
 
+  it('cover-metadata: a JPEG comment segment sharp does not report (review thread, #616)', async () => {
+    const plain = await image(200, 300, { format: 'jpeg' });
+    expect(hasJpegComment(plain), 'a plain JPEG has none').toBe(false);
+
+    // A COM segment (0xFFFE, a two-byte length, the text) straight after the start of image.
+    const text = Buffer.from('taken at a private place');
+    const comment = Buffer.concat([
+      plain.subarray(0, 2),
+      Buffer.from([0xff, 0xfe, 0x00, text.length + 2]),
+      text,
+      plain.subarray(2),
+    ]);
+    expect((await sharp(comment).metadata()).exif, 'sharp reports nothing for it').toBeUndefined();
+    expect(hasJpegComment(comment)).toBe(true);
+
+    await writeFile(join(dist, 'covers', 'a.jpg'), comment);
+    const said = (await inspect()).problems.map((problem) => problem.message).join('\n');
+    expect(said).toMatch(/covers\/a\.jpg carries a JPEG comment — /);
+    expect(said).not.toContain('private place');
+    expect(hasJpegComment(Buffer.from('not a jpeg at all'))).toBe(false);
+  });
+
   it('cover-metadata: a wishlist book’s cover is held to it as any other is', async () => {
     await expectOnly('cover-metadata', async () => {
       await writeLibrary([
@@ -694,7 +717,7 @@ describe('G20 — every rule goes red', () => {
 
   it('says it read the covers only when there were some and none carried metadata', async () => {
     expect((await inspect()).observations).toContain(
-      '1 cover file(s), none carrying EXIF, XMP, IPTC, PNG text or a Photoshop block',
+      '1 cover file(s), none carrying EXIF, XMP, IPTC, PNG text, a Photoshop block or a JPEG comment',
     );
 
     await writeFile(join(dist, 'covers', 'a.jpg'), await image(200, 300, { exif: true }));
