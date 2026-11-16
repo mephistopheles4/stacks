@@ -85,7 +85,9 @@ optional-Plausible spec).
   applies neither policy, and it is checked once by hand on a preview, so a
   later change in how the host serves that header is not seen (ADR-0163).
 - *Repo.* All vault access goes through the adapter (invariant 4, G1). G1 reads
-  import specifiers under `packages/` and `scripts/`, not `gates/` or run-time reach.
+  import specifiers under `packages/` and `scripts/`, not `gates/` or run-time reach;
+  its allowlist admits `scripts/ios-swipe-check.ts`, which reads the BrowserStack
+  credential file and no note.
 - *Host.* None. Whatever is uploaded is public.
 
 **Residual:** What you publish.
@@ -246,9 +248,27 @@ so invariants 1, 2 and 4 hold by structure.
 
 **Residual:** Ask availability can be spent; Questions reach Workers AI; Provider bytes are trusted.
 
+### Device-cloud checks
+
+**Crosses:** out, by the owner's hand: the BrowserStack credential, in an
+`Authorization` header to the Automate hub, and the fixture build, over
+BrowserStack Local's one-port tunnel, to a cloud phone. In: the hub's and the
+page's replies to `scripts/ios-swipe-check.ts`.
+
+**Controls:**
+
+- *Repo.* The probe reads `~/.config/browserstack.env`, sends the credential only
+  to a constant HTTPS address, masks it and the session id in every error, and
+  never prints page text. Not the file at rest, or the tunnel's command line.
+- *Repo.* `--serve` serves `packages/site/dist` on 127.0.0.1 only; `--check-served`
+  and `--local` refuse unless every title is a fixture title, at one moment only.
+- *Owner's hand.* The tunnel runs with `--only` one port and `--force-local` off.
+
+**Residual:** A device cloud runs the probe.
+
 ## Scope
 
-**In:** the six boundaries above.
+**In:** the seven boundaries above.
 
 **Out:**
 
@@ -265,7 +285,7 @@ so invariants 1, 2 and 4 hold by structure.
   isolation, disk encryption and antivirus. None is a control on a boundary above.
 - **Third parties relied on:** Open Library, Google Books, Apple Books, Cloudflare
   (Pages, Workers, Workers AI, AI Gateway, Turnstile, Web Analytics, the WAF),
-  Plausible, GitHub, the npm registry, Amazon's image CDN, Obsidian, and wherever a generated site is
+  Plausible, GitHub, BrowserStack, the npm registry, Amazon's image CDN, Obsidian, and wherever a generated site is
   hosted.
 - **Root of trust:** the owner's machine and their GitHub and Cloudflare accounts.
   One maintainer.
@@ -289,6 +309,7 @@ quadrantChart
   Posts are public: [0.35, 0.45]
   Ask availability can be spent: [0.6, 0.3]
   Questions reach Workers AI: [0.7, 0.2]
+  A device cloud runs the probe: [0.2, 0.3]
 ```
 
 ## Accepted threat classes
@@ -301,6 +322,7 @@ quadrantChart
 - **Posts are public:** an issue, comment or pull request is public the moment it posts and may be cached or indexed after deletion; the posting rules and the read before posting are the only check.
 - **Ask availability can be spent:** a few addresses can use up the Worker's request allowance and keep AI off, search keeps working, and ADR-0127 accepts it.
 - **Questions reach Workers AI:** a visitor's question, the catalogue and some Thoughts go to Workers AI through the gateway, and Turnstile sees the address and browser signals; the Worker stores no question, and ADR-0127 approves the flow.
+- **A device cloud runs the probe:** a BrowserStack session loads the fixture build or the live site on a cloud phone and keeps its recordings; a real-vault build on the tunnel's port would cross it, which `--check-served` refuses.
 
 ## Open issues
 
