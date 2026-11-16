@@ -2257,6 +2257,17 @@ interface LinesAndFailures {
   readonly failures: readonly string[];
 }
 
+/** How many nodes of the committed room carry a mesh: read from its JSON chunk, so the page cannot lie about it. */
+function bakedMeshCount(): number {
+  const glb = readFileSync(
+    join(REPO_ROOT, 'packages/site/public/rooms/reading-corner/room-audition.glb'),
+  );
+  const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8')) as {
+    nodes: { mesh?: number }[];
+  };
+  return json.nodes.filter((node) => node.mesh !== undefined).length;
+}
+
 /**
  * The default page, the room round the bookcase (#602, claims C1, C2, C7): dressed with no page
  * error, the loading screen gone, the camera inside the room's box, a book picks up and puts back,
@@ -2285,6 +2296,15 @@ async function checkRoom(browser: Browser, origin: string): Promise<LinesAndFail
     const state = await readState(page);
     lines.push(`dressed in ${seconds}s   ${String(state.roomDraws)} draws`);
     if (state.roomDraws === 0) failures.push('the room drew nothing');
+    // C1, the room as the prototype dressed it: a mesh the loader dropped or hid is a piece of the room
+    // gone, so the room draws at least every mesh the committed GLB holds.
+    const baked = bakedMeshCount();
+    if (state.roomDraws < baked) {
+      failures.push(
+        `the room draws ${String(state.roomDraws)} meshes, fewer than the ${String(baked)} in its GLB`,
+      );
+    }
+    lines.push(`${String(baked)} meshes in the GLB, ${String(state.roomDraws)} drawn`);
     if (state.loadingScreen) failures.push('the loading screen is still up on a dressed room');
 
     const inside = (await page.evaluate(`(() => {
