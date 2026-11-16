@@ -454,12 +454,58 @@ const CSP_DIRECTIVES: ReadonlyMap<string, readonly string[]> = new Map([
   ['form-action', ["'none'"]],
   [
     'script-src',
-    ["'self'", 'https://static.cloudflareinsights.com', 'https://challenges.cloudflare.com'],
+    [
+      "'self'",
+      // The room's meshopt decoder and KTX2 transcoder compile WebAssembly. This keyword is not
+      // `'unsafe-eval'`: it admits `WebAssembly.compile` and nothing that turns a string into
+      // JavaScript. Astro emits one policy for the site, so it reaches every page (spec S6.1).
+      "'wasm-unsafe-eval'",
+      'https://static.cloudflareinsights.com',
+      'https://challenges.cloudflare.com',
+    ],
   ],
   // The one frame origin: Turnstile's challenge, for the Ask the library drawer.
   ['frame-src', ['https://challenges.cloudflare.com']],
   ['style-src', ["'self'"]],
+  // The KTX2 transcoder's dedicated worker, loaded from its own same-origin file and never from a
+  // `blob:` URL, which would hand it this policy (spec S6.3). Its own policy is the `_headers`
+  // block `KTX2_WORKER_PATH` names.
+  ['worker-src', ["'self'"]],
 ]);
+
+/**
+ * The one path whose response may use `'unsafe-eval'`, and the policy it is served under.
+ *
+ * three's basis transcoder glue builds functions with `new Function`. That code runs in a dedicated
+ * worker loaded from this file: a worker loaded from a URL takes its policy from its own response,
+ * where a `blob:` worker inherits the page's (spec S6.2, S6.4). **`default-src 'none'` is what
+ * confines it**: it can fetch nothing, so the page fetches the wasm and posts the bytes in. The
+ * `/*` block's `frame-ancestors` policy also reaches this path, and both apply.
+ *
+ * `packages/site/src/shelf/room-codec.ts` holds the same path for the loader, and
+ * `gates/public-build-artifact.test.ts` holds the two equal.
+ */
+export const KTX2_WORKER_PATH = '/rooms/basis/ktx2-worker.js';
+
+/** The wasm the page fetches and posts into the worker. It sits beside the worker. */
+export const KTX2_WASM_PATH = '/rooms/basis/basis_transcoder.wasm';
+
+/**
+ * The wasm is Apache-2.0, and §4(a) of that licence makes a copy of it part of redistributing the
+ * binary, so a build that serves the wasm serves this beside it.
+ */
+export const KTX2_LICENCE_PATH = '/rooms/basis/LICENSE-basis-universal.txt';
+
+export const KTX2_WORKER_POLICY = "default-src 'none'; script-src 'unsafe-eval' 'wasm-unsafe-eval'";
+
+/**
+ * What the confinement probe's script carries, so G20 can refuse it in a production build
+ * (spec S6.7). The probe tries `fetch`, a second worker and `importScripts` from the worker's own
+ * path, and is served from a scratch folder alone: **a production `dist/` that holds it has a
+ * worker that tries to reach out, under a policy that admits eval.** The ticket that writes the
+ * probe (T6) puts this string in it; a file under `rooms/` named `*probe*` is refused as well.
+ */
+export const CONFINEMENT_PROBE_MARKER = 'stacks-confinement-probe';
 
 /**
  * The pinned policy for one of the two shapes the switch allows.
@@ -929,6 +975,28 @@ export async function inspectPublicBuild(
     );
   }
 
+  // ── No confinement probe in a production build ────────────────────────────
+  //
+  // The probe (spec S6.7) is served from a scratch folder in place of the worker, to show in a
+  // browser that the worker can reach nothing. In a production `dist/` it would be a worker that
+  // tries to, under a policy that admits eval. Refused by name and by the marker it carries.
+  for (const file of walk(dir)) {
+    const where = posix(relative(dir, file));
+    // The name rule is for `rooms/` only: a cover is named for its book's title, and a book called
+    // "The Space Probe" must not refuse a deploy. The marker is not a title, so it is read in every
+    // text file the build holds.
+    const named = where.startsWith('rooms/') && /probe/i.test(where);
+    const marked =
+      TEXTUAL.has(extname(file)) && readFileSync(file, 'utf8').includes(CONFINEMENT_PROBE_MARKER);
+    if (!named && !marked) continue;
+    fail(
+      'csp',
+      `${where} is a confinement probe — it is served from a scratch folder, never from a ` +
+        'production build, where it would be a worker that tries to reach out under a policy ' +
+        'that admits eval (spec S6.7)',
+    );
+  }
+
   // ── An off build ships no trace of the tracker ────────────────────────────
   //
   // Under `'off'`: no file under `dist/` names `plausible.io`, and neither notice
@@ -1028,6 +1096,59 @@ export async function inspectPublicBuild(
           `\`<meta>\` policy the build emits, so framing is denied here or nowhere. Headers in that ` +
           `block: ${everyPath.join(' · ') || '(none)'}`,
       );
+    }
+
+    // Eval, granted once. `'unsafe-eval'` may appear in exactly one block of this file, the
+    // worker's, keyed on exactly its path, under exactly its policy (spec S6.4, S6.6). Read from
+    // the raw lines and not from `blocks`, because that map keeps one entry per key and a second
+    // block for the same path would overwrite the first and go unseen.
+    const grants = evalGrants(headers);
+    if (grants.length !== 1 || grants[0]?.path !== KTX2_WORKER_PATH) {
+      fail(
+        'headers',
+        `'unsafe-eval' must appear in exactly one _headers block, keyed on ${KTX2_WORKER_PATH}; ` +
+          `found ${grants.map((grant) => grant.path).join(' · ') || '(none)'}`,
+      );
+    }
+    const workerBlock = blocks.get(KTX2_WORKER_PATH);
+    if (workerBlock === undefined) {
+      fail(
+        'headers',
+        `_headers has no ${KTX2_WORKER_PATH} block — the KTX2 transcoder's glue builds functions ` +
+          'with `new Function` and would be refused, and every texture would fall back to WebP',
+      );
+    } else {
+      const policies = workerBlock.filter((header) => /^Content-Security-Policy:/i.test(header));
+      const policy = policies[0]?.replace(/^Content-Security-Policy:\s*/i, '').trim();
+      if (policies.length !== 1 || policy !== KTX2_WORKER_POLICY) {
+        fail(
+          'headers',
+          `${KTX2_WORKER_PATH} is served under ${policies.join(' · ') || '(no policy)'} — must be ` +
+            `exactly one Content-Security-Policy: ${KTX2_WORKER_POLICY}. Anything wider lets the ` +
+            'worker reach out, and eval is only safe in a worker that can reach nothing',
+        );
+      }
+    }
+    for (const path of [KTX2_WORKER_PATH, KTX2_WASM_PATH]) {
+      if (existsSync(join(dir, ...path.split('/')))) continue;
+      fail(
+        'headers',
+        `${path} did not reach the build — the room's textures would not transcode, and a block ` +
+          'that keys eval on a path serving nothing is a grant to whatever lands there',
+      );
+    }
+    if (
+      existsSync(join(dir, ...KTX2_WASM_PATH.split('/'))) &&
+      !existsSync(join(dir, ...KTX2_LICENCE_PATH.split('/')))
+    ) {
+      fail(
+        'headers',
+        `${KTX2_WASM_PATH} is served without ${KTX2_LICENCE_PATH} — it is Apache-2.0, whose §4(a) ` +
+          'requires a copy of the licence to go with every copy of the binary',
+      );
+    }
+    if (grants.length === 1 && workerBlock !== undefined) {
+      observations.push(`ktx2 worker ${KTX2_WORKER_PATH}: the one block with 'unsafe-eval'`);
     }
 
     const revalidating: readonly (readonly [string, string, string])[] = [
@@ -1404,6 +1525,26 @@ function headerBlocks(source: string): Map<string, string[]> {
   }
 
   return blocks;
+}
+
+/**
+ * Every `_headers` block that grants `'unsafe-eval'`, one entry per header line that does so, in
+ * file order. Comments are not read, and a repeated key is not collapsed: that is why this is a
+ * scan of the lines and not a look into `headerBlocks`.
+ */
+function evalGrants(source: string): { path: string; header: string }[] {
+  const grants: { path: string; header: string }[] = [];
+  let path = '';
+  for (const line of source.split(/\r?\n/)) {
+    if (line.trim() === '' || line.trimStart().startsWith('#')) continue;
+    if (!/^\s/.test(line)) {
+      path = line.trim();
+      continue;
+    }
+    // CSP keywords are case-insensitive, and a browser honours `'UNSAFE-EVAL'`.
+    if (/'unsafe-eval'/i.test(line)) grants.push({ path, header: line.trim() });
+  }
+  return grants;
 }
 
 /**

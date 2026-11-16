@@ -45,3 +45,8 @@ fixtures/
 
 # ── Generated ──────────────────────────────────────────────────────────────
 pnpm-lock.yaml
+
+# three's KTX2 transcoder worker, written by `packages/site/rooms/basis/make_ktx2_worker.mjs`
+# (#601, spec S6.5). The committed bytes are the tested bytes and the served bytes, so a
+# formatter pass must not rewrite them; the next three upgrade regenerates the file.
+packages/site/public/rooms/basis/

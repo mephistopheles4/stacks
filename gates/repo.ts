@@ -65,7 +65,7 @@ export function trackedFiles(): string[] {
  * not match is read as text. So a binary with a new extension reddens both
  * rows, which is the direction to fail in.
  */
-export const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip)$/i;
+export const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip|wasm)$/i;
 
 /** Reads a repo-relative file. */
 export function readRepoFile(path: string): string {
