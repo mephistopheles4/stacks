@@ -52,8 +52,16 @@ export function parseSwipeArgs(argv: readonly string[]): SwipeOptions | string {
   if (local && premise) {
     return '--premise loads the live site, which needs no tunnel: it cannot be run with --local';
   }
-  const url = values.get('--url') ?? (local ? `http://bs-local.com:${String(port)}/` : LIVE_URL);
+  if (premise && values.has('--url')) {
+    return `--premise loads the live site, ${LIVE_URL}, and no other page`;
+  }
+  const tunnel = `http://bs-local.com:${String(port)}`;
+  const url = values.get('--url') ?? (local ? `${tunnel}/` : LIVE_URL);
   if (!/^https?:\/\//.test(url)) return '--url is not an http(s) address';
+  // The served-build check reads `--port`, so the page the phone loads must be that port.
+  if (local && new URL(url).origin !== tunnel) {
+    return `--local loads ${tunnel}, the port --check-served reads, and no other address`;
+  }
   return {
     device: values.get('--device') ?? 'iPhone 16 Pro',
     os: values.get('--os') ?? '18',
@@ -199,7 +207,7 @@ return {
   scrollTop: page ? page.scrollTop : -1,
   events: window.__swipeScrolls,
   parent: page && page.parentElement ? page.parentElement.className : '',
-  held: held === undefined ? null : { title: held.title, phase: held.phase, opened: held.opened, yaw: held.turn.yaw, pitch: held.turn.pitch },
+  held: held === undefined ? null : { phase: held.phase, opened: held.opened, yaw: held.turn.yaw, pitch: held.turn.pitch },
   fallback: shelf ? String(shelf.fallback()) : ''
 };
 `;
@@ -214,18 +222,83 @@ export interface Armed {
   readonly clientHeight: number;
 }
 
+/** The only parents the verdict names: a page's own class name is the page's text, not ours. */
+const PARENTS = ['probe-flat', 'held-flat', 'held-layer'] as const;
+export type ParentName = (typeof PARENTS)[number] | 'other';
+
 export interface After {
   readonly scrollTop: number;
   readonly events: number;
-  readonly parent: string;
+  readonly parent: ParentName;
   readonly held: {
-    readonly title: string;
     readonly phase: string;
     readonly opened: boolean;
     readonly yaw: number;
     readonly pitch: number;
   } | null;
   readonly fallback: string;
+}
+
+const isNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** What a script handed back, or `undefined` for any shape this tool did not ask for. */
+export function readOpened(value: unknown): Opened | undefined {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.error === 'string') return { error: value.error };
+  if (!isNumber(value.chars) || !isNumber(value.paragraphs) || typeof value.title !== 'string') {
+    return undefined;
+  }
+  return { title: value.title, chars: value.chars, paragraphs: value.paragraphs };
+}
+
+/** The armed page's box and scroll numbers, or the script's own error. */
+export function readArmed(value: unknown): Armed | { readonly error: string } | undefined {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.error === 'string') return { error: value.error };
+  const { left, width, top, bottom, scrollTop, scrollHeight, clientHeight } = value;
+  if (
+    !isNumber(left) ||
+    !isNumber(width) ||
+    !isNumber(top) ||
+    !isNumber(bottom) ||
+    !isNumber(scrollTop) ||
+    !isNumber(scrollHeight) ||
+    !isNumber(clientHeight)
+  ) {
+    return undefined;
+  }
+  return { left, width, top, bottom, scrollTop, scrollHeight, clientHeight };
+}
+
+/** What is true after the swipe. Strings are mapped to a fixed set, never echoed. */
+export function readAfter(value: unknown): After | undefined {
+  if (!isRecord(value) || !isNumber(value.scrollTop) || !isNumber(value.events)) return undefined;
+  const raw = value.held;
+  let held: After['held'] = null;
+  if (raw !== null) {
+    if (
+      !isRecord(raw) ||
+      typeof raw.phase !== 'string' ||
+      typeof raw.opened !== 'boolean' ||
+      !isNumber(raw.yaw) ||
+      !isNumber(raw.pitch)
+    ) {
+      return undefined;
+    }
+    held = { phase: raw.phase, opened: raw.opened, yaw: raw.yaw, pitch: raw.pitch };
+  }
+  const parent = PARENTS.find((name) => name === value.parent) ?? 'other';
+  const fallback =
+    typeof value.fallback === 'string' && /^[a-z-]{1,24}$/.test(value.fallback)
+      ? value.fallback
+      : value.fallback === ''
+        ? ''
+        : 'unrecognised';
+  return { scrollTop: value.scrollTop, events: value.events, parent, held, fallback };
 }
 
 /** Where the finger goes: down the middle of the visible page, from low to high, so the content moves up. */

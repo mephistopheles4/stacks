@@ -9,6 +9,9 @@ import {
   MOVE_CLONE_TO_FLAT,
   parseSwipeArgs,
   READ_AFTER,
+  readAfter,
+  readArmed,
+  readOpened,
   swipePath,
   type After,
   type Armed,
@@ -25,7 +28,7 @@ const ARMED: Armed = {
   clientHeight: 700,
 };
 
-const RESTING = { title: 'A', phase: 'held', opened: true, yaw: 0, pitch: 0 };
+const RESTING = { phase: 'held', opened: true, yaw: 0, pitch: 0 };
 const AFTER: After = {
   scrollTop: 280,
   events: 9,
@@ -54,11 +57,25 @@ describe('parseSwipeArgs', () => {
     });
   });
 
-  it('points --local at the tunnel host and the one port, unless --url says otherwise', () => {
+  it('points --local at the tunnel host and the one port', () => {
     expect(options(['--local', '--port', '9000']).url).toBe('http://bs-local.com:9000/');
-    expect(options(['--local', '--url', 'http://bs-local.com:9001/x']).url).toBe(
-      'http://bs-local.com:9001/x',
+    expect(options(['--local', '--url', 'http://bs-local.com:8766/x']).url).toBe(
+      'http://bs-local.com:8766/x',
     );
+  });
+
+  it('loads the port it checks: --local refuses any other address', () => {
+    for (const other of [
+      'http://bs-local.com:9001/',
+      'http://localhost:8766/',
+      'https://stacks.aymandiab.com/',
+    ]) {
+      expect(parseSwipeArgs(['--local', '--url', other])).toMatch(/--check-served reads/);
+    }
+  });
+
+  it('loads the live site for the premise and no other page', () => {
+    expect(parseSwipeArgs(['--premise', '--url', 'http://example.com/'])).toMatch(/no other page/);
   });
 
   it('refuses what it does not know, a flag with no value, and a bad port or address', () => {
@@ -71,6 +88,42 @@ describe('parseSwipeArgs', () => {
 
   it('refuses the premise through a tunnel, which the live site does not need', () => {
     expect(parseSwipeArgs(['--premise', '--local'])).toMatch(/needs no tunnel/);
+  });
+});
+
+describe('what a page hands back', () => {
+  it('reads the shapes it asked for', () => {
+    expect(readOpened({ title: 'T', chars: 9, paragraphs: 2 })).toEqual({
+      title: 'T',
+      chars: 9,
+      paragraphs: 2,
+    });
+    expect(readOpened({ error: 'no book' })).toEqual({ error: 'no book' });
+    expect(readArmed({ ...ARMED })).toEqual(ARMED);
+    expect(readArmed({ error: 'no page' })).toEqual({ error: 'no page' });
+  });
+
+  it('refuses any other shape, and a number that is not finite', () => {
+    expect(readOpened('text')).toBeUndefined();
+    expect(readOpened({ title: 'T', chars: '9', paragraphs: 2 })).toBeUndefined();
+    expect(readArmed({ ...ARMED, width: null })).toBeUndefined();
+    expect(readArmed({ ...ARMED, top: Infinity })).toBeUndefined();
+    expect(readAfter({ scrollTop: 1 })).toBeUndefined();
+    expect(readAfter({ ...AFTER, held: { phase: 'held' } })).toBeUndefined();
+  });
+
+  it('names the page parent from a fixed set and never echoes the page', () => {
+    expect(readAfter({ ...AFTER })?.parent).toBe('probe-flat');
+    expect(readAfter({ ...AFTER, parent: 'held-flat' })?.parent).toBe('held-flat');
+    expect(readAfter({ ...AFTER, parent: '\u001b[2Jhello' })?.parent).toBe('other');
+  });
+
+  it('keeps a fallback state that is a short lowercase word and nothing else', () => {
+    expect(readAfter({ ...AFTER, fallback: 'painted' })?.fallback).toBe('painted');
+    expect(readAfter({ ...AFTER, fallback: '' })?.fallback).toBe('');
+    expect(readAfter({ ...AFTER, fallback: '\u001b[2J' + 'x'.repeat(500) })?.fallback).toBe(
+      'unrecognised',
+    );
   });
 });
 

@@ -38,15 +38,18 @@ import {
   parseSwipeArgs,
   READ_AFTER,
   swipePath,
-  type After,
-  type Armed,
-  type Opened,
+  readAfter,
+  readArmed,
+  readOpened,
 } from './lib/ios-swipe.ts';
 
 const CREDENTIAL_FILE = join(homedir(), '.config', 'browserstack.env');
 const SETTLE_MS = 400;
 const DRAG_MS = 700;
 const MOMENTUM_MS = 1500;
+/** The longest script, finding and opening the book, outlasts WebDriver's 30 s default. */
+const SCRIPT_TIMEOUT_MS = 90_000;
+const UNEXPECTED = 'the page returned an answer of a shape this check did not ask for';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -83,21 +86,28 @@ async function main(): Promise<void> {
       local: options.local,
       sessionName: options.premise ? 'premise' : 'swipe',
     });
+    await driver.setScriptTimeout(SCRIPT_TIMEOUT_MS);
     await driver.navigate(options.url);
-    const opened = (await driver.runAsync(FIND_AND_OPEN)) as Opened;
+    // What a page hands back is outside text: each answer is checked for the
+    // shape asked for, and the page's own strings are never echoed.
+    const opened = readOpened(await driver.runAsync(FIND_AND_OPEN));
+    if (opened === undefined) fail(UNEXPECTED);
     if ('error' in opened) fail(opened.error);
 
     if (options.premise) {
-      const moved = (await driver.run(MOVE_CLONE_TO_FLAT)) as { error?: string };
-      if (moved.error !== undefined) fail(moved.error);
+      const moved = await driver.run(MOVE_CLONE_TO_FLAT);
+      const refusal = readOpened(moved);
+      if (refusal !== undefined && 'error' in refusal) fail(refusal.error);
       await sleep(SETTLE_MS);
     }
-    const armed = (await driver.run(ARM_SCROLL_COUNT)) as Armed | { error: string };
+    const armed = readArmed(await driver.run(ARM_SCROLL_COUNT));
+    if (armed === undefined) fail(UNEXPECTED);
     if ('error' in armed) fail(armed.error);
     const path = swipePath(armed);
     await driver.swipe(path.from, path.to, DRAG_MS);
     await sleep(MOMENTUM_MS);
-    const after = (await driver.run(READ_AFTER)) as After;
+    const after = readAfter(await driver.run(READ_AFTER));
+    if (after === undefined) fail(UNEXPECTED);
 
     const verdict = judge(armed, after, options.premise);
     console.log(verdict.line);

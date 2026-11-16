@@ -143,8 +143,58 @@ describe('the driver', () => {
     await driver.start(CAPS);
     const failure = await driver.navigate('https://x.example/').catch((error: unknown) => error);
     expect((failure as Error).message).toBe(
-      'request failed: connect failed for /session/<session>/url',
+      'request failed: connect failed for /session/<redacted>/url',
     );
+  });
+
+  it('masks the account, the key and the signed header by value when the hub echoes them', async () => {
+    const encoded = Buffer.from('someone:not-a-real-key').toString('base64');
+    const echo = `bad login someone / not-a-real-key / Basic ${encoded} / ${'b'.repeat(64)}`;
+    const { send } = hub([{ status: 401, body: { value: { message: echo } } }]);
+    const failure = await createDriver(CREDENTIALS, send)
+      .start(CAPS)
+      .catch((error: unknown) => error);
+    const message = (failure as Error).message;
+    for (const secret of ['someone', 'not-a-real-key', encoded, 'bbbb']) {
+      expect(message).not.toContain(secret);
+    }
+    expect(message).toContain('<redacted>');
+  });
+
+  it('masks a session id of a shape it does not know, once it holds one', async () => {
+    const odd = 'sess-ion/odd id';
+    const driver = createDriver(CREDENTIALS, (url) =>
+      url.endsWith('/session')
+        ? Promise.resolve(new Response(JSON.stringify({ value: { sessionId: odd } })))
+        : Promise.reject(new Error(`failed at ${url}`)),
+    );
+    await driver.start(CAPS);
+    const failure = await driver.navigate('https://x.example/').catch((error: unknown) => error);
+    expect((failure as Error).message).not.toContain(odd);
+  });
+
+  it('replaces control characters, so a page or hub cannot move the cursor', () => {
+    expect(scrub('a\u001b[2Jb\u0007c\u0085d')).toBe('a [2Jb c d');
+  });
+
+  it('says only that a 2xx answer was not JSON, never quoting it', async () => {
+    const { send } = hub([{ body: 'not json at all, with a snippet' }]);
+    const failure = await createDriver(CREDENTIALS, send)
+      .start(CAPS)
+      .catch((error: unknown) => error);
+    expect((failure as Error).message).toBe("HTTP 200: the hub's answer was not JSON");
+  });
+
+  it('sets the script timeout through the W3C timeouts call', async () => {
+    const { send, seen } = hub([
+      { body: { value: { sessionId: SESSION } } },
+      { body: { value: null } },
+    ]);
+    const driver = createDriver(CREDENTIALS, send, 'https://hub.example/wd/hub');
+    await driver.start(CAPS);
+    await driver.setScriptTimeout(90_000);
+    expect(seen[1]?.url).toBe(`https://hub.example/wd/hub/session/${SESSION}/timeouts`);
+    expect(seen[1]?.init.body).toBe(JSON.stringify({ script: 90_000 }));
   });
 
   it('refuses a call before a session is open, and a hub that returns none', async () => {
