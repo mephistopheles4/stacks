@@ -157,6 +157,28 @@ const CC0_BINARY_FILES = [
   'packages/site/public/wood/sapele-diff-512.jpg',
 ];
 
+/**
+ * The rooms' baked files, allowed as a **directory** on a **provenance** that
+ * each room's own `SOURCES.md` carries — [ADR-0162](../docs/adr/0162-the-rooms-directory-is-allowed-on-its-sources-file.md).
+ *
+ * ⚠️ **This is the one directory entry in the third-party list, and it widens
+ * what the rule above says**: every other entry here names a file, and the only
+ * claim under which a third party's image may be committed is CC0. A room is a
+ * GLB and its textures, baked from models whose licences are CC0, CC BY or public
+ * domain (`packages/site/rooms/<room>/inputs.json`, read by G75), and CC BY wants
+ * the author credited, which a filename list cannot say. So the claim for
+ * `packages/site/public/rooms/` is `SOURCES.md` beside each room's files, and the
+ * rule below holds a room's binaries to having one.
+ *
+ * It is a directory because a room is 80 files and rebakes rename them. It is
+ * safe to allow as one for the reason the brand art could not be: this folder is
+ * not where `stacks build --public` stages a real vault's covers (`covers/`,
+ * `held-covers/` and `notes/`, beside it), so a real cover dropped here would be
+ * the wrong place for it twice over, and the sweep below still reads every folder
+ * under it.
+ */
+const ROOM_BINARY_DIR = 'packages/site/public/rooms/';
+
 describe('G5 — library.json is a build artifact', () => {
   it('is not tracked by git', () => {
     const tracked = trackedFiles();
@@ -205,6 +227,7 @@ describe('G13 — no third-party material is committed', () => {
       (path) =>
         BINARY.test(path) &&
         !GENERATED_BINARY_DIRS.some((dir) => path.startsWith(dir)) &&
+        !path.startsWith(ROOM_BINARY_DIR) &&
         !allowedFiles.has(path),
     );
 
@@ -266,6 +289,36 @@ describe('G13 — no third-party material is committed', () => {
       'allowlisted as CC0 woodwork sheets but not tracked — the shelf fetches every one ' +
         `of these: ${missing.join(', ')}`,
     ).toEqual([]);
+  });
+
+  it('tracks a SOURCES.md in every room folder that tracks a binary', () => {
+    // The provenance claim for packages/site/public/rooms/: a room's binaries
+    // are allowed because SOURCES.md credits where they come from. A folder of
+    // baked files with none beside them is a standing permission with no claim
+    // behind it, which is the thing this row exists to refuse.
+    const tracked = trackedFiles();
+    const inRooms = tracked.filter((path) => path.startsWith(ROOM_BINARY_DIR));
+    const withBinaries = new Set(
+      inRooms
+        .filter((path) => BINARY.test(path))
+        .map((path) => path.slice(ROOM_BINARY_DIR.length).split('/')[0] as string),
+    );
+    expectFound([...withBinaries], 'room folders that track a binary', 1);
+
+    const unsourced = [...withBinaries].filter(
+      (room) => !tracked.includes(`${ROOM_BINARY_DIR}${room}/SOURCES.md`),
+    );
+    expect(
+      unsourced,
+      `${ROOM_BINARY_DIR} is allowed on each room's SOURCES.md, and these folders track a ` +
+        `binary and no SOURCES.md beside it: ${unsourced.join(', ')}`,
+    ).toEqual([]);
+
+    // A binary directly in the folder, with no room around it, has no SOURCES.md to be allowed on.
+    const loose = inRooms.filter(
+      (path) => BINARY.test(path) && !path.slice(ROOM_BINARY_DIR.length).includes('/'),
+    );
+    expect(loose, `binaries directly in ${ROOM_BINARY_DIR}, outside any room folder`).toEqual([]);
   });
 
   it('keeps docs/images to exactly the generated screenshot', () => {

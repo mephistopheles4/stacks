@@ -108,8 +108,10 @@ token for Terraform has an expiry, is set only on the command, and never enters
 ### Outside lookups and imports
 
 **Crosses:** in: replies and cover bytes from Open Library, Google Books and
-Apple Books (cover URLs come out of those replies), and a Libation export of an Audible
-library, given to `stacks import audible`. Out: each looked-up book's ISBN, title and author, private
+Apple Books (cover URLs come out of those replies), a Libation export of an Audible
+library, given to `stacks import audible`, and a room's bake inputs: files from
+`dl.polyhaven.org`, `images.metmuseum.org` and `upload.wikimedia.org`, fetched
+by `fetch_inputs.py` on the owner's machine alone, plus models placed by hand. Out: each looked-up book's ISBN, title and author, private
 and wishlist ones included, and the Google key, to the providers' HTTPS endpoints
 (approved by `AGENTS.md`'s tech decisions); and, on an Audible import, the
 export's picture ids and the owner's address to Amazon's image CDN, which no
@@ -131,7 +133,15 @@ record approves.
   `Description`. The adapter creates the note, never overwrites, and strips path
   characters from the title. Both trust the file's own fields.
 
-**Residual:** Provider bytes are trusted.
+- *Repo.* A bake input is fetched over HTTPS from those three hosts only, a
+  redirect is re-checked against them, and each file is held to the SHA-256 in
+  `inputs.json`: a fetched file that differs is deleted and refused, a hand-placed
+  one is refused and kept, and a name that would leave the inputs folder is
+  refused. G75 holds each entry to a licence and, for CC BY, a credit.
+
+**Residual:** Provider bytes are trusted. A bake input's hash is the owner's
+record of the first fetch and its licence is typed, not read from the host again;
+a model the baker opens is third-party content, run with Blender's auto-run off.
 
 ### Tracker and PRs
 

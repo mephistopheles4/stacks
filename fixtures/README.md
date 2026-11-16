@@ -22,6 +22,12 @@ reading history. Do not read anything into them.
 Real covers only ever exist at runtime: `stacks add` downloads them into the
 vault, which is gitignored.
 
+**One exception, and it is not a fixture**: the baked rooms in
+`packages/site/public/rooms/`, made from CC0, CC BY and public-domain models and
+credited in each room's `SOURCES.md`
+([ADR-0162](../docs/adr/0162-the-rooms-directory-is-allowed-on-its-sources-file.md)).
+Nothing in this folder is third-party.
+
 ## What each file is for
 
 | File | Exercises |
