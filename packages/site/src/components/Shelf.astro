@@ -61,6 +61,22 @@
     z-index: 5;
   }
 
+  /*
+   * The same pages at rest, out of the 3D layer: iOS will not start a native
+   * scroll inside `CSS3DRenderer`'s layer, and does in this one (#599, ADR-0151).
+   * The same box and stacking as `.held-layer`, so a page does not jump when it
+   * moves, and deliberately no `transform`, `perspective` or `transform-style`:
+   * each page carries its own 2D matrix, and a 3D ancestor here would bring the
+   * bug back. It follows `.held-layer` in the document, so it stands above it.
+   */
+  .shelf :global(.held-flat) {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 5;
+  }
+
   .shelf :global(.held-page) {
     box-sizing: border-box;
     padding: 44px 40px;

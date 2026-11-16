@@ -33,6 +33,7 @@ import {
   judgeAnalyticsCalls,
   type Attempt,
 } from './lib/analytics-gate.ts';
+import { LONG_BOOK_PARAGRAPHS, LONG_BOOK_TITLE } from './lib/fixture-books.ts';
 import { lightingOf, litFailures, type Frame, type Lighting } from './lib/large-library-lit.ts';
 import {
   CLOSED_HINT,
@@ -67,6 +68,17 @@ import {
   type Box,
   AT_REST_FRAMES,
 } from './lib/pickup-gate.ts';
+import {
+  flatMotionFailures,
+  flatOpenedFailures,
+  flatPutBackFailures,
+  flatRestFailures,
+  type FlatMotionRead,
+  type FlatPutBackRead,
+  type FlatOpenedRead,
+  type FlatRestRead,
+} from './lib/flat-layer-gate.ts';
+import { PAGES_HIDDEN, WATCH_PAGES } from './lib/page-watch.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
 import { samplingHookSource } from './lib/sampling-hook.ts';
@@ -285,6 +297,7 @@ async function main(): Promise<void> {
       }
       const spread = await timed('open spread', () => checkSpread(browser, origin));
       const atRest = await timed('G35 held at rest', () => checkHeldAtRest(browser, origin));
+      const flatLayer = await timed('G35 flat layer (#599)', () => checkFlatLayer(browser, origin));
       const controls = await timed('G35 closed book controls', () =>
         checkClosedControls(browser, origin),
       );
@@ -332,6 +345,7 @@ async function main(): Promise<void> {
         phone,
         spread,
         atRest,
+        flatLayer,
         controls,
         drawerCells,
         overlap,
@@ -746,36 +760,6 @@ async function clickToPickUp(
   return undefined;
 }
 
-/**
- * Watches every held page from the moment it is added: each must arrive hidden
- * by `visibility`, and no page may ever be visible while its opacity is still 0,
- * which is what text showing through the closing cover looks like in the DOM.
- * Watched rather than sampled once after the click, because on a slow runner the
- * one sample could land after the fade and prove nothing.
- */
-const WATCH_PAGES = `(() => {
-  const seen = [];
-  window.__pageVisibility = seen;
-  const record = (page, event) => seen.push({ event, visibility: page.style.visibility, opacity: page.style.opacity });
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node instanceof HTMLElement && node.classList.contains('held-page')) record(node, 'added');
-      }
-      const target = mutation.target;
-      if (mutation.type === 'attributes' && target instanceof HTMLElement && target.classList.contains('held-page')) record(target, 'style');
-    }
-  });
-  observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
-})()`;
-
-const PAGES_HIDDEN = `(() => {
-  const seen = window.__pageVisibility ?? [];
-  const added = seen.filter((entry) => entry.event === 'added');
-  return added.length >= 2 &&
-    added.every((entry) => entry.visibility === 'hidden') &&
-    !seen.some((entry) => entry.visibility === 'visible' && Number(entry.opacity) === 0);
-})()`;
 /**
  * The closed book at rest, read before anything opens it (#531): the board lies
  * flat to the block in the scene, the pages are hidden from sight and from the
@@ -1792,10 +1776,10 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
  * landed and the links row comes into reach, and GSAP's own ticker stays asleep
  * through the pickup (ADR-0103, commit `019add5`).
  *
- * The Thoughts are planted by request interception rather than a fixture, so
- * no vault carries them: every `notes/<id>.json` the page asks for answers with
- * `LONG_THOUGHTS`, invented prose far taller than the page. The page fetches
- * exactly what it would have; only the answer differs.
+ * The Thoughts are the generated vaults' own long book, `LONG_BOOK_TITLE`
+ * (`scripts/lib/fixture-books.ts`, #599): invented prose far taller than the
+ * page at either viewport, fetched from the real `/notes/` file the publisher
+ * wrote, so the page is the one a visitor gets and nothing is intercepted.
  *
  * The ticker is read as `COUNT_FRAMES` reads G60's loops: GSAP's ticker is a
  * `requestAnimationFrame` loop of its own, so awake it shows as a second
@@ -1803,17 +1787,6 @@ async function checkSpread(browser: Browser, origin: string): Promise<SpreadChec
  * of the pickup, while the motion runs and before GSAP would auto-sleep, so a
  * slow runner only stretches the sample in time, never shortens it.
  */
-const LONG_THOUGHTS = {
-  paragraphs: Array.from(
-    { length: 14 },
-    (_, index) =>
-      `Paragraph ${String(index + 1)} of a note planted by the gate. The lamp was low and the ` +
-      'margins filled with small arrows pointing nowhere in particular, which is how a reader ' +
-      'marks a page they mean to come back to and never does. Nothing here is quoted; the gate ' +
-      'wrote every word so the page has something tall enough to scroll.',
-  ),
-};
-
 interface AtRestChecked {
   readonly lines: readonly string[];
   readonly failures: readonly string[];
@@ -1827,28 +1800,14 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     const page = await context.newPage();
     await page.setViewport(VIEWPORT);
     await page.evaluateOnNewDocument(COUNT_FRAMES);
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      if (new URL(request.url()).pathname.startsWith('/notes/')) {
-        void request.respond({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(LONG_THOUGHTS),
-        });
-      } else {
-        void request.continue();
-      }
-    });
     await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
 
     const library = (await page.evaluate(
       `fetch('/library.json').then((response) => response.json())`,
     )) as { books: LibraryBook[] };
-    const count = new Map<string, number>();
-    for (const book of library.books) count.set(book.title, (count.get(book.title) ?? 0) + 1);
     const ordered = shelfOrder(library.books);
-    const index = ordered.findIndex((b) => b.thoughts === true && count.get(b.title) === 1);
+    const index = ordered.findIndex((b) => b.thoughts === true && b.title === LONG_BOOK_TITLE);
     // An early stop says why under the check's own heading, not only in the closing list.
     const stop = (why: string): AtRestChecked => {
       lines.push(`STOPPED          ${why}`);
@@ -1856,7 +1815,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       return { lines, failures };
     };
     if (index === -1) {
-      return stop('library.json flags no uniquely titled book with Thoughts');
+      return stop('library.json flags no long-Thoughts book');
     }
 
     await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
@@ -1874,7 +1833,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
     if (!(await until(page, HELD_OPEN, 'the long-Thoughts book to open'))) {
       return stop('the book never opened');
     }
-    const planted = LONG_THOUGHTS.paragraphs.length;
+    const planted = LONG_BOOK_PARAGRAPHS;
     if (
       !(await until(
         page,
@@ -1892,7 +1851,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       const page = right.getBoundingClientRect(), row = links.getBoundingClientRect();
       return {
         overflow: getComputedStyle(right).overflowY,
-        tall: right.scrollHeight > right.clientHeight + 1,
+        tall: right.scrollHeight - right.clientHeight >= ${String(LONG_OVERFLOW_PX)},
         inReach: row.top >= page.top - 1 && row.bottom <= page.bottom + 1 &&
           row.top >= -1 && row.left >= -1 && row.right <= innerWidth + 1 && row.bottom <= innerHeight + 1,
         centre: { x: (page.left + page.right) / 2, y: (page.top + page.bottom) / 2 },
@@ -1961,7 +1920,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       const beforeScroll = (await page.evaluate(READ_ARROW)) as Box | null;
       const scrolled = (await page.evaluate(`(() => {
         const right = document.querySelector('.held-page-right');
-        const tall = right.scrollHeight > right.clientHeight + 1;
+        const tall = right.scrollHeight - right.clientHeight >= ${String(LONG_OVERFLOW_PX)};
         right.scrollTop = right.scrollHeight;
         return tall && right.scrollTop > 0;
       })()`)) as boolean;
@@ -1996,6 +1955,285 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       inReachScrolled: after?.inReach === true,
     });
     failures.push(...judged.map((failure) => `held at rest: ${failure}`));
+  } finally {
+    await context.close();
+  }
+  return { lines, failures };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The open book's pages at rest stand in a flat layer (#599, ADR-0151, claims C2,
+ * C3, C4, C7 and C11), and go back into 3D before the book moves. No desktop
+ * engine shows the bug this prevents (iOS will not scroll inside the 3D layer),
+ * so what is held here is the structure; a finger scrolling is
+ * `scripts/ios-swipe-check.ts`'s, on a real iPhone.
+ */
+const FLAT_MOTION = `(() => ({
+  flatCount: document.querySelectorAll('.held-flat .held-page').length,
+  layerCount: document.querySelectorAll('.held-layer .held-page').length,
+  transforms: [...document.querySelectorAll('.held-page')].map((page) => page.style.transform),
+}))()`;
+
+/** How far the long-Thoughts book must overflow its page at both smoke viewports (S6). */
+const LONG_OVERFLOW_PX = 400;
+
+const FLAT_REST = `(() => {
+  const layer = document.querySelector('.held-layer');
+  const pages = [...document.querySelectorAll('.held-page')];
+  const box = (node) => {
+    const r = node.getBoundingClientRect();
+    return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  };
+  const seen = new Set();
+  const ancestors = [];
+  for (const page of pages) {
+    for (let node = page.parentElement; node; node = node.parentElement) {
+      if (seen.has(node)) continue;
+      seen.add(node);
+      const style = getComputedStyle(node);
+      const first = String(node.className).split(' ')[0];
+      ancestors.push({
+        name: node.tagName.toLowerCase() + (first ? '.' + first : ''),
+        transformStyle: style.transformStyle,
+        transform: style.transform,
+      });
+    }
+  }
+  // A page that is drawn at all: the phone shows the right-hand one alone.
+  const drawn = pages.filter((page) => {
+    const style = getComputedStyle(page);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+  });
+  // The slots are the 3D layer's empty boxes: a page left in one would fill it.
+  const slots = layer ? [...layer.querySelectorAll('div[data-slot-for]')].filter((div) => div.children.length === 0) : [];
+  const sideOf = (page) => (page.classList.contains('held-page-right') ? 'right' : 'left');
+  return {
+    pageSides: drawn.map(sideOf),
+    slotSides: slots.map((slot) => slot.dataset.slotFor),
+    flatCount: document.querySelectorAll('.held-flat .held-page').length,
+    layerCount: document.querySelectorAll('.held-layer .held-page').length,
+    ancestors,
+    pages: drawn.map(box),
+    slots: slots.map(box),
+    slotEvents: slots.map((slot) => getComputedStyle(slot).pointerEvents),
+    sheetsVisible: window.__shelf.held()?.sheetsVisible === true,
+  };
+})()`;
+
+/**
+ * A put-back, sampled once a frame until the book is home on the shelf: a frame
+ * off the open rest with a page flat. The hand empties as the return begins, so
+ * the end is read from the book in motion, which outlasts it.
+ */
+const PUT_BACK_FRAMES = `new Promise((resolve) => {
+  window.__shelf.putBack();
+  let frames = 0;
+  let violations = 0;
+  const step = () => {
+    frames += 1;
+    const held = window.__shelf.held();
+    const atRest = held !== undefined && held.phase === 'held' && held.opened === true &&
+      Math.abs(held.boardAngle - 180) < 1;
+    if (!atRest && document.querySelectorAll('.held-flat .held-page').length > 0) violations += 1;
+    const home = held === undefined && window.__shelf.current() === undefined;
+    if (home || frames > 600) resolve({ frames, violations, ended: home });
+    else requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+})`;
+
+interface FlatCase {
+  readonly label: string;
+  readonly turned: boolean;
+  readonly reduced: boolean;
+  /** The upright viewport, where only the right-hand page is drawn. */
+  readonly phone: boolean;
+}
+
+/**
+ * One book, picked up (turned or not), opened, closed, opened again and put back,
+ * with the pages read at rest, in the call that opens it under reduced motion,
+ * the instant a close is asked, and the instant a put-back is.
+ */
+async function runFlatCase(
+  page: Page,
+  index: number,
+  one: FlatCase,
+  warnings: readonly string[],
+): Promise<string[]> {
+  const failures: string[] = [];
+  const at = `flat layer, ${one.label}`;
+  await page.emulateMediaFeatures([
+    { name: 'prefers-reduced-motion', value: one.reduced ? 'reduce' : 'no-preference' },
+  ]);
+  await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+  if (
+    !(await until(
+      page,
+      `${CLOSED_AT_REST} && document.querySelectorAll('.held-page').length === 2`,
+      `${one.label}: the book to come to rest held`,
+    ))
+  ) {
+    return [`${at}: the book never came to rest held`];
+  }
+  if (one.turned) {
+    // A turned book is the one the opening has to square; an unturned run would
+    // pass without ever asking the placement to be exact.
+    await page.evaluate(`document.querySelector('${X_BUTTON}')?.focus()`);
+    for (let press = 0; press < 3; press += 1) await page.keyboard.press('ArrowRight');
+    const turn = await turnOf(page);
+    if (!(Math.abs(turn.yaw) > 1))
+      failures.push(`${at}: the turn did not take (yaw ${String(turn.yaw)})`);
+  }
+
+  const reopen = async (what: string): Promise<boolean> => {
+    if (one.reduced) {
+      // Rest is reached in this call: no frame has yet touched the pages.
+      const opened = (await page.evaluate(
+        `(() => { window.__shelf.open(); return ${FLAT_MOTION}; })()`,
+      )) as FlatOpenedRead & { layerCount: number };
+      failures.push(
+        ...flatOpenedFailures({
+          label: `${one.label}, ${what}`,
+          flatCount: opened.flatCount,
+          transforms: opened.transforms,
+        }),
+      );
+    } else if (what === 'first opening') {
+      // The Open button from the keyboard, as a person opens it: it asks for focus
+      // on the page once the book rests, and a turned book rests a frame or more
+      // before it is square, so the move into the flat layer comes after (C9).
+      await page.evaluate(`document.querySelector('.held-controls .held-open').focus()`);
+      await page.keyboard.press('Enter');
+    } else {
+      await page.evaluate('window.__shelf.open()');
+    }
+    const open = await until(page, HELD_OPEN, `${one.label}: the book to open (${what})`);
+    // The move into the flat layer is part of coming to rest: a short search, and
+    // a miss is read as it is by the judge below.
+    await searchFor(page, `document.querySelectorAll('.held-flat .held-page').length === 2`, 3000);
+    // Under SwiftShader a frame can take longer than the 50 ms poll, so a rest read
+    // straight after the state flips can land before any frame has drawn the slots
+    // the pages are measured against. Three frames, and the layers agree.
+    await page.evaluate(
+      `new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))))`,
+    );
+    return open;
+  };
+
+  if (!(await reopen('first opening'))) return [...failures, `${at}: the book never opened`];
+  if (!one.reduced) {
+    const focused = (await page.evaluate(
+      `document.activeElement?.classList.contains('held-page-right') === true`,
+    )) as boolean;
+    if (!focused) {
+      failures.push(`${at}: opening from the Open button left focus off the right-hand page`);
+    }
+  }
+
+  const rest = (await page.evaluate(FLAT_REST)) as FlatRestRead;
+  if (rest.pages.length === 0) failures.push(`${at}: no page was drawn at rest`);
+  const restFailures = flatRestFailures({
+    ...rest,
+    label: one.label,
+    expectedSides: one.phone ? ['right'] : ['left', 'right'],
+  });
+  failures.push(...restFailures);
+  if (restFailures.length > 0) {
+    // Where everything stood, for a failure that is a distance and not a count.
+    failures.push(
+      `${at}: pages ${JSON.stringify(rest.pages)}, slots ${JSON.stringify(rest.slots)}, ` +
+        `warnings ${JSON.stringify(warnings.slice(0, 3))}, held ${JSON.stringify(
+          await page.evaluate(
+            `(() => { const h = window.__shelf.held(); return h && { phase: h.phase, opened: h.opened, boardAngle: h.boardAngle, turn: h.turn }; })()`,
+          ),
+        )}`,
+    );
+  }
+
+  // C4: the instant a close is asked, the pages are back in 3D, never left behind.
+  const closing = (await page.evaluate(
+    `(() => { document.querySelector('${CLOSE_FOOT_CONTROL}').click(); return ${FLAT_MOTION}; })()`,
+  )) as Omit<FlatMotionRead, 'label' | 'pagesExpected'>;
+  failures.push(
+    ...flatMotionFailures({ ...closing, label: `closing, ${one.label}`, pagesExpected: true }),
+  );
+  if (!(await until(page, CLOSED_AT_REST, `${one.label}: the book to close`))) {
+    return [...failures, `${at}: the book never closed`];
+  }
+  if (!(await reopen('second opening'))) {
+    return [...failures, `${at}: the book never opened a second time`];
+  }
+
+  // C4: a put-back from the open book returns them too, before the reverse plays.
+  // Sampled once a frame, because a put-back empties the hand through the history
+  // entry and not in the call. Under reduced motion it is cut, with no frame in
+  // which the book moves, so only the settled read below is asked of it.
+  if (!one.reduced) {
+    const putting = (await page.evaluate(PUT_BACK_FRAMES)) as Omit<FlatPutBackRead, 'label'>;
+    failures.push(...flatPutBackFailures({ ...putting, label: one.label }));
+  } else {
+    await page.evaluate('window.__shelf.putBack()');
+  }
+  if (!(await until(page, NOTHING_HELD, `${one.label}: the book to be put back`))) {
+    return [...failures, `${at}: the book never settled after a put-back`];
+  }
+  const settled = (await page.evaluate(FLAT_MOTION)) as Omit<
+    FlatMotionRead,
+    'label' | 'pagesExpected'
+  >;
+  failures.push(
+    ...flatMotionFailures({ ...settled, label: `settled, ${one.label}`, pagesExpected: false }),
+  );
+  return failures;
+}
+
+async function checkFlatLayer(browser: Browser, origin: string): Promise<LinesAndFailures> {
+  const context = await browser.createBrowserContext();
+  const lines: string[] = [];
+  const failures: string[] = [];
+  try {
+    const page = await context.newPage();
+    // What the shelf says about a page it would not place, for a failure that needs it.
+    const warnings: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'warn') warnings.push(message.text().slice(0, 160));
+    });
+    await page.setViewport(VIEWPORT);
+    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    const cases: readonly FlatCase[] = [
+      { label: 'desktop', turned: false, reduced: false, phone: false },
+      { label: 'desktop, turned', turned: true, reduced: false, phone: false },
+      { label: 'desktop, reduced motion', turned: false, reduced: true, phone: false },
+      { label: 'desktop, turned, reduced motion', turned: true, reduced: true, phone: false },
+      { label: 'phone', turned: false, reduced: false, phone: true },
+      { label: 'phone, reduced motion', turned: false, reduced: true, phone: true },
+    ];
+    let phone = false;
+    for (const one of cases) {
+      if (one.phone && !phone) {
+        phone = true;
+        await page.setViewport({ width: 375, height: 812 });
+        await until(
+          page,
+          '(() => { const s = window.__shelf.stats(); return s.bufferWidth < s.bufferHeight * 0.9; })()',
+          'the shelf to resize to the upright viewport',
+        );
+      }
+      warnings.length = 0;
+      const found = await runFlatCase(page, 0, one, warnings);
+      lines.push(
+        `${one.label.padEnd(34)}${found.length === 0 ? 'in a flat layer at rest, 3D in motion' : 'FAILED'}`,
+      );
+      failures.push(...found);
+      // A case that stopped early can leave a book in hand; the next starts clean.
+      await page.evaluate('window.__shelf.putBack()');
+      await until(page, NOTHING_HELD, `${one.label}: the hand to empty`);
+    }
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
   } finally {
     await context.close();
   }
@@ -5096,6 +5334,7 @@ function report(result: {
   phone: PhoneRead | undefined;
   spread: SpreadChecked;
   atRest: AtRestChecked;
+  flatLayer: LinesAndFailures;
   controls: LinesAndFailures;
   drawerCells: DrawerChecked;
   overlap: LinesAndFailures;
@@ -5123,6 +5362,7 @@ function report(result: {
     phone,
     spread,
     atRest,
+    flatLayer,
     controls,
     drawerCells,
     overlap,
@@ -5240,6 +5480,8 @@ function report(result: {
   for (const line of spread.lines) console.log(`  ${line}`);
   console.log('held page at rest, long Thoughts planted (#426)');
   for (const line of atRest.lines) console.log(`  ${line}`);
+  console.log('the open book in a flat layer at rest (#599)');
+  for (const line of flatLayer.lines) console.log(`  ${line}`);
   console.log('the closed book and its controls (#531)');
   for (const line of controls.lines) console.log(`  ${line}`);
   console.log('the Ask drawer over a held book (#531)');
@@ -5318,6 +5560,7 @@ function report(result: {
     ...phoneFailures(phone),
     ...spread.failures,
     ...atRest.failures,
+    ...flatLayer.failures,
     ...controls.failures,
     ...drawerCells.failures,
     ...notices.failures,

@@ -25,6 +25,14 @@ import { join } from 'node:path';
 // By path, as every other script here reaches into core: `scripts/` is outside
 // the workspace's package graph and does not resolve the package name.
 import { spineColour } from '../packages/core/src/covers/dominant-colour.ts';
+import {
+  FIRST,
+  LONG_BOOK_AUTHOR,
+  LONG_BOOK_TITLE,
+  longBookParagraphs,
+  SECOND,
+  SUBTITLE,
+} from './lib/fixture-books.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 /** `--books N`: a whole number of at least 1. Anything else is refused, not defaulted. */
@@ -56,45 +64,6 @@ function makeRandom(seed: number): () => number {
   };
 }
 
-const FIRST = [
-  'Tidal',
-  'Quiet',
-  'Salt',
-  'Lantern',
-  'Signal',
-  'Warehouse',
-  'Compiler',
-  'Sediment',
-  'Harbour',
-  'Ember',
-  'Glass',
-  'Iron',
-  'Paper',
-  'River',
-  'Northern',
-];
-const SECOND = [
-  'Engine',
-  'Protocol',
-  'Ledger',
-  'Work',
-  'Road',
-  'Atlas',
-  'Notebook',
-  'Almanac',
-  'Machine',
-  'Garden',
-  'Archive',
-  'Circuit',
-];
-const SUBTITLE = [
-  'A Field Guide',
-  'Notes on Craft',
-  'An Investigation',
-  'Essays',
-  'A Primer',
-  'Selected Writings',
-];
 const SURNAME = [
   'Vane',
   'Roy',
@@ -274,6 +243,40 @@ for (let i = 0; written < BOOK_COUNT; i += 1) {
   writeFileSync(join(OUT_LIBRARY, filename), lines.join('\n'), 'utf8');
   written += 1;
 }
+
+/**
+ * One fixed book after the generated ones, in every vault of every size: a
+ * long `## Thoughts`, so every test that opens a held book meets a page that
+ * really scrolls (#599, S6). It follows the loop and draws nothing from
+ * `random()`, so every other book is what it was before it. Written, it is the
+ * generated books plus one: a count is read from `library.json`, never assumed.
+ */
+writeFileSync(
+  join(OUT_LIBRARY, `${LONG_BOOK_TITLE}.md`),
+  [
+    '---',
+    'type: book',
+    `title: "${LONG_BOOK_TITLE}"`,
+    `author: "${LONG_BOOK_AUTHOR}"`,
+    'status: read',
+    'started: 2024-12-01',
+    'finished: 2025-01-20',
+    'rating: 4',
+    'pages: 312',
+    'tags: [essays]',
+    '---',
+    '',
+    '## Thoughts',
+    '',
+    ...longBookParagraphs().flatMap((paragraph) => [paragraph, '']),
+    '## Notes',
+    '',
+    'NOTE_BODY_CANARY_do_not_ship',
+    '',
+  ].join('\n'),
+  'utf8',
+);
+written += 1;
 
 console.log(`${written} books written to ${OUT}`);
 console.log(`${covers.length} covers copied`);

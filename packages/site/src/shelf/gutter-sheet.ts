@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { gutterStops } from './gutter-shade.ts';
-import { withoutShadowFetch } from './shadow-receivers.ts';
 
 /**
  * The held book's two paper sheets, as `pickup.ts` rigs them: the geometry
@@ -18,11 +17,15 @@ import { withoutShadowFetch } from './shadow-receivers.ts';
  */
 const FOLD = { right: -1, left: 1 } as const;
 
-/** The paper both sheets share: lit, reading no shadow map, shaded per vertex. */
-export function paperMaterial(): THREE.MeshStandardMaterial {
-  return withoutShadowFetch(
-    new THREE.MeshStandardMaterial({ color: 0xece2cf, roughness: 0.95, vertexColors: true }),
-  );
+/**
+ * The paper both sheets share: **unlit**, shaded per vertex, taking no fog
+ * (#599, ADR-0151). The pages are read, and a page that darkened with the room
+ * or went grey in the fog would be harder to read than the same text on a
+ * flat card. The cover, boards and page block stay lit. A basic material
+ * samples no shadow map, so G61's count of readers cannot rise.
+ */
+export function paperMaterial(): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({ color: 0xece2cf, vertexColors: true, fog: false });
 }
 
 /**
@@ -55,4 +58,41 @@ export function sheetGeometry(page: keyof typeof FOLD): THREE.BufferGeometry {
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
   return geometry;
+}
+
+/** Set on a sheet's `userData`, so nothing mistakes the paper for a painted piece. */
+const SHEET = 'paperSheet';
+
+/**
+ * One of the two paper sheets: unlit, reading no shadow map, casting none, and
+ * darkening into the fold. Marked as a sheet (`isSheet`) because it is a
+ * `MeshBasicMaterial` like the painted shadows, and the two must never be
+ * confused (#599, C7).
+ */
+export function sheetMesh(material: THREE.MeshBasicMaterial, page: 'left' | 'right'): THREE.Mesh {
+  const mesh = new THREE.Mesh(sheetGeometry(page), material);
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  mesh.visible = false;
+  mesh.userData[SHEET] = true;
+  return mesh;
+}
+
+export function isSheet(object: THREE.Object3D): boolean {
+  return object.userData[SHEET] === true;
+}
+
+/**
+ * The unlit painted planes among a book's children — the neighbour shadow,
+ * hidden while the book is held and shown again when it is put back. Never a
+ * paper sheet, whenever it was added: a sheet in this set would hide while the
+ * book is held and show on the shelf after the put-back.
+ */
+export function paintedPieces(children: readonly THREE.Object3D[]): THREE.Mesh[] {
+  return children.filter(
+    (child): child is THREE.Mesh =>
+      child instanceof THREE.Mesh &&
+      child.material instanceof THREE.MeshBasicMaterial &&
+      !isSheet(child),
+  );
 }
