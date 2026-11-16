@@ -149,8 +149,8 @@ export function writeConfigFile(accessKey: string): ConfigFile {
  * Removes config folders an earlier run left behind. A run that was killed outright (a closed
  * terminal, a pipe that ended, `kill -9`) cannot run its own cleanup, and its folder holds the key.
  * Only a folder this launcher made is touched: named `bs-local-`, holding `local.yml` and nothing
- * else. Returns how many it removed. The launcher runs one tunnel at a time (the binary's ports are
- * fixed), so none of them can belong to a live run.
+ * else. Returns how many it removed. It runs before the port is bound, so a second launcher started
+ * beside a live one removes the live run's config file: that only shortens the key's time on disk.
  */
 export function sweepStaleConfigs(root: string = tmpdir()): number {
   let removed = 0;
