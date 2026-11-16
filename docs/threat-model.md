@@ -111,7 +111,7 @@ token for Terraform has an expiry, is set only on the command, and never enters
 Apple Books (cover URLs come out of those replies), a Libation export of an Audible
 library, given to `stacks import audible`, and a room's bake inputs: files from
 `dl.polyhaven.org`, `images.metmuseum.org` and `upload.wikimedia.org`, fetched
-by `fetch_inputs.py` on the owner's machine alone, plus models placed by hand. Out: each looked-up book's ISBN, title and author, private
+by `fetch_inputs.py` on the owner's machine alone, plus models placed by hand (a bake-input fetch sends the owner's address and the asset URL to those hosts). Out: each looked-up book's ISBN, title and author, private
 and wishlist ones included, and the Google key, to the providers' HTTPS endpoints
 (approved by `AGENTS.md`'s tech decisions); and, on an Audible import, the
 export's picture ids and the owner's address to Amazon's image CDN, which no

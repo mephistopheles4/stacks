@@ -2,6 +2,7 @@
 
   python packages/site/rooms/shared/fetch_inputs.py <room>            fetch what is missing, check everything
   python packages/site/rooms/shared/fetch_inputs.py <room> --check    check only, never touch the network
+                                                                      (a fetched file that differs is still deleted)
 
 `packages/site/rooms/<room>/inputs.json` names every bake input that lives outside git: its page
 URL, licence, author, SHA-256, destination file name and, for one that can be fetched, its download
@@ -26,6 +27,7 @@ What this script will and will not do, each a control in the threat model's bake
 Standard library only, so Blender's Python and any system Python run it.
 """
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -95,6 +97,8 @@ def load_entries(room):
     for e in entries:
         if not isinstance(e, dict):
             raise Refused("an inputs entry is not an object")
+        if not isinstance(e.get("dest"), str):
+            raise Refused("an inputs entry has no destination that is a string")
         if not isinstance(e.get("sha256"), str) or not SHA256.match(e["sha256"]):
             raise Refused(f"{e.get('dest')!r}: sha256 is not 64 lowercase hex digits")
         if e.get("manual") is not True:
@@ -188,7 +192,7 @@ def fetch_room(room, network=True):
                 continue
             os.replace(tmp, target)
             print(f"[inputs] fetched {dest}")
-        except (Refused, urllib.error.URLError, OSError) as ex:
+        except (Refused, urllib.error.URLError, http.client.HTTPException, OSError) as ex:
             if os.path.exists(tmp):
                 os.remove(tmp)
             problems.append(f"{dest}: {ex}")

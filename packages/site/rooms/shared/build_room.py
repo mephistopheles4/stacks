@@ -50,7 +50,7 @@ ap.add_argument("--rug-ruck", type=float, nargs=2, metavar=("X", "Y"),
 ap.add_argument("--lamp", choices=("arc", "hero"), default="arc",
                 help="hero: the bridge lamp of hero_lamp.py, behind the chair, lighting the room")
 ap.add_argument("--table", choices=("drum", "polyhaven"), default="drum",
-                help="polyhaven: Poly Haven's Side Table Tall 01 (CC0; fetch_textures.py --model side_table_tall_01)")
+                help="polyhaven: Poly Haven's Side Table Tall 01 (CC0; fetched by fetch_inputs.py)")
 ap.add_argument("--candles", choices=("glass", "hero"), default="glass",
                 help="hero: hero_candles.py's brass candlesticks and pillar, on the table top")
 ap.add_argument("--table-file", default="", help="default: the Poly Haven Side Table Tall 01 in the room's inputs")

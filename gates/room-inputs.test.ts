@@ -55,12 +55,17 @@ interface Entry {
   manual?: unknown;
 }
 
+/** The served room folders: a folder with no inputs.json is red here and not skipped. */
 function roomIds(): string[] {
-  return readdirSync(join(REPO_ROOT, ROOMS), { withFileTypes: true })
-    .filter((e) => e.isDirectory() && existsSync(join(REPO_ROOT, ROOMS, e.name, 'inputs.json')))
+  return readdirSync(join(REPO_ROOT, SERVED), { withFileTypes: true })
+    .filter((e) => e.isDirectory())
     .map((e) => e.name)
     .sort();
 }
+
+/** A destination named more than once. */
+const duplicateDests = (names: readonly string[]): string[] =>
+  names.filter((n, i) => names.indexOf(n) !== i);
 
 /** The hosts `fetch_inputs.py` will fetch from: the one list, read where it is written. */
 function fetchHosts(): ReadonlySet<string> {
@@ -145,12 +150,28 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
   const rooms = roomIds();
   const hosts = fetchHosts();
 
-  it('reads the fetch hosts out of fetch_inputs.py', () => {
-    expectFound([...hosts], 'fetch hosts', 3);
+  it('names every fetch host in the threat model', () => {
+    const model = readFileSync(join(REPO_ROOT, 'docs/threat-model.md'), 'utf8');
+    expect([...hosts].filter((host) => !model.includes(host))).toEqual([]);
+  });
+
+  it('allows exactly the three hosts the threat model names', () => {
+    // read out of fetch_inputs.py; a fourth host there is a change to the threat model too
+    expect([...hosts].sort()).toEqual([
+      'dl.polyhaven.org',
+      'images.metmuseum.org',
+      'upload.wikimedia.org',
+    ]);
   });
 
   it('finds at least one room, with entries and at least one CC BY', () => {
-    expectFound(rooms, 'rooms with an inputs.json', 1);
+    expectFound(rooms, 'served room folders', 1);
+    for (const room of rooms) {
+      expect(
+        existsSync(join(REPO_ROOT, ROOMS, room, 'inputs.json')),
+        `${room}: a served room folder with no ${ROOMS}/${room}/inputs.json`,
+      ).toBe(true);
+    }
     for (const room of rooms) {
       const { entries } = load(room);
       expect(entries.length, `${room}: entries`).toBeGreaterThanOrEqual(10);
@@ -163,9 +184,10 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
 
   it.each(rooms)('%s: every entry holds', (room) => {
     const { entries, sources } = load(room);
-    const names = entries.map((e) => String(e.dest));
-    const dupes = names.filter((n, i) => names.indexOf(n) !== i);
-    expect(dupes, `${room}: a destination named twice`).toEqual([]);
+    expect(
+      duplicateDests(entries.map((e) => String(e.dest))),
+      `${room}: a destination named twice`,
+    ).toEqual([]);
     expect(entries.flatMap((e) => entryFaults(e, hosts, sources))).toEqual([]);
   });
 
@@ -177,9 +199,8 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
     const faultsOf = (base: Entry, change: Partial<Entry>, text = sources) =>
       entryFaults({ ...base, ...change }, hosts, text).join('\n');
 
-    it('passes the real ones', () => {
-      expect(entryFaults(fetched, hosts, sources)).toEqual([]);
-      expect(entryFaults(ccBy, hosts, sources)).toEqual([]);
+    it('a destination named twice', () => {
+      expect(duplicateDests(['a/x.bin', 'b/y.bin', 'a/x.bin'])).toEqual(['a/x.bin']);
     });
 
     it.each([
@@ -188,7 +209,14 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
       ['a signed link', { page: 'https://polyhaven.com/a/x/Signature-abc' }, /signed link/],
       ['no page', { page: undefined }, /not a URL/],
       ['a licence off the list', { licence: 'CC BY-NC 4.0' }, /not CC0, public domain or CC BY/],
+      ['a fragment', { page: 'https://polyhaven.com/a/x#download' }, /query string or a fragment/],
       ['a short hash', { sha256: 'abc' }, /sha256/],
+      ['no author', { author: '' }, /no author/],
+      ['no title', { title: undefined }, /no title/],
+      ['a dot segment', { dest: 'a/./x.bin' }, /escapes/],
+      ['an empty segment', { dest: 'a//x.bin' }, /escapes/],
+      ['a home destination', { dest: '~/x.bin' }, /escapes/],
+      ['a NUL in the destination', { dest: 'a\0b.bin' }, /escapes/],
       ['an escaping destination', { dest: '../x.bin' }, /escapes/],
       ['an absolute destination', { dest: '/x.bin' }, /escapes/],
       ['a drive letter', { dest: 'C:/x.bin' }, /escapes/],

@@ -289,3 +289,19 @@ export function expectFound<T>(values: readonly T[], what: string, atLeast = 1):
   }
   return values;
 }
+
+/** Every image path a GLB's JSON chunk names, anywhere in it. */
+export function imagesNamedBy(glb: Buffer): string[] {
+  const jsonLength = glb.readUInt32LE(12);
+  const json: unknown = JSON.parse(glb.subarray(20, 20 + jsonLength).toString('utf8'));
+  const found = new Set<string>();
+  const visit = (v: unknown): void => {
+    if (typeof v === 'string' && /\.(webp|jpg|png)$/i.test(v)) found.add(v);
+    else if (v && typeof v === 'object') Object.values(v).forEach(visit);
+  };
+  visit(json);
+  return [...found].sort();
+}
+
+/** Where a room serves the KTX2 twin of one of its WebP textures. */
+export const ktx2Of = (webp: string): string => `ktx-etc1s/${webp.replace(/\.webp$/i, '.ktx2')}`;

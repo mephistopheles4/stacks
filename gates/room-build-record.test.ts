@@ -38,7 +38,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, expectFound } from './repo.ts';
+import { REPO_ROOT, expectFound, imagesNamedBy, ktx2Of } from './repo.ts';
 
 const ROOMS = 'packages/site/rooms';
 const SERVED = 'packages/site/public/rooms';
@@ -49,6 +49,38 @@ function roomIds(): string[] {
     .filter((e) => e.isDirectory() && existsSync(join(REPO_ROOT, ROOMS, e.name, 'build.json')))
     .map((e) => e.name)
     .sort();
+}
+
+/** The folders under the served `rooms/`: what a visitor can fetch, whatever the scripts say. */
+function servedRoomFolders(): string[] {
+  return readdirSync(join(REPO_ROOT, SERVED), { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+}
+
+/** Served room folders with no record to hold them: the ones every gate here would walk past. */
+const unrecordedFolders = (served: readonly string[], recorded: readonly string[]): string[] =>
+  served.filter((room) => !recorded.includes(room));
+
+/**
+ * A served room is its GLB, its SOURCES.md and the images the GLB names, each with its KTX2 twin.
+ * Anything else the record lists was put there by hand and refreshed in: a cover, a scene, a note.
+ */
+function unexplainedFiles(served: Iterable<string>, glb: Buffer, glbName: string): string[] {
+  const allowed = new Set([glbName, 'SOURCES.md']);
+  for (const image of imagesNamedBy(glb)) {
+    allowed.add(image);
+    allowed.add(ktx2Of(image));
+  }
+  return [...served].filter((path) => !allowed.has(path));
+}
+
+/** Files directly in the served `rooms/` folder: a room is a folder, and a loose file is none. */
+function looseServedFiles(): string[] {
+  return readdirSync(join(REPO_ROOT, SERVED), { withFileTypes: true })
+    .filter((e) => !e.isDirectory())
+    .map((e) => e.name);
 }
 
 function walk(dir: string, prefix = ''): string[] {
@@ -85,7 +117,8 @@ function strings(value: unknown): string[] {
 }
 
 /** Flags that let Blender run a script a .blend carries. */
-const AUTO_RUN = /(^|\s)(-y|--enable-autoexec)(\s|$)/;
+const AUTO_RUN =
+  /(^|\s)(-y|--enable-autoexec|--python-expr|--python-text|--python-console|--python-use-system-env|--addons)(\s|$)/;
 
 /** What is wrong with a build record, given the disk. Empty when nothing is. */
 function recordFaults(
@@ -119,18 +152,20 @@ function recordFaults(
   for (const text of strings(record)) {
     if (/(^|[\s=:"'])[A-Za-z]:[\\/]/.test(text))
       faults.push(`${room}: a drive letter in "${text.slice(0, 60)}"`);
-    if (/(^|[\s=])\/[A-Za-z0-9._-]/.test(text))
+    if (/(^|[\s=:"'])\/[A-Za-z0-9._-]/.test(text))
       faults.push(`${room}: an absolute path in "${text.slice(0, 60)}"`);
-    if (/(^|[\s=])~/.test(text)) faults.push(`${room}: a ~ in "${text.slice(0, 60)}"`);
+    if (/(^|[\s=:"'])~/.test(text)) faults.push(`${room}: a ~ in "${text.slice(0, 60)}"`);
     if (/(^|[\s=\\/])\.\.([\\/]|\s|$)/.test(text))
       faults.push(`${room}: a .. segment in "${text.slice(0, 60)}"`);
     if (text.includes('\\')) faults.push(`${room}: a backslash in "${text.slice(0, 60)}"`);
   }
 
   const bake = typeof record.bake?.command === 'string' ? record.bake.command : '';
-  if (!/(^|\s)--factory-startup(\s|$)/.test(bake))
+  // what follows ` -- ` is the script's own arguments: Blender never reads a flag there
+  const blenderArgs = bake.split(/\s--\s/)[0] ?? '';
+  if (!/(^|\s)--factory-startup(\s|$)/.test(blenderArgs))
     faults.push(`${room}: the bake command does not run Blender with --factory-startup`);
-  if (AUTO_RUN.test(bake)) faults.push(`${room}: the bake command enables auto-run scripts`);
+  if (AUTO_RUN.test(blenderArgs)) faults.push(`${room}: the bake command enables auto-run scripts`);
 
   for (const [tool, version] of Object.entries(record.tools ?? {})) {
     if (typeof version !== 'string' || !/^\d+(\.\d+)*$/.test(version)) {
@@ -175,6 +210,54 @@ describe('G73 — a room serves what its build record says', () => {
         `${room}: inputs recorded`,
       ).toBeGreaterThanOrEqual(10);
     }
+  });
+
+  it('has a record for every served room folder', () => {
+    expectFound(servedRoomFolders(), 'served room folders', 1);
+    expect(
+      unrecordedFolders(servedRoomFolders(), rooms),
+      `${SERVED}/ folders with no ${ROOMS}/<room>/build.json: a room the other room gates would not see`,
+    ).toEqual([]);
+  });
+
+  it('serves only a GLB, its SOURCES.md and the images the GLB names', () => {
+    expect(looseServedFiles(), `files directly in ${SERVED}/`).toEqual([]);
+    for (const room of rooms) {
+      const names = readdirSync(join(REPO_ROOT, SERVED, room)).filter((n) => n.endsWith('.glb'));
+      expect(names, `${room}: one GLB`).toHaveLength(1);
+      const glbName = names[0] as string;
+      const glb = readFileSync(join(REPO_ROOT, SERVED, room, glbName));
+      const { disk } = load(room);
+      expect(
+        unexplainedFiles(disk.served.keys(), glb, glbName),
+        `${room}: served files the GLB does not name, which a refreshed record would have made green`,
+      ).toEqual([]);
+    }
+  });
+
+  it('is shown red on a file the GLB does not name', () => {
+    const json = Buffer.from(JSON.stringify({ images: [{ uri: 'bake/a.webp' }] }));
+    const header = Buffer.alloc(20);
+    header.writeUInt32LE(json.length, 12);
+    const glb = Buffer.concat([header, json]);
+    expect(
+      unexplainedFiles(
+        [
+          'room.glb',
+          'SOURCES.md',
+          'bake/a.webp',
+          'ktx-etc1s/bake/a.ktx2',
+          'bake/cover.webp',
+          'x.blend',
+        ],
+        glb,
+        'room.glb',
+      ),
+    ).toEqual(['bake/cover.webp', 'x.blend']);
+  });
+
+  it('is shown red on a served folder with no record', () => {
+    expect(unrecordedFolders(['reading-corner', 'attic'], ['reading-corner'])).toEqual(['attic']);
   });
 
   it.each(rooms)(
@@ -233,7 +316,9 @@ describe('G73 — a room serves what its build record says', () => {
     it.each([
       ['a drive letter', 'blender -P C:/Users/someone/build_room.py', /drive letter/],
       ['an absolute path', 'blender -P /home/someone/build_room.py', /absolute path/],
-      ['a home path', 'blender -P ~/build_room.py', /~/],
+      ['a home path', 'blender -P ~/build_room.py', /a ~ in/],
+      ['a quoted absolute path', 'blender -P "/home/x/build_room.py"', /absolute path/],
+      ['a quoted home path', "blender -P '~/build_room.py'", /a ~ in/],
       ['an escaping segment', 'blender -P ../build_room.py', /\.\. segment/],
       ['a backslash', 'blender -P packages\\site\\build_room.py', /backslash/],
     ])('%s in the bake command', (_name, command, pattern) => {
@@ -259,6 +344,41 @@ describe('G73 — a room serves what its build record says', () => {
           r.bake = { command: 'blender -b -y --factory-startup -P x.py' };
         }).join('\n'),
       ).toMatch(/auto-run/);
+      for (const flag of ['--python-expr', '--python-text', '--python-console', '--addons']) {
+        expect(
+          faultsWith((r) => {
+            r.bake = { command: `blender -b --factory-startup ${flag} x -P x.py` };
+          }).join('\n'),
+          flag,
+        ).toMatch(/auto-run/);
+      }
+    });
+
+    it("--factory-startup or auto-run only after the -- that ends Blender's arguments", () => {
+      expect(
+        faultsWith((r) => {
+          r.bake = { command: 'blender -b -P x.py -- --room a --factory-startup' };
+        }).join('\n'),
+      ).toMatch(/--factory-startup/);
+      expect(
+        faultsWith((r) => {
+          r.bake = { command: 'blender -b --factory-startup -P x.py -- -y --enable-autoexec' };
+        }).join('\n'),
+      ).not.toMatch(/auto-run/);
+    });
+
+    it('an input the record holds and inputs.json does not name', () => {
+      const faults = faultsWith((r) => {
+        (r.inputs as Record_)['commons/not_in_inputs_json.jpg'] = '2'.repeat(64);
+      });
+      expect(faults.join('\n')).toMatch(/which inputs.json does not name/);
+    });
+
+    it('a tool with no recorded version', () => {
+      const faults = faultsWith((r) => {
+        delete (r.tools as Record_).ktx;
+      });
+      expect(faults.join('\n')).toMatch(/no ktx version is recorded/);
     });
 
     it('a tool version that is not a bare number', () => {

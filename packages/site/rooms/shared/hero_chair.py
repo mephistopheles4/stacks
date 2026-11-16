@@ -11,7 +11,7 @@ copy, the usual high-to-low game-art bake, so the page never downloads these fac
 
     build(tex_dir) -> list of mesh objects
 
-Materials are Cycles node trees over CC0 Poly Haven scans (fetch_textures.py); nothing here is
+Materials are Cycles node trees over CC0 Poly Haven scans (fetch_inputs.py); nothing here is
 copied from anyone's model.
 """
 import math

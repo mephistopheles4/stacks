@@ -25,51 +25,46 @@
  * See docs/gates.md, row G74 (room-budget).
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, expectFound } from './repo.ts';
+import { REPO_ROOT, expectFound, imagesNamedBy, ktx2Of } from './repo.ts';
 
 const SERVED = 'packages/site/public/rooms';
-const ROOMS = 'packages/site/rooms';
 
 const MAX_GLB = 5_000_000;
 const MAX_FETCHED = 40_000_000;
 const MAX_FILE = 25 * 1024 * 1024;
 
+/** The served room folders: what a visitor can fetch, so a folder with no record is measured too. */
 function roomIds(): string[] {
-  return readdirSync(join(REPO_ROOT, ROOMS), { withFileTypes: true })
-    .filter((e) => e.isDirectory() && existsSync(join(REPO_ROOT, ROOMS, e.name, 'build.json')))
+  return readdirSync(join(REPO_ROOT, SERVED), { withFileTypes: true })
+    .filter((e) => e.isDirectory())
     .map((e) => e.name)
     .sort();
 }
 
-function walk(dir: string, prefix = ''): string[] {
+function walk(root: string, dir: string, prefix = ''): string[] {
   const out: string[] = [];
-  for (const e of readdirSync(join(REPO_ROOT, dir), { withFileTypes: true })) {
+  for (const e of readdirSync(join(root, dir), { withFileTypes: true })) {
     const rel = prefix ? `${prefix}/${e.name}` : e.name;
-    if (e.isDirectory()) out.push(...walk(`${dir}/${e.name}`, rel));
+    if (e.isDirectory()) out.push(...walk(root, `${dir}/${e.name}`, rel));
     else out.push(rel);
   }
   return out;
 }
 
-const sizeOf = (path: string): number => statSync(join(REPO_ROOT, path)).size;
-
-/** Every image path the GLB's JSON chunk names, anywhere in it. */
-function imagesNamedBy(glb: Buffer): string[] {
-  const jsonLength = glb.readUInt32LE(12);
-  const json: unknown = JSON.parse(glb.subarray(20, 20 + jsonLength).toString('utf8'));
-  const found = new Set<string>();
-  const visit = (v: unknown): void => {
-    if (typeof v === 'string' && /\.(webp|jpg|png)$/i.test(v)) found.add(v);
-    else if (v && typeof v === 'object') Object.values(v).forEach(visit);
-  };
-  visit(json);
-  return [...found].sort();
-}
-
-const ktx2Of = (webp: string): string => `ktx-etc1s/${webp.replace(/\.webp$/i, '.ktx2')}`;
+const sizeOf = (root: string, path: string): number => statSync(join(root, path)).size;
 
 interface Sizes {
   glb: number;
@@ -90,15 +85,18 @@ function budgetFaults(room: string, s: Sizes): string[] {
   return faults;
 }
 
-function measure(room: string): { sizes: Sizes; problems: string[]; images: string[] } {
+function measure(
+  room: string,
+  root = REPO_ROOT,
+): { sizes: Sizes; problems: string[]; images: string[] } {
   const dir = `${SERVED}/${room}`;
   const problems: string[] = [];
-  const glbs = readdirSync(join(REPO_ROOT, dir)).filter((n) => n.endsWith('.glb'));
+  const glbs = readdirSync(join(root, dir)).filter((n) => n.endsWith('.glb'));
   if (glbs.length !== 1)
     problems.push(`${room}: expected one GLB at the top of ${dir}, found ${glbs.length}`);
   const glbName = glbs[0] ?? '';
-  const glb = glbName ? sizeOf(`${dir}/${glbName}`) : 0;
-  const images = glbName ? imagesNamedBy(readFileSync(join(REPO_ROOT, dir, glbName))) : [];
+  const glb = glbName ? sizeOf(root, `${dir}/${glbName}`) : 0;
+  const images = glbName ? imagesNamedBy(readFileSync(join(root, dir, glbName))) : [];
 
   let webpSet = glb;
   let ktx2Set = glb;
@@ -107,11 +105,11 @@ function measure(room: string): { sizes: Sizes; problems: string[]; images: stri
       [image, (n: number) => (webpSet += n)],
       [ktx2Of(image), (n: number) => (ktx2Set += n)],
     ] as const) {
-      if (existsSync(join(REPO_ROOT, dir, path))) add(sizeOf(`${dir}/${path}`));
+      if (existsSync(join(root, dir, path))) add(sizeOf(root, `${dir}/${path}`));
       else problems.push(`${room}: the GLB names ${image} and ${path} is not served`);
     }
   }
-  const largestFile = Math.max(0, ...walk(dir).map((p) => sizeOf(`${dir}/${p}`)));
+  const largestFile = Math.max(0, ...walk(root, dir).map((p) => sizeOf(root, `${dir}/${p}`)));
   return { sizes: { glb, webpSet, ktx2Set, largestFile }, problems, images };
 }
 
@@ -119,12 +117,15 @@ describe('G74 — a room stays inside its budget', () => {
   const rooms = roomIds();
 
   it('finds at least one room', () => {
-    expectFound(rooms, 'rooms with a build.json', 1);
+    expectFound(rooms, 'served room folders', 1);
   });
 
   it.each(rooms)('%s: the GLB, each texture set and every file are inside the caps', (room) => {
     const { sizes, problems, images } = measure(room);
     expect(images.length, `${room}: images the GLB names`).toBeGreaterThanOrEqual(10);
+    // the totals are the GLB plus the textures: a sum that forgot to add them would pass the caps
+    expect(sizes.webpSet, `${room}: the WebP set adds its textures`).toBeGreaterThan(sizes.glb);
+    expect(sizes.ktx2Set, `${room}: the KTX2 set adds its textures`).toBeGreaterThan(sizes.glb);
     expect(problems).toEqual([]);
     expect(budgetFaults(room, sizes)).toEqual([]);
   });
@@ -136,10 +137,6 @@ describe('G74 — a room stays inside its budget', () => {
       ktx2Set: 35_000_000,
       largestFile: 2_500_000,
     };
-
-    it('passes the measured room', () => {
-      expect(budgetFaults('r', inside)).toEqual([]);
-    });
 
     it('a GLB over 5 MB', () => {
       expect(budgetFaults('r', { ...inside, glb: MAX_GLB + 1 }).join()).toMatch(/packed GLB/);
@@ -154,6 +151,56 @@ describe('G74 — a room stays inside its budget', () => {
       expect(budgetFaults('r', { ...inside, largestFile: MAX_FILE + 1 }).join()).toMatch(
         /served file/,
       );
+    });
+  });
+
+  describe('measure() on a room built in a temporary folder', () => {
+    function glbNaming(images: string[]): Buffer {
+      const json = Buffer.from(JSON.stringify({ images: images.map((uri) => ({ uri })) }));
+      const padded = Buffer.concat([json, Buffer.alloc((4 - (json.length % 4)) % 4, 0x20)]);
+      const header = Buffer.alloc(20);
+      header.write('glTF', 0, 'latin1');
+      header.writeUInt32LE(2, 4);
+      header.writeUInt32LE(20 + padded.length, 8);
+      header.writeUInt32LE(padded.length, 12);
+      header.write('JSON', 16, 'latin1');
+      return Buffer.concat([header, padded]);
+    }
+
+    it('adds each served texture to both sets, and names one that is not served', () => {
+      const root = mkdtempSync(join(tmpdir(), 'room-budget-'));
+      try {
+        const dir = join(root, SERVED, 'r');
+        mkdirSync(join(dir, 'ktx-etc1s', 'bake'), { recursive: true });
+        mkdirSync(join(dir, 'bake'), { recursive: true });
+        const glb = glbNaming(['bake/a.webp', 'bake/b.webp']);
+        writeFileSync(join(dir, 'room.glb'), glb);
+        writeFileSync(join(dir, 'bake', 'a.webp'), Buffer.alloc(1000));
+        writeFileSync(join(dir, 'ktx-etc1s', 'bake', 'a.ktx2'), Buffer.alloc(300));
+        const { sizes, problems } = measure('r', root);
+        expect(sizes.webpSet).toBe(glb.length + 1000);
+        expect(sizes.ktx2Set).toBe(glb.length + 300);
+        expect(problems.join('\n')).toMatch(/names bake\/b\.webp and bake\/b\.webp is not served/);
+        expect(problems.join('\n')).toMatch(/ktx-etc1s\/bake\/b\.ktx2 is not served/);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+
+    it('a second GLB, and a 30 MiB file in a folder nobody recorded', () => {
+      const root = mkdtempSync(join(tmpdir(), 'room-budget-'));
+      try {
+        const dir = join(root, SERVED, 'stray');
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(join(dir, 'a.glb'), glbNaming([]));
+        writeFileSync(join(dir, 'b.glb'), glbNaming([]));
+        writeFileSync(join(dir, 'big.bin'), Buffer.alloc(30 * 1024 * 1024));
+        const { sizes, problems } = measure('stray', root);
+        expect(problems.join('\n')).toMatch(/expected one GLB/);
+        expect(budgetFaults('stray', sizes).join('\n')).toMatch(/served file/);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
     });
   });
 });
