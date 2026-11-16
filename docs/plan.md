@@ -33,6 +33,8 @@ inferable from the code.
 
 ### Hard constraint: no third-party copyrighted material in the repo
 
+*One exception, added with [#600](https://github.com/mephistopheles4/stacks/issues/600) and decided in [ADR-0162](adr/0162-the-rooms-directory-is-allowed-on-its-sources-file.md): the baked rooms in `packages/site/public/rooms/`, made from CC0, CC BY and public-domain models and credited in each room's `SOURCES.md`. Everything below stands for the rest of the repo.*
+
 Stated explicitly by the owner. Fixtures are **invented**. No book cover art, no
 book text, no EPUB-extracted assets are committed — ever. Real covers exist only
 at runtime, downloaded by `stacks add` into the vault, which is gitignored.

@@ -1,0 +1,644 @@
+{
+  "room": "reading-corner",
+  "about": "Every bake input outside git (spec #593 S4.12). fetch_inputs.py fetches what carries a url and checks every entry's sha256; an entry marked manual is placed by hand under artifacts/rooms/reading-corner/ and checked, never fetched or deleted.",
+  "inputs": [
+    {
+      "dest": "polyhaven/Chandelier_03/Chandelier_03_2k.gltf",
+      "title": "Chandelier 03",
+      "author": "Kirill Sannikov",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/Chandelier_03",
+      "sha256": "e7ecba239abb263b016d2f8a297db905f903804de4a41801ec1cf6e49c07b823",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/Chandelier_03/Chandelier_03_2k.gltf"
+    },
+    {
+      "dest": "polyhaven/Chandelier_03/textures/Chandelier_03_arm_2k.jpg",
+      "title": "Chandelier 03",
+      "author": "Kirill Sannikov",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/Chandelier_03",
+      "sha256": "e5ee65cbcbee470d010a9c502f00dbcd04fddbf5c34cd4e47fc85a4f1f98505a",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/Chandelier_03/Chandelier_03_arm_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/Chandelier_03/textures/Chandelier_03_opacity_2k.jpg",
+      "title": "Chandelier 03",
+      "author": "Kirill Sannikov",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/Chandelier_03",
+      "sha256": "4c523ff7ade337930b320e85ed15fa412332edba2eb836bba5c434dd9628a581",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/Chandelier_03/Chandelier_03_opacity_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/Chandelier_03/Chandelier_03.bin",
+      "title": "Chandelier 03",
+      "author": "Kirill Sannikov",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/Chandelier_03",
+      "sha256": "b7085e20c530331e71a6934604f77ba90acef175e78b75a28ded775a28d1a26e",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/Chandelier_03/Chandelier_03.bin"
+    },
+    {
+      "dest": "polyhaven/Chandelier_03/textures/Chandelier_03_nor_gl_2k.jpg",
+      "title": "Chandelier 03",
+      "author": "Kirill Sannikov",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/Chandelier_03",
+      "sha256": "d3387a05afb75c61e18a415f0965d929ddbef89fd06553fa4ee268089c952161",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/Chandelier_03/Chandelier_03_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/Chandelier_03/textures/Chandelier_03_diff_2k.jpg",
+      "title": "Chandelier 03",
+      "author": "Kirill Sannikov",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/Chandelier_03",
+      "sha256": "694f9a7e2752a6586c1731e542eb3816702dd688cb8697814ed39cbee88ee1c2",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/Chandelier_03/Chandelier_03_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/treasure_chest/treasure_chest_2k.gltf",
+      "title": "Treasure Chest",
+      "author": "Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/treasure_chest",
+      "sha256": "2c59e873b188815a3d822ea5548b8b0fa6a7fb3a8f5398c7daaee73b032e0e35",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/treasure_chest/treasure_chest_2k.gltf"
+    },
+    {
+      "dest": "polyhaven/treasure_chest/textures/treasure_chest_arm_2k.jpg",
+      "title": "Treasure Chest",
+      "author": "Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/treasure_chest",
+      "sha256": "f232d968ee8a57a3fecf253c32e5bb8f69ef20b804df11432b74c4603d160066",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/treasure_chest/treasure_chest_arm_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/treasure_chest/textures/treasure_chest_diff_2k.jpg",
+      "title": "Treasure Chest",
+      "author": "Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/treasure_chest",
+      "sha256": "d3e30f10911677b72e4aa1975cae984dee80bdad30c7b6fe29cb9c1f7e3be222",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/treasure_chest/treasure_chest_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/treasure_chest/treasure_chest.bin",
+      "title": "Treasure Chest",
+      "author": "Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/treasure_chest",
+      "sha256": "6e8fd5b5c641c3535bf26767fc7b0e7295c314d43613726da9679ee8cffecb03",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/treasure_chest/treasure_chest.bin"
+    },
+    {
+      "dest": "polyhaven/treasure_chest/textures/treasure_chest_nor_gl_2k.jpg",
+      "title": "Treasure Chest",
+      "author": "Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/treasure_chest",
+      "sha256": "21fc97fd8ce65f07db325eb69d9503c4eec0f85760a623bb0d3ff46fcb6800df",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/treasure_chest/treasure_chest_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/vintage_pocket_watch/vintage_pocket_watch_2k.gltf",
+      "title": "Vintage Pocket Watch",
+      "author": "Tal Swicegood",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/vintage_pocket_watch",
+      "sha256": "f8c2befc0da3a214cb5635c57ebdcbe7858fc3cf6e36a035927d60f401818436",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/vintage_pocket_watch/vintage_pocket_watch_2k.gltf"
+    },
+    {
+      "dest": "polyhaven/vintage_pocket_watch/textures/vintage_pocket_watch_arm_2k.jpg",
+      "title": "Vintage Pocket Watch",
+      "author": "Tal Swicegood",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/vintage_pocket_watch",
+      "sha256": "c3439c39a48a13ebf5b924160b101ee6541664687a12c1dd14311e54daf46797",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/vintage_pocket_watch/vintage_pocket_watch_arm_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/vintage_pocket_watch/textures/vintage_pocket_watch_nor_gl_2k.jpg",
+      "title": "Vintage Pocket Watch",
+      "author": "Tal Swicegood",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/vintage_pocket_watch",
+      "sha256": "49d629ff4e391d0ff8c90085482f6d08c33197a082d63f9b586f66758af78a34",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/vintage_pocket_watch/vintage_pocket_watch_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/vintage_pocket_watch/textures/vintage_pocket_watch_diff_2k.jpg",
+      "title": "Vintage Pocket Watch",
+      "author": "Tal Swicegood",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/vintage_pocket_watch",
+      "sha256": "4ceee8c0fb589e5ad94dee89b70db18b3f48d89df095e8361ca7de18c0469836",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/vintage_pocket_watch/vintage_pocket_watch_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/vintage_pocket_watch/vintage_pocket_watch.bin",
+      "title": "Vintage Pocket Watch",
+      "author": "Tal Swicegood",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/vintage_pocket_watch",
+      "sha256": "26333e636f635d835db0982aea2dbbab5aa2943f5a9726fd390dd158d4ebb2c6",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/vintage_pocket_watch/vintage_pocket_watch.bin"
+    },
+    {
+      "dest": "polyhaven/postcard_set_01/postcard_set_01_2k.gltf",
+      "title": "Postcard Set 01",
+      "author": "James Ray Cock, Jurita Burger",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/postcard_set_01",
+      "sha256": "aadd5cade5de945c8463dc2818b3b1a73d640db0b2a377ce776c75d4b75ff654",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/postcard_set_01/postcard_set_01_2k.gltf"
+    },
+    {
+      "dest": "polyhaven/postcard_set_01/textures/postcard_set_01_rough_2k.jpg",
+      "title": "Postcard Set 01",
+      "author": "James Ray Cock, Jurita Burger",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/postcard_set_01",
+      "sha256": "566b3be336f4bee5848c2af6b005cf445047f8d2af0ad4559a54c90e1a271ea6",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/postcard_set_01/postcard_set_01_rough_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/postcard_set_01/textures/postcard_set_01_diff_2k.jpg",
+      "title": "Postcard Set 01",
+      "author": "James Ray Cock, Jurita Burger",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/postcard_set_01",
+      "sha256": "0796cf5282d8d050a8081bb9fbfa865fc737dfbd01e4b2330f98a9a1d15f0f79",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/postcard_set_01/postcard_set_01_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/postcard_set_01/textures/postcard_set_01_nor_gl_2k.jpg",
+      "title": "Postcard Set 01",
+      "author": "James Ray Cock, Jurita Burger",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/postcard_set_01",
+      "sha256": "e7c97d471bf86b85b4c71f30076d1e0bc579917086eca75038936ecf0beafdbd",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/postcard_set_01/postcard_set_01_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/postcard_set_01/postcard_set_01.bin",
+      "title": "Postcard Set 01",
+      "author": "James Ray Cock, Jurita Burger",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/postcard_set_01",
+      "sha256": "896bd95eb00e5251f34332617b29667e75a2f684efa9e3394dd6511d3e13f7b9",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/postcard_set_01/postcard_set_01.bin"
+    },
+    {
+      "dest": "polyhaven/mantel_clock_01/mantel_clock_01_2k.gltf",
+      "title": "Mantel Clock 01",
+      "author": "Yann Kervran, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/mantel_clock_01",
+      "sha256": "e817cf5e3c9e0c8bb161431c1be7f0e66a7ec364b04a9647143fa96091a8f228",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/mantel_clock_01/mantel_clock_01_2k.gltf"
+    },
+    {
+      "dest": "polyhaven/mantel_clock_01/textures/mantel_clock_01_nor_gl_2k.jpg",
+      "title": "Mantel Clock 01",
+      "author": "Yann Kervran, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/mantel_clock_01",
+      "sha256": "4934cfc7ae8d65270336b542a7129c9e98a4f8e3f3969dbbea13065cdcfd299a",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/mantel_clock_01/mantel_clock_01_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/mantel_clock_01/textures/mantel_clock_01_arm_2k.jpg",
+      "title": "Mantel Clock 01",
+      "author": "Yann Kervran, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/mantel_clock_01",
+      "sha256": "8dc8b4ac0af1f2005255638782c759035f4e21853e59682ae039e2d00a6b95d9",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/mantel_clock_01/mantel_clock_01_arm_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/mantel_clock_01/textures/mantel_clock_01_diff_2k.jpg",
+      "title": "Mantel Clock 01",
+      "author": "Yann Kervran, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/mantel_clock_01",
+      "sha256": "2004f57093b768e4c2868b5ab697c41456b46a5d640100f17d81f6afccca7e49",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/mantel_clock_01/mantel_clock_01_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/mantel_clock_01/mantel_clock_01.bin",
+      "title": "Mantel Clock 01",
+      "author": "Yann Kervran, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/mantel_clock_01",
+      "sha256": "95e2b4820daaea592aa3e354bb06aa78c2e747fb89939b54eaf51140294d40c7",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/mantel_clock_01/mantel_clock_01.bin"
+    },
+    {
+      "dest": "polyhaven/book_encyclopedia_set_01/book_encyclopedia_set_01_2k.gltf",
+      "title": "Book Encyclopedia Set 01",
+      "author": "John Malcolm",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/book_encyclopedia_set_01",
+      "sha256": "6c8c76560ca8e3c28516c0831545db903111bea069ce569579c2848a2e781bed",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/book_encyclopedia_set_01/book_encyclopedia_set_01_2k.gltf"
+    },
+    {
+      "dest": "polyhaven/book_encyclopedia_set_01/book_encyclopedia_set_01.bin",
+      "title": "Book Encyclopedia Set 01",
+      "author": "John Malcolm",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/book_encyclopedia_set_01",
+      "sha256": "bbc726698b6e40ab5537b73e082f7bb4db97b9e6f978f52cdaf763dddc85d9ba",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/book_encyclopedia_set_01/book_encyclopedia_set_01.bin"
+    },
+    {
+      "dest": "polyhaven/book_encyclopedia_set_01/textures/book_encyclopedia_set_01_paper_diff_2k.jpg",
+      "title": "Book Encyclopedia Set 01",
+      "author": "John Malcolm",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/book_encyclopedia_set_01",
+      "sha256": "507a75738825e1d9dd78dfc8f32441db67c0b1e7b116c044b47c7b9116194241",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/book_encyclopedia_set_01/book_encyclopedia_set_01_paper_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/book_encyclopedia_set_01/textures/book_encyclopedia_set_01_paper_nor_gl_2k.jpg",
+      "title": "Book Encyclopedia Set 01",
+      "author": "John Malcolm",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/book_encyclopedia_set_01",
+      "sha256": "5fdcfc21365bb9ef26e0822cdb27b5add3b4a55fe36a975a2f0fce3d061219d3",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/book_encyclopedia_set_01/book_encyclopedia_set_01_paper_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/book_encyclopedia_set_01/textures/book_encyclopedia_set_01_paper_roughness_2k.jpg",
+      "title": "Book Encyclopedia Set 01",
+      "author": "John Malcolm",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/book_encyclopedia_set_01",
+      "sha256": "8415728143b9270913ae3d79351400fbd5295bb56e6571ea8c829b68792d9ae4",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/book_encyclopedia_set_01/book_encyclopedia_set_01_paper_roughness_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/book_encyclopedia_set_01/textures/book_encyclopedia_set_01_cover_arm_2k.jpg",
+      "title": "Book Encyclopedia Set 01",
+      "author": "John Malcolm",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/book_encyclopedia_set_01",
+      "sha256": "a8586332a573a522619b65ac709f4f513660878d543510c7adf634736cf8dfa9",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/book_encyclopedia_set_01/book_encyclopedia_set_01_cover_arm_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/book_encyclopedia_set_01/textures/book_encyclopedia_set_01_cover_nor_gl_2k.jpg",
+      "title": "Book Encyclopedia Set 01",
+      "author": "John Malcolm",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/book_encyclopedia_set_01",
+      "sha256": "7585385f842380949303eba7250d2ffc23aeeb7e3928dff567d532e9b9452276",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/book_encyclopedia_set_01/book_encyclopedia_set_01_cover_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/book_encyclopedia_set_01/textures/book_encyclopedia_set_01_cover_diff_2k.jpg",
+      "title": "Book Encyclopedia Set 01",
+      "author": "John Malcolm",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/book_encyclopedia_set_01",
+      "sha256": "b75dd3ba7b39bc57cc3c7118b24c18f2b99a298c72c1955084bc5845ac6f4092",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/book_encyclopedia_set_01/book_encyclopedia_set_01_cover_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/side_table_tall_01/side_table_tall_01_2k.gltf",
+      "title": "Side Table Tall 01",
+      "author": "James Ray Cock",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/side_table_tall_01",
+      "sha256": "b0a92c70c98a2c0446d8eafcf63a3f6bb84c0de2764dedcea4db411f42ce228e",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/side_table_tall_01/side_table_tall_01_2k.gltf"
+    },
+    {
+      "dest": "polyhaven/side_table_tall_01/textures/side_table_tall_01_nor_gl_2k.jpg",
+      "title": "Side Table Tall 01",
+      "author": "James Ray Cock",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/side_table_tall_01",
+      "sha256": "a45453302e658ab5dbc9b007b068ba86070e48488b08b44c9df603597180db2e",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/side_table_tall_01/side_table_tall_01_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/side_table_tall_01/textures/side_table_tall_01_diff_2k.jpg",
+      "title": "Side Table Tall 01",
+      "author": "James Ray Cock",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/side_table_tall_01",
+      "sha256": "e3e61dafbea53d678b980698a57ed497b19113e45f2af8804790a0ba10a5b943",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/side_table_tall_01/side_table_tall_01_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/side_table_tall_01/textures/side_table_tall_01_arm_2k.jpg",
+      "title": "Side Table Tall 01",
+      "author": "James Ray Cock",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/side_table_tall_01",
+      "sha256": "6b588dea4dea704983fe2f47ca20a6cda9f9ce03fe59a025de2f7e8baa5b7ddc",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/side_table_tall_01/side_table_tall_01_arm_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/side_table_tall_01/side_table_tall_01.bin",
+      "title": "Side Table Tall 01",
+      "author": "James Ray Cock",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/side_table_tall_01",
+      "sha256": "38e09f46bb073b033aad56657f2ba2d8ae783513eb779d5a0bcbc7988991dd18",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/side_table_tall_01/side_table_tall_01.bin"
+    },
+    {
+      "dest": "polyhaven/plank_flooring/diff.jpg",
+      "title": "Plank Flooring (diff map, 2K)",
+      "author": "Dario Barresi, Dimitrios Savva, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/plank_flooring",
+      "sha256": "3ad1359f43a2dce3052bfc2c38d223682bb30ec77ca615a063b5b12f5b0a77af",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/plank_flooring/plank_flooring_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/american_walnut_veneer/diff.jpg",
+      "title": "American Walnut Veneer (diff map, 2K)",
+      "author": "Jenelle van Heerden",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/american_walnut_veneer",
+      "sha256": "278ed3382b3a28a95861a84ccf4f3b591abf96a203698152064d65fcc6425271",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/american_walnut_veneer/american_walnut_veneer_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/floral_jacquard/diff.jpg",
+      "title": "Floral Jacquard (diff map, 2K)",
+      "author": "colormass, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/floral_jacquard",
+      "sha256": "2c9af7d2a223df245f33cc8acd8362a0faff90aec507cc06a5c46c815016fb62",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/floral_jacquard/floral_jacquard_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/floral_jacquard/rough.jpg",
+      "title": "Floral Jacquard (rough map, 2K)",
+      "author": "colormass, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/floral_jacquard",
+      "sha256": "732a087c847f20c8c6372211ecfb3d0d1455a5bbd8c8d395aba3d1809e8b21f8",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/floral_jacquard/floral_jacquard_rough_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/floral_jacquard/nor_gl.jpg",
+      "title": "Floral Jacquard (nor_gl map, 2K)",
+      "author": "colormass, Rico Cilliers",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/floral_jacquard",
+      "sha256": "b228b0891aabc8c5434b775766520c002c6585d495fab8437a9f8b2c5b139b26",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/floral_jacquard/floral_jacquard_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/leather_red_02/diff.jpg",
+      "title": "Leather Red 02 (diff map, 2K)",
+      "author": "Rob Tuytel",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/leather_red_02",
+      "sha256": "a900630e541991b7ee63aab820f425610fbf2db32f7ae6c63b6ef4fc2325ab60",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/leather_red_02/leather_red_02_coll1_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/leather_red_02/rough.jpg",
+      "title": "Leather Red 02 (rough map, 2K)",
+      "author": "Rob Tuytel",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/leather_red_02",
+      "sha256": "0dd604b493aef28488a7f8a4c86846c1ec7313c16bd5198a9deec8a7f880b43d",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/leather_red_02/leather_red_02_rough_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/leather_red_02/nor_gl.jpg",
+      "title": "Leather Red 02 (nor_gl map, 2K)",
+      "author": "Rob Tuytel",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/leather_red_02",
+      "sha256": "be8e0525fe6cc7d0215d4fc81f2761a2f8485f85baad3bcd4b9bcdeb843ea925",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/leather_red_02/leather_red_02_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/black_walnut_veneer_01/diff.jpg",
+      "title": "Black Walnut Veneer 01 (diff map, 2K)",
+      "author": "Jenelle van Heerden",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/black_walnut_veneer_01",
+      "sha256": "131a5322d045f86dcf6fa413cdf34f230f8f7f96d820221a1637647108bf2304",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/black_walnut_veneer_01/black_walnut_veneer_01_diff_2k.jpg"
+    },
+    {
+      "dest": "polyhaven/black_walnut_veneer_01/nor_gl.jpg",
+      "title": "Black Walnut Veneer 01 (nor_gl map, 2K)",
+      "author": "Jenelle van Heerden",
+      "licence": "CC0",
+      "page": "https://polyhaven.com/a/black_walnut_veneer_01",
+      "sha256": "8970308650c9e8b44b3fad5f14459239869a8dc74db40d00b6a095b38e7e24e9",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/black_walnut_veneer_01/black_walnut_veneer_01_nor_gl_2k.jpg"
+    },
+    {
+      "dest": "met/melencolia-336228.jpg",
+      "title": "Melencolia I",
+      "author": "Albrecht Duerer",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/336228",
+      "sha256": "ea8e4a7d78d56d7b1bfec95c640470a3a768b3f0f9d7bdb520c402791c27a330",
+      "url": "https://images.metmuseum.org/CRDImages/dp/original/DP820348.jpg",
+      "note": "Met Open Access (CC0)"
+    },
+    {
+      "dest": "met/jerome-336229.jpg",
+      "title": "Saint Jerome in His Study",
+      "author": "Albrecht Duerer",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/336229",
+      "sha256": "d807400e3ae7128613795c41bd62dfef422b6f8961f450ce1042f6464451d767",
+      "url": "https://images.metmuseum.org/CRDImages/dp/original/DP820349.jpg",
+      "note": "Met Open Access (CC0)"
+    },
+    {
+      "dest": "met/knight-336223.jpg",
+      "title": "Knight, Death and the Devil",
+      "author": "Albrecht Duerer",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/336223",
+      "sha256": "fc188806e199beb31d2a3b2b745ebfcf10f3b63029643c04c1513a8edac26a27",
+      "url": "https://images.metmuseum.org/CRDImages/dp/original/DP102226.jpg",
+      "note": "Met Open Access (CC0)"
+    },
+    {
+      "dest": "met/aristotle-437394.jpg",
+      "title": "Aristotle with a Bust of Homer",
+      "author": "Rembrandt",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/437394",
+      "sha256": "55dc9232dd6b412cea4964f19e98a56f6bd1fa7213e4e947834413cf65d8776a",
+      "url": "https://images.metmuseum.org/CRDImages/ep/original/DP-30758-001.jpg",
+      "note": "Met Open Access (CC0)"
+    },
+    {
+      "dest": "met/gulf-stream-11122.jpg",
+      "title": "The Gulf Stream",
+      "author": "Winslow Homer",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/11122",
+      "sha256": "67fd3b2bb4e07f41dc1991c0e538981ba187ab6e3c08722636f6c347f0611b70",
+      "url": "https://images.metmuseum.org/CRDImages/ad/original/DP-20821-001.jpg",
+      "note": "Met Open Access (CC0)"
+    },
+    {
+      "dest": "commons/longfellow_1851/letter_spread.jpg",
+      "title": "Frances (Appleton) Longfellow to Emmeline (Austin) Wadsworth, 22 September 1851",
+      "author": "Fanny (Appleton) Longfellow",
+      "licence": "public domain",
+      "page": "https://commons.wikimedia.org/wiki/File:Frances_(Appleton)_Longfellow_to_Emmeline_(Austin)_Wadsworth,_22_September_1851_(1a6fb63e-4035-449d-a2fb-c2110e3af2e6).jpg",
+      "sha256": "7616d77d96aa7ddf4d6a7e4aaeb1277fdf43b55b06a7d33b2c5fca7325bb68c8",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/98/Frances_%28Appleton%29_Longfellow_to_Emmeline_%28Austin%29_Wadsworth%2C_22_September_1851_%281a6fb63e-4035-449d-a2fb-c2110e3af2e6%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+    },
+    {
+      "dest": "sketchfab/monstera/monstera_1k.glb",
+      "title": "Monstera Deliciosa Potted Mid-Century plant",
+      "author": "Giora",
+      "licence": "CC BY 4.0",
+      "page": "https://sketchfab.com/3d-models/1ab9bf841df04c07b1819be596327629",
+      "sha256": "8e9384925b0f60cd052cc5569ad4602c272eafc94ce8c749a2328e63e4c72fc9",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "sketchfab/victorian_desk/victorian_desk_2k.glb",
+      "title": "Victorian Desk",
+      "author": "Faheem Yusuf",
+      "licence": "CC BY 4.0",
+      "page": "https://sketchfab.com/3d-models/ac061b3de2b9480d8ca175e9fdc0c785",
+      "sha256": "06410700fda784cfb15003ea333aea75be3cf1062d6ad4e45ced5e9092b3ef42",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "sketchfab/chair_england_1750/chair_4k.glb",
+      "title": "Chair (England) 1750-60",
+      "author": "The Smithsonian Institution",
+      "licence": "CC0",
+      "page": "https://sketchfab.com/3d-models/40688b848b6044f6af306ecdf2b8b105",
+      "sha256": "85657830b21764544a94357f03f49357ab41d6277d227f30d09b2760a7222214",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "sketchfab/globe_victorian/globe_victorian_4k.glb",
+      "title": "Globe on a wooden stand in Victorian style",
+      "author": "Rylae Shylna",
+      "licence": "CC BY 4.0",
+      "page": "https://sketchfab.com/3d-models/54245a6f6f8a425d93dfa3892445cab4",
+      "sha256": "615a0bf02c8596a5f4d230f45c3d1693e8d477fd2883eb673f20fd7704bd494a",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "sketchfab/bankers_lamp/bankers_lamp_1k.glb",
+      "title": "Lamp (Bankers Lamp)",
+      "author": "Patrick Matthew",
+      "licence": "CC BY 4.0",
+      "page": "https://sketchfab.com/3d-models/fb7b850b5aa04cb48999f4cd58d7eaca",
+      "sha256": "8fe5a4c2f8f1a6395867957a67e8484d9db06e63977d006ac4e24a00f6d96633",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "sketchfab/vintage_desk_assets/vintage_desk_assets.glb",
+      "title": "Vintage Desk Assets",
+      "author": "Hobu",
+      "licence": "CC BY 4.0",
+      "page": "https://sketchfab.com/3d-models/280db303f4d64354aa3e7b71f4652813",
+      "sha256": "2716373647bb93a9e55ec6d82ee190e6f828a1ad86f8c002c3c39535af9607db",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "sketchfab/letter_wax/letter_wax.glb",
+      "title": "Letter",
+      "author": "Incg5764",
+      "licence": "CC BY 4.0",
+      "page": "https://sketchfab.com/3d-models/303b287819a84f7496bd92f5d69710c7",
+      "sha256": "82479fe54a9842d9f8c827129e5459973dd67d4fe19aa46c57101afed02c5bf6",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "sketchfab/round_glasses/round_glasses.glb",
+      "title": "Metal Round Glasses",
+      "author": "rikokenz",
+      "licence": "CC BY 4.0",
+      "page": "https://sketchfab.com/3d-models/f9128bd394214539af2ac80e4204bd35",
+      "sha256": "db5370c9b07a3ac6960605f942cc0e1d83b257cd46cbfad102cdf69a65a556f4",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "sketchfab/sand_blotter/sand_blotter.glb",
+      "title": "Sand Blotter EOA:2022.154 OE414",
+      "author": "Portland Museum",
+      "licence": "CC BY 4.0",
+      "page": "https://sketchfab.com/3d-models/51ed4daff7a147ee859a85cbbbea1f09",
+      "sha256": "eb83562b92bb778ce0a8b0af4053d7c623c213213718d9af1c872f88bf2371b6",
+      "manual": true,
+      "note": "Sketchfab downloads need an account: placed by hand"
+    },
+    {
+      "dest": "met/DP229989.jpg",
+      "title": "Silk Animal Carpet, photo DP229989",
+      "author": "The Metropolitan Museum of Art",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/446642",
+      "sha256": "0945c7763672f3ed643118a4ad4b353ddc921c8c11faa0869709cbf5bd82f2e1",
+      "url": "https://images.metmuseum.org/CRDImages/is/original/DP229989.jpg",
+      "note": "Met Open Access (CC0); source of derived/rug-met-446642.png"
+    },
+    {
+      "dest": "met/DP306739.jpg",
+      "title": "Willow (William Morris, 1874), photo DP306739",
+      "author": "The Metropolitan Museum of Art",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/398344",
+      "sha256": "5bf8dc7aabc2d3e24714c8a2da2194e10f03d6e1475b00fc5591d456d1387b97",
+      "url": "https://images.metmuseum.org/CRDImages/dp/original/DP306739.jpg",
+      "note": "Met Open Access (CC0); source of derived/wallpaper-willow.png"
+    },
+    {
+      "dest": "derived/rug-met-446642.png",
+      "title": "Silk Animal Carpet, flattened",
+      "author": "made here from the Met's photo DP229989",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/446642",
+      "sha256": "3b3cc450b00fa3a4e4bc7e471047de339d322f1e5cc380c973f37d6cb0d20507",
+      "manual": true,
+      "note": "Derived, so placed by hand: made from met/DP229989.jpg, and reproduced byte for byte on 2026-11-16 by the command in `derive`",
+      "derive": {
+        "from": "met/DP229989.jpg",
+        "command": "blender -b --factory-startup --python-exit-code 1 -P packages/site/rooms/shared/rug_from_photo.py -- --src <inputs>/met/DP229989.jpg --out <inputs>/derived/rug-met-446642.png --corners 180,152 2874,172 2850,3828 168,3842 --width 2700"
+      }
+    },
+    {
+      "dest": "derived/wallpaper-willow.png",
+      "title": "Willow wallpaper tile",
+      "author": "made here from the Met's photo DP306739 (William Morris, 1874)",
+      "licence": "public domain",
+      "page": "https://www.metmuseum.org/art/collection/search/398344",
+      "sha256": "3876b1361b2efea4f5b04c2181eb4fe81fd11543aa8b53984fc9b67cd7dfdf8e",
+      "manual": true,
+      "note": "Derived, so placed by hand: made from met/DP306739.jpg, and reproduced byte for byte on 2026-11-16 by the command in `derive`",
+      "derive": {
+        "from": "met/DP306739.jpg",
+        "command": "blender -b --factory-startup --python-exit-code 1 -P packages/site/rooms/shared/wallpaper_from_scan.py -- --src <inputs>/met/DP306739.jpg --out <inputs>/derived/wallpaper-willow.png --crop 190,200,2500,3700 --period-y 2453 --contrast 1.4"
+      }
+    }
+  ]
+}

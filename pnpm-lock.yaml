@@ -50,6 +50,9 @@ importers:
       github-slugger:
         specifier: 2.0.0
         version: 2.0.0
+      gltfpack:
+        specifier: 1.3.0
+        version: 1.3.0
       happy-dom:
         specifier: 21.0.4
         version: 21.0.4
@@ -2143,6 +2146,11 @@ packages:
   globby@16.2.4:
     resolution: {integrity: sha512-c8B/VNLmxRcmqqenRA9t+9IyOjf9+V6lTxPaUJLqOCONdQkWZ0ETYgX0qbtJqPsgCNusT9MZ5Jeidw8Eb9tn2g==}
     engines: {node: '>=20'}
+
+  gltfpack@1.3.0:
+    resolution: {integrity: sha512-YGt2vPUa3OZuGh4IqbKdorwPyr9PcKKVRHtxOcfrHz3c83EFA6WOJVQMzRej6gPbCWcVnrZ8RDKduxaGclW/xQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
@@ -5660,6 +5668,8 @@ snapshots:
       micromatch: 4.0.8
       slash: 5.1.0
       unicorn-magic: 0.4.0
+
+  gltfpack@1.3.0: {}
 
   gopd@1.2.0: {}
 

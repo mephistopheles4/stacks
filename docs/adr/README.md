@@ -169,4 +169,7 @@ Two other files hold what these deliberately do not:
 | [0147](./0147-oreilly-is-removed.md) | O'Reilly is removed as a metadata provider (supersedes 0038) |
 | [0148](./0148-stacks-has-a-threat-model-boundaries-first-capped-at-3000-words.md) | Stacks has a threat model, boundaries first, capped at 3,000 words (G72) |
 | [0150](./0150-the-agent-docs-hold-what-holds-now.md) | The agent docs hold what holds now, and the history lives in `docs/log/` (supersedes parts of 0040 and 0024) |
+| [0160](./0160-gltfpack-is-a-pinned-root-devdependency-run-through-node.md) | gltfpack is a pinned root devDependency, run through node (the room's pack step) |
+| [0161](./0161-the-room-is-committed-baked-with-a-record-and-fetchable-inputs.md) | The room is committed baked, with a build record and fetchable inputs |
+| [0162](./0162-the-rooms-directory-is-allowed-on-its-sources-file.md) | The rooms directory is allowed on its SOURCES.md, and G13 admits CC BY (proposed) |
 | [0163](./0163-wasm-is-allowed-on-the-page-and-eval-is-confined-to-the-ktx2-worker.md) | WebAssembly is allowed on the page, and eval is confined to the KTX2 worker (amends 0065) |
