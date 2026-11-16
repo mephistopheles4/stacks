@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { extractAll, expectFound, filesUnder, readRepoFile } from './repo.ts';
+import { codeOf, extractAll, expectFound, filesUnder, readRepoFile } from './repo.ts';
 
 /** `process.env['KEY']` and `process.env.KEY`. Dynamic `process.env[key]` — the
  *  `.env` loader's own indirection — has no literal to capture, so it is
@@ -107,5 +107,45 @@ describe('G9 — env contract', () => {
     // would keep them equal and silently break every existing .env.
     expect(keysDocumented()).toContain('STACKS_VAULT');
     expect(keysReadInCode()).toContain('STACKS_VAULT');
+  });
+});
+
+/**
+ * Room spec S13.6, C14: the BrowserStack key rules, held in the entries that must carry them.
+ * The decisions are tested in `scripts/lib/browserstack-key.test.ts`; what no unit test can see is
+ * an entry that stopped calling them, so these read the entries' code.
+ */
+describe('G9 — the BrowserStack key stays out of the root .env and out of wrangler', () => {
+  const entries = [
+    'scripts/deploy.ts',
+    'scripts/deploy-ask.ts',
+    'scripts/preview-fixture.ts',
+    'scripts/browserstack-local.ts',
+    'scripts/turnstile.ts',
+    'scripts/evals-ask.ts',
+    'scripts/ask-status.ts',
+  ];
+
+  it.each(entries)('%s refuses a root .env that names a BROWSERSTACK_ variable', (entry) => {
+    const code = codeOf(entry);
+    expect(code).toContain('browserstackRootRefusalsOnDisk()');
+    expect(code).toMatch(
+      /if \(keyInRootEnv\.length > 0\) (\{\n\s+console\.error[\s\S]*?process\.exit\(1\)|fail\()/,
+    );
+  });
+
+  it('hands wrangler an environment without one, through the one function every upload uses', () => {
+    expect(codeOf('scripts/lib/upload.ts')).toContain('dropBrowserstack(shell)');
+  });
+
+  it('reads the key from process.env in the launcher alone, and never from a file path', () => {
+    const launcher = codeOf('scripts/browserstack-local.ts');
+    expect(launcher).toContain("process.env['BROWSERSTACK_ACCESS_KEY']");
+    expect(launcher).not.toMatch(/browserstack\.env/);
+    // No script but the launcher reads the key out of the environment.
+    const others = filesUnder('scripts', ['.ts'])
+      .filter((path) => !path.endsWith('.test.ts') && path !== 'scripts/browserstack-local.ts')
+      .filter((path) => /process\.env\[['"]BROWSERSTACK_/.test(codeOf(path)));
+    expect(others).toEqual([]);
   });
 });

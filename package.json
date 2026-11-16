@@ -33,6 +33,7 @@
     "trend:sync": "tsx scripts/trend-sync.ts",
     "deploy:site": "tsx scripts/deploy.ts",
     "deploy:ask": "tsx scripts/deploy-ask.ts",
+    "preview:fixture": "tsx scripts/preview-fixture.ts",
     "evals:ask": "tsx scripts/evals-ask.ts",
     "ask:status": "tsx scripts/ask-status.ts",
     "turnstile": "tsx scripts/turnstile.ts"

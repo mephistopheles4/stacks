@@ -87,7 +87,10 @@ optional-Plausible spec).
 - *Repo.* All vault access goes through the adapter (invariant 4, G1). G1 reads
   import specifiers under `packages/` and `scripts/`, not `gates/` or run-time reach;
   its allowlist admits `scripts/ios-swipe-check.ts`, which reads the BrowserStack
-  credential file and no note.
+  credential file and no note, and six T6 scripts, none reading a note:
+  `scripts/browserstack-local.ts`, `scripts/preview-fixture.ts`,
+  `scripts/lib/browserstack-key.ts`, `scripts/lib/browserstack-local.ts`,
+  `scripts/lib/confinement-probe.ts`, `scripts/lib/fixture-dist.ts`.
 - *Host.* None. Whatever is uploaded is public.
 
 **Residual:** What you publish.
@@ -111,6 +114,7 @@ Cloudflare Pages (`pnpm deploy:site`), the Worker bundle and its two secrets
 - *Repo.* `deploy:ask` reads the live AI switch first and refuses to turn AI
   back on without `--ai-on`, and refuses log sampling below every line. It checks
   the Worker's own settings and never the gateway's.
+- *Repo.* `preview:fixture` uploads a fixture build, never to `main`.
 
 **Residual:** What you publish. The rule it rests on: the Cloudflare
 token for Terraform has an expiry, is set only on the command, and never enters

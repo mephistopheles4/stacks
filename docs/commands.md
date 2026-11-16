@@ -531,6 +531,30 @@ error a second rotation gets, a site key's exact length, wrangler's output lines
 `pnpm exec` restores a `NODE_OPTIONS` from `.npmrc` into wrangler's environment are unverified until
 the first run, and each fails closed.
 
+## `pnpm preview:fixture` and `scripts/browserstack-local.ts` — the room on a real device
+
+[ADR-0165](adr/0165-the-fixture-preview-and-the-tunnel-launcher-carry-a-fixture-build-only.md). The
+owner's to start and stop; neither is a gate. **Both carry the fixture build and nothing else**: each
+builds the 50-book vault into a scratch `dist/` under `artifacts/room-devices/`, runs G20's rules and
+the fixture-marker check on it, and serves or uploads that folder alone. ⚠️ They stage the fixture into
+`packages/site/public/` as `gate:public` does, so a real deploy builds after them, as `deploy:site` does.
+
+```sh
+pnpm preview:fixture --dry-run           # build, judge, print the upload command
+pnpm preview:fixture [--probe [--control]]   # upload; the probe at the worker's path; --control must come back RED
+pnpm preview:fixture --delete            # a preview is public until deleted: delete it once read
+pnpm exec tsx scripts/browserstack-local.ts --binary <path> [--port 8766]   # the key is already in this shell, see below
+```
+
+The preview branch is the constant `preview-fixture`; `main` and the production branch are refused. Read
+the `_headers` block on `/rooms/basis/ktx2-worker.js`, the probe (`/probe.html`: green is `eval` reached and
+`fetch`, `worker` and `importScripts` blocked) and the room's transfer size there. The launcher's `--only`
+names `localhost`, `127.0.0.1` and `bs-local.com` on one port, and sends the key by a temp `--config-file`
+(its key name `key` is unconfirmed). **Set the key without typing it**, or the shell keeps it in its history: PowerShell `$env:BROWSERSTACK_ACCESS_KEY = Read-Host -MaskInput`, bash `read -rs BROWSERSTACK_ACCESS_KEY; export BROWSERSTACK_ACCESS_KEY`; likewise the username, and clear both in that shell when the run ends, as every later command in it inherits them. **The key** is otherwise read by the launcher alone: the
+deploys, `preview:fixture` and the launcher refuse a root `.env` or `.env.local` naming a `BROWSERSTACK_`
+variable, and `uploadEnv` drops them (G9). ⚠️ The binary's ports (45690, 45691) are fixed: on a machine
+with a hidden Windows reservation over them it dies with `SYS_CONFLICT`, though nothing shows as using them.
+
 ## `pnpm worktree <branch>`
 
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —

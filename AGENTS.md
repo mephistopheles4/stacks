@@ -228,6 +228,7 @@ pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
 pnpm deploy:ask          # the Ask the library Worker: main only   (--dry-run, --ai-off, --ai-on, --gateway <id>)
+pnpm preview:fixture     # the fixture site on a Pages preview   (--probe, --control, --delete)
 pnpm evals:ask           # the S9 evals, live, through a test gateway   (--gateway <id>, --site <dir>)
 pnpm ask:status          # the Worker's daily totals, from Workers Logs   (--record, --day <date>)
 pnpm turnstile           # the Ask widget: create it once, rotate its secret later   (--create, --sync, --dry-run)
