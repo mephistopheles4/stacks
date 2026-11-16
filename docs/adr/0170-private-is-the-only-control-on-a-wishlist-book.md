@@ -22,7 +22,7 @@
    goes down.
 4. **A cover within the shelf cap is now read for metadata.** It is copied byte for byte, and a
    cover the owner photographed carries what a camera wrote, location included. The inspector's
-   new `cover-metadata` rule reads `covers/` for EXIF, XMP, IPTC, PNG text and a Photoshop block, as
+   new `cover-metadata` rule reads `covers/` for EXIF, XMP, IPTC, PNG text, a Photoshop block and a JPEG comment, as
    `held-metadata` reads `held-covers/`, and a file sharp cannot read is refused too. It lives in
    the one inspector, so `gate:public` and `deploy:site`'s check of the real `dist/` both run it,
    and a deploy that finds one, wishlist book or not, refuses until the cover is saved again

@@ -72,8 +72,8 @@ optional-Plausible spec).
   removes it from the next deployment only.
 - *Repo.* G20 (`public-build-artifact`) inspects the real `dist/` before upload
   for private books, orphan covers, vault paths and unknown keys, refuses a cover
-  within the cap (copied as is) carrying EXIF, XMP, IPTC, PNG text or a
-  Photoshop block, or unreadable, by sharp's report, and holds the
+  within the cap (copied as is) carrying EXIF, XMP, IPTC, PNG text, a
+  Photoshop block or a JPEG comment, or unreadable, by sharp's report, and holds the
   site's CSP (`connect-src 'self'` unless analytics is on; `script-src` with
   `'wasm-unsafe-eval'` and never `'unsafe-eval'`; `worker-src 'self'`; no `blob:`).
   It reads key names,

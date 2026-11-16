@@ -676,8 +676,34 @@ describe('G20 — every rule goes red', () => {
       text,
       plain.subarray(2),
     ]);
-    expect((await sharp(comment).metadata()).exif, 'sharp reports nothing for it').toBeUndefined();
     expect(hasJpegComment(comment)).toBe(true);
+
+    // The same segment reached by the other two branches of the walk: after the first segment
+    // (skipped by its length), and after the scan data, just before the end of image.
+    const segment = Buffer.concat([Buffer.from([0xff, 0xfe, 0x00, text.length + 2]), text]);
+    const firstEnd = 2 + 2 + plain.readUInt16BE(4);
+    expect(plain[2], 'a segment follows the start of image').toBe(0xff);
+    expect(
+      hasJpegComment(
+        Buffer.concat([plain.subarray(0, firstEnd), segment, plain.subarray(firstEnd)]),
+      ),
+    ).toBe(true);
+    expect(
+      plain.subarray(-2).equals(Buffer.from([0xff, 0xd9])),
+      'it ends with an end of image',
+    ).toBe(true);
+    expect(
+      hasJpegComment(Buffer.concat([plain.subarray(0, -2), segment, plain.subarray(-2)])),
+    ).toBe(true);
+
+    // Every one of them is invisible to sharp's own metadata, which is the whole reason for the walk.
+    const seen = await sharp(comment).metadata();
+    expect([seen.exif, seen.xmp, seen.iptc, seen.comments]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
 
     await writeFile(join(dist, 'covers', 'a.jpg'), comment);
     const said = (await inspect()).problems.map((problem) => problem.message).join('\n');

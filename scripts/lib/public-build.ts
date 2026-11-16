@@ -1337,8 +1337,9 @@ function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildRe
 
 /**
  * The five kinds of embedded metadata sharp reports that can name a place or a person: EXIF, XMP,
- * IPTC, PNG text and a Photoshop block. One list for the shelf's covers and the held copies, so the
- * two rules cannot come to disagree about what a camera wrote.
+ * IPTC, PNG text and a Photoshop block. One list for the shelf's covers and the held copies. The
+ * shelf's rule adds a JPEG comment segment (`hasJpegComment`); a held copy is always re-encoded, so
+ * it needs only these five.
  */
 function embeddedMetadata(metadata: Metadata): string[] {
   return [
