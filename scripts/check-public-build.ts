@@ -28,12 +28,12 @@ import sharp from 'sharp';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
 import { HELD_COVER_EDGE, MAX_COVER_EDGE } from '../packages/core/src/covers/cover-budget.ts';
 import { coverFileName } from '../packages/core/src/covers/cover-path.ts';
-import { SHELVED_STATUSES } from '../packages/core/src/shelf-order.ts';
 import {
   inspectPublicBuild,
   NOTE_BODY_CANARY,
   notesPresence,
   THOUGHTS_SHIP_PHRASE,
+  WISHLIST_SHIP_PHRASE,
 } from './lib/public-build.ts';
 import { PUBLISH_HELD_COVERS, PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
@@ -94,12 +94,38 @@ if (!planted) {
 }
 console.log(`ship phrase planted in a fixture's Thoughts: ${THOUGHTS_SHIP_PHRASE}`);
 
+// 1b'. The same, for a wishlist book (#603): a wishlist fixture that is not private must carry its
+// own phrase inside `## Thoughts`, or the check that a wishlist book's notes ship proves nothing.
+const wishlistPlanted = walk(VAULT)
+  .filter((file) => extname(file) === '.md')
+  .some((file) => {
+    const text = readFileSync(file, 'utf8');
+    if (!/^status: wishlist\s*$/m.test(text) || /^private:/m.test(text)) return false;
+    const lines = text.split(/\r?\n/);
+    const start = lines.findIndex((line) => line.trimEnd() === '## Thoughts');
+    if (start === -1) return false;
+    const rest = lines.slice(start + 1);
+    const end = rest.findIndex((line) => /^#{1,2}\s/.test(line));
+    return end !== -1 && rest.slice(0, end).join('\n').includes(WISHLIST_SHIP_PHRASE);
+  });
+
+if (!wishlistPlanted) {
+  console.error(
+    `FAILED: no wishlist fixture that is not private carries "${WISHLIST_SHIP_PHRASE}" inside ` +
+      '`## Thoughts`.\nWithout it the check that a wishlist book publishes would pass no matter ' +
+      'what the build shipped.',
+  );
+  process.exit(1);
+}
+console.log(`ship phrase planted in a wishlist fixture's Thoughts: ${WISHLIST_SHIP_PHRASE}`);
+
 // 1c. The held tier's vacuity guard (spec §3.3, §5). Each held-tier claim this
 // gate and the inspector make is about a fixture cover that would break it:
 // a published cover over the held cap (the resize), a published one carrying
-// EXIF or XMP (the re-encode), and a cover over the shelf cap on a private book
-// and on a wishlist book (the filter). Without all four, a build that staged
-// nothing, or copied everything, would pass. Read through the adapter, never
+// EXIF or XMP (the re-encode), a published wishlist book's cover over the shelf
+// cap (#603: `private` is the only control, so it ships a held copy as any
+// does), and a cover over the shelf cap on a private book (the filter). Without
+// all four, a build that staged nothing, or copied everything, would pass. Read through the adapter, never
 // by parsing the notes by hand (invariant 4).
 console.log('\nreading fixture covers — any skip warnings below are the fixtures’ own, by design');
 const vault = new ObsidianAdapter(VAULT);
@@ -115,7 +141,7 @@ const fixtureCovers = await Promise.all(
     return {
       title: book.title,
       name,
-      published: SHELVED_STATUSES.has(book.status) && book.private !== true,
+      published: book.private !== true,
       privateBook: book.private === true,
       wishlist: book.status === 'wishlist',
       edge: metadata === undefined ? 0 : Math.max(metadata.width, metadata.height),
@@ -140,7 +166,10 @@ const heldCases: readonly (readonly [string, boolean])[] = [
     'a private book with a cover over the shelf cap',
     mustNotHold.some((cover) => cover.privateBook),
   ],
-  ['a wishlist book with a cover over the shelf cap', mustNotHold.some((cover) => cover.wishlist)],
+  [
+    'a published wishlist book with a cover over the shelf cap',
+    wantHeld.some((cover) => cover.wishlist),
+  ],
 ];
 const unplanted = heldCases.filter(([, present]) => !present).map(([what]) => what);
 if (unplanted.length > 0) {
@@ -215,10 +244,18 @@ if (presence.problem !== undefined) {
 }
 console.log(presence.observation);
 
+// 4b. A wishlist book that is not private publishes its Thoughts too (#603, C8).
+const wishlistPresence = notesPresence(staged, PUBLISH_THOUGHTS, WISHLIST_SHIP_PHRASE);
+if (wishlistPresence.problem !== undefined) {
+  console.error(`\nFAILED: ${wishlistPresence.problem}`);
+  process.exit(1);
+}
+console.log(`wishlist: ${wishlistPresence.observation ?? ''}`);
+
 // 5. The held tier's presence half, and the filter. The inspector held every
 // file in `held-covers/` to the cap, to no metadata and to a book that names
 // it; this proves each published cover over the shelf cap got its copy, named
-// by its book, and that the private and wishlist books' covers got none.
+// by its book, and that the private books' covers got none.
 // Here and not in the inspector, which cannot know which vault built the folder.
 const heldDir = join(DIST, 'held-covers');
 const shippedBooks = (

@@ -27,7 +27,11 @@ import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.
 import { parseNote } from '../packages/core/src/frontmatter.ts';
 import { buildLibrary } from '../packages/core/src/library.ts';
 import { publish, PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
-import { NOTE_BODY_CANARY, THOUGHTS_SHIP_PHRASE } from '../scripts/lib/public-build.ts';
+import {
+  NOTE_BODY_CANARY,
+  THOUGHTS_SHIP_PHRASE,
+  WISHLIST_SHIP_PHRASE,
+} from '../scripts/lib/public-build.ts';
 import { walk } from '../scripts/lib/walk.ts';
 import { REPO_ROOT } from './repo.ts';
 
@@ -36,6 +40,7 @@ import { REPO_ROOT } from './repo.ts';
 // and where it is searched for is worse than none: both halves keep passing.
 const CANARY = NOTE_BODY_CANARY;
 const SHIP_PHRASE = THOUGHTS_SHIP_PHRASE;
+const WISH_PHRASE = WISHLIST_SHIP_PHRASE;
 const FIXTURE_VAULT = join(REPO_ROOT, 'fixtures', 'vault');
 
 let assets: string;
@@ -129,7 +134,10 @@ const PLANTED = {
   split: 'The Tidal Engine.md',
   /** `private: true`, with the canary inside its Thoughts. */
   private: 'A Book Kept Back.md',
-  /** `status: wishlist`, with the canary inside its Thoughts. */
+  /**
+   * `status: wishlist` and not private: it publishes like any other book (#603), so its ship phrase
+   * is inside `## Thoughts` and the canary below the section.
+   */
   wishlist: 'The Quiet Protocol.md',
   /** An embed in its Thoughts, which withholds the whole section. */
   embed: 'Lantern Work.md',
@@ -210,16 +218,22 @@ describe('G2 — the Thoughts split is planted before anything is asserted about
     expect(thoughts?.after).toContain(CANARY);
   });
 
-  it('has a private book and a wishlist book, each with the canary in its Thoughts', async () => {
+  it('has a private book with the canary in its Thoughts, and a wishlist book that ships its own', async () => {
     const vault = new ObsidianAdapter(FIXTURE_VAULT);
     const books = await vault.listBooks();
     const named = (name: string) => books.find((book) => basename(book.sourcePath) === name);
 
     expect(named(PLANTED.private)?.private).toBe(true);
+    expect(thoughtsOf(await readFixture(PLANTED.private))?.section).toContain(CANARY);
+
     expect(named(PLANTED.wishlist)?.status).toBe('wishlist');
-    for (const name of [PLANTED.private, PLANTED.wishlist]) {
-      expect(thoughtsOf(await readFixture(name))?.section, name).toContain(CANARY);
-    }
+    expect(named(PLANTED.wishlist)?.private).not.toBe(true);
+    const wished = thoughtsOf(await readFixture(PLANTED.wishlist));
+    expect(wished?.section).toContain(WISH_PHRASE);
+    expect(wished?.section, 'the canary belongs below the section, not in it').not.toContain(
+      CANARY,
+    );
+    expect(wished?.after).toContain(CANARY);
   });
 
   it('has an embed inside a `## Thoughts` section, with the canary beside it', async () => {
@@ -266,6 +280,7 @@ describe('G2 — the Thoughts split is planted before anything is asserted about
 
     for (const name of [
       PLANTED.split,
+      PLANTED.wishlist,
       PLANTED.embed,
       PLANTED.unclosedFence,
       PLANTED.noThoughts,
@@ -336,20 +351,22 @@ describe.each([
     }
   });
 
-  it('stages no notes file for any book but the split one', async () => {
-    // One assertion for six planted cases: the private and wishlist books, the
-    // embed, the unclosed fence, the book with no Thoughts and the quoted
-    // description. A filtered book
+  it('stages no notes file for any book but the split one and the wishlist one', async () => {
+    // One assertion for six planted cases: the private book, the embed, the
+    // unclosed fence, the book with no Thoughts and the quoted description, with
+    // the split and the wishlist book the two that ship. A filtered book
     // has no id in a public `library.json` to look a file up by, so the folder
-    // is held to an allowlist of one rather than searched for each case.
+    // is held to an allowlist of two rather than searched for each case.
     const { ids } = await publishSplit();
-    const allowed = `${ids.get(PLANTED.split) ?? PLANTED.split}.json`;
+    const allowed = new Set(
+      [PLANTED.split, PLANTED.wishlist].map((name) => `${ids.get(name) ?? name}.json`),
+    );
     const fixtureFor = new Map([...ids].map(([name, id]) => [`${id}.json`, name]));
 
     const notesDir = join(assets, 'notes');
     const strays = walk(notesDir)
       .map((file) => relative(notesDir, file).split('\\').join('/'))
-      .filter((name) => name !== allowed)
+      .filter((name) => !allowed.has(name))
       .map((name) => `${name} (${fixtureFor.get(name) ?? 'no fixture'})`);
 
     expect(strays, 'notes files no planted case may produce').toEqual([]);
@@ -377,6 +394,19 @@ describe.each([
     expect(notes.paragraphs.join('\n')).toContain(SHIP_PHRASE);
   });
 
+  it.runIf(PUBLISH_THOUGHTS)(
+    "ships the Thoughts in the wishlist book's notes file, and not what is below them",
+    async () => {
+      const { ids } = await publishSplit();
+      const file = join(assets, 'notes', `${ids.get(PLANTED.wishlist) ?? PLANTED.wishlist}.json`);
+      const notes = JSON.parse(await readFile(file, 'utf8')) as { paragraphs: string[] };
+
+      expect(Object.keys(notes)).toEqual(['paragraphs']);
+      expect(notes.paragraphs.join('\n')).toContain(WISH_PHRASE);
+      expect(notes.paragraphs.join('\n')).not.toContain(CANARY);
+    },
+  );
+
   it('takes the file away when the section is withheld, and again when it is removed', async () => {
     // The rest of spec §5's `split` row. `idFor` is stable, so a stale file
     // still names a listed book: without the prune, a section the owner
@@ -392,6 +422,11 @@ describe.each([
       const build = async () =>
         publish(await vault.listBooks(), vault, assets, { isPublic, publishThoughts: true });
       const file = join(assets, 'notes', `${(await fixtureIds()).get(PLANTED.split) ?? ''}.json`);
+      const wishlistFile = join(
+        assets,
+        'notes',
+        `${(await fixtureIds()).get(PLANTED.wishlist) ?? ''}.json`,
+      );
 
       await build();
       expect(existsSync(file), 'the first build writes the split book’s file').toBe(true);
@@ -408,8 +443,10 @@ describe.each([
       const removed = await build();
       expect(existsSync(file), 'a removed section leaves no file').toBe(false);
 
+      // The split note's marks are gone; the wishlist book's, which this case never touched, stay.
       for (const result of [withheld, removed]) {
-        expect(result.library.books.filter((book) => book.thoughts === true)).toEqual([]);
+        expect(existsSync(wishlistFile), 'the untouched wishlist file stays').toBe(true);
+        expect(result.library.books.filter((book) => book.thoughts === true)).toHaveLength(1);
       }
     } finally {
       await rm(copy, { recursive: true, force: true });
@@ -437,8 +474,9 @@ describe.each([
           publishThoughts: true,
         });
 
-        expect(walk(join(assets, 'notes'))).toEqual([]);
-        expect(result.notesWritten).toBe(0);
+        // Only the wishlist book's file: the split note's section was withheld.
+        expect(walk(join(assets, 'notes'))).toHaveLength(1);
+        expect(result.notesWritten).toBe(1);
       } finally {
         await rm(copy, { recursive: true, force: true });
       }
@@ -453,9 +491,13 @@ describe.each([
       const { json, ids } = await publishSplit();
       const shipped = JSON.parse(json) as { books: { id: string; thoughts?: unknown }[] };
 
-      expect(shipped.books.filter((book) => book.thoughts !== undefined)).toEqual([
-        expect.objectContaining({ id: ids.get(PLANTED.split), thoughts: true }),
-      ]);
+      expect(shipped.books.filter((book) => book.thoughts !== undefined)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: ids.get(PLANTED.split), thoughts: true }),
+          expect.objectContaining({ id: ids.get(PLANTED.wishlist), thoughts: true }),
+        ]),
+      );
+      expect(shipped.books.filter((book) => book.thoughts !== undefined)).toHaveLength(2);
     },
   );
 
@@ -475,7 +517,7 @@ describe.each([
     // constant says: spec §4's undo is this build, then a deploy.
     const vault = new ObsidianAdapter(FIXTURE_VAULT);
     await publish(await vault.listBooks(), vault, assets, { isPublic, publishThoughts: true });
-    expect(walk(join(assets, 'notes')), 'the earlier build staged the split file').toHaveLength(1);
+    expect(walk(join(assets, 'notes')), 'the earlier build staged both files').toHaveLength(2);
 
     // Switched off, no note's body is read at all (round 5, integrity F10).
     const reads = vi.spyOn(vault, 'readPublicSection');
@@ -489,6 +531,78 @@ describe.each([
     expect(off.notesWritten).toBe(0);
     expect(off.library.books.filter((book) => book.thoughts !== undefined)).toEqual([]);
   });
+});
+
+describe('G2 — a wishlist book publishes unless it is private (#603, C8)', () => {
+  const WISHLIST_COVER = 'the-quiet-protocol.png';
+  const PRIVATE_COVER = 'a-book-kept-back.png';
+
+  /** A public build of a copy of the fixture vault, one note's `private:` line rewritten first. */
+  async function buildCopy(rewrite?: { note: string; from: string; to: string }) {
+    const copy = await mkdtemp(join(tmpdir(), 'stacks-wishlist-vault-'));
+    try {
+      await cp(FIXTURE_VAULT, copy, { recursive: true });
+      if (rewrite !== undefined) {
+        const path = join(copy, 'Library', rewrite.note);
+        const text = await readFile(path, 'utf8');
+        expect(text, `${rewrite.note} carries ${rewrite.from}`).toContain(rewrite.from);
+        await writeFile(path, text.replace(rewrite.from, rewrite.to));
+      }
+      const vault = new ObsidianAdapter(copy);
+      const result = await publish(await vault.listBooks(), vault, assets, { isPublic: true });
+      const ids = new Map(
+        buildLibrary(await vault.listBooks(), { isPublic: false }).books.flatMap((book) =>
+          book.sourcePath === undefined ? [] : [[basename(book.sourcePath), book.id] as const],
+        ),
+      );
+      return {
+        titles: result.library.books.map((book) => book.title),
+        covers: await readdir(join(assets, 'covers')),
+        held: await readdir(join(assets, 'held-covers')),
+        notes: walk(join(assets, 'notes')).map((file) => basename(file)),
+        ids,
+      };
+    } finally {
+      await rm(copy, { recursive: true, force: true });
+    }
+  }
+
+  it('publishes a wishlist book that is not private: its entry, cover, held cover and notes', async () => {
+    const built = await buildCopy();
+
+    expect(built.titles).toContain('The Quiet Protocol');
+    expect(built.covers).toContain(WISHLIST_COVER);
+    expect(built.held).toContain(WISHLIST_COVER);
+    expect(built.notes).toContain(`${built.ids.get(PLANTED.wishlist) ?? ''}.json`);
+  });
+
+  it.each([
+    ['private: true', undefined],
+    ['private: yes', { note: PLANTED.private, from: 'private: true', to: 'private: yes' }],
+  ])('withholds a book marked %s from every folder a build stages', async (_mark, rewrite) => {
+    const built = await buildCopy(rewrite);
+
+    expect(built.titles).not.toContain('A Book Kept Back');
+    expect(built.covers).not.toContain(PRIVATE_COVER);
+    expect(built.held).not.toContain(PRIVATE_COVER);
+    expect(built.notes).not.toContain(`${built.ids.get(PLANTED.private) ?? ''}.json`);
+  });
+
+  it.each(['private: true', 'private: yes'])(
+    'withholds a wishlist book marked %s from every folder a build stages',
+    async (mark) => {
+      const built = await buildCopy({
+        note: PLANTED.wishlist,
+        from: 'status: wishlist',
+        to: `status: wishlist\n${mark}`,
+      });
+
+      expect(built.titles).not.toContain('The Quiet Protocol');
+      expect(built.covers).not.toContain(WISHLIST_COVER);
+      expect(built.held).not.toContain(WISHLIST_COVER);
+      expect(built.notes).not.toContain(`${built.ids.get(PLANTED.wishlist) ?? ''}.json`);
+    },
+  );
 });
 
 describe('G2 — the staged folder is exactly this build', () => {

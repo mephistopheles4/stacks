@@ -26,7 +26,8 @@ The folder of Obsidian notes that *is* the database. Defined by
 
 **Shelved**:
 A book in a status that puts it on the shelf. Wishlist books are not shelved —
-you do not own them — and that is a different exclusion from **private**.
+they lie on the **floor stacks** in the room — and that is a different matter
+from **private**, which is the only thing that keeps a book out of a public build.
 *Avoid*: active, visible, owned.
 
 **Private**:
@@ -337,13 +338,13 @@ The model answers a count from it, with no search.
 ### Building and publishing
 
 **Public build**:
-A build that assumes an audience: wishlist and private books are dropped, covers
+A build that assumes an audience: private books are dropped, covers
 are re-hosted same-origin, and no note body ships except as [invariant 2](AGENTS.md)
 allows. The counterpart is a **local build**, which is for you, and it means
 one of two things — say which:
 
 - **a local publish**, `publish()` with `isPublic: false`: it keeps private
-  and wishlist books on the shelf, and stages covers and the same notes files
+  books on the shelf, and stages covers and the same notes files
   a public build would. No command runs it today; G2 and the publisher's tests
   build both modes;
 - **the local index**, the plain `stacks build`, which writes `library.json`

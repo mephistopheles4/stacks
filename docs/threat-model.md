@@ -67,11 +67,13 @@ optional-Plausible spec).
   prose. G2 (`public-build`) reads `publish()`'s output in both modes. It does
   not hold if the allowlist ever names `## About`, which `AGENTS.md` forbids.
 - *Repo.* `private` fails closed: anything present that is not clearly "no" keeps
-  a book out of every public build, and wishlist books stay out too. It does not
-  hold for a deployment already published: marking a book private removes it
-  from the next deployment only.
+  a book out of every public build, the only control, wishlist books too ([ADR-0170](adr/0170-private-is-the-only-control-on-a-wishlist-book.md)).
+  It does not hold for a deployment already published: marking a book private
+  removes it from the next deployment only.
 - *Repo.* G20 (`public-build-artifact`) inspects the real `dist/` before upload
-  for private books, orphan covers, vault paths and unknown keys, and holds the
+  for private books, orphan covers, vault paths and unknown keys, refuses a cover
+  within the cap (copied as is) carrying EXIF, XMP, IPTC, PNG text or a
+  Photoshop block, or unreadable, by sharp's report, and holds the
   site's CSP (`connect-src 'self'` unless analytics is on; `script-src` with
   `'wasm-unsafe-eval'` and never `'unsafe-eval'`; `worker-src 'self'`; no `blob:`).
   It reads key names,

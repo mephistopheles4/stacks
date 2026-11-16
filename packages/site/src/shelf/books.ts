@@ -143,6 +143,27 @@ export function toRows(books: readonly LibraryBook[], settings: BooksSettings): 
 }
 
 /**
+ * The wishlist, for the room's floor stacks (#603, spec S9): the books `toRows` leaves off the shelf,
+ * made as the shelf makes a book so they lie at its scale.
+ *
+ * **In title order, then id, whatever order the library came in**, so the same library deals the same
+ * books to the same stacks on every load. The title is compared lower-cased with `toLowerCase`, never
+ * a locale's collation, which differs between a visitor's browser and the next; a tie is the id's.
+ */
+export function wishlistBooks(books: readonly LibraryBook[], settings: BooksSettings): ShelfBook[] {
+  const order = (a: LibraryBook, b: LibraryBook): number => {
+    const [x, y] = [a.title.toLowerCase(), b.title.toLowerCase()];
+    if (x !== y) return x < y ? -1 : 1;
+    if (a.title !== b.title) return a.title < b.title ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  };
+  return books
+    .filter((book) => book.status === 'wishlist')
+    .sort(order)
+    .map((book) => ({ ...toShelfBook(book, settings), faceOut: false }));
+}
+
+/**
  * Whether these books, placed as this row, stay inside the shelf.
  *
  * **The packer stopped estimating.** It used to price each book with

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
-import { toRows, type ShelfBook } from './books.ts';
+import { toRows, wishlistBooks, type ShelfBook } from './books.ts';
 import {
   LIFT,
   makeBackboardShade,
@@ -29,6 +29,7 @@ import { clampInto, frameRoom, lightsPatch, type RoomData } from './room-data.ts
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import { runRoomLoad } from './room-load.ts';
 import { showLoadingScreen } from './room-loading.ts';
+import { layWishlist, STACK_BASE_NODE, stackSlots, type LaidBook } from './room-wishlist.ts';
 import { ROOMS, type RoomId } from './room-mode.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
@@ -353,6 +354,16 @@ export interface ShelfHandle {
    * the layout changes.
    */
   projectBook(index: number): { x: number; y: number } | undefined;
+  /**
+   * How many wishlist books lie on the room's floor stacks, and where each stack's top stands on
+   * screen (#603): for the gate, which clicks a stack book and a stack base through them. A stack
+   * book's index for `projectBook` and the pickup's `pickUp` is `bookCount` plus its place here, in
+   * the order it was dealt. Both are empty without a room.
+   */
+  readonly stacked: number;
+  projectStack(slot: number): { x: number; y: number } | undefined;
+  /** A screen point where the nearest thing drawn is the room's baked stack base, if one shows. */
+  projectStackBase(): { x: number; y: number } | undefined;
   /** What picking a book up reaches into. See `pickup.ts`. */
   readonly stage: ShelfStage;
   /** Where the room stands, and what it cost: for the smoke gates and the black box. */
@@ -924,6 +935,61 @@ function assembleShelf(
     return report;
   };
 
+  // ---- the wishlist on the room's floor stacks (#603, spec S9, S11) -------------------------------
+  //
+  // Live books made as the shelf makes one, laid on the stacks once the room is dressed and taken off
+  // again if the room is abandoned. They answer to the same pickup as a shelf book: they join the
+  // click lookup, the picker and the pickup's staged list. The stack bases under them are baked room
+  // meshes and join none of them, so a click on a base picks nothing up. `?shelf` has no room and so
+  // no stacks: the books are display only there, and every one stays in `library.json`.
+  const stagedBooks: StagedBook[] = placed.map(({ group, entry, frontZ }) => ({
+    group,
+    entry,
+    depth: frontZ * 2,
+  }));
+  let stacked: LaidBook[] = [];
+  /** Each stack's top, bare of books: where the gate aims to click a base. */
+  let stackTops: (readonly [number, number, number])[] = [];
+
+  const toScreen = (point: THREE.Vector3): { x: number; y: number } => {
+    point.project(camera);
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: rect.left + ((point.x + 1) / 2) * rect.width,
+      y: rect.top + ((1 - point.y) / 2) * rect.height,
+    };
+  };
+
+  const layOnStacks = (slots: RoomData['slots']): void => {
+    stackTops = stackSlots(slots).map(({ position }) => position);
+    // A cover-up book's depth is its cover's width, as `buildBook` reads it.
+    const laid = layWishlist(slots, wishlistBooks(books, settings.books), (entry) =>
+      buildBook(entry, entry.coverWidth, textures, false, settings),
+    );
+    for (const { group, entry } of laid) {
+      scene.add(group);
+      // Every part of a book answers for the whole book, as on the shelf.
+      for (const part of group.children) lookup.set(part, entry.book);
+      stagedBooks.push({ group, entry, depth: entry.coverWidth });
+    }
+    picker.add(laid.map(({ group }) => group));
+    stacked = laid;
+  };
+
+  const clearStacks = (): void => {
+    const gone = new Set(stacked.map(({ group }) => group));
+    for (const { group } of stacked) {
+      group.removeFromParent();
+      for (const part of group.children) lookup.delete(part);
+    }
+    picker.remove(gone);
+    for (let i = stagedBooks.length - 1; i >= 0; i -= 1) {
+      if (gone.has(stagedBooks[i]!.group)) stagedBooks.splice(i, 1);
+    }
+    stacked = [];
+    stackTops = [];
+  };
+
   // ---- the room (#602): an upgrade over the plain shelf, never a condition of it -------------------
   //
   // The shelf above is complete without it. A room that loads is put in under the loading screen and
@@ -958,10 +1024,13 @@ function assembleShelf(
             ),
           );
           frameCamera(camera.aspect);
+          // Last, so a room that fails above it has laid nothing to take back out.
+          layOnStacks(loaded.data.slots);
           roomState = 'dressed';
           request.onDressed?.();
         },
         abandon: (loaded) => {
+          clearStacks();
           loaded?.group.removeFromParent();
           room = undefined;
           roomData = undefined;
@@ -988,7 +1057,8 @@ function assembleShelf(
     renderer,
     controls,
     canvas,
-    books: placed.map(({ group, entry, frontZ }) => ({ group, entry, depth: frontZ * 2 })),
+    // Read live: the wishlist joins it when a room is dressed (above).
+    books: stagedBooks,
     lookup,
     headCap: mountedWith.books.headCap,
     repaint: (without) => {
@@ -1074,20 +1144,58 @@ function assembleShelf(
       };
     },
 
+    get stacked(): number {
+      return stacked.length;
+    },
+
     projectBook(index: number): { x: number; y: number } | undefined {
       const book = placed[index];
-      if (book === undefined) return undefined;
+      if (book === undefined) {
+        // A wishlist book on a floor stack: its top face's middle, where it lies cover up.
+        const laid = stacked[index - placed.length];
+        if (laid === undefined) return undefined;
+        const centre = new THREE.Box3().setFromObject(laid.group).getCenter(new THREE.Vector3());
+        return toScreen(centre);
+      }
 
       // Aim at the front face of the spine, not the centre of the box — the
       // centre is buried inside the book and behind its neighbours.
-      const point = book.group.localToWorld(new THREE.Vector3(0, 0, book.frontZ));
-      point.project(camera);
+      return toScreen(book.group.localToWorld(new THREE.Vector3(0, 0, book.frontZ)));
+    },
 
+    projectStack(slot: number): { x: number; y: number } | undefined {
+      const at = stackTops[slot];
+      return at === undefined ? undefined : toScreen(new THREE.Vector3(...at));
+    },
+
+    projectStackBase(): { x: number; y: number } | undefined {
+      const base = room?.group.getObjectByName(STACK_BASE_NODE);
+      if (base === undefined) return undefined;
       const rect = canvas.getBoundingClientRect();
-      return {
-        x: rect.left + ((point.x + 1) / 2) * rect.width,
-        y: rect.top + ((1 - point.y) / 2) * rect.height,
-      };
+      const caster = new THREE.Raycaster();
+      // The first point on a coarse grid of the screen where the nearest thing drawn is the baked
+      // base: not a book lying on it, not the floor, so a click there is a click on the base.
+      const [columns, rows] = [48, 30];
+      for (let row = 1; row < rows; row += 1) {
+        for (let column = 1; column < columns; column += 1) {
+          const ndc = new THREE.Vector2((column / columns) * 2 - 1, 1 - (row / rows) * 2);
+          caster.setFromCamera(ndc, camera);
+          const hit = caster.intersectObjects(scene.children, true)[0];
+          for (
+            let node: THREE.Object3D | null = hit?.object ?? null;
+            node !== null;
+            node = node.parent
+          ) {
+            if (node === base) {
+              return {
+                x: rect.left + ((ndc.x + 1) / 2) * rect.width,
+                y: rect.top + ((1 - ndc.y) / 2) * rect.height,
+              };
+            }
+          }
+        }
+      }
+      return undefined;
     },
 
     dispose(): void {
@@ -3083,6 +3191,18 @@ class Picker {
       event.defaultPrevented,
     );
   };
+
+  /** Books that join after mount: the wishlist, when a room is dressed round the shelf (#603). */
+  add(books: readonly THREE.Object3D[]): void {
+    this.#books.push(...books);
+  }
+
+  /** Books that leave again: the wishlist, when the room is abandoned. */
+  remove(books: ReadonlySet<THREE.Object3D>): void {
+    for (let i = this.#books.length - 1; i >= 0; i -= 1) {
+      if (books.has(this.#books[i]!)) this.#books.splice(i, 1);
+    }
+  }
 
   dispose(): void {
     this.#canvas.removeEventListener('pointerdown', this.#handleDown);

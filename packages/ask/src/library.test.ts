@@ -61,10 +61,16 @@ describe('toCatalogue (C3)', () => {
 describe('a local build is refused (invariant 2)', () => {
   it.each([
     ['a private flag', { id: 'x', title: 'X', private: false }],
+    ['a private book', { id: 'x', title: 'X', private: true }],
     ['a source path', { id: 'x', title: 'X', sourcePath: 'Library/X.md' }],
-    ['a wishlist book', { id: 'x', title: 'X', status: 'wishlist' }],
   ])('throws on %s', (_n, book) => {
     expect(() => toCatalogue({ books: [book] })).toThrow(DataError);
+  });
+
+  it('keeps a wishlist book: a public build publishes one unless it is private (#603)', () => {
+    expect(toCatalogue({ books: [{ id: 'w', title: 'W', status: 'wishlist' }] })).toEqual([
+      expect.objectContaining({ id: 'w', title: 'W', status: 'wishlist' }),
+    ]);
   });
 });
 

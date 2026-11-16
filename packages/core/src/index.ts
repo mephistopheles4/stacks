@@ -70,7 +70,8 @@ export {
 
 export { isRebuildTrigger, watchVault, type Closeable, type WatchOptions } from './watch.ts';
 
-export { publish, type PublishOptions, type PublishResult } from './publish.ts';
+export { listNewWishlist, publish, type PublishOptions, type PublishResult } from './publish.ts';
+export { describeNewWishlist, type NewWishlistEntry } from './wishlist-report.ts';
 
 export {
   backfillCoverSources,

@@ -46,7 +46,9 @@ import {
   overlapFailures,
   OVERLAP_READS,
   spreadFailures,
+  stackFailures,
   turnFailures,
+  type StackRead,
   type ClosedFraming,
   type CloseRead,
   type DrawerCell,
@@ -301,6 +303,7 @@ async function main(): Promise<void> {
       const atRest = await timed('G35 held at rest', () => checkHeldAtRest(browser, origin));
       const flatLayer = await timed('G35 flat layer (#599)', () => checkFlatLayer(browser, origin));
       const room = await timed('room page (#602)', () => checkRoom(browser, origin));
+      const stacks = await timed('G35 floor stacks (#603)', () => checkStacks(browser, origin));
       const controls = await timed('G35 closed book controls', () =>
         checkClosedControls(browser, origin),
       );
@@ -350,6 +353,7 @@ async function main(): Promise<void> {
         atRest,
         flatLayer,
         room,
+        stacks,
         controls,
         drawerCells,
         overlap,
@@ -2335,6 +2339,165 @@ async function checkRoom(browser: Browser, origin: string): Promise<LinesAndFail
     await context.close();
   }
   return { lines, failures };
+}
+
+/**
+ * G35's stacks cells (#603, claim C11, spec S11.3): at both viewports, a click on a wishlist book
+ * lying on a floor stack picks it up, it arrives closed, turns, opens, closes and goes back as a
+ * shelf book does, and a click on a stack's baked base (never pickable) picks nothing up. The views
+ * are reached by dragging the canvas, as a visitor reaches them: on a phone the stacks begin off screen.
+ * Every judgement is `lib/pickup-gate.ts`'s `stackFailures`.
+ */
+async function checkStacks(browser: Browser, origin: string): Promise<LinesAndFailures> {
+  const lines: string[] = [];
+  const failures: string[] = [];
+  for (const size of [DESKTOP, PHONE]) {
+    const context = await browser.createBrowserContext();
+    try {
+      const page = await context.newPage();
+      await page.setViewport(size);
+      page.on('pageerror', (error: unknown) => {
+        failures.push(
+          `stacks page error: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+      await visit(page, origin, '/');
+      const read = await readStacks(page, `${String(size.width)}x${String(size.height)}`);
+      failures.push(...stackFailures(read));
+      lines.push(
+        `${read.viewport}: ${String(read.stacked)} wishlist book(s) on the stacks, ` +
+          `${read.picked ? 'one picked up, turned, opened and put back' : 'none picked up'}, ` +
+          `${read.baseFound ? (read.baseClickPickedNothing ? 'a base click picks nothing' : 'a base click picked a book') : 'no base in reach'}`,
+      );
+    } finally {
+      await context.close();
+    }
+  }
+  return { lines, failures };
+}
+
+/**
+ * The point `expression` returns once a visitor can reach it: tried where the camera stands, then
+ * after real drags on the canvas, left first and then right, as a visitor turns the view. The stacks
+ * stand left of the default view, so on a phone they begin off screen. A drag starts high on the
+ * screen, off the books, and a drag is never a click.
+ */
+async function orbitUntil(
+  page: Page,
+  expression: string,
+): Promise<{ x: number; y: number } | undefined> {
+  const size = (await page.evaluate('({ w: innerWidth, h: innerHeight })')) as {
+    w: number;
+    h: number;
+  };
+  const read = async (): Promise<{ x: number; y: number } | undefined> =>
+    (await page.evaluate(expression)) as { x: number; y: number } | undefined;
+  let found = await read();
+  for (const dx of [-150, -150, -150, -150, -150, -150, 150, 150, 150, 150, 150, 150]) {
+    if (found !== undefined) break;
+    await page.mouse.move(size.w / 2, size.h * 0.2);
+    await page.mouse.down();
+    await page.mouse.move(size.w / 2 + dx, size.h * 0.2, { steps: 6 });
+    await page.mouse.up();
+    // The damped camera keeps gliding after the drag: wait until two polls in a row agree.
+    await searchFor(
+      page,
+      `(() => {
+        const now = window.__shelf.room().camera.join();
+        const still = window.__orbitSeen === now;
+        window.__orbitSeen = now;
+        return still;
+      })()`,
+      4000,
+    );
+    found = await read();
+  }
+  return found;
+}
+
+async function readStacks(page: Page, viewport: string): Promise<StackRead> {
+  const href = (await page.evaluate('location.href')) as string;
+  const stacked = Number(await page.evaluate('window.__shelf.stacked'));
+  const shelf = Number(await page.evaluate('window.__shelf.bookCount'));
+  const read = {
+    viewport,
+    stacked,
+    picked: false,
+    arrivedClosed: false,
+    turned: false,
+    opened: false,
+    pagesShown: false,
+    closedAgain: false,
+    wentBack: false,
+    hrefUnchanged: false,
+    baseFound: false,
+    baseClickPickedNothing: false,
+  };
+  if (stacked === 0) return read;
+
+  // The baked base first, with the hand empty. The stacks may be full (the 50-book fixture fills
+  // both), so the point is one where the nearest thing drawn is the base itself, never a book on it.
+  const baseAt = `(() => {
+    const p = window.__shelf.projectStackBase();
+    if (!p || p.x < 24 || p.x > innerWidth - 24 || p.y < 80 || p.y > innerHeight - 80) return undefined;
+    const onCanvas = document.elementFromPoint(p.x, p.y) === document.getElementById('shelf-canvas');
+    return onCanvas && window.__shelf.bookAt(p.x, p.y) === undefined ? { x: p.x, y: p.y } : undefined;
+  })()`;
+  const base = await orbitUntil(page, baseAt);
+  if (base !== undefined) {
+    read.baseFound = true;
+    await page.mouse.click(Math.round(base.x), Math.round(base.y));
+    // Absence, so a fixed wait that outlasts the pickup's start: a slower runner makes it weaker, never flaky.
+    read.baseClickPickedNothing = !(await searchFor(page, HELD, STAYS_CLOSED_MS));
+    if (!read.baseClickPickedNothing) await putBackAndSettle(page);
+  }
+
+  // A wishlist book, by the id `library.json` gives it: a click that picked a shelf book is no pickup from a stack.
+  const library = (await page.evaluate(
+    `fetch('/library.json').then((response) => response.json())`,
+  )) as { books: { id: string; status?: string }[] };
+  const wanted = JSON.stringify(
+    library.books.filter((b) => b.status === 'wishlist').map((b) => b.id),
+  );
+  const bookAt = `(() => {
+    const p = window.__shelf.projectBook(${String(shelf)});
+    if (!p || p.x < 24 || p.x > innerWidth - 24 || p.y < 80 || p.y > innerHeight - 80) return undefined;
+    if (document.elementFromPoint(p.x, p.y) !== document.getElementById('shelf-canvas')) return undefined;
+    return ${wanted}.includes(window.__shelf.bookAt(p.x, p.y)) ? { x: p.x, y: p.y } : undefined;
+  })()`;
+  const book = await orbitUntil(page, bookAt);
+  if (book === undefined) return read;
+  await page.mouse.click(Math.round(book.x), Math.round(book.y));
+  read.picked = await searchFor(page, HELD, 4000);
+  if (!read.picked) return read;
+
+  read.arrivedClosed = await until(
+    page,
+    `${CLOSED_AT_REST} && Math.abs(window.__shelf.held().boardAngle) <= ${String(CLOSED_TOLERANCE_DEG)}`,
+    'the stack book to come to rest held, closed',
+  );
+  // A real drag on the canvas turns it, as `turnOne` does for a shelf book.
+  const box = (await page.evaluate('({ w: innerWidth, h: innerHeight })')) as {
+    w: number;
+    h: number;
+  };
+  const before = await turnOf(page);
+  await page.mouse.move(box.w / 2, box.h / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.w / 2 + 120, box.h / 2, { steps: 8 });
+  await page.mouse.up();
+  read.turned = Math.abs((await turnOf(page)).yaw - before.yaw) > 1;
+  await page.keyboard.press('Home');
+
+  read.opened = await openBook(page, 'the stack book');
+  read.pagesShown = (await page.evaluate(
+    `(() => { const pages = [...document.querySelectorAll('.held-page')]; return pages.length === 2 && pages.every((p) => p.style.visibility === 'visible'); })()`,
+  )) as boolean;
+  read.closedAgain = (await closeBy(page, CLOSE_CONTROL)).atClosedRest;
+  await putBackAndSettle(page);
+  read.wentBack = (await page.evaluate(NOTHING_HELD)) as boolean;
+  read.hrefUnchanged = ((await page.evaluate('location.href')) as string) === href;
+  return read;
 }
 
 /** The held book, closed at rest, picked up through the shelf's hook. */
@@ -5614,6 +5777,7 @@ function report(result: {
   atRest: AtRestChecked;
   flatLayer: LinesAndFailures;
   room: LinesAndFailures;
+  stacks: LinesAndFailures;
   controls: LinesAndFailures;
   drawerCells: DrawerChecked;
   overlap: LinesAndFailures;
@@ -5643,6 +5807,7 @@ function report(result: {
     atRest,
     flatLayer,
     room,
+    stacks,
     controls,
     drawerCells,
     overlap,
@@ -5764,6 +5929,7 @@ function report(result: {
   for (const line of flatLayer.lines) console.log(`  ${line}`);
   console.log('room page (#602)');
   for (const line of room.lines) console.log(`  ${line}`);
+  for (const line of stacks.lines) console.log(`  ${line}`);
   console.log('the closed book and its controls (#531)');
   for (const line of controls.lines) console.log(`  ${line}`);
   console.log('the Ask drawer over a held book (#531)');
@@ -5844,6 +6010,7 @@ function report(result: {
     ...atRest.failures,
     ...flatLayer.failures,
     ...room.failures,
+    ...stacks.failures,
     ...controls.failures,
     ...drawerCells.failures,
     ...notices.failures,

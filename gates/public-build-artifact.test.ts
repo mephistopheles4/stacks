@@ -30,7 +30,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 import { KTX2_WASM_URL, KTX2_WORKER_URL } from '../packages/site/src/shelf/room-codec.ts';
-import { HELD_COVER_EDGE } from '../packages/core/src/covers/cover-budget.ts';
+import { HELD_COVER_EDGE, MAX_COVER_EDGE } from '../packages/core/src/covers/cover-budget.ts';
 import { plantedCover, type PlantedCoverOptions } from '../packages/core/src/test-support.ts';
 import {
   CONFINEMENT_PROBE_MARKER,
@@ -106,7 +106,7 @@ async function writeCleanBuild(): Promise<void> {
   await writeLibrary([CLEAN_BOOK]);
   await writeIndex(indexHtml());
   await mkdir(join(dist, 'covers'), { recursive: true });
-  await writeFile(join(dist, 'covers', 'a.jpg'), 'pretend jpeg');
+  await writeFile(join(dist, 'covers', 'a.jpg'), await image(200, 300));
   await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A paragraph the owner chose to share.'] });
   await writeHeld('a.png', await image(600, 900));
   await writeFile(join(dist, 'og.png'), 'x'.repeat(4096));
@@ -448,10 +448,18 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('wishlist-book: a book the owner does not own', async () => {
-    await expectOnly('wishlist-book', async () => {
-      await writeLibrary([{ ...CLEAN_BOOK }, { title: 'One Day', status: 'wishlist' }]);
+  it('private-book: a private wishlist book, which is still private', async () => {
+    await expectOnly('private-book', async () => {
+      await writeLibrary([
+        { ...CLEAN_BOOK },
+        { title: 'One Day', status: 'wishlist', private: true },
+      ]);
     });
+  });
+
+  it('a wishlist book that is not private is no problem: private is the only control (#603)', async () => {
+    await writeLibrary([{ ...CLEAN_BOOK }, { title: 'One Day', status: 'wishlist' }]);
+    expect((await inspect()).problems).toEqual([]);
   });
 
   it('foreign-cover: a cover served by somebody else', async () => {
@@ -627,11 +635,84 @@ describe('G20 — every rule goes red', () => {
     expect(said).toMatch(message);
   });
 
+  it('cover-metadata: a cover within the shelf cap carrying EXIF, XMP, IPTC or PNG text (S10.7)', async () => {
+    // A cover within the shelf cap is copied byte for byte, never re-encoded, so
+    // a photographed one carries its camera metadata to the site (#603). Held
+    // copies are always re-encoded and have their own rule; this one reads the
+    // shelf's own folder. Each plant is first shown to carry what it plants,
+    // through the reader the rule uses, and sits within the shelf cap.
+    const plants = [
+      ['EXIF in a PNG', await image(200, 300, { exif: true })],
+      ['EXIF in a JPEG', await image(200, 300, { format: 'jpeg', exif: true })],
+      ['XMP in a PNG', await image(200, 300, { xmp: true })],
+      ['IPTC in a JPEG', await image(200, 300, { format: 'jpeg', iptc: true })],
+      ['text in a PNG', await image(200, 300, { text: true })],
+    ] as const;
+    for (const [what, bytes] of plants) {
+      const planted = await sharp(bytes).metadata();
+      expect(
+        planted.exif ?? planted.xmp ?? planted.iptc ?? planted.comments,
+        `${what}: the plant carries it`,
+      ).toBeDefined();
+      expect(Math.max(planted.width, planted.height)).toBeLessThanOrEqual(MAX_COVER_EDGE);
+
+      await writeFile(join(dist, 'covers', 'a.jpg'), bytes);
+      const fired = new Set((await inspect()).problems.map((problem) => problem.rule));
+      expect([...fired], `planted ${what}`).toEqual(['cover-metadata']);
+    }
+    exercised.add('cover-metadata');
+  });
+
+  it('cover-metadata: a wishlist book’s cover is held to it as any other is', async () => {
+    await expectOnly('cover-metadata', async () => {
+      await writeLibrary([
+        { ...CLEAN_BOOK },
+        { id: 'w-2', title: 'One Day', status: 'wishlist', cover: 'covers/w.jpg' },
+      ]);
+      await writeFile(join(dist, 'covers', 'w.jpg'), await image(200, 300, { exif: true }));
+    });
+  });
+
+  it('cover-metadata: a cover that is not an image', async () => {
+    await expectOnly('cover-metadata', async () => {
+      await writeFile(join(dist, 'covers', 'a.jpg'), 'pretend jpeg');
+    });
+  });
+
+  it('cover-metadata: says what it found, never the value', async () => {
+    await writeFile(
+      join(dist, 'covers', 'a.jpg'),
+      await image(200, 300, { exif: true, xmp: true }),
+    );
+    const said = (await inspect()).problems.map((problem) => problem.message).join('\n');
+    expect(said).toMatch(
+      /covers\/a\.jpg carries EXIF and XMP — camera metadata, location included, ships with it; save the cover again without its metadata/,
+    );
+    // The deploy log is read by the owner and kept: it names the kinds, never what a kind holds.
+    expect(said).not.toContain('Invented planted camera');
+  });
+
+  it('says it read the covers only when there were some and none carried metadata', async () => {
+    expect((await inspect()).observations).toContain(
+      '1 cover file(s), none carrying EXIF, XMP, IPTC, PNG text or a Photoshop block',
+    );
+
+    await writeFile(join(dist, 'covers', 'a.jpg'), await image(200, 300, { exif: true }));
+    expect((await inspect()).observations.join('\n')).not.toMatch(/cover file\(s\)/);
+
+    // With no cover there is nothing it read, and it does not say it read zero.
+    await rm(join(dist, 'covers', 'a.jpg'));
+    expect((await inspect()).observations.join('\n')).not.toMatch(/cover file\(s\)/);
+  });
+
   it('orphan-cover: a cover no shipped book points at', async () => {
     await expectOnly('orphan-cover', async () => {
       // Named after a real book, which is the whole problem: the filename is
       // the leak, and a grep of text files opens no JPEG to find it.
-      await writeFile(join(dist, 'covers', 'a-real-book-you-actually-read.jpg'), 'pretend jpeg');
+      await writeFile(
+        join(dist, 'covers', 'a-real-book-you-actually-read.jpg'),
+        await image(200, 300),
+      );
     });
   });
 
@@ -1393,8 +1474,8 @@ describe('G20 — every rule goes red', () => {
 
     it("passes a book's cover when its title has the word probe in it", async () => {
       // A cover is named for its book, and a title must not refuse a deploy.
-      await writeFile(join(dist, 'covers', 'a.jpg'), 'pretend jpeg');
-      await writeFile(join(dist, 'covers', 'the-space-probe.jpg'), 'pretend jpeg');
+      await writeFile(join(dist, 'covers', 'a.jpg'), await image(200, 300));
+      await writeFile(join(dist, 'covers', 'the-space-probe.jpg'), await image(200, 300));
       await writeLibrary([
         { ...CLEAN_BOOK, cover: 'covers/the-space-probe.jpg' },
         { id: 'b-2', title: 'B', cover: 'covers/a.jpg', status: 'read' },

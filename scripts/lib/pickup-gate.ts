@@ -1031,3 +1031,60 @@ export function arrowFailures(read: ArrowPlace): string[] {
   }
   return failures;
 }
+
+/**
+ * A wishlist book picked up from the room's floor stacks, at one viewport (#603, C11, spec S11.3).
+ * Every field is a plain fact the browser half read; the judgement is here, planted red in
+ * `pickup-gate.test.ts`.
+ */
+export interface StackRead {
+  readonly viewport: string;
+  /** How many wishlist books lie on the stacks. A page with none proves nothing. */
+  readonly stacked: number;
+  /** A real click on the stack book's projected point picked it up. */
+  readonly picked: boolean;
+  /** It arrived closed: the board square to the block, within `CLOSED_TOLERANCE_DEG`. */
+  readonly arrivedClosed: boolean;
+  /** A drag on the canvas turned it. */
+  readonly turned: boolean;
+  /** The open control opened it. */
+  readonly opened: boolean;
+  /** Both pages are visible with it open at rest. */
+  readonly pagesShown: boolean;
+  /** The close control closed it back to the closed rest. */
+  readonly closedAgain: boolean;
+  /** The put-back control returned it: nothing held, no pages in the document. */
+  readonly wentBack: boolean;
+  /** `location.href` is what it was before the pickup. */
+  readonly hrefUnchanged: boolean;
+  /** A point where the nearest thing drawn is a baked stack base was reached, to aim a click at. */
+  readonly baseFound: boolean;
+  /** A real click on that base picked nothing up. */
+  readonly baseClickPickedNothing: boolean;
+}
+
+export function stackFailures(read: StackRead | undefined): string[] {
+  if (read === undefined) return ['the floor stacks were not read'];
+  const failures: string[] = [];
+  const fail = (message: string): void => {
+    failures.push(`${message} at ${read.viewport}`);
+  };
+  if (read.stacked === 0) {
+    // Everything below would read a shelf book or nothing, so it is not read.
+    fail(
+      'no wishlist book lay on a stack: the fixture has wishlist books, so the room dropped them',
+    );
+    return failures;
+  }
+  if (!read.picked) fail('a click on a stack book did not pick it up');
+  if (!read.arrivedClosed) fail('a book picked up from a stack did not arrive closed');
+  if (!read.turned) fail('a drag did not turn the book picked up from a stack');
+  if (!read.opened) fail('the open control did not open the book picked up from a stack');
+  if (!read.pagesShown) fail('the pages are not visible with the stack book open at rest');
+  if (!read.closedAgain) fail('the stack book would not close back to the closed rest');
+  if (!read.wentBack) fail('the stack book did not go back when put back');
+  if (!read.hrefUnchanged) fail('location.href changed on a pickup from a stack (spec §3.9)');
+  if (!read.baseFound) fail('no stack base could be reached to click');
+  else if (!read.baseClickPickedNothing) fail('a click on a stack base picked a book up');
+  return failures;
+}

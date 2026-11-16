@@ -1,11 +1,11 @@
-import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp, { type Sharp } from 'sharp';
 import { HELD_COVER_EDGE, MAX_COVER_EDGE, measureCover } from './covers/cover-budget.ts';
 import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
 import { buildLibrary, idFor, type Library } from './library.ts';
-import { SHELVED_STATUSES } from './shelf-order.ts';
 import type { BookRecord } from './types.ts';
+import type { NewWishlistEntry } from './wishlist-report.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
 
 /**
@@ -100,16 +100,12 @@ export async function publish(
 ): Promise<PublishResult> {
   await mkdir(assetsDir, { recursive: true });
 
-  // Two kinds of book do not leave the machine.
-  //
-  // Wishlist ones because you do not own them: they were already filtered at
-  // render time and by the OG image, so nothing displayed them, but they
-  // shipped in library.json where anyone could read the list of books the owner
-  // merely wants.
-  //
-  // `private: true` ones because the owner said so. The shelf is published by a
-  // pipeline that never asks again — a book is public the moment `stacks add`
-  // finishes — and this is the per-book way to say no.
+  // One kind of book does not leave the machine: `private: true` ones, because
+  // the owner said so. The shelf is published by a pipeline that never asks
+  // again — a book is public the moment `stacks add` finishes — and this is the
+  // per-book way to say no. A wishlist book is no longer held back for being
+  // unowned (#603, ADR-0170): the floor stacks draw them, and `private` is the
+  // control.
   //
   // Filtered here rather than in `buildLibrary`, so a local index still shows
   // you everything on your own machine. Private means "not published", not
@@ -171,7 +167,13 @@ export async function publish(
 }
 
 /**
- * Whether a public build publishes this book: one you own, not marked private.
+ * Whether a public build publishes this book: any book not marked private.
+ *
+ * **`private` is the only control** (#603, ADR-0170). A wishlist book ships as any other does: its
+ * `library.json` entry, its cover and held cover, its Thoughts and its place in Ask the library.
+ * It used to be held back for being unowned, and the owner decided that the list of what they mean
+ * to read is theirs to publish or not, book by book. `private` fails closed at parse, so
+ * `private: yes` is private here too.
  *
  * One predicate, two callers: the public shelf filter, and the notes stage,
  * which asks it **in both of `publish()`'s modes** (spec §3.2). So `publish()`
@@ -180,7 +182,7 @@ export async function publish(
  * `stacks build` index never runs `publish()` and stages nothing.)
  */
 function isPublishable(book: BookRecord): boolean {
-  return SHELVED_STATUSES.has(book.status) && book.private !== true;
+  return book.private !== true;
 }
 
 /**
@@ -191,7 +193,7 @@ function isPublishable(book: BookRecord): boolean {
  * The one stage that ships note-body text (invariant 2). It reads through
  * `readPublicSection`, which hands back the section and never the body.
  * `publish()` hands it only books `isPublishable` admits, in both of its
- * modes, so a private or wishlist book's Thoughts are never read for a build
+ * modes, so a private book's Thoughts are never read for a build
  * at all — and none at all when the stage is switched off, which still prunes.
  *
  * **A note that cannot be read is skipped with a warning**, never a failed
@@ -254,6 +256,39 @@ async function stageNotes(
   }
 
   return written;
+}
+
+/**
+ * Each wishlist book in the folder a build staged, by title, with whether a notes file and a cover or
+ * held cover were staged for it: what `stacks build --public --list-new-wishlist` prints (#603, S10.1).
+ *
+ * **Read back from the staged folder, never from a second filter**: it reads that folder's
+ * `library.json` and looks for the files the same run wrote beside it, so it cannot disagree with what
+ * a deploy would ship. It writes nothing, and it is here because this is the module that owns that
+ * folder.
+ */
+export async function listNewWishlist(assetsDir: string): Promise<NewWishlistEntry[]> {
+  const raw = await readFile(join(assetsDir, 'library.json'), 'utf8');
+  const books = (JSON.parse(raw) as { books?: readonly Record<string, unknown>[] }).books ?? [];
+
+  const stagedFile = async (folder: string, value: unknown): Promise<boolean> => {
+    if (typeof value !== 'string') return false;
+    const name = coverFileName(value);
+    return name !== '' && (await exists(join(assetsDir, folder, name)));
+  };
+
+  const entries: NewWishlistEntry[] = [];
+  for (const book of books) {
+    if (book['status'] !== 'wishlist' || typeof book['title'] !== 'string') continue;
+    const notes =
+      typeof book['id'] === 'string' &&
+      (await exists(join(assetsDir, NOTES_DIR, `${book['id']}.json`)));
+    const cover =
+      (await stagedFile('covers', book['cover'])) ||
+      (await stagedFile(HELD_DIR, book['heldCover']));
+    entries.push({ title: book['title'], notes, cover });
+  }
+  return entries.sort((a, b) => a.title.localeCompare(b.title));
 }
 
 /**

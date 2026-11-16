@@ -38,8 +38,8 @@ const PORT = Number(process.env['PORT'] ?? 4322);
  * shelf on a phone without deploying it, and this project has already had two
  * bugs that only appeared on a phone — and an unreasonable default.
  *
- * The build is the same `--public` one the site ships, so `private:` and
- * wishlist books stay off it either way.
+ * The build is the same `--public` one the site ships, so a `private:` book
+ * stays off it, and a wishlist book that is not private is on it, either way.
  */
 const ON_NETWORK = /^(1|true|yes)$/i.test(process.env['STACKS_DEV_HOST'] ?? '');
 

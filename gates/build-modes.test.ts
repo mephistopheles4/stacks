@@ -46,13 +46,14 @@ const INTENDED_DIFFERENCES = {
 } as const;
 
 /**
- * A public build also drops whole books, for two unrelated reasons: wishlist
- * ones because you do not own them, and `private: true` ones because the owner
- * said no. Kept separate from the key list above because these are differences
- * in the *set*, not in a field, and the two are checked differently.
+ * A public build also drops whole books: `private: true` ones, because the
+ * owner said no. A wishlist book is no longer dropped for being unowned (#603,
+ * ADR-0170): `private` is the only control. Kept separate from the key list
+ * above because this is a difference in the *set*, not in a field, and the two
+ * are checked differently.
  */
 function shipsPublicly(book: Record<string, unknown>): boolean {
-  return book['status'] !== 'wishlist' && book['private'] !== true;
+  return book['private'] !== true;
 }
 
 const FIXTURE_VAULT = join(REPO_ROOT, 'fixtures', 'vault');
@@ -98,9 +99,15 @@ describe('G11 — build modes', () => {
     expect(publicBuild.map((book) => book['id'])).toEqual(shipping.map((book) => book['id']));
   });
 
-  it('never ships a book you do not own, or one marked private', async () => {
-    const { publicBuild } = await bothModes();
-    expect(publicBuild.every((book) => book['status'] !== 'wishlist')).toBe(true);
+  it('ships a wishlist book that is not private, and never one marked private', async () => {
+    const { local, publicBuild } = await bothModes();
+    const wishlist = local.filter(
+      (book) => book['status'] === 'wishlist' && book['private'] !== true,
+    );
+    expect(wishlist.length, 'need a wishlist fixture that is not private').toBeGreaterThan(0);
+    for (const book of wishlist) {
+      expect(publicBuild.map((shipped) => shipped['id'])).toContain(book['id']);
+    }
     expect(publicBuild.every((book) => book['private'] !== true)).toBe(true);
   });
 

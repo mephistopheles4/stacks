@@ -470,9 +470,9 @@ describe('a local build is refused whole', () => {
     expect(r.aiCalls).toHaveLength(0);
   });
 
-  it('refuses a wishlist book too', async () => {
+  it('does not refuse a wishlist book: a public build publishes one (#603)', async () => {
     const r = rig({ library: { books: [{ id: 'w', title: 'W', status: 'wishlist' }] } });
-    expect((await run(r, ask())).status).toBe(503);
+    expect((await run(r, ask())).status).not.toBe(503);
   });
 });
 
