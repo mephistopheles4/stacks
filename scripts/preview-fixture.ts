@@ -155,6 +155,9 @@ if (args.dryRun) {
   console.log(
     `to publish: pnpm exec wrangler pages deploy ${scratch} --project-name ${project} --branch ${PREVIEW_BRANCH}`,
   );
+  console.log(
+    '  (not to be run by hand: a shell that holds a BrowserStack key would hand it to wrangler)',
+  );
   const switches = [args.probe ? ' --probe' : '', args.control ? ' --control' : ''].join('');
   console.log(`to publish with its guards, run: pnpm preview:fixture${switches}`);
   process.exit(0);

@@ -120,6 +120,7 @@ describe('sweepStaleConfigs', () => {
   it('removes a launcher folder holding only local.yml, and leaves every other folder alone', () => {
     const root = mkdtempSync(join(tmpdir(), 'sweep-'));
     try {
+      // Names with no pid in them are an older launcher's: judged by age.
       mkdirSync(join(root, 'bs-local-aaa'));
       writeFileSync(join(root, 'bs-local-aaa', 'local.yml'), 'key: "x"\n');
       mkdirSync(join(root, 'bs-local-bbb'));
@@ -135,6 +136,16 @@ describe('sweepStaleConfigs', () => {
       expect(sweepStaleConfigs(root, Date.now() + 10 * 60 * 1000)).toBe(1);
       expect(existsSync(join(root, 'bs-local-aaa'))).toBe(false);
       expect(existsSync(join(root, 'bs-local-bbb', 'notes.txt'))).toBe(true);
+      // A pid in the name: a folder of a live process stays however old, one of an ended process goes.
+      const live = `bs-local-${String(process.pid)}-xyz`;
+      const dead = 'bs-local-999999999-xyz';
+      for (const name of [live, dead]) {
+        mkdirSync(join(root, name));
+        writeFileSync(join(root, name, 'local.yml'), 'key: "x"\n');
+      }
+      expect(sweepStaleConfigs(root, Date.now() + 10 * 60 * 1000)).toBe(1);
+      expect(existsSync(join(root, live))).toBe(true);
+      expect(existsSync(join(root, dead))).toBe(false);
       expect(existsSync(join(root, 'other', 'local.yml'))).toBe(true);
       expect(existsSync(join(root, 'bs-local-file'))).toBe(true);
     } finally {

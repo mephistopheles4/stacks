@@ -131,7 +131,7 @@ export interface ConfigFile {
  * idempotent and removes the folder.
  */
 export function writeConfigFile(accessKey: string): ConfigFile {
-  const dir = mkdtempSync(join(tmpdir(), 'bs-local-'));
+  const dir = mkdtempSync(join(tmpdir(), `bs-local-${String(process.pid)}-`));
   const path = join(dir, 'local.yml');
   const remove = (): void => {
     rmSync(dir, { recursive: true, force: true });
@@ -148,12 +148,23 @@ export function writeConfigFile(accessKey: string): ConfigFile {
 
 const SWEEP_MIN_AGE_MS = 5 * 60 * 1000;
 
+/** Whether a process with this id exists. A refusal to signal it still means it exists. */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
 /**
  * Removes config folders an earlier run left behind. A run that was killed outright (a closed
  * terminal, a pipe that ended, `kill -9`) cannot run its own cleanup, and its folder holds the key.
- * Only a folder this launcher made is touched: named `bs-local-`, holding `local.yml` and nothing
- * else, and older than five minutes: a launcher's binary reads its config in the first seconds, so a
- * younger folder may belong to a run that has not started it yet. Returns how many it removed.
+ * Only a folder this launcher made is touched: named `bs-local-<pid>-…`, holding `local.yml` and
+ * nothing else. A folder whose process is still alive is left alone, however old; one whose process
+ * has ended goes at once. A folder with no pid in its name (an older launcher's) goes once it is five
+ * minutes old, as its binary has read the config by then. Returns how many it removed.
  */
 export function sweepStaleConfigs(
   root: string = tmpdir(),
@@ -164,7 +175,12 @@ export function sweepStaleConfigs(
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     if (!entry.isDirectory() || !entry.name.startsWith('bs-local-')) continue;
     const dir = join(root, entry.name);
-    if (now - statSync(dir).mtimeMs < minAgeMs) continue;
+    const owner = /^bs-local-(\d+)-/.exec(entry.name)?.[1];
+    if (owner === undefined) {
+      if (now - statSync(dir).mtimeMs < minAgeMs) continue;
+    } else if (isAlive(Number(owner))) {
+      continue;
+    }
     const files = readdirSync(dir);
     if (files.length === 1 && files[0] === 'local.yml') {
       rmSync(dir, { recursive: true, force: true });
