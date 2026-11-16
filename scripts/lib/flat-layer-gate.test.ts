@@ -26,6 +26,8 @@ const REST: FlatRestRead = {
   ],
   pages: [box(100, 80, 560, 720), box(580, 80, 1040, 720)],
   slots: [box(100.4, 80, 560, 719.5), box(580, 80.8, 1040.2, 720)],
+  pageSides: ['left', 'right'],
+  slotSides: ['left', 'right'],
   slotEvents: ['none', 'none'],
   sheetsVisible: true,
 };
@@ -60,6 +62,19 @@ describe('flatRestFailures — the open book at rest (#599, C2, C3, C7, C11)', (
     ).toHaveLength(1);
     expect(
       flatRestFailures({ ...REST, pages: [box(100, 80, 560, 723), REST.pages[1]!] }),
+    ).toHaveLength(1);
+  });
+
+  it("holds each page to its own slot: pages standing on each other's slots fail", () => {
+    expect(flatRestFailures({ ...REST, pages: [REST.pages[1]!, REST.pages[0]!] })).toHaveLength(2);
+  });
+
+  it('holds the right page alone to the right slot, as the phone draws it', () => {
+    expect(flatRestFailures({ ...REST, pages: [REST.pages[1]!], pageSides: ['right'] })).toEqual(
+      [],
+    );
+    expect(
+      flatRestFailures({ ...REST, pages: [REST.pages[0]!], pageSides: ['right'] }),
     ).toHaveLength(1);
   });
 

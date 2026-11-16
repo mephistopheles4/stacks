@@ -34,6 +34,9 @@ export interface FlatRestRead {
   /** The two pages' boxes, and the two empty slots' boxes, on screen. */
   readonly pages: readonly Box[];
   readonly slots: readonly Box[];
+  /** Which page each box above is (`left` or `right`), so a page is held to its own slot. */
+  readonly pageSides: readonly string[];
+  readonly slotSides: readonly string[];
   /** Each slot's computed `pointer-events`. */
   readonly slotEvents: readonly string[];
   /** Both paper sheets drawn. */
@@ -76,10 +79,16 @@ export function flatRestFailures(read: FlatRestRead): string[] {
     failures.push(`${at}: ${String(read.slots.length)} slots were found, not 2`);
   }
   read.pages.forEach((page, index) => {
-    const nearest = Math.min(...read.slots.map((slot) => edgeGap(page, slot)));
-    if (!(nearest <= FLAT_EDGE_PX)) {
+    const side = read.pageSides[index];
+    const own = read.slots[read.slotSides.indexOf(side ?? '')];
+    if (side === undefined || own === undefined) {
+      failures.push(`${at}: page ${String(index)} has no slot of its own to be held to`);
+      return;
+    }
+    const gap = edgeGap(page, own);
+    if (!(gap <= FLAT_EDGE_PX)) {
       failures.push(
-        `${at}: page ${String(index)} stands ${nearest.toFixed(2)}px from its slot's box, over ${String(FLAT_EDGE_PX)}px`,
+        `${at}: the ${side} page stands ${gap.toFixed(2)}px from its own slot's box, over ${String(FLAT_EDGE_PX)}px`,
       );
     }
   });

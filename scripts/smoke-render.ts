@@ -1880,7 +1880,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       const page = right.getBoundingClientRect(), row = links.getBoundingClientRect();
       return {
         overflow: getComputedStyle(right).overflowY,
-        tall: right.scrollHeight > right.clientHeight + 1,
+        tall: right.scrollHeight - right.clientHeight >= ${String(LONG_OVERFLOW_PX)},
         inReach: row.top >= page.top - 1 && row.bottom <= page.bottom + 1 &&
           row.top >= -1 && row.left >= -1 && row.right <= innerWidth + 1 && row.bottom <= innerHeight + 1,
         centre: { x: (page.left + page.right) / 2, y: (page.top + page.bottom) / 2 },
@@ -1949,7 +1949,7 @@ async function checkHeldAtRest(browser: Browser, origin: string): Promise<AtRest
       const beforeScroll = (await page.evaluate(READ_ARROW)) as Box | null;
       const scrolled = (await page.evaluate(`(() => {
         const right = document.querySelector('.held-page-right');
-        const tall = right.scrollHeight > right.clientHeight + 1;
+        const tall = right.scrollHeight - right.clientHeight >= ${String(LONG_OVERFLOW_PX)};
         right.scrollTop = right.scrollHeight;
         return tall && right.scrollTop > 0;
       })()`)) as boolean;
@@ -2005,6 +2005,9 @@ const FLAT_MOTION = `(() => ({
   transforms: [...document.querySelectorAll('.held-page')].map((page) => page.style.transform),
 }))()`;
 
+/** How far the long-Thoughts book must overflow its page at both smoke viewports (S6). */
+const LONG_OVERFLOW_PX = 400;
+
 const FLAT_REST = `(() => {
   const layer = document.querySelector('.held-layer');
   const pages = [...document.querySelectorAll('.held-page')];
@@ -2033,8 +2036,11 @@ const FLAT_REST = `(() => {
     return style.display !== 'none' && style.visibility !== 'hidden';
   });
   // The slots are the 3D layer's empty boxes: a page left in one would fill it.
-  const slots = layer ? [...layer.querySelectorAll('div')].filter((div) => div.children.length === 0) : [];
+  const slots = layer ? [...layer.querySelectorAll('div[data-slot-for]')].filter((div) => div.children.length === 0) : [];
+  const sideOf = (page) => (page.classList.contains('held-page-right') ? 'right' : 'left');
   return {
+    pageSides: drawn.map(sideOf),
+    slotSides: slots.map((slot) => slot.dataset.slotFor),
     flatCount: document.querySelectorAll('.held-flat .held-page').length,
     layerCount: document.querySelectorAll('.held-layer .held-page').length,
     ancestors,
@@ -2117,6 +2123,12 @@ async function runFlatCase(
           transforms: opened.transforms,
         }),
       );
+    } else if (what === 'first opening') {
+      // The Open button from the keyboard, as a person opens it: it asks for focus
+      // on the page once the book rests, and a turned book rests a frame or more
+      // before it is square, so the move into the flat layer comes after (C9).
+      await page.evaluate(`document.querySelector('.held-controls .held-open').focus()`);
+      await page.keyboard.press('Enter');
     } else {
       await page.evaluate('window.__shelf.open()');
     }
@@ -2134,6 +2146,14 @@ async function runFlatCase(
   };
 
   if (!(await reopen('first opening'))) return [...failures, `${at}: the book never opened`];
+  if (!one.reduced) {
+    const focused = (await page.evaluate(
+      `document.activeElement?.classList.contains('held-page-right') === true`,
+    )) as boolean;
+    if (!focused) {
+      failures.push(`${at}: opening from the Open button left focus off the right-hand page`);
+    }
+  }
 
   const rest = (await page.evaluate(FLAT_REST)) as FlatRestRead;
   if (rest.pages.length === 0) failures.push(`${at}: no page was drawn at rest`);
