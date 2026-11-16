@@ -29,7 +29,13 @@ import { clampInto, frameRoom, lightsPatch, type RoomData } from './room-data.ts
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import { runRoomLoad } from './room-load.ts';
 import { showLoadingScreen } from './room-loading.ts';
-import { layWishlist, STACK_BASE_NODE, stackSlots, type LaidBook } from './room-wishlist.ts';
+import {
+  interiorCell,
+  layWishlist,
+  STACK_BASE_NODE,
+  stackSlots,
+  type LaidBook,
+} from './room-wishlist.ts';
 import { ROOMS, type RoomId } from './room-mode.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
@@ -1173,9 +1179,11 @@ function assembleShelf(
       if (base === undefined) return undefined;
       const rect = canvas.getBoundingClientRect();
       const caster = new THREE.Raycaster();
-      // The first point on a coarse grid of the screen where the nearest thing drawn is the baked
-      // base: not a book lying on it, not the floor, so a click there is a click on the base.
+      // A point on a coarse grid of the screen where the nearest thing drawn is the baked base: not
+      // a book lying on it, not the floor, so a click there is a click on the base, and well inside
+      // it (`interiorCell`) so that a book behind its edge cannot take the click.
       const [columns, rows] = [48, 30];
+      const hits: [number, number][] = [];
       for (let row = 1; row < rows; row += 1) {
         for (let column = 1; column < columns; column += 1) {
           const ndc = new THREE.Vector2((column / columns) * 2 - 1, 1 - (row / rows) * 2);
@@ -1187,15 +1195,18 @@ function assembleShelf(
             node = node.parent
           ) {
             if (node === base) {
-              return {
-                x: rect.left + ((ndc.x + 1) / 2) * rect.width,
-                y: rect.top + ((1 - ndc.y) / 2) * rect.height,
-              };
+              hits.push([column, row]);
+              break;
             }
           }
         }
       }
-      return undefined;
+      const cell = interiorCell(hits);
+      if (cell === undefined) return undefined;
+      return {
+        x: rect.left + (cell[0] / columns) * rect.width,
+        y: rect.top + (cell[1] / rows) * rect.height,
+      };
     },
 
     dispose(): void {

@@ -75,6 +75,27 @@ export function dealWishlist(
   });
 }
 
+/**
+ * Of the grid cells (column, row) where the nearest thing drawn is the baked base, the first one whose
+ * eight neighbours are the base too, else the first of all: so a click aimed at it lands on the base
+ * and not on its edge, where a book behind it could take the click. `hits` is in scan order.
+ */
+export function interiorCell(
+  hits: readonly (readonly [number, number])[],
+): readonly [number, number] | undefined {
+  const key = (column: number, row: number): string => `${String(column)},${String(row)}`;
+  const set = new Set(hits.map(([column, row]) => key(column, row)));
+  const inside = hits.find(([column, row]) => {
+    for (let dc = -1; dc <= 1; dc += 1) {
+      for (let dr = -1; dr <= 1; dr += 1) {
+        if (!set.has(key(column + dc, row + dr))) return false;
+      }
+    }
+    return true;
+  });
+  return inside ?? hits[0];
+}
+
 export interface LaidBook {
   readonly entry: ShelfBook;
   /** The book, a group of its own and not yet in any scene: the caller adds it. */

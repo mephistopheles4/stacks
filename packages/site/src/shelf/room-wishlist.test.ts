@@ -4,7 +4,7 @@ import type { LibraryBook } from '@stacks/core';
 import { wishlistBooks, type ShelfBook } from './books.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 import type { Slot } from './room-data.ts';
-import { dealWishlist, layWishlist, stackSlots, STACK_CAP } from './room-wishlist.ts';
+import { dealWishlist, interiorCell, layWishlist, stackSlots, STACK_CAP } from './room-wishlist.ts';
 
 const book = (id: string, thickness: number): ShelfBook =>
   ({ book: { id }, thickness, height: 0.9, coverWidth: 0.6 }) as unknown as ShelfBook;
@@ -103,6 +103,32 @@ describe('dealWishlist (S9)', () => {
       many,
     );
     expect(laid).toHaveLength(3 * STACK_CAP);
+  });
+});
+
+describe('interiorCell', () => {
+  const block = (c0: number, r0: number, size: number): [number, number][] =>
+    Array.from({ length: size * size }, (_, i): [number, number] => [
+      c0 + (i % size),
+      r0 + Math.floor(i / size),
+    ]);
+
+  it('picks the middle of a block, never its edge', () => {
+    expect(interiorCell(block(5, 3, 3))).toEqual([6, 4]);
+  });
+
+  it('skips a thin sliver for a block that has an inside', () => {
+    expect(interiorCell([[1, 1], [2, 1], ...block(10, 10, 4)])).toEqual([11, 11]);
+  });
+
+  it('falls back to the first cell when nothing has an inside, and to nothing when empty', () => {
+    expect(
+      interiorCell([
+        [4, 2],
+        [5, 2],
+      ]),
+    ).toEqual([4, 2]);
+    expect(interiorCell([])).toBeUndefined();
   });
 });
 

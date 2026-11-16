@@ -2441,7 +2441,9 @@ async function readStacks(page: Page, viewport: string): Promise<StackRead> {
     const p = window.__shelf.projectStackBase();
     if (!p || p.x < 24 || p.x > innerWidth - 24 || p.y < 80 || p.y > innerHeight - 80) return undefined;
     const onCanvas = document.elementFromPoint(p.x, p.y) === document.getElementById('shelf-canvas');
-    return onCanvas && window.__shelf.bookAt(p.x, p.y) === undefined ? { x: p.x, y: p.y } : undefined;
+    // No book at the point or a few pixels round it, so the click's rounding cannot reach one.
+    const clear = [-3, 0, 3].every((dx) => [-3, 0, 3].every((dy) => window.__shelf.bookAt(p.x + dx, p.y + dy) === undefined));
+    return onCanvas && clear ? { x: p.x, y: p.y } : undefined;
   })()`;
   const base = await orbitUntil(page, baseAt);
   if (base !== undefined) {
