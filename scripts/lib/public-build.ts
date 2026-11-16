@@ -982,10 +982,10 @@ export async function inspectPublicBuild(
   // tries to, under a policy that admits eval. Refused by name and by the marker it carries.
   for (const file of walk(dir)) {
     const where = posix(relative(dir, file));
-    // Under `rooms/` only: a cover is named for its book's title, and a book called "The Space
-    // Probe" must not refuse a deploy.
-    if (!where.startsWith('rooms/')) continue;
-    const named = /probe/i.test(where);
+    // The name rule is for `rooms/` only: a cover is named for its book's title, and a book called
+    // "The Space Probe" must not refuse a deploy. The marker is not a title, so it is read in every
+    // text file the build holds.
+    const named = where.startsWith('rooms/') && /probe/i.test(where);
     const marked =
       TEXTUAL.has(extname(file)) && readFileSync(file, 'utf8').includes(CONFINEMENT_PROBE_MARKER);
     if (!named && !marked) continue;

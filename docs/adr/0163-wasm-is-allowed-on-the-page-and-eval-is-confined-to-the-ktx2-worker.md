@@ -93,7 +93,7 @@ three's own (MIT). Both licences allow redistribution. Neither file is a binary 
 
 Apache-2.0 §4(a) makes a copy of the licence part of redistributing the binary, so the licence
 text is served beside it, as `/rooms/basis/LICENSE-basis-universal.txt`, and G20 refuses a build
-that serves the wasm without it. The file also carries the repository's `NOTICE`, which asks
+that serves the wasm without it. The file also carries three's MIT notice, which the generated worker body needs, the repository's `NOTICE`, which asks
 redistributions to include it (§4(d)), and the BSD-3-Clause text for Zstandard, which the
 transcoder contains and whose binary redistribution must reproduce it. The wasm is served as
 three ships it, so §4(b) has nothing to mark. The licence file is copied by hand from the
@@ -103,8 +103,9 @@ repository, so it moves with a three upgrade, as the wasm does.
 
 The confinement probe (it tries `fetch`, a second worker and `importScripts`, and is served from a
 scratch folder alone) and the Pages fixture preview are T6's. G20 already refuses a probe in a
-production build, by a file named `*probe*` and by the marker string
-`stacks-confinement-probe` in any text file under `rooms/`; T6's probe carries that marker.
+production build, by a file under `rooms/` named `*probe*` (a book's cover may be called
+"The Space Probe", so a name elsewhere is no probe) and by the marker string
+`stacks-confinement-probe` in any text file the build holds; T6's probe carries that marker.
 
 ## How this was decided
 

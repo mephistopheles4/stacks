@@ -21,7 +21,7 @@ import { KTX2_WASM_URL, KTX2_WORKER_URL } from './room-codec.ts';
  * **A worker that starts and never answers is a failure too.** Where a browser applies the page's
  * policy to the worker and not its own, the transcoder's eval is refused inside the worker: nothing
  * reaches the page, no `error` event fires, and every transcode waits for ever (measured in a real
- * Chrome). So the first worker's first answer is waited for `KTX2_STALL_MS`, and silence is a
+ * Chrome). So the first worker's first message is waited for `KTX2_STALL_MS`, and silence is a
  * failure, which is how spec S6.10's fallback to WebP happens there.
  */
 
@@ -39,7 +39,7 @@ export interface Ktx2Members {
 
 /** The part of a `Worker` this file uses, so a test can stand one in. */
 export interface WorkerLike {
-  addEventListener(type: 'error' | 'messageerror', listener: () => void): void;
+  addEventListener(type: 'error' | 'messageerror' | 'message', listener: () => void): void;
   postMessage(message: unknown, transfer: Transferable[]): void;
 }
 
@@ -70,7 +70,8 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
   // Nobody may be loading when the worker dies, and a rejection nobody awaits is not an error.
   failed.catch(() => undefined);
 
-  // Armed when the first worker starts, and put down by the first answer, a texture or an error.
+  // Armed when the first worker starts, and put down by the first message any worker sends. A load
+  // settling is not an answer: a 404 on the KTX2 file rejects without a worker having said a word.
   let stall: ReturnType<typeof setTimeout> | undefined;
   let answered = false;
   const answer = (): void => {
@@ -89,6 +90,7 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
               fail(new Error('the KTX2 worker did not answer'));
             }, options.stallMs ?? KTX2_STALL_MS);
           }
+          worker.addEventListener('message', answer);
           worker.addEventListener('error', () => {
             fail(new Error('the KTX2 worker failed'));
           });
@@ -110,7 +112,7 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
     return loader.transcoderPending;
   };
 
-  return { load: (url) => Promise.race([loader.loadAsync(url).finally(answer), failed]) };
+  return { load: (url) => Promise.race([loader.loadAsync(url), failed]) };
 }
 
 /**

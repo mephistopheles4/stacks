@@ -1385,6 +1385,12 @@ describe('G20 — every rule goes red', () => {
       });
     });
 
+    it('csp: the probe marker in a script outside rooms/ in a production build (S6.7)', async () => {
+      await expectOnly('csp', () =>
+        writeFile(join(dist, 'probe-loader.js'), `/* ${CONFINEMENT_PROBE_MARKER} */`),
+      );
+    });
+
     it("passes a book's cover when its title has the word probe in it", async () => {
       // A cover is named for its book, and a title must not refuse a deploy.
       await writeFile(join(dist, 'covers', 'a.jpg'), 'pretend jpeg');

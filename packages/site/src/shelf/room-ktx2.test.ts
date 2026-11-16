@@ -199,12 +199,13 @@ describe('a failure rejects the load and never leaves it pending (spec S5.4)', (
       expect(state).toMatch(/did not answer/);
     });
 
-    it('is put down by the first answer, so a slow later texture is not a failure', async () => {
+    it('is put down by the first message from a worker, so a slow later texture is not a failure', async () => {
       vi.useFakeTimers();
       const h = harness();
       h.loadAsync.mockResolvedValueOnce({} as THREE.CompressedTexture);
       await h.loader.init();
-      h.startWorker();
+      const worker = h.startWorker() as FakeWorker;
+      worker.emit('message');
       await h.textures.load('first.ktx2');
 
       h.loadAsync.mockReturnValue(new Promise(() => undefined));
@@ -217,19 +218,22 @@ describe('a failure rejects the load and never leaves it pending (spec S5.4)', (
       expect(state).toBe('pending');
     });
 
-    it('counts a rejected first load as an answer too: the worker is alive', async () => {
+    it('does not count a rejected load as an answer: a 404 says nothing of the worker', async () => {
       vi.useFakeTimers();
       const h = harness();
-      h.loadAsync.mockRejectedValueOnce('transcode: bad file');
+      h.loadAsync.mockRejectedValueOnce('http 404');
       await h.loader.init();
       h.startWorker();
-      await expect(h.textures.load('bad.ktx2')).rejects.toBe('transcode: bad file');
+      await expect(h.textures.load('missing.ktx2')).rejects.toBe('http 404');
 
       h.loadAsync.mockReturnValue(new Promise(() => undefined));
       let state = 'pending';
-      h.textures.load('next.ktx2').catch(() => (state = 'rejected'));
-      await vi.advanceTimersByTimeAsync(KTX2_STALL_MS * 4);
-      expect(state).toBe('pending');
+      const next = h.textures.load('next.ktx2').catch((error: unknown) => {
+        state = error instanceof Error ? error.message : 'other';
+      });
+      await vi.advanceTimersByTimeAsync(KTX2_STALL_MS);
+      await next;
+      expect(state).toMatch(/did not answer/);
     });
   });
 
