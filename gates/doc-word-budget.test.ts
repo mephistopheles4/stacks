@@ -23,12 +23,12 @@ import { expectFound, readRepoFile, trackedFiles } from './repo.ts';
 
 /** File → the most words it may hold. Words are whitespace-separated runs. */
 const BUDGETS: Readonly<Record<string, number>> = {
-  'AGENTS.md': 6_100,
+  'AGENTS.md': 6_120, // +20: pnpm preview:fixture, a command that is new (#605)
   'CONTEXT.md': 3_950,
   'CONTRIBUTING.md': 1_750,
   'docs/agents/issue-tracker.md': 2_750,
-  'docs/commands.md': 15_300,
-  'docs/gates.md': 32_350, // +550: G73-G75 and the rooms directory in G13 (#600), rules that are new, beside #609's wasm clause
+  'docs/commands.md': 15_380, // +80: pnpm preview:fixture and the launcher, commands that are new (#605)
+  'docs/gates.md': 32_490, // +140 (#605: G9's key rules, G67's third script, the device-matrix row); earlier +550: G73-G75 and the rooms directory in G13 (#600), rules that are new, beside #609's wasm clause
   'docs/notes-on-the-shelf.md': 1_350,
   'docs/progress.md': 3_500,
   'docs/shelf-inspectors.md': 2_500,

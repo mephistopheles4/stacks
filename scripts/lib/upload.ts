@@ -10,6 +10,8 @@
  * `docs/spec/release-age-side-doors.md`.
  */
 
+import { dropBrowserstack } from './browserstack-key.ts';
+
 /**
  * Why the installed wrangler is not the pinned one, or `undefined` when it is.
  *
@@ -79,7 +81,7 @@ export function uploadEnv(shell: NodeJS.ProcessEnv, loaded: readonly string[]): 
   const dropped = new Set(loaded.filter((name) => !WRANGLER_NAMES.test(name)));
   // Case-insensitive, since Windows environment names are: a `Wrangler_Send_Metrics`
   // left beside the override could be the one the child reads.
-  const kept = Object.entries(shell).filter(
+  const kept = Object.entries(dropBrowserstack(shell)).filter(
     ([name]) => !dropped.has(name) && name.toUpperCase() !== 'WRANGLER_SEND_METRICS',
   );
   return { ...Object.fromEntries(kept), WRANGLER_SEND_METRICS: 'false' };

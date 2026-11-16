@@ -523,6 +523,13 @@ describe('G67 — the release-age window is stated, at seven days or more', () =
     // The site deploy calls both Turnstile key checks, which are tested on their own (integrity N1).
     expect(read('scripts/deploy.ts')).toContain('siteKeyProblem(html)');
     expect(read('scripts/deploy.ts')).toContain('keyProblem(process.env');
+    // Room T6 (S13.4): `preview:fixture` runs wrangler in three places, the upload, the list and the
+    // delete, each as `'exec', 'wrangler'`, behind the same refusal and the same narrowed environment,
+    // and it never reads the owner's login. G67 holds its one form of call.
+    expect(
+      deployProblems(read('scripts/preview-fixture.ts'), { file: 'preview-fixture.ts', calls: 3 }),
+    ).toEqual([]);
+    expect(readsLogin(read('scripts/preview-fixture.ts'))).toBe(false);
     // C3's first half: the list is these two and nothing else.
     expect(readList(read('pnpm-workspace.yaml'), TRUST_EXCLUDE).items).toEqual([
       'semver@6.3.1',
