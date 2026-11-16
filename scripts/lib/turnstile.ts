@@ -125,7 +125,7 @@ export interface EnvFile {
  * dotenv reads one: an `export ` prefix, `NAME: value` as well as `NAME=value`,
  * leading whitespace, a lone CR as a line end, and a leading byte-order mark.
  */
-function assignments(text: string): { name: string; value: string }[] {
+export function assignments(text: string): { name: string; value: string }[] {
   const lines = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n').split('\n');
   const found: { name: string; value: string }[] = [];
   for (const line of lines) {

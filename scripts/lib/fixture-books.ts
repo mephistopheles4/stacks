@@ -12,7 +12,12 @@
  *   about to serve a real vault (#599, S8).
  * - **the long-Thoughts book**, written into every generated vault, so every
  *   test meets a page that really scrolls (#599, S6).
+ * - **the marker**, the id that only the generator's long book carries.
  */
+
+// By path, as every other script here reaches into core.
+import { idFor } from '../../packages/core/src/library.ts';
+import type { BookRecord } from '../../packages/core/src/types.ts';
 
 export const FIRST = [
   'Tidal',
@@ -110,3 +115,18 @@ export function isFixtureTitle(title: string): boolean {
     (SECOND as readonly string[]).includes(second ?? '')
   );
 }
+
+/**
+ * The fixture's marker (room spec S13.2): the `library.json` id of the long-Thoughts book, a
+ * fixed invented book that only `scripts/make-50-book-fixture.ts` writes. A build that does not
+ * list it is not a fixture build, which is what the tunnel launcher and `preview:fixture` check
+ * before they serve or upload anything.
+ *
+ * Derived the way the build derives it (`idFor`): the generator's note is
+ * `Library/<title>.md`, carries no ISBN, and the adapter hands the vault-relative posix path as
+ * the source path, so the id is the same on every machine.
+ */
+export const FIXTURE_MARKER_ID = idFor({
+  title: LONG_BOOK_TITLE,
+  sourcePath: `Library/${LONG_BOOK_TITLE}.md`,
+} as BookRecord);

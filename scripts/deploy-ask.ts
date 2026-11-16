@@ -28,6 +28,7 @@ import {
   varArgs,
 } from './lib/ask-deploy.ts';
 import { readLiveAi } from './lib/ask-live.ts';
+import { browserstackRootRefusalsOnDisk } from './lib/browserstack-key.ts';
 import { gitOutput } from './lib/git.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
@@ -40,6 +41,10 @@ function fail(message: string): never {
   console.error(`\nFAILED: ${message}`);
   process.exit(1);
 }
+
+// The BrowserStack key never rests where wrangler reads it (room spec S13.6). No flag clears this.
+const keyInRootEnv = browserstackRootRefusalsOnDisk();
+if (keyInRootEnv.length > 0) fail(keyInRootEnv.join('\n'));
 
 const parsed = parseAskArgs(process.argv.slice(2));
 if ('refusal' in parsed) fail(parsed.refusal);

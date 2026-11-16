@@ -165,6 +165,16 @@ const ALLOWED = [
   // a fixture build or the live site, read through a browser; it never opens a
   // note and could not name a vault.
   'scripts/ios-swipe-check.ts',
+  // Room T6 (S13). The device-cloud launcher and the fixture preview each build the *fixture* site
+  // into a scratch folder under `artifacts/` and judge, serve or upload that folder alone; none
+  // opens a note or a vault, and each refuses a build whose library is not the fixture's. The key
+  // rule reads the root `.env` files by name to refuse a BrowserStack variable, never a value.
+  'scripts/browserstack-local.ts',
+  'scripts/lib/browserstack-key.ts',
+  'scripts/lib/browserstack-local.ts',
+  'scripts/lib/confinement-probe.ts',
+  'scripts/lib/fixture-dist.ts',
+  'scripts/preview-fixture.ts',
   // Rasterises the committed brand SVGs into the icon PNGs. Its inputs are two
   // files it names literally and its output is `packages/site/public/` — it
   // takes no path from anywhere and has no way to reach a vault.

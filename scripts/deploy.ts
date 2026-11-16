@@ -87,6 +87,7 @@ import {
   type FetchedRecord,
 } from './lib/metrics-record.ts';
 import { readDeclarations, scoreRun, type Tally } from './lib/mutation-score.ts';
+import { browserstackRootRefusalsOnDisk } from './lib/browserstack-key.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
 import { keyProblem, siteKeyProblem } from './lib/ask-deploy.ts';
 import { numbersFrom } from './lib/pr-window.ts';
@@ -186,6 +187,11 @@ function fail(message: string): never {
   console.error(`\nFAILED: ${message}`);
   process.exit(1);
 }
+
+// The BrowserStack key never rests where wrangler reads it (room spec S13.6). **No flag clears
+// this**: a root `.env` that names a `BROWSERSTACK_` variable would hand the key to the upload.
+const keyInRootEnv = browserstackRootRefusalsOnDisk();
+if (keyInRootEnv.length > 0) fail(keyInRootEnv.join('\n'));
 
 /**
  * `runShell` — the shell and the joined command line are its business, not this

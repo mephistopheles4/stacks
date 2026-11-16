@@ -67,13 +67,12 @@ optional-Plausible spec).
   prose. G2 (`public-build`) reads `publish()`'s output in both modes. It does
   not hold if the allowlist ever names `## About`, which `AGENTS.md` forbids.
 - *Repo.* `private` fails closed: anything present that is not clearly "no" keeps
-  a book out of every public build, the only control, wishlist books too ([ADR-0170](adr/0170-private-is-the-only-control-on-a-wishlist-book.md)).
+  a book out of every public build, wishlist books too ([ADR-0170](adr/0170-private-is-the-only-control-on-a-wishlist-book.md)).
   It does not hold for a deployment already published: marking a book private
   removes it from the next deployment only.
 - *Repo.* G20 (`public-build-artifact`) inspects the real `dist/` before upload
   for private books, orphan covers, vault paths and unknown keys, refuses a cover
-  within the cap (copied as is) carrying EXIF, XMP, IPTC, PNG text, a
-  Photoshop block or a JPEG comment, or unreadable, by sharp's report, and holds the
+  carrying embedded metadata, and holds the
   site's CSP (`connect-src 'self'` unless analytics is on; `script-src` with
   `'wasm-unsafe-eval'` and never `'unsafe-eval'`; `worker-src 'self'`; no `blob:`).
   It reads key names,
@@ -89,7 +88,10 @@ optional-Plausible spec).
 - *Repo.* All vault access goes through the adapter (invariant 4, G1). G1 reads
   import specifiers under `packages/` and `scripts/`, not `gates/` or run-time reach;
   its allowlist admits `scripts/ios-swipe-check.ts`, which reads the BrowserStack
-  credential file and no note.
+  credential file and no note, and six T6 scripts, none reading a note:
+  `scripts/browserstack-local.ts`, `scripts/preview-fixture.ts`,
+  `scripts/lib/browserstack-key.ts`, `scripts/lib/browserstack-local.ts`,
+  `scripts/lib/confinement-probe.ts`, `scripts/lib/fixture-dist.ts`.
 - *Host.* None. Whatever is uploaded is public.
 
 **Residual:** What you publish.
@@ -113,6 +115,7 @@ Cloudflare Pages (`pnpm deploy:site`), the Worker bundle and its two secrets
 - *Repo.* `deploy:ask` reads the live AI switch first and refuses to turn AI
   back on without `--ai-on`, and refuses log sampling below every line. It checks
   the Worker's own settings and never the gateway's.
+- *Repo.* `preview:fixture` uploads a fixture build, never to `main`.
 
 **Residual:** What you publish. The rule it rests on: the Cloudflare
 token for Terraform has an expiry, is set only on the command, and never enters
