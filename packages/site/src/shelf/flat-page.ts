@@ -35,8 +35,8 @@ export interface Placement {
 /** A square page at rest shows none; over this the page is not flat, and is not moved. */
 export const SKEW_LIMIT_PX = 1;
 
-/** Three decimals, and never `-0`: a matrix written only when it differs must not flicker on a sign. */
-const fixed = (value: number): string => String(Math.round(value * 1000) / 1000 + 0);
+/** Three decimals. `String(-0)` is already `0`, so a sign cannot make a matrix look changed. */
+const fixed = (value: number): string => String(Math.round(value * 1000) / 1000);
 
 /**
  * The affine map that takes the page's own box onto `corners`, fitted to the

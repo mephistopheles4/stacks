@@ -468,12 +468,18 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     if (inLayers(at) || controls.root.contains(at)) current.canvas.focus();
   };
 
+  /** A refused move is retried on a later frame, by which time a page may hold focus. */
+  const moveInKeepingFocus = (flat: FlatBook): boolean => {
+    const at = document.activeElement;
+    return moveIn(flatLayer, flat, screenOf(), at instanceof HTMLElement ? at : null);
+  };
+
   /** Moves the open book's pages into the flat layer: the one place a page is not in 3D. */
   const flatten = (entry: Lifted): void => {
     entry.staged.group.updateMatrixWorld(true);
     current.camera.updateMatrixWorld(true);
     entry.flat.wanted = true;
-    moveIn(flatLayer, entry.flat, screenOf());
+    moveInKeepingFocus(entry.flat);
   };
 
   // ---- the controls outside the pages ------------------------------------------
@@ -728,6 +734,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
    */
   const slotFor = (page: HTMLElement): HTMLElement => {
     const slot = document.createElement('div');
+    // Which page this slot is for, so a gate can pair each page with its own slot.
+    slot.dataset.slotFor = page.classList.contains('held-page-right') ? 'right' : 'left';
     slot.style.width = page.style.width;
     slot.style.height = page.style.height;
     // The page, flattened into its slot, no longer hides its own back.
@@ -784,6 +792,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       flat: false,
       wanted: false,
       warned: false,
+      refused: 0,
     };
     return { objects: [right, left], flat };
   };
@@ -925,7 +934,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       for (const entry of lifted.values()) {
         const { flat } = entry;
         if (flat.flat) updateFlat(flat, screenOf());
-        else if (flat.wanted) moveIn(flatLayer, flat, screenOf());
+        else if (flat.wanted) moveInKeepingFocus(flat);
       }
     },
   };

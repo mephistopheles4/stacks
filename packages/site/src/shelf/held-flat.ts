@@ -46,7 +46,16 @@ export interface FlatBook {
   wanted: boolean;
   /** Whether the skew warning has been said for this book. */
   warned: boolean;
+  /** Placements refused in a row for skew; a landed placement resets it. */
+  refused: number;
 }
+
+/**
+ * A turned book squares as it opens, so a refusal in the first frames is the
+ * ordinary path and says nothing. A page still skewed this many frames in a row
+ * (half a second at 60 fps) is the case the warning is for.
+ */
+export const WARN_AFTER_REFUSALS = 30;
 
 export interface Screen {
   readonly camera: THREE.Camera;
@@ -66,7 +75,8 @@ function placements(book: FlatBook, screen: Screen): string[] | undefined {
       book.box,
     );
     if (placed.skew > SKEW_LIMIT_PX) {
-      if (!book.warned) {
+      book.refused += 1;
+      if (!book.warned && book.refused >= WARN_AFTER_REFUSALS) {
         book.warned = true;
         console.warn(
           `held page is ${placed.skew.toFixed(1)} px off a flat rectangle; it stays in the 3D layer`,
@@ -76,6 +86,7 @@ function placements(book: FlatBook, screen: Screen): string[] | undefined {
     }
     out.push(placed.matrix);
   }
+  book.refused = 0;
   return out;
 }
 
@@ -84,16 +95,27 @@ function placements(book: FlatBook, screen: Screen): string[] | undefined {
  * has run `updateMatrixWorld` on the book and the camera, so a book that
  * reaches rest outside the frame (reduced motion) shows no frame at the wrong
  * place. `false`, with the pages left in their slots, when the page is skewed.
+ *
+ * Re-inserting a node blurs it, so `active` (the element holding focus) is
+ * focused again afterwards when a page holds it or contains it: a page focused
+ * while its move was refused keeps focus when a later frame's retry lands.
  */
-export function moveIn(layer: HTMLElement, book: FlatBook, screen: Screen): boolean {
+export function moveIn(
+  layer: HTMLElement,
+  book: FlatBook,
+  screen: Screen,
+  active: HTMLElement | null = null,
+): boolean {
   const matrices = placements(book, screen);
   if (matrices === undefined) return false;
+  const held = active !== null && book.pages.some(({ page }) => page.contains(active));
   layer.append(...book.pages.map(({ page }) => page));
   book.pages.forEach((entry, index) => {
     entry.matrix = matrices[index];
     entry.page.style.transform = entry.matrix ?? '';
   });
   book.flat = true;
+  if (held) active.focus({ preventScroll: true });
   return true;
 }
 

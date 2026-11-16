@@ -72,18 +72,6 @@ describe('flatPlacement', () => {
     expect(flatPlacement(trapezoid, BOX).skew).toBeCloseTo(12, 6);
     expect(flatPlacement(trapezoid, BOX).skew).toBeGreaterThan(SKEW_LIMIT_PX);
   });
-
-  it('never writes -0, so a sign flip cannot make the matrix look changed', () => {
-    const corners = moved((x, y) => ({ x: x * 1, y: y * 1 }));
-    expect(flatPlacement(corners, BOX).matrix).not.toContain('-0');
-    const flipped: Corners = [
-      { x: 0, y: 0 },
-      { x: 460, y: -0.0001 },
-      { x: 460, y: 640 },
-      { x: 0, y: 640 },
-    ];
-    expect(flatPlacement(flipped, BOX).matrix).not.toContain('-0');
-  });
 });
 
 describe('projectSlot', () => {

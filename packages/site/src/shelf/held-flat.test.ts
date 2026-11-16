@@ -1,6 +1,14 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { moveIn, moveOut, update, type FlatBook, type FlatPage, type Screen } from './held-flat.ts';
+import {
+  moveIn,
+  moveOut,
+  update,
+  WARN_AFTER_REFUSALS,
+  type FlatBook,
+  type FlatPage,
+  type Screen,
+} from './held-flat.ts';
 
 /**
  * Just enough of an element to move between parents with no DOM library: the
@@ -19,6 +27,25 @@ class Box {
       node.parent = this;
       this.children.push(node);
     }
+  }
+
+  contains(other: Box): boolean {
+    for (let at: Box | undefined = other; at !== undefined; at = at.parent) {
+      if (at === this) return true;
+    }
+    return false;
+  }
+}
+
+/** An element inside `parent` that counts how often it is focused. */
+class FocusBox extends Box {
+  focused = 0;
+  constructor(parent: Box) {
+    super();
+    this.parent = parent;
+  }
+  focus(): void {
+    this.focused += 1;
   }
 }
 
@@ -62,6 +89,7 @@ function book(turned = 0): { book: FlatBook; layer: Box; pages: Box[]; slots: Bo
       flat: false,
       wanted: false,
       warned: false,
+      refused: 0,
     },
     layer,
     pages,
@@ -86,9 +114,21 @@ describe('moveIn', () => {
     for (const page of pages) expect(page?.style.transform).toMatch(/^matrix\(/);
   });
 
-  it('leaves the pages in their slots, and says so once, when a page is not flat to the camera', () => {
+  it('places each page on its own slot: the left page left of the right', () => {
+    const { book: held, layer, pages } = book();
+    moveIn(asElement(layer), held, screen());
+    const x = (box: Box | undefined): number =>
+      Number(/^matrix\(([^)]*)\)$/.exec(box?.style.transform ?? '')?.[1]?.split(',')[4]);
+    expect(x(pages[0])).toBeLessThan(x(pages[1]));
+  });
+
+  it('leaves the pages in their slots, and says so once, when a page stays off a flat rectangle', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { book: held, layer, slots } = book(0.5);
+    for (let frame = 1; frame < WARN_AFTER_REFUSALS; frame += 1) {
+      expect(moveIn(asElement(layer), held, screen())).toBe(false);
+    }
+    expect(warn).not.toHaveBeenCalled();
     expect(moveIn(asElement(layer), held, screen())).toBe(false);
     expect(moveIn(asElement(layer), held, screen())).toBe(false);
     expect(held.flat).toBe(false);
@@ -96,6 +136,31 @@ describe('moveIn', () => {
     expect(slots[0]?.children).toHaveLength(1);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(String(warn.mock.calls[0]?.[0])).toMatch(/px off a flat rectangle/);
+  });
+
+  it('counts only refusals in a row: a landed placement starts the count again', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { book: held, layer } = book(0.5);
+    for (let frame = 1; frame < WARN_AFTER_REFUSALS; frame += 1)
+      moveIn(asElement(layer), held, screen());
+    for (const { object } of held.pages) {
+      object.rotation.y = 0;
+      object.updateMatrixWorld(true);
+    }
+    expect(moveIn(asElement(layer), held, screen())).toBe(true);
+    expect(held.refused).toBe(0);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('gives focus back to a page, or a link in it, that held it before the move', () => {
+    const { book: held, layer, pages } = book();
+    const link = new FocusBox(pages[1] as Box);
+    expect(moveIn(asElement(layer), held, screen(), link as unknown as HTMLElement)).toBe(true);
+    expect(link.focused).toBe(1);
+    const elsewhere = new FocusBox(new Box());
+    const idle = book();
+    moveIn(asElement(idle.layer), idle.book, screen(), elsewhere as unknown as HTMLElement);
+    expect(elsewhere.focused).toBe(0);
   });
 });
 
