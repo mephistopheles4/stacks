@@ -26,8 +26,8 @@ describe('loadFraction', () => {
     expect(loadFraction({ ...start, glbLoaded: 5_000_000, glbDone: true })).toBeGreaterThan(0);
   });
 
-  it('is whole for a room with no textures once its GLB is in', () => {
-    expect(loadFraction({ ...start, glbLoaded: 10, glbTotal: 10, glbDone: true })).toBe(1);
+  it('holds at the GLB’s share until the textures are counted, never at whole', () => {
+    expect(loadFraction({ ...start, glbLoaded: 10, glbTotal: 10, glbDone: true })).toBe(0.5);
   });
 
   it('never runs past the whole, whatever a server reports', () => {

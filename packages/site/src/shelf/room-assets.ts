@@ -210,6 +210,7 @@ async function prepare(
     codec: () => session.codec(),
     settled,
     dispose: () => {
+      ktx?.dispose();
       group.removeFromParent();
       group.traverse((node) => {
         if (!(node instanceof THREE.Mesh)) return;

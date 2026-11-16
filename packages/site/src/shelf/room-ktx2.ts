@@ -35,6 +35,7 @@ export interface Ktx2Members {
   workerPool: { setWorkerCreator(create: () => WorkerLike): void };
   init(): Promise<void>;
   loadAsync(url: string): Promise<THREE.CompressedTexture>;
+  dispose(): void;
 }
 
 /** The part of a `Worker` this file uses, so a test can stand one in. */
@@ -55,6 +56,8 @@ export interface OwnWorkerOptions {
 export interface Ktx2Textures {
   /** One KTX2 file as a texture, rejecting if the worker could not start or died. */
   readonly load: (url: string) => Promise<THREE.CompressedTexture>;
+  /** Ends the transcoder workers this loader started. */
+  readonly dispose: () => void;
 }
 
 /**
@@ -112,7 +115,12 @@ export function ownWorkerTextures(loader: Ktx2Members, options: OwnWorkerOptions
     return loader.transcoderPending;
   };
 
-  return { load: (url) => Promise.race([loader.loadAsync(url), failed]) };
+  return {
+    load: (url) => Promise.race([loader.loadAsync(url), failed]),
+    dispose: () => {
+      loader.dispose();
+    },
+  };
 }
 
 /**

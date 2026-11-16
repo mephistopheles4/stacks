@@ -149,6 +149,9 @@ export function readRoomData(empties: readonly Empty[]): RoomData {
     height: positive(open.userData.height, '"view_open"\'s height'),
     aspect: positive(open.userData.aspect, '"view_open"\'s aspect'),
   };
+  if (between(view.position, view.target) === 0) {
+    throw new RoomDataError('"view_open" stands on its target, so it has no line of sight');
+  }
 
   const bounds: Box = {
     min: find(empties, 'bounds_min').position,

@@ -28,7 +28,8 @@ const GLB_SHARE = 0.5;
 export function loadFraction(s: LoadState): number {
   const glb = s.glbDone ? 1 : s.glbTotal > 0 ? Math.min(s.glbLoaded / s.glbTotal, 0.99) : 0;
   if (!s.glbDone) return GLB_SHARE * glb;
-  if (s.texTotal === 0) return 1;
+  // `texTotal` is 0 until the GLB is parsed, so hold at the GLB's share: `done()` fills the bar.
+  if (s.texTotal === 0) return GLB_SHARE;
   const tex = Math.min(s.texLoaded / s.texTotal, 1);
   return GLB_SHARE + (1 - GLB_SHARE) * tex;
 }

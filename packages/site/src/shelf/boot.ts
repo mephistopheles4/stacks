@@ -255,7 +255,8 @@ export async function boot(
           onFailed: () => {
             roomWanted = undefined;
             queueMicrotask(() => {
-              if (handle?.room.state === 'failed') remount('same');
+              // A rebuild that does not come up leaves a blank canvas: say so, as the recovery does.
+              if (handle?.room.state === 'failed' && !remount('same')) showNotice(surface, failure);
             });
           },
         }

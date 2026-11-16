@@ -52,3 +52,12 @@ the product, and the room is a setting for it.
 - `slot_bookcase`'s position is not honoured: the bookcase stays at the origin until a second room
   needs it elsewhere.
 - Following the room's camera box costs the damped orbit one clamp a frame (`keepInRoom`).
+
+## How this was decided
+
+No Decision Log entries exist for this record: the log was retired before it. The sources are the
+owner-signed spec ([revision 3](https://github.com/mephistopheles4/stacks/issues/593#issuecomment-6904699109):
+S2, S3, S7, S8, S14.4) and two picks made while building. A failed room draws the plain shelf
+**painted**, as a lost context does (S2.5, C13). The cabinet under the mantel clock is the live
+abandoned bookcase T5 builds, so until then the room shows the clock shelf without it, and nothing is
+deployed between T3 and T5.

@@ -963,6 +963,7 @@ function assembleShelf(
         },
         abandon: (loaded) => {
           loaded?.group.removeFromParent();
+          room = undefined;
           roomData = undefined;
           // A cancelled load is not a failed room: the page that cancelled it has the shelf it wants.
           if (!leaving.signal.aborted) {

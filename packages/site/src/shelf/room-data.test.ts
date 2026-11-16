@@ -109,6 +109,16 @@ describe('readRoomData refuses a room that is missing what the page needs', () =
     );
     expect(() => readRoomData(out)).toThrow('outside the camera box');
   });
+
+  it('with a camera that stands on its own target, which no framing can use', () => {
+    const open = empties.find((e) => e.name === 'view_open');
+    const onTarget = empties.map((e) =>
+      e.name === 'view_open' && open !== undefined
+        ? { ...e, position: open.userData.target as Vec3 }
+        : e,
+    );
+    expect(() => readRoomData(onTarget)).toThrow('stands on its target');
+  });
 });
 
 describe('clampInto (spec S8.2, S8.3)', () => {

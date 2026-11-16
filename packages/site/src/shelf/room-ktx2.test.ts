@@ -42,6 +42,7 @@ function harness(options: { wasm?: () => Promise<ArrayBuffer> } = {}) {
     },
     init: () => Promise.reject(new Error("three's own init, which builds a blob: worker")),
     loadAsync,
+    dispose: () => undefined,
   };
   const fetchWasm = vi.fn(options.wasm ?? (() => Promise.resolve(wasm)));
   const makeWorker = vi.fn((url: string) => {

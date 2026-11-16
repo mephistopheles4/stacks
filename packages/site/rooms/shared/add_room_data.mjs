@@ -53,8 +53,18 @@ if (file.readUInt32LE(16) !== 0x4e4f534a) throw new Error('the first chunk is no
 const json = JSON.parse(file.subarray(20, 20 + jsonLength).toString('utf8'));
 const rest = file.subarray(20 + jsonLength);
 
-// An empty of one of these names, from an earlier run, goes; the others keep their index.
-const ours = new Set(empties.map((e) => e.name));
+// An empty this script owns, from an earlier run, goes; the others keep their index. The set is
+// fixed, not the names `room-data.json` has now, so a light taken out of the data (the optional
+// lamp) is taken out of the file on the next run, and cannot linger.
+const ours = new Set([
+  'view_open',
+  'bounds_min',
+  'bounds_max',
+  'live_ambient',
+  'live_key',
+  'live_fill',
+  'live_lamp',
+]);
 const scene = json.scenes[json.scene ?? 0];
 const dropped = new Set();
 json.nodes.forEach((node, i) => {

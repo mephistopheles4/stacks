@@ -4226,6 +4226,11 @@ async function roomSettled(page: Page, what: string, mayFail: boolean): Promise<
       timeout: ROOM_WAIT_MS,
       polling: 100,
     });
+    // The cover dissolves after the room is dressed (about 1.75 s) and must be gone before it is read.
+    await page.waitForFunction("document.querySelector('[data-loading-screen]') === null", {
+      timeout: ROOM_WAIT_MS,
+      polling: 100,
+    });
   } catch {
     throw new Error(`the room at ${what} was still loading after ${String(ROOM_WAIT_MS)}ms`);
   }
