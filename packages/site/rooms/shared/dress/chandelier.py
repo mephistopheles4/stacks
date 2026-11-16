@@ -4,9 +4,13 @@ point light in each, and the faceless 'fill' area light turned off.
 
     exec(open("chandelier.py").read(), g); g["hang_chandelier"](scene, repo, (x, y))
 """
+import os
+
 import bmesh
 import bpy
 from mathutils import Vector
+
+from room_paths import INPUTS  # noqa: E402  (build_room.py puts rooms/shared on sys.path)
 
 M = 3.11
 CEILING = 12.0      # scene units: ceiling.py TOP
@@ -49,7 +53,7 @@ def _flame_mat():
 def hang_chandelier(scene, repo, at=(-0.8, -4.5), shorten=0.24 - (CEILING - HUNG_UNDER) / M, watts=130.0, fill_off=True):
     """at: hung off the room's centre toward the desk, so it reaches Aristotle on the back wall's
     left end and still lights the chest and the storm on the right (the owner's pick)."""
-    path = f"{repo}/.cache/polyhaven/Chandelier_03/Chandelier_03_2k.gltf"
+    path = os.path.join(INPUTS, "polyhaven", "Chandelier_03", "Chandelier_03_2k.gltf")
     before = set(bpy.data.objects)
     w = bpy.context.window_manager.windows[0]
     with bpy.context.temp_override(window=w, scene=scene, view_layer=scene.view_layers[0]):

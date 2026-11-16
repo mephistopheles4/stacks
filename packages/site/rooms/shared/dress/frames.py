@@ -12,9 +12,9 @@ import bpy
 from mathutils import Matrix, Vector
 
 M = 3.11
-REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))  # the checkout, four folders up
-PH = os.path.join(REPO, ".cache", "polyhaven")
-MET = os.path.join(REPO, ".cache", "met")
+from room_paths import INPUTS  # noqa: E402
+PH = os.path.join(INPUTS, "polyhaven")
+MET = os.path.join(INPUTS, "met")
 
 
 def arc(cx, cz, r, a0, a1, n=6, mat=0):

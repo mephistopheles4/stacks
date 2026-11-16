@@ -13,6 +13,8 @@ import bmesh
 import bpy
 from mathutils import Matrix, Quaternion, Vector
 
+from room_paths import INPUTS  # noqa: E402  (build_room.py puts rooms/shared on sys.path)
+
 M = 3.11
 TOP = 2.36          # the desk's top, scene units
 LEFT_WALL_X = -7.89
@@ -185,7 +187,7 @@ def dress_floor_books(scene, repo, seed=FLOOR_SEED):
     rebuild lays the same stacks. On each stack's top book stands `slot_wishlist_<n>`, where the page
     lays the wishlist: turned a quarter from that book, so the slot's x runs along its long side, the
     way a book lying flat on the page has its height along x. Returns the pivots, floor_books_<n>."""
-    hobu = os.path.join(repo, ".cache", "sketchfab", "vintage_desk_assets", "vintage_desk_assets.glb")
+    hobu = os.path.join(INPUTS, "sketchfab", "vintage_desk_assets", "vintage_desk_assets.glb")
     src = _keep(_import(hobu, scene), FLOOR_KINDS)
     _darken(src)
     rng = random.Random(seed)
@@ -235,8 +237,8 @@ def dress_floor_books(scene, repo, seed=FLOOR_SEED):
 
 
 def dress_desk(scene, repo, frame_build=None):
-    sf = os.path.join(repo, ".cache", "sketchfab")
-    ph = os.path.join(repo, ".cache", "polyhaven")
+    sf = os.path.join(INPUTS, "sketchfab")
+    ph = os.path.join(INPUTS, "polyhaven")
     hobu = os.path.join(sf, "vintage_desk_assets", "vintage_desk_assets.glb")
     roots = []
 
@@ -247,7 +249,7 @@ def dress_desk(scene, repo, frame_build=None):
     roots.append(_group("desk_books", objs, scene, (-7.12, -6.8), yaw_deg=12, size=BOOK_SIZE))  # off the dado rail at this size
     # his bronze inkwell, back centre, and the dip pen laid across the letter
     roots.append(_group("desk_inkwell", _keep(_import(hobu, scene), ("inkwell.001",)), scene, (-7.4, -5.75), yaw_deg=0))
-    roots.append(_written_page(scene, os.path.join(repo, ".cache", "commons", "longfellow_1851", "letter_spread.jpg"), (-6.2, -5.45), yaw_deg=6))
+    roots.append(_written_page(scene, os.path.join(INPUTS, "commons", "longfellow_1851", "letter_spread.jpg"), (-6.2, -5.45), yaw_deg=6))
     roots.append(_group("desk_pen", _keep(_import(hobu, scene), ("pen.001",)), scene, (-6.0, -5.38), yaw_deg=-25, z=TOP + 0.003 * M))
     # Portland Museum's sand blotter (pounce pot) from the Earl of Abergavenny wreck: 55 mm tall
     sb = _import(os.path.join(sf, "sand_blotter", "sand_blotter.glb"), scene)

@@ -12,8 +12,8 @@ import os
 import bpy
 
 M = 3.11
-REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))  # the checkout, four folders up
-PH = os.path.join(REPO, ".cache", "polyhaven")
+from room_paths import INPUTS  # noqa: E402
+PH = os.path.join(INPUTS, "polyhaven")
 
 
 def _img(slug, name, colour=True):

@@ -1,9 +1,13 @@
 """
-PROTOTYPE for #593 — throwaway. A rough reading-corner room, baked, exported as GLB.
+The room bake (#593, spec S4): a room's light, baked, exported as GLB. The one entry point.
 
-Run (headless):
-  blender -b --factory-startup -P packages/site/room-prototype-593/build_room.py -- \
-      --out packages/site/public/room-prototype-593/room.glb --samples 128 --res 2048
+Run (headless), from the repo root, after `fetch_inputs.py <room>` and the hand-placed inputs:
+  blender -b --factory-startup -P packages/site/rooms/shared/build_room.py -- --room <id> \
+      --out packages/site/public/rooms/<id>/<id>.glb ...
+`packages/site/rooms/<id>/build.json` records the command that baked the committed files. The bake
+refuses to start until every input named in `packages/site/rooms/<id>/inputs.json` is present and
+matches its SHA-256 (fetch_inputs.py's check), and Blender runs with --factory-startup so no
+auto-run script can.
 
 Coordinates: 1 Blender unit = 1 shelf unit (~0.31 m). Blender is Z-up; the glTF
 exporter maps Blender (x, y, z) to three (x, z, -y). The bookcase stands centred
@@ -26,13 +30,14 @@ from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
+ap.add_argument("--room", required=True, help="the room id: its inputs are artifacts/rooms/<id>/, named by packages/site/rooms/<id>/inputs.json")
 ap.add_argument("--out", required=True)
 ap.add_argument("--samples", type=int, default=128)
 ap.add_argument("--res", type=int, default=2048)
 ap.add_argument("--rows", type=int, default=4)
 ap.add_argument("--save-blend", default="")
-ap.add_argument("--pack", default="",
-                help="the gltfpack binary (npm gltfpack): pack the GLB after export, see the end of this file")
+ap.add_argument("--pack", action="store_true",
+                help="pack the GLB after export with the pinned gltfpack (the root devDependency), run through node; see the end of this file")
 ap.add_argument("--chair", choices=("blocks", "scripted", "import", "hero"), default="blocks")
 ap.add_argument("--chair-res", type=int, default=0, help="the chair's own atlas size (default: --res)")
 ap.add_argument("--lightmaps", action="store_true",
@@ -48,9 +53,7 @@ ap.add_argument("--table", choices=("drum", "polyhaven"), default="drum",
                 help="polyhaven: Poly Haven's Side Table Tall 01 (CC0; fetch_textures.py --model side_table_tall_01)")
 ap.add_argument("--candles", choices=("glass", "hero"), default="glass",
                 help="hero: hero_candles.py's brass candlesticks and pillar, on the table top")
-ap.add_argument("--table-file", default=os.path.normpath(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".cache", "polyhaven",
-    "side_table_tall_01", "side_table_tall_01_2k.gltf")))
+ap.add_argument("--table-file", default="", help="default: the Poly Haven Side Table Tall 01 in the room's inputs")
 ap.add_argument("--wallpaper", default="", help="with --lightmaps: a seamless tile (wallpaper_from_scan.py) papering the wall above a dado rail")
 ap.add_argument("--wallpaper-size", default=(0.288, 0.450), type=lambda s: tuple(float(v) for v in s.split(",")),
                 help="one tile's width,height in metres (Morris's Willow: 0.288,0.450)")
@@ -63,7 +66,20 @@ ap.add_argument("--chair-recolour", action="store_true", help="paint an imported
 ap.add_argument("--dress", default="", help="a Python file whose dress(scene, repo) furnishes the room further and "
                 "returns [(mesh name, objects)]: each list is joined and baked, glossy seen from the site camera")
 args = ap.parse_args(argv)
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Every path in the recorded command is relative to the repo, whatever the shell's folder was; the
+# sibling modules read STACKS_ROOM when they are imported, so it is set before any of them is.
+os.environ["STACKS_ROOM"] = args.room
+import fetch_inputs  # noqa: E402
+import room_paths  # noqa: E402
+
+os.chdir(room_paths.REPO)
+if not fetch_inputs.verify_room(args.room):
+    sys.exit("[room] refusing to bake: the inputs failed fetch_inputs.py's check (above). "
+             f"Run `python packages/site/rooms/shared/fetch_inputs.py {args.room}` and place the hand-placed ones.")
+if not args.table_file:
+    args.table_file = os.path.join(room_paths.INPUTS, "polyhaven", "side_table_tall_01", "side_table_tall_01_2k.gltf")
 
 ROW_HEIGHT = 1.12
 CASE_W = 3.4 + 0.09 * 2
@@ -447,7 +463,7 @@ dressed = []
 if args.dress:
     _dress = {"__name__": "dress", "__file__": os.path.abspath(args.dress)}
     exec(open(args.dress, encoding="utf-8").read(), _dress)
-    dressed = _dress["dress"](scene, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")))
+    dressed = _dress["dress"](scene, room_paths.REPO)
     # a dressing's own slots go to the page too; its wishlist slots on the floor's stacks replace
     # the stand-in's one
     made = [o for o in scene.objects if o.name.startswith("slot_") and o not in slots]
@@ -844,10 +860,17 @@ print(f"[room] wrote {args.out}")
 # texture; the UVs stay float, as a quantized UV needs a texture transform on the material, and the
 # page replaces every material. Measured on bake 10: 35.9 MB -> 12.9 MB quantized, 3.0 MB with meshopt.
 if args.pack:
+    import shutil
     import subprocess
     raw = args.out[:-4] + ".raw.glb"
     os.replace(args.out, raw)
-    subprocess.run([args.pack, "-i", raw, "-o", args.out, "-cc", "-kn", "-ke", "-km", "-kv", "-vtf",
+    # gltfpack 1.3.0 is a root devDependency; node runs its entry file, never the `.bin` shim, which
+    # is a .cmd file on Windows that subprocess cannot run without a shell.
+    entry = os.path.join(room_paths.REPO, "node_modules", "gltfpack", "cli.js")
+    node = shutil.which("node")
+    if not node or not os.path.isfile(entry):
+        sys.exit("[room] --pack needs node and the pinned gltfpack (pnpm install): " + entry)
+    subprocess.run([node, entry, "-i", raw, "-o", args.out, "-cc", "-kn", "-ke", "-km", "-kv", "-vtf",
                     "-si", "0.5", "-slb"], check=True)
     os.remove(raw)
     print(f"[room] packed {args.out}: {os.path.getsize(args.out) / 1e6:.1f} MB")

@@ -23,7 +23,8 @@ UNITS_PER_M = 3.11
 RUG_SIZE = (2.41 * UNITS_PER_M, 1.78 * UNITS_PER_M, 0.04)  # the Met carpet's 241 x 178 cm
 PLANK_M = 1.34 * UNITS_PER_M  # the plank_flooring scan covers 1.34 m
 FLOOR_TINT = (0.55, 0.5, 0.46)  # the scan is pale pine; this reads as old oak under a warm lamp
-TEX = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".cache", "polyhaven")
+from room_paths import INPUTS  # noqa: E402
+TEX = os.path.join(INPUTS, "polyhaven")
 
 
 def _keep_faces(o, keep):

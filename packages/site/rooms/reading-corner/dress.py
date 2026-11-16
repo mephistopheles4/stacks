@@ -1,25 +1,30 @@
-"""#593: the audition's furniture, pictures, side walls and lights, set into build_room.py's room so
-they are baked with it. Run by `build_room.py --dress audition_dress.py`; dress(scene, repo) returns
-the meshes to join and bake, one atlas each.
+"""#593: the reading corner's furniture, pictures, side walls and lights, set into build_room.py's
+room so they are baked with it. Run by `build_room.py --dress`; dress(scene, repo) returns the
+meshes to join and bake, one atlas each.
 
-The positions come from the owner's block-out (artifacts/layout-study.blend), as audition_study.py
-reads them; the helpers beside this file (desk_dress, side_walls, chandelier, frames, throw,
-chair_texture) are the same ones the audition runs.
+The positions are the owner's block-out, kept as data in layout.json beside this file (spec S4.5):
+the one-off dump of the untracked layout-study.blend, so no .blend is an input. The helpers it runs
+(desk_dress, side_walls, chandelier, frames, throw, chair_texture, chair_seat, ceiling,
+abandoned_shelf) are in rooms/shared/dress/.
 """
+import json
 import math
 import os
 
 import bpy
 from mathutils import Vector
 
+from room_paths import INPUTS  # noqa: E402  (build_room.py puts rooms/shared on sys.path)
+
 M = 3.11
 HERE = os.path.dirname(os.path.abspath(__file__))
+SHARED_DRESS = os.path.normpath(os.path.join(HERE, "..", "shared", "dress"))
 FACE_CAP = 25000          # a quick bake: anything denser is decimated to this
 SMALL_CAP = {"desk_sand_blotter": 4000}
 
 
 def _helper(name):
-    path = os.path.join(HERE, name + ".py")
+    path = os.path.join(SHARED_DRESS, name + ".py")
     g = {"__name__": name, "__file__": path}
     exec(open(path, encoding="utf-8").read(), g)
     return g
@@ -138,17 +143,36 @@ MOVES = {
 }
 
 
+def _load_layout(scene):
+    """The block-out's boxes, built from layout.json: each L_<name> keeps its mesh, transform and rotation mode."""
+    with open(os.path.join(HERE, "layout.json"), encoding="utf-8") as f:
+        rows = json.load(f)["objects"]
+    made = {}
+    for row in rows:
+        me = bpy.data.meshes.new(row["name"])
+        me.from_pydata([tuple(v) for v in row["verts"]], [], row["faces"])
+        me.update()
+        o = bpy.data.objects.new(row["name"], me)
+        o.rotation_mode = row["rotation_mode"]
+        o.location = row["location"]
+        o.rotation_euler = row["rotation_euler"]
+        o.rotation_quaternion = row["rotation_quaternion"]
+        o.scale = row["scale"]
+        scene.collection.objects.link(o)
+        made[row["name"]] = o
+    for row in rows:
+        if row["parent"]:
+            made[row["name"]].parent = made[row["parent"]]
+    return made
+
+
 def dress(scene, repo):
-    PH = os.path.join(repo, ".cache", "polyhaven")
-    SF = os.path.join(repo, ".cache", "sketchfab")
+    PH = os.path.join(INPUTS, "polyhaven")
+    SF = os.path.join(INPUTS, "sketchfab")
     before = set(bpy.data.objects)
 
     # the owner's block-out: its boxes give every position
-    with bpy.data.libraries.load(os.path.join(repo, "artifacts", "layout-study.blend"), link=False) as (src, dst):
-        dst.objects = [n for n in src.objects if n.startswith("L_")]
-    for o in dst.objects:
-        if o is not None:
-            scene.collection.objects.link(o)
+    _load_layout(scene)
     # the owner's moves since the block-out, once the real bookcase's width (3.58) was known
     for n, d in MOVES.items():
         bpy.data.objects[n].location += Vector((d[0], d[1], 0))
@@ -206,7 +230,7 @@ def dress(scene, repo):
         bpy.data.objects[n].location.z = top
     clock = bpy.data.objects["P_L_clock"]
     clock.location.y -= 0.08  # its end stood past the box's
-    _helper("side_walls")["dress_side_walls"](scene, os.path.join(repo, "packages", "site", "public", "room-prototype-593", "tex", "wallpaper-willow.webp"))
+    _helper("side_walls")["dress_side_walls"](scene, os.path.join(INPUTS, "derived", "wallpaper-willow.png"))
     _helper("ceiling")["dress_ceiling"](scene)
     _helper("chandelier")["hang_chandelier"](scene, repo, fill_off=False)
 

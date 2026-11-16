@@ -22,7 +22,8 @@ import bpy
 from mathutils import Matrix, Vector, noise
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TEX = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".cache", "polyhaven"))
+from room_paths import INPUTS  # noqa: E402
+TEX = os.path.join(INPUTS, "polyhaven")
 
 # ── measurements, metres ─────────────────────────────────────────────────────
 HEIGHT = 1.108
