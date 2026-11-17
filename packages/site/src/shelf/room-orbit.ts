@@ -20,12 +20,11 @@ type Listening = Pick<HTMLElement, 'addEventListener' | 'removeEventListener'>;
  * a face, where the turn undid itself and the camera looked stuck. The distance the visitor asked for
  * (`wished`) is kept apart, so turning away from the wall lets the camera back out.
  *
- * **Walk.** `OrbitControls`' own dolly is off in a room: it takes a share of what is left, stops at
- * `minDistance`, and every one of its handlers runs `update()` itself, which a camera put back to
- * its wished distance each frame undid, so the scroll did nothing at all. The walk is the only thing
- * the wheel and the pinch do, and it is queued here and taken a little each frame. From the first
- * step on, the drag turns the view about a pivot `minDistance` ahead, not about the far target the
- * opening view was framed round.
+ * **Walk.** `OrbitControls`' own dolly is off in a room (why: ADR-0178 item 8). The walk is the only
+ * thing the wheel and the pinch do, and it is queued here and taken a little each frame. **From the
+ * first step on, the drag turns the view about the camera**, as turning a head would: the target
+ * stands `minDistance` ahead and swings, and the camera stays where it walked, so no face can hold
+ * the turn. Before the first step the drag orbits the far target the opening view was framed round.
  *
  * Outside a room (`leave`, and before `enter`) it is `OrbitControls` as it was.
  */
@@ -59,17 +58,20 @@ export function createRoomOrbit(
   let pending = 0;
   /** Set by the first step of a walk: the pivot has come in to the camera (see `walkFrame`). */
   let walked = false;
+  /** Where the visitor stands once they have walked: the camera, whatever a pointer handler did to it. */
+  const stand = new THREE.Vector3();
   const offset = new THREE.Vector3();
   const at = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
 
   const walkFrame = (box: Box): void => {
     const { target } = controls;
-    // **Once the visitor has walked, a drag turns the view and does not swing the camera.** The
-    // opening view orbits a target across the room, as the owner framed it; after the first step the
-    // pivot is only `minDistance` ahead of the camera, the nearest `OrbitControls` allows, so a drag
-    // turns the view about where the visitor stands, as turning their head would. The line of sight
-    // does not change when the pivot comes in, so nothing jumps.
-    if (!walked) {
+    // **Once the visitor has walked, a drag turns the view and does not swing the camera** (see
+    // `headTurn`). The opening view orbits a target across the room, as the owner framed it; after
+    // the first step the target is only `minDistance` ahead of the camera, the nearest
+    // `OrbitControls` allows. The line of sight does not change when it comes in, so nothing jumps.
+    if (walked) {
+      settle();
+    } else {
       walked = true;
       radius = Math.min(radius, controls.minDistance);
     }
@@ -82,7 +84,37 @@ export function createRoomOrbit(
     const done = camera.position.distanceTo(from);
     pending = done < Math.abs(part) - 1e-9 ? 0 : pending - part;
     if (Math.abs(pending) < 1e-6) pending = 0;
+    stand.copy(camera.position);
     wished = camera.position.distanceTo(target);
+  };
+
+  /**
+   * A drag after a walk: the camera stays where it stands and the view turns about it. `OrbitControls`
+   * turns the camera about the target, so the turn is taken and then the camera is put back and the
+   * target carried to where the turned view looks. The camera never leaves the box, so no face can
+   * hold the turn.
+   */
+  const headTurn = (): void => {
+    const { target } = controls;
+    settle();
+    offset.subVectors(stand, target).setLength(radius);
+    camera.position.copy(target).add(offset);
+    controls.update();
+    settle();
+    camera.lookAt(target);
+    wished = radius;
+  };
+
+  /**
+   * `OrbitControls` runs `update()` inside its own pointer handlers, which swings the camera about the
+   * target between two frames. What that swing meant is the turn (the direction from the target to
+   * the camera); the camera goes back to where the visitor stands and the target to `radius` ahead of
+   * it along the turned view.
+   */
+  const settle = (): void => {
+    offset.subVectors(camera.position, controls.target).setLength(radius);
+    camera.position.copy(stand);
+    controls.target.copy(stand).sub(offset);
   };
 
   const orbit = (box: Box): void => {
@@ -93,6 +125,7 @@ export function createRoomOrbit(
     controls.update();
     offset.subVectors(camera.position, target);
     wished = offset.length();
+    // `offset` now holds the place the visitor asked for, as a point, for the pull-in
     offset.add(target);
     const [x, y, z] = pullIn(box, at(target), at(offset), controls.minDistance);
     camera.position.set(x, y, z);
@@ -174,11 +207,14 @@ export function createRoomOrbit(
         return;
       }
       if (wished === 0) {
+        stand.copy(camera.position);
         wished = camera.position.distanceTo(controls.target);
-        if (radius === 0) radius = wished;
+        // after a hold the camera may stand elsewhere: once walked, the pivot is wherever it now is
+        if (radius === 0 || walked) radius = wished;
       }
       if (pending !== 0) walkFrame(bounds);
-      orbit(bounds);
+      if (walked) headTurn();
+      else orbit(bounds);
     },
     attach,
   };

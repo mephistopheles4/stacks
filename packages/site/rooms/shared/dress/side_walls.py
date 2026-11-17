@@ -121,8 +121,8 @@ def dress_side_walls(scene, willow_path, left_x=-7.89, right_x=9.89, y0=-13.0, y
                                       ["room_wallpaper_right", right_x - 0.003, -1, y0, y1, z0, top]])
     # the side walls run on to y0, where the room's front wall closes them: the back wall's own pieces
     # (build_room.py builds them from this record, as it builds the papered strips above). Its trim
-    # runs to the side walls' middles, inside their bodies; its paper to their inner faces, 4.5 mm
-    # past the paper beside it, so no sliver of the void shows in the corner
+    # runs to the side walls' middles, inside their bodies; its paper to 0.0045 units (about 1.4 mm)
+    # past their inner faces, behind the side paper, so no sliver of the void shows in the corner
     scene["front_wall"] = json.dumps({"y": y0, "trim_x": [left_x - 0.16, right_x + 0.16],
                                       "paper_x": [left_x - 0.0045, right_x + 0.0045], "z0": z0, "top": top})
     return [_wall(scene, "left_wall_dress", left_x, 1, y0, y1, top, paper),

@@ -44,28 +44,32 @@ describe('walk (#626)', () => {
     expect(back.camera[2]).toBeGreaterThan(camera[2]);
   });
 
-  it('does not stop at the page’s nearest distance: ten steps walk ten steps', () => {
-    let stand = { camera, target };
-    for (let i = 0; i < 10; i += 1) {
-      stand = walk(box, stand.camera, stand.target, 0.5, radius, NEAREST);
-    }
-    expect(length(stand.camera, camera)).toBeCloseTo(5, 6);
-  });
-
-  it('stops at the face, and the camera stays in the box', () => {
+  it('stops at the face on its own line of sight, and the camera stays in the box', () => {
+    const [sx, sy, sz] = [target[0] - camera[0], target[1] - camera[1], target[2] - camera[2]];
+    const online = (stood: Vec3): number => {
+      const [ox, oy, oz] = [stood[0] - camera[0], stood[1] - camera[1], stood[2] - camera[2]];
+      return Math.hypot(oy * sz - oz * sy, oz * sx - ox * sz, ox * sy - oy * sx) / radius;
+    };
     const stood = walk(box, camera, target, 100, radius, NEAREST);
     expect(contains(box, stood.camera)).toBe(true);
+    expect(online(stood.camera)).toBeCloseTo(0, 6);
     const back = walk(box, camera, target, -100, radius, NEAREST);
     expect(contains(box, back.camera)).toBe(true);
+    expect(online(back.camera)).toBeCloseTo(0, 6);
     expect(back.camera[2]).toBeCloseTo(12.452, 6);
     expect(length(stood.camera, camera)).toBeLessThan(100);
   });
 
-  it('keeps the target in the box while the camera walks to the far face, never nearer than `nearest`', () => {
-    const stood = walk(box, camera, target, 100, radius, NEAREST);
-    expect(length(stood.camera, stood.target)).toBeGreaterThanOrEqual(NEAREST - 1e-9);
-    const mid = walk(box, camera, target, 8, radius, NEAREST);
-    expect(contains(box, mid.target)).toBe(true);
+  it('keeps the target in the box where the box holds it, and never nearer than `nearest`', () => {
+    const near: Vec3 = [1, 5, 5];
+    const ahead: Vec3 = [1, 5, 2];
+    // 2 forward: the camera at z 3, the target 3 ahead of it at z 0, inside the box
+    expect(contains(box, walk(box, near, ahead, 2, 3, NEAREST).target)).toBe(true);
+    // to the face: the camera on it, and the target `nearest` ahead, past it and outside the box
+    const face = walk(box, near, ahead, 100, 3, NEAREST);
+    expect(face.camera[2]).toBeCloseTo(-0.2, 9);
+    expect(length(face.camera, face.target)).toBeCloseTo(NEAREST, 9);
+    expect(contains(box, face.target)).toBe(false);
   });
 
   it('gives the target its radius again when the walk comes back out', () => {
@@ -87,8 +91,9 @@ describe('notchesOf (#626)', () => {
   });
 
   it('reads lines and pages as their pixels, and a trackpad’s small deltas as a part of one', () => {
-    expect(notchesOf(-3, 1)).toBeCloseTo(0.48, 9);
+    expect(notchesOf(-3, 1)).toBeCloseTo(1, 9);
     expect(notchesOf(-10, 0)).toBeCloseTo(0.1, 9);
+    expect(notchesOf(-0.25, 2)).toBeCloseTo(1, 9);
   });
 
   it('never lets one event leap', () => {

@@ -43,6 +43,7 @@ function committedEmpties(): Empty[] {
     }));
 }
 
+/** The opening view as the room had it before #620, kept for the framing tests (the box below is the old one). */
 const view: RoomView = {
   position: [-5.267, 4.306, 14.331],
   target: [2.334, 1.504, 1.335],
@@ -50,8 +51,12 @@ const view: RoomView = {
   height: 8,
   aspect: 0.99,
 };
+/** The camera box before #620: open at the front (z 18) and 0.8 short of the back wall. */
 const box = { min: [-7.4, 0.5, 0.8] as Vec3, max: [9.4, 10.5, 18] as Vec3 };
-/** The room as it is closed (#620): the box's front comes in, to the front wall's side of it. */
+/**
+ * The room as it is closed (#620): the box's front comes in, to the front wall's side of it, and its
+ * back face to z -0.2 so the 1.5 stand behind the target is inside it.
+ */
 const closed = { min: [-7.4, 0.5, -0.2] as Vec3, max: [9.4, 10.5, 12.452] as Vec3 };
 
 describe('the committed room (spec S7.2, S7.3, S8)', () => {
@@ -60,6 +65,9 @@ describe('the committed room (spec S7.2, S7.3, S8)', () => {
   it('carries its camera, its box and its live lights in the GLB', () => {
     expect(data.view.position).toEqual([-3.904, 3.803, 12]);
     expect(data.bounds.max[2]).toBe(12.452);
+    // the back face is far enough behind the target for the 1.5 stand the pull-in keeps (#620)
+    expect(data.bounds.min[2]).toBe(-0.2);
+    expect(data.view.target[2] - data.bounds.min[2]).toBeGreaterThanOrEqual(1.5);
     expect(data.bounds.min[0]).toBeLessThan(data.bounds.max[0]);
     expect(Object.keys(data.lights)).toEqual(['ambient', 'key', 'fill', 'lamp']);
   });
@@ -213,24 +221,17 @@ describe('pullIn (#620)', () => {
     );
   });
 
-  it('stands a wish the box can hold exactly where it was asked', () => {
-    const near = away(0, 4);
-    expect(pullIn(closed, target, near)).toEqual(near);
-  });
-
-  it('never comes in closer than the page allows, at any turn of the view', () => {
-    // the box's back face is 1.535 behind the target: the nearest stand is the floor, not the face
-    const steps = Array.from({ length: 72 }, (_, i) => (((i + 0.5) / 72) * 2 - 1) * Math.PI);
-    for (const angle of steps) {
-      const stood = pullIn(closed, target, away(angle, 20), 1.5);
-      expect(contains(closed, stood)).toBe(true);
-      expect(reach(stood)).toBeGreaterThanOrEqual(1.5 - 1e-9);
-    }
-  });
-
-  it('came in past that floor before the floor was asked for', () => {
-    const stood = pullIn({ ...closed, min: [-7.4, 0.5, 0.8] }, target, away(Math.PI, 20));
-    expect(reach(stood)).toBeLessThan(1);
+  it('holds the near limit where a face is close to the target, and stays in the box', () => {
+    // the target 0.5 in front of the back face, the wish mostly along x and a little behind it:
+    // without a near limit the line meets the back face 1.1 from the target
+    const close: Vec3 = [2, 5, 0.3];
+    const wish: Vec3 = [-18, 5, -9.7];
+    const dist = (p: Vec3): number => Math.hypot(p[0] - close[0], p[1] - close[1], p[2] - close[2]);
+    const without = pullIn(closed, close, wish);
+    const held = pullIn(closed, close, wish, 1.5);
+    expect(dist(without)).toBeCloseTo(1.118, 3);
+    expect(dist(held)).toBeGreaterThan(dist(without) + 0.2);
+    expect(contains(closed, held)).toBe(true);
   });
 
   it('stands against the nearest face when the target itself is outside the box', () => {

@@ -222,7 +222,7 @@ export function pullIn(box: Box, target: Vec3, point: Vec3, nearest = 0): Vec3 {
     const wall = run > 0 ? box.max[axis] : box.min[axis];
     reach = Math.min(reach, (wall - target[axis]) / run);
   }
-  // a floor never takes the camera past the place that was asked for
+  // the near limit never takes the camera past the place that was asked for
   if (away > 0) reach = Math.max(reach, Math.min(1, nearest / away));
   // the multiply can land a rounding error past the face it stops at
   return clampInto(box, [

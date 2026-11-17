@@ -114,9 +114,33 @@ describe('the camera in a room (#620, #626)', () => {
       after.frames(40);
     }
     const walked = after.view.position.clone();
+    const sight = after.controls.target.clone().sub(walked).normalize();
     drag(after);
-    // after a walk it turns the view where the visitor stands
-    expect(after.view.position.distanceTo(walked)).toBeLessThan(2);
+    // after a walk it turns the view where the visitor stands, and the camera stays there
+    expect(after.view.position.distanceTo(walked)).toBeLessThan(1e-6);
+    const turned = after.controls.target.clone().sub(walked).normalize();
+    expect(Math.acos(Math.min(1, sight.dot(turned)))).toBeGreaterThan(1);
+  });
+
+  it('keeps turning the view after the walk has stopped at a face (#620’s done-when)', () => {
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(2);
+    for (let i = 0; i < 80; i += 1) {
+      r.send('wheel', { deltaY: -300, deltaMode: 0 });
+      r.frames(10);
+    }
+    r.frames(80);
+    const atFace = r.view.position.clone();
+    const sight = r.controls.target.clone().sub(atFace).normalize();
+    const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
+    r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
+    r.send('pointermove', { ...mouse, clientX: 790, clientY: 400 });
+    r.send('pointerup', { ...mouse, clientX: 790, clientY: 400, buttons: 0 });
+    r.frames(120);
+    const turned = r.controls.target.clone().sub(r.view.position).normalize();
+    // the same 150 px turns it as far as it does anywhere in the room: 2π · 150 / 800 ≈ 67°
+    expect(Math.acos(sight.dot(turned))).toBeGreaterThan(1);
+    expect(r.view.position.distanceTo(atFace)).toBeLessThan(1e-6);
   });
 
   it('walks the same step with the target near or far', () => {
@@ -147,12 +171,14 @@ describe('the camera in a room (#620, #626)', () => {
     r.frames(2);
     const start = r.view.position.clone();
     r.send('wheel', { deltaY: -100, deltaMode: 0 });
+    r.frames(80);
+    expect(r.view.position.distanceTo(start)).toBeCloseTo(WALK_PER_NOTCH, 6);
     r.send('wheel', { deltaY: 100, deltaMode: 0 });
     r.frames(80);
     expect(r.view.position.distanceTo(start)).toBeCloseTo(0, 6);
   });
 
-  it('stops at the face of the box, and goes no farther however long the wheel turns', () => {
+  it('stops at the face of the box, and walks back from it at once', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
     r.frames(2);
     for (let i = 0; i < 80; i += 1) {
@@ -162,6 +188,32 @@ describe('the camera in a room (#620, #626)', () => {
     r.frames(80);
     expect(r.view.position.z).toBeGreaterThanOrEqual(-0.2 - 1e-6);
     expect(r.view.position.z).toBeLessThan(0.1);
+    // what was queued against the face was dropped, so one notch back is one step back
+    const atFace = r.view.position.clone();
+    r.send('wheel', { deltaY: 100, deltaMode: 0 });
+    r.frames(80);
+    expect(r.view.position.distanceTo(atFace)).toBeCloseTo(WALK_PER_NOTCH, 6);
+  });
+
+  it('comes in toward a close wall along the line, and goes back out as the view turns away', () => {
+    const r = room([1, 5, 12], [1, 5, 1]);
+    r.frames(2);
+    const start = r.view.position.clone();
+    const drag = (dx: number): void => {
+      const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
+      r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
+      r.send('pointermove', { ...mouse, clientX: 640 + dx, clientY: 400 });
+      r.send('pointerup', { ...mouse, clientX: 640 + dx, clientY: 400, buttons: 0 });
+      r.frames(120);
+    };
+    drag(150);
+    // the view turned as far as the pointer went (2π · 150 / 800), the camera 11 from the target would
+    // be outside the box, so it is on that line and nearer
+    const out = r.view.position.clone().sub(r.controls.target);
+    expect(Math.atan2(out.x, out.z)).toBeCloseTo((-2 * Math.PI * 150) / 800, 2);
+    expect(out.length()).toBeLessThan(10);
+    drag(-150);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(0.05);
   });
 
   it('walks to a pinch, forward as the fingers spread', () => {
@@ -206,8 +258,10 @@ describe('the camera in a room (#620, #626)', () => {
   it('lets the dolly back in when the room is taken down', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
     expect(r.controls.enableZoom).toBe(false);
+    expect(r.controls.enablePan).toBe(false);
     r.orbit.leave();
     expect(r.controls.enableZoom).toBe(true);
+    expect(r.controls.enablePan).toBe(true);
     const start = r.view.position.clone();
     r.send('wheel', { deltaY: -100, deltaMode: 0 });
     r.frames(10);

@@ -21,7 +21,8 @@ export const WALK_PER_PINCH_PIXEL = 0.02;
 
 /** The notches one wheel event is worth: `deltaY` in pixels, lines or pages, forward positive. */
 export function notchesOf(deltaY: number, deltaMode: number): number {
-  const pixels = deltaMode === 1 ? deltaY * 16 : deltaMode === 2 ? deltaY * 400 : deltaY;
+  // a line is a third of a notch: browsers that report lines send 3 for one click of the wheel
+  const pixels = deltaMode === 1 ? (deltaY * 100) / 3 : deltaMode === 2 ? deltaY * 400 : deltaY;
   const notches = -pixels / 100;
   return Math.max(-MOST_NOTCHES, Math.min(MOST_NOTCHES, notches));
 }
@@ -56,10 +57,13 @@ export interface Stand {
  *
  * - **The step is the same size at any distance from the target**, and the camera is never taken
  *   past the box: a step that would leave it stops at the face.
- * - **The target goes with the camera**, as far ahead as `radius` (how far the visitor stands from
- *   what they look at) unless the box ends first, and then it stands on that face, never nearer the
- *   camera than `nearest`: the orbit needs a target it can turn about, and one inside the box is
- *   one the pull-in can use. Walking back out gives the target its `radius` again.
+ * - **The target goes with the camera**, `radius` ahead of it (how far ahead the target is kept)
+ *   unless the box ends first, and then it stands on that face. It is never nearer the camera than
+ *   `nearest`, so with the camera closer than that to the face it looks at, the target stands
+ *   `nearest` ahead, past the face and outside the box, and the orbit falls back to clamping the
+ *   camera onto the nearest face (`pullIn` takes a target outside the box that way). Where the target
+ *   is inside the box, it is one the pull-in can use. Walking back out gives the target its `radius`
+ *   again.
  *
  * `camera` is inside the box, which the orbit's pull-in keeps true.
  */

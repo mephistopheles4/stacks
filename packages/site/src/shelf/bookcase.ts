@@ -139,6 +139,10 @@ const MIN_ROWS = 2;
  * taller and wider than the case. The bake writes the stand-in's size into the GLB (`slot_bookcase`'s
  * `caster_*`), and `room-data.test.ts` holds this to it, so a rebake with another `--rows` is a red
  * test and not a shadow nobody explains. The width and depth already agree: `SHELF`'s own.
+ *
+ * **This is the trade `MIN_ROWS` above argues against**, made for rooms only: a small library sits in
+ * a four-row case with empty shelves, because the baked shadow needs that case more than the room
+ * needs the books framed large (the camera there walks up to a spine).
  */
 export const ROOM_MIN_ROWS = 4;
 

@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SHARED_DRESS = os.path.normpath(os.path.join(HERE, "..", "shared", "dress"))
 FACE_CAP = 25000          # a quick bake: anything denser is decimated to this
 SMALL_CAP = {"desk_sand_blotter": 4000}
-DESK_SHIFT = -0.95        # the desk group's move toward the front (#620); desk_dress.py reads the same number
+DESK_SHIFT = -0.95        # the desk group's move toward the front (#620); passed to desk_dress.dress_desk as `shift`
 
 
 def _helper(name):
