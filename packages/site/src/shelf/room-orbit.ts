@@ -23,7 +23,9 @@ type Listening = Pick<HTMLElement, 'addEventListener' | 'removeEventListener'>;
  * **Walk.** `OrbitControls`' own dolly is off in a room: it takes a share of what is left, stops at
  * `minDistance`, and every one of its handlers runs `update()` itself, which a camera put back to
  * its wished distance each frame undid, so the scroll did nothing at all. The walk is the only thing
- * the wheel and the pinch do, and it is queued here and taken a little each frame.
+ * the wheel and the pinch do, and it is queued here and taken a little each frame. From the first
+ * step on, the drag turns the view about a pivot `minDistance` ahead, not about the far target the
+ * opening view was framed round.
  *
  * Outside a room (`leave`, and before `enter`) it is `OrbitControls` as it was.
  */
@@ -55,11 +57,22 @@ export function createRoomOrbit(
   let radius = 0;
   /** The walk still to take. */
   let pending = 0;
+  /** Set by the first step of a walk: the pivot has come in to the camera (see `walkFrame`). */
+  let walked = false;
   const offset = new THREE.Vector3();
   const at = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
 
   const walkFrame = (box: Box): void => {
     const { target } = controls;
+    // **Once the visitor has walked, a drag turns the view and does not swing the camera.** The
+    // opening view orbits a target across the room, as the owner framed it; after the first step the
+    // pivot is only `minDistance` ahead of the camera, the nearest `OrbitControls` allows, so a drag
+    // turns the view about where the visitor stands, as turning their head would. The line of sight
+    // does not change when the pivot comes in, so nothing jumps.
+    if (!walked) {
+      walked = true;
+      radius = Math.min(radius, controls.minDistance);
+    }
     const part = Math.abs(pending) < REST ? pending : pending * EASE;
     const from = camera.position.clone();
     const stood = walk(box, at(camera.position), at(target), part, radius, controls.minDistance);
@@ -131,6 +144,7 @@ export function createRoomOrbit(
     wished = 0;
     radius = 0;
     pending = 0;
+    walked = false;
   };
 
   const orbitApi: RoomOrbit = {

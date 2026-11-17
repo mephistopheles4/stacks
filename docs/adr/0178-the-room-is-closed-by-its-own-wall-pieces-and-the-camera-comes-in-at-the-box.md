@@ -57,7 +57,12 @@
    cursor, which is a later choice. The dolly was first kept and repaired, and the reason it needed
    repairing is the reason to drop it: every `OrbitControls` handler runs `update()` itself, so a camera
    put back to its wished distance each frame (item 5) undid the dolly and the scroll did nothing.
-   The plain shelf keeps the dolly.
+   The plain shelf keeps the dolly. **From the first step of a walk the pivot comes in to
+   `minDistance`** ahead of the camera: with the pivot across the room (about 11 at the opening view)
+   a 150 px drag after a walk swung the camera over the room and not the view, and the pivot at
+   `minDistance` makes a drag turn the view about where the visitor stands, as turning their head would.
+   The line of sight does not change when the pivot comes in, and the opening view keeps its own orbit
+   until the first step.
 
 ## Why
 

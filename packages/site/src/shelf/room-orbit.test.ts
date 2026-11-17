@@ -81,13 +81,42 @@ describe('the camera in a room (#620, #626)', () => {
     const r = room([-3.9, 3.8, 11], [2.334, 1.504, 1.335]);
     r.frames(2);
     const start = r.view.position.clone();
-    const radius = start.distanceTo(r.controls.target);
+    const sight = r.controls.target.clone().sub(start).normalize();
     const { prevented } = r.send('wheel', { deltaY: -100, deltaMode: 0 });
     r.frames(80);
     expect(prevented).toBe(true);
     expect(r.view.position.distanceTo(start)).toBeCloseTo(WALK_PER_NOTCH, 6);
-    // a walk, not a dolly: the target went with the camera
-    expect(r.view.position.distanceTo(r.controls.target)).toBeCloseTo(radius, 6);
+    // a walk, not a dolly: the camera still looks the way it did, and the target is just ahead of it
+    const now = r.controls.target.clone().sub(r.view.position);
+    expect(now.length()).toBeCloseTo(r.controls.minDistance, 6);
+    expect(now.normalize().dot(sight)).toBeCloseTo(1, 9);
+  });
+
+  it('turns the view about a pivot just ahead once it has walked, and swings the camera before', () => {
+    const drag = (r: ReturnType<typeof room>): void => {
+      const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
+      r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
+      r.send('pointermove', { ...mouse, clientX: 790, clientY: 400 });
+      r.send('pointerup', { ...mouse, clientX: 790, clientY: 400, buttons: 0 });
+      r.frames(120);
+    };
+    const before = room([1, 5, 12], [1, 5, 1]);
+    before.frames(2);
+    const stood = before.view.position.clone();
+    drag(before);
+    // the opening view's far target: a 150 px drag sweeps the camera across the room
+    expect(before.view.position.distanceTo(stood)).toBeGreaterThan(8);
+
+    const after = room([1, 5, 12], [1, 5, 1]);
+    after.frames(2);
+    for (let i = 0; i < 10; i += 1) {
+      after.send('wheel', { deltaY: -100, deltaMode: 0 });
+      after.frames(40);
+    }
+    const walked = after.view.position.clone();
+    drag(after);
+    // after a walk it turns the view where the visitor stands
+    expect(after.view.position.distanceTo(walked)).toBeLessThan(2);
   });
 
   it('walks the same step with the target near or far', () => {
@@ -110,7 +139,7 @@ describe('the camera in a room (#620, #626)', () => {
       r.frames(40);
     }
     expect(r.view.position.distanceTo(start)).toBeCloseTo(10 * WALK_PER_NOTCH, 5);
-    expect(r.view.position.distanceTo(r.controls.target)).toBeCloseTo(3, 5);
+    expect(r.view.position.distanceTo(r.controls.target)).toBeCloseTo(r.controls.minDistance, 5);
   });
 
   it('walks back out the way it came', () => {
@@ -138,16 +167,17 @@ describe('the camera in a room (#620, #626)', () => {
   it('walks to a pinch, forward as the fingers spread', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
     r.frames(2);
-    const start = r.controls.target.clone();
     const touch = { pointerType: 'touch' };
     r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
     r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
     r.send('pointermove', { ...touch, pointerId: 2, clientX: 600, clientY: 400 });
     r.frames(80);
-    // the target is the walk's own, and the drag's turn about it does not move it; the fingers' own
-    // midpoint turns the view a little as they spread, so the line it walks along bends a little
-    expect(start.distanceTo(r.controls.target)).toBeCloseTo(100 * WALK_PER_PINCH_PIXEL, 1);
-    expect(r.controls.target.z).toBeLessThan(start.z);
+    // The pivot is the walk's own, and the drag's turn about it does not move it: it stands
+    // `minDistance` ahead of where the walk took the camera, from z 8 forward by the spread. The
+    // fingers' midpoint turns the view a little as they spread, so the line bends a little.
+    const expected = 8 - 100 * WALK_PER_PINCH_PIXEL - r.controls.minDistance;
+    expect(r.controls.target.z).toBeCloseTo(expected, 0);
+    expect(r.controls.target.z).toBeLessThan(5);
   });
 
   it('leaves a single finger to the drag: it turns the view and walks nowhere', () => {
