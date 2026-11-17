@@ -77,10 +77,14 @@ as the paper, the trim or the light changed.
 
 **Not decided here:** keeping the camera out of the furniture's boxes (the armchair, the plant) with the
 same pull-in. The try-out showed it could, but the issue's done-when does not ask for it, and it needs
-the boxes in the room's data. ⚠️ **The main bookcase is one of them**: the box's back face (z -0.2, item
-6) lies behind the front of the books, so a walk straight at the shelves ends with the camera up to
-0.56 inside the case, where it used to stop 0.44 in front of the books. The stand-in is 0.72 deep,
-centred on z 0.
+the boxes in the room's data. **The main bookcase is the one exception, and it is kept out by the
+walk only**: the box's back face (z -0.2, item 6) lies behind the front of the books, so a walk
+straight at the shelves ended with the camera up to 0.56 inside the case. The walk now stops
+`BOOKCASE_STANDOFF` (0.3) short of the case's front, its sides and its top (`bookcaseBox`,
+`room-data.ts`, from the baked caster's width and depth and the case's own height; `keepOut` in
+`walk`), and a camera already inside it is not trapped there. The orbit before the first walk step
+can still put the camera inside the case (a view turned to the front wall pulls in to the box's
+back face), which the walk does not cover.
 
 ## How this was decided
 

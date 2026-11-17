@@ -29,8 +29,11 @@ type Listening = Pick<HTMLElement, 'addEventListener' | 'removeEventListener'>;
  * Outside a room (`leave`, and before `enter`) it is `OrbitControls` as it was.
  */
 export interface RoomOrbit {
-  /** The room is dressed: walk inside `bounds`, and `OrbitControls` zooms and pans no more. */
-  enter(bounds: Box): void;
+  /**
+   * The room is dressed: walk inside `bounds` and not into `keepOut` (the main bookcase), and
+   * `OrbitControls` zooms and pans no more.
+   */
+  enter(bounds: Box, keepOut?: readonly Box[]): void;
   /** The room failed or was taken down: `OrbitControls` as it was. */
   leave(): void;
   /** The camera was framed anew, so what was wished and what is queued are forgotten. */
@@ -50,6 +53,7 @@ export function createRoomOrbit(
   controls: OrbitControls,
 ): RoomOrbit {
   let bounds: Box | undefined;
+  let keepOut: readonly Box[] = [];
   /** How far from the target the visitor stands: the distance the orbit goes back to. */
   let wished = 0;
   /** How far from what they look at the walk keeps the target when the box allows it. */
@@ -77,7 +81,15 @@ export function createRoomOrbit(
     }
     const part = Math.abs(pending) < REST ? pending : pending * EASE;
     const from = camera.position.clone();
-    const stood = walk(box, at(camera.position), at(target), part, radius, controls.minDistance);
+    const stood = walk(
+      box,
+      at(camera.position),
+      at(target),
+      part,
+      radius,
+      controls.minDistance,
+      keepOut,
+    );
     camera.position.set(...stood.camera);
     target.set(...stood.target);
     // a step that met a face took less than it was asked for, and what is left would only press on it
@@ -181,14 +193,16 @@ export function createRoomOrbit(
   };
 
   const orbitApi: RoomOrbit = {
-    enter(box) {
+    enter(box, spaces = []) {
       bounds = box;
+      keepOut = spaces;
       controls.enableZoom = false;
       controls.enablePan = false;
       forget();
     },
     leave() {
       bounds = undefined;
+      keepOut = [];
       controls.enableZoom = true;
       controls.enablePan = true;
       forget();

@@ -25,8 +25,9 @@ import { BACKBOARD_INSET, mainRowCount, PLANK_INSET, rowsForBookcase, SHELF } fr
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed, type RoomView } from './shelf-url.ts';
-import { frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
+import { bookcaseBox, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
 import { createRoomOrbit } from './room-orbit.ts';
+import { BOOKCASE_STANDOFF } from './room-walk.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import {
   ABANDONED_ROWS,
@@ -1099,7 +1100,13 @@ function assembleShelf(
         },
         ready: (loaded) => {
           roomData = loaded.data;
-          roomOrbit.enter(loaded.data.bounds);
+          // the walk stops in front of the main bookcase, the box's back face being behind its books
+          const bookcaseSpace = bookcaseBox(
+            loaded.data.slots.slot_bookcase,
+            unitHeight,
+            BOOKCASE_STANDOFF,
+          );
+          roomOrbit.enter(loaded.data.bounds, bookcaseSpace === undefined ? [] : [bookcaseSpace]);
           // The room's lighting and scene, from its own GLB and entry. They are the theme's defaults
           // for those two groups (spec S15.1): what the panel resets to, and what a `?debug` link is a
           // difference from. A link that names the room then lays its differences over them.

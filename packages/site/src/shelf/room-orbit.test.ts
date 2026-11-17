@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { describe, expect, it } from 'vitest';
-import type { Box } from './room-data.ts';
+import { type Box, bookcaseBox } from './room-data.ts';
 import { createRoomOrbit } from './room-orbit.ts';
-import { WALK_PER_NOTCH, WALK_PER_PINCH_PIXEL } from './room-walk.ts';
+import { BOOKCASE_STANDOFF, WALK_PER_NOTCH, WALK_PER_PINCH_PIXEL } from './room-walk.ts';
 
 const box: Box = { min: [-7.4, 0.5, -0.2], max: [9.4, 10.5, 12.452] };
 
@@ -57,7 +57,11 @@ function fakeCanvas(): {
   };
 }
 
-function room(camera: [number, number, number], target: [number, number, number]) {
+function room(
+  camera: [number, number, number],
+  target: [number, number, number],
+  keepOut: readonly Box[] = [],
+) {
   const canvas = fakeCanvas();
   const view = new THREE.PerspectiveCamera(30, 1.6, 0.1, 100);
   view.position.set(...camera);
@@ -68,7 +72,7 @@ function room(camera: [number, number, number], target: [number, number, number]
   controls.target.set(...target);
   controls.update();
   const orbit = createRoomOrbit(view, controls);
-  orbit.enter(box);
+  orbit.enter(box, keepOut);
   orbit.attach(canvas.element);
   const frames = (n: number): void => {
     for (let i = 0; i < n; i += 1) orbit.step();
@@ -193,6 +197,29 @@ describe('the camera in a room (#620, #626)', () => {
     r.send('wheel', { deltaY: 100, deltaMode: 0 });
     r.frames(80);
     expect(r.view.position.distanceTo(atFace)).toBeCloseTo(WALK_PER_NOTCH, 6);
+  });
+
+  it('never walks into the main bookcase, however many notches, and leaves it by walking back', () => {
+    const slot = {
+      position: [0, 0, 0] as [number, number, number],
+      rotationY: 0,
+      extras: { caster_width: 3.58, caster_depth: 0.72 },
+    };
+    const space = bookcaseBox(slot, 4.48, BOOKCASE_STANDOFF);
+    const r = room([0.3, 3, 6], [0.3, 3, 3], space === undefined ? [] : [space]);
+    r.frames(2);
+    for (let i = 0; i < 80; i += 1) {
+      r.send('wheel', { deltaY: -300, deltaMode: 0 });
+      r.frames(10);
+    }
+    r.frames(80);
+    // the front plane of the case is z 0.36; the walk stops its standoff short of it
+    expect(r.view.position.z).toBeGreaterThanOrEqual(0.36 + BOOKCASE_STANDOFF - 1e-6);
+    expect(r.view.position.z).toBeLessThan(0.36 + BOOKCASE_STANDOFF + 0.01);
+    const atFront = r.view.position.clone();
+    r.send('wheel', { deltaY: 100, deltaMode: 0 });
+    r.frames(80);
+    expect(r.view.position.distanceTo(atFront)).toBeCloseTo(WALK_PER_NOTCH, 6);
   });
 
   it('comes in toward a close wall along the line, and goes back out as the view turns away', () => {

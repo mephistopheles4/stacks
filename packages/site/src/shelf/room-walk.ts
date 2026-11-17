@@ -16,6 +16,8 @@ import { type Box, type Vec3, clampInto, contains } from './room-data.ts';
 export const WALK_PER_NOTCH = 0.5;
 /** The most notches one wheel event may walk: a flung wheel is not a leap across the room. */
 export const MOST_NOTCHES = 3;
+/** How far short of the main bookcase's front a walk stops, so the camera's near plane clears the spines. */
+export const BOOKCASE_STANDOFF = 0.3;
 /** World units a pinch walks for each pixel the fingers spread or close. */
 export const WALK_PER_PINCH_PIXEL = 0.02;
 
@@ -47,6 +49,27 @@ function reachOfBox(box: Box, point: Vec3, direction: Vec3): number {
   return reach;
 }
 
+/**
+ * How far a point outside `box` can go along `direction` before it enters it: `Infinity` for a line
+ * that misses it, and for a point already inside, which a walk must not trap.
+ */
+function enterReach(box: Box, point: Vec3, direction: Vec3): number {
+  let near = -Infinity;
+  let far = Infinity;
+  for (const axis of [0, 1, 2] as const) {
+    const run = direction[axis];
+    if (run === 0) {
+      if (point[axis] < box.min[axis] || point[axis] > box.max[axis]) return Infinity;
+      continue;
+    }
+    const a = (box.min[axis] - point[axis]) / run;
+    const b = (box.max[axis] - point[axis]) / run;
+    near = Math.max(near, Math.min(a, b));
+    far = Math.min(far, Math.max(a, b));
+  }
+  return near >= 0 && near <= far ? near : Infinity;
+}
+
 export interface Stand {
   readonly camera: Vec3;
   readonly target: Vec3;
@@ -65,6 +88,9 @@ export interface Stand {
  *   is inside the box, it is one the pull-in can use. Walking back out gives the target its `radius`
  *   again.
  *
+ * - **`keepOut`** are spaces the camera does not walk into (the main bookcase): a step that would enter
+ *   one stops at its face. A camera already inside one is not held there.
+ *
  * `camera` is inside the box, which the orbit's pull-in keeps true.
  */
 export function walk(
@@ -74,11 +100,16 @@ export function walk(
   distance: number,
   radius: number,
   nearest: number,
+  keepOut: readonly Box[] = [],
 ): Stand {
   const ahead = unit(camera, target);
   if (ahead === undefined || !contains(box, camera)) return { camera, target };
   const heading: Vec3 = distance >= 0 ? ahead : [-ahead[0], -ahead[1], -ahead[2]];
-  const moved = Math.min(Math.abs(distance), reachOfBox(box, camera, heading));
+  const moved = Math.min(
+    Math.abs(distance),
+    reachOfBox(box, camera, heading),
+    ...keepOut.map((space) => enterReach(space, camera, heading)),
+  );
   const sign = distance >= 0 ? 1 : -1;
   const stood = clampInto(box, [
     camera[0] + ahead[0] * moved * sign,

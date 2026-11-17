@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  bookcaseBox,
   clampInto,
   contains,
   type Empty,
@@ -168,6 +169,15 @@ describe('the room’s bookcase is never smaller than the one its shadow was bak
   it('is as wide and as deep as the baked caster', () => {
     expect(SHELF.width + SHELF.sideThickness * 2).toBeCloseTo(Number(caster.caster_width), 9);
     expect(SHELF.depth).toBeCloseTo(Number(caster.caster_depth), 9);
+  });
+
+  it('gives the walk the case’s own space to stop at, centred on its slot (#620)', () => {
+    const slot = readRoomData(committedEmpties()).slots.slot_bookcase;
+    const space = bookcaseBox(slot, ROOM_MIN_ROWS * SHELF.rowHeight, 0);
+    expect(space?.max[2]).toBeCloseTo(SHELF.depth / 2, 9);
+    expect(space?.min[2]).toBeCloseTo(-SHELF.depth / 2, 9);
+    expect(space?.max[0]).toBeCloseTo((SHELF.width + SHELF.sideThickness * 2) / 2, 9);
+    expect(bookcaseBox(undefined, 4, 0.3)).toBeUndefined();
   });
 
   it('still grows past the minimum with the library, one empty shelf ahead', () => {

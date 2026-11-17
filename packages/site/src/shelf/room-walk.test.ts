@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { type Box, type Vec3, contains } from './room-data.ts';
-import { MOST_NOTCHES, notchesOf, walk } from './room-walk.ts';
+import { type Box, type Vec3, bookcaseBox, contains } from './room-data.ts';
+import { BOOKCASE_STANDOFF, MOST_NOTCHES, notchesOf, walk } from './room-walk.ts';
 
 const box: Box = { min: [-7.4, 0.5, -0.2], max: [9.4, 10.5, 12.452] };
 const NEAREST = 1.5;
@@ -81,6 +81,38 @@ describe('walk (#626)', () => {
 
   it('stands still on a camera with no line of sight', () => {
     expect(walk(box, camera, camera, 1, radius, NEAREST)).toEqual({ camera, target: camera });
+  });
+});
+
+describe('walk and the main bookcase (#620)', () => {
+  // the committed case: 3.58 wide, 0.72 deep, centred on the origin, 4.48 tall (four rows)
+  const slot = {
+    position: [0, 0, 0] as Vec3,
+    rotationY: 0,
+    extras: { caster_width: 3.58, caster_depth: 0.72 },
+  };
+  const keepOut = bookcaseBox(slot, 4.48, BOOKCASE_STANDOFF);
+  const front = 0.36 + BOOKCASE_STANDOFF;
+
+  it('stops short of its front, however long the walk', () => {
+    expect(keepOut).toBeDefined();
+    const spaces = keepOut === undefined ? [] : [keepOut];
+    let stand = { camera: [0, 3, 4] as Vec3, target: [0, 3, 1] as Vec3 };
+    for (let i = 0; i < 40; i += 1) {
+      stand = walk(box, stand.camera, stand.target, 0.5, 1.5, NEAREST, spaces);
+      expect(stand.camera[2]).toBeGreaterThanOrEqual(front - 1e-9);
+    }
+    expect(stand.camera[2]).toBeCloseTo(front, 9);
+  });
+
+  it('stops on its own line of sight at the case’s top as well, and lets a camera inside walk out', () => {
+    const spaces = keepOut === undefined ? [] : [keepOut];
+    // from above, heading nearly straight down at the case
+    const down = walk(box, [0, 9, 0.5], [0, 8, 0.4], 100, 1.5, NEAREST, spaces);
+    expect(down.camera[1]).toBeGreaterThanOrEqual(4.48 + BOOKCASE_STANDOFF - 1e-9);
+    // a camera the orbit left inside the case is not trapped by it
+    const out = walk(box, [0, 3, 0.2], [0, 3, 1.7], 1, 1.5, NEAREST, spaces);
+    expect(out.camera[2]).toBeCloseTo(1.2, 9);
   });
 });
 

@@ -190,6 +190,30 @@ export function contains(box: Box, point: Vec3): boolean {
   return point.every((v, axis) => v >= (box.min[axis] ?? 0) && v <= (box.max[axis] ?? 0));
 }
 
+/**
+ * The space the main bookcase fills, grown by `margin` on its sides and its top, for the walk to stop
+ * at (#620): the box's back face is behind the front of the books, so without this a walk at the
+ * shelves ends inside the case. Its width and depth are the baked caster's (`slot_bookcase`'s
+ * `caster_width` and `caster_depth`, which the case itself is held to), its height is the case's own,
+ * which grows with the library. `undefined` for a room that did not bake them.
+ */
+export function bookcaseBox(
+  slot: Slot | undefined,
+  height: number,
+  margin: number,
+): Box | undefined {
+  if (slot === undefined) return undefined;
+  const width = Number(slot.extras.caster_width);
+  const depth = Number(slot.extras.caster_depth);
+  if (!Number.isFinite(width) || !Number.isFinite(depth) || width <= 0 || depth <= 0)
+    return undefined;
+  const [x, y, z] = slot.position;
+  return {
+    min: [x - width / 2 - margin, y, z - depth / 2 - margin],
+    max: [x + width / 2 + margin, y + height + margin, z + depth / 2 + margin],
+  };
+}
+
 /** The point nearest `point` that is inside `box`. A camera pushed against a wall stands against it. */
 export function clampInto(box: Box, point: Vec3): Vec3 {
   const at = (axis: 0 | 1 | 2): number =>
