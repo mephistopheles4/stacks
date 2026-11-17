@@ -477,6 +477,14 @@ slots = [
     slot("slot_stacks", (-4.6, -2.05, 0), 15, 3.0, 2.0, 3.0),  # forward of the plant, with the stand-in stacks
     slot("slot_pile", (-2.6, -3.8, 0), -10, 2.0, 1.5, 1.5),
 ]
+# The bookcase stand-in's size is what the baked shadow on the wall was cast from. The page's live
+# bookcase must stand at least this tall and wide, or an empty shadow shows round a smaller case
+# (#620), so the bake records it: `bookcase.ts` holds its room minimum to these, a test reads them
+# off the GLB, and a rebake with another `--rows` fails that test until the minimum follows.
+slots[0]["caster_rows"] = args.rows
+slots[0]["caster_width"] = CASE_W
+slots[0]["caster_depth"] = CASE_D
+slots[0]["caster_height"] = CASE_H
 
 # ── the rest of the room, from a dressing script (the #593 audition's furniture and lights) ──
 dressed = []

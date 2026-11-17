@@ -21,11 +21,18 @@ import {
   type CoverQuad,
 } from './cover-shade.ts';
 import { changedPieces, livePieces, paintedPieces } from './painted-pieces.ts';
-import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
+import { BACKBOARD_INSET, mainRowCount, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
-import { frameRoom, lightsPatch, pullIn, type RoomData, type Slot } from './room-data.ts';
+import {
+  frameRoom,
+  lightsPatch,
+  pullIn,
+  type RoomData,
+  type Slot,
+  wishAfterOrbit,
+} from './room-data.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import {
   ABANDONED_ROWS,
@@ -616,7 +623,7 @@ function assembleShelf(
   // `slot_abandoned` (#604, spec S12). The room is asked for at mount, so the main bookcase is laid out
   // without them from the start; a room that fails ends in a rebuilt plain shelf that has them (S2.5).
   const rows = toRows(mainShelfBooks(books, options.room !== undefined), settings.books);
-  const rowCount = rowsForBookcase(rows.length);
+  const rowCount = mainRowCount(rows.length, options.room !== undefined);
   const unitHeight = rowCount * SHELF.rowHeight;
 
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
@@ -794,16 +801,13 @@ function assembleShelf(
     const { target } = controls;
     const wasWished = wished;
     // The orbit starts from where the visitor asked the camera to stand, not from where the box left it.
-    if (wished > 0)
-      camera.position
-        .copy(target)
-        .add(offset.subVectors(camera.position, target).setLength(wished));
+    if (wished > 0) {
+      offset.subVectors(camera.position, target).setLength(wished);
+      camera.position.copy(target).add(offset);
+    }
     controls.update();
     offset.subVectors(camera.position, target);
-    const asked = offset.length();
-    // A zoom changed the distance; it works from what is on screen, so a pulled-in camera does not owe it a dead stretch.
-    if (wasWished === 0) wished = asked;
-    else if (Math.abs(asked - wasWished) > 1e-6) wished = stood * (asked / wasWished);
+    wished = wishAfterOrbit(wasWished, stood, offset.length());
     offset.setLength(wished).add(target);
     const [x, y, z] = pullIn(
       bounds,

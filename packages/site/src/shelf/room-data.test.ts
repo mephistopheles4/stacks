@@ -11,7 +11,9 @@ import {
   RoomDataError,
   type RoomView,
   type Vec3,
+  wishAfterOrbit,
 } from './room-data.ts';
+import { mainRowCount, ROOM_MIN_ROWS, SHELF } from './bookcase.ts';
 import { FOV } from './framing.ts';
 import { resolveSettings } from './shelf-settings.ts';
 
@@ -145,6 +147,33 @@ describe('clampInto (spec S8.2, S8.3)', () => {
   });
 });
 
+describe('the room’s bookcase is never smaller than the one its shadow was baked from (#620)', () => {
+  const caster = readRoomData(committedEmpties()).slots.slot_bookcase?.extras ?? {};
+
+  it('stands at the baked caster’s height, however small the library', () => {
+    expect(caster.caster_rows).toBe(ROOM_MIN_ROWS);
+    expect(ROOM_MIN_ROWS * SHELF.rowHeight).toBeCloseTo(Number(caster.caster_height), 9);
+    expect(mainRowCount(0, true) * SHELF.rowHeight).toBeGreaterThanOrEqual(
+      Number(caster.caster_height),
+    );
+  });
+
+  it('is as wide and as deep as the baked caster', () => {
+    expect(SHELF.width + SHELF.sideThickness * 2).toBeCloseTo(Number(caster.caster_width), 9);
+    expect(SHELF.depth).toBeCloseTo(Number(caster.caster_depth), 9);
+  });
+
+  it('still grows past the minimum with the library, one empty shelf ahead', () => {
+    expect(mainRowCount(3, true)).toBe(4);
+    expect(mainRowCount(6, true)).toBe(7);
+  });
+
+  it('keeps the plain shelf’s two-row minimum outside a room', () => {
+    expect(mainRowCount(0, false)).toBe(2);
+    expect(mainRowCount(6, false)).toBe(7);
+  });
+});
+
 describe('pullIn (#620)', () => {
   const target: Vec3 = [2.334, 1.504, 1.335];
   /** `distance` from the target, `angle` about the vertical (0 faces the front wall), 3 up. */
@@ -192,6 +221,26 @@ describe('pullIn (#620)', () => {
 
   it('stands against the nearest face when the target itself is outside the box', () => {
     expect(pullIn(closed, [50, 1, 1], [60, 1, 1])).toEqual(clampInto(closed, [60, 1, 1]));
+  });
+});
+
+describe('wishAfterOrbit (#620)', () => {
+  it('takes the first distance the orbit gives as the wish', () => {
+    expect(wishAfterOrbit(0, 0, 11)).toBe(11);
+  });
+
+  it('keeps the wish through a turn, which leaves the distance alone', () => {
+    expect(wishAfterOrbit(14, 6, 14)).toBe(14);
+  });
+
+  it('zooms from what is on screen when the box has pulled the camera in', () => {
+    // wished 14, standing at 6: a zoom in by a fifth (the orbit's 14 -> 11.2) leaves it at 4.8
+    expect(wishAfterOrbit(14, 6, 11.2)).toBeCloseTo(4.8, 9);
+    expect(wishAfterOrbit(14, 6, 14.7)).toBeCloseTo(6.3, 9);
+  });
+
+  it('zooms as the orbit does when the camera stands where it was wished', () => {
+    expect(wishAfterOrbit(8, 8, 6.4)).toBeCloseTo(6.4, 9);
   });
 });
 
