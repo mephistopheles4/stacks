@@ -60,6 +60,17 @@
   keeping them would paint the room with the shelf's lights. Driver: a link must not look
   deliberate when it has been read wrongly.
 
+## Claim the S15.4 tests back
+
+The spec's C15 covers the pick, the fetch and the reload. The tests for the `?debug` link, the panel
+and the pane back this one, added here and not an edit to the spec comment, which is the owner's:
+
+**C15a. A `?debug` link records its room and only the differences from that room's defaults, and
+opens to the same state in that room; a link not made in the loaded room never lays its lighting or
+scene over it and the pane says so; the pane offers a button per room once there are two.**
+Quality: functional suitability. Measure: `shelf-url.test.ts`, `panel-model.test.ts` and
+`mode-switch.test.ts`, each against the test room.
+
 ## Not decided here
 
 What the second room is (T8). Where the picker sits at a phone's width beside the Attribution link and

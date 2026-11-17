@@ -188,7 +188,8 @@ export function addressFor(search: string, mode: PageMode): string {
  *
  * The `?debug=<json>` link's own `room` goes, and so do its lighting and scene: they are one room's
  * differences from that room's defaults (spec S15.4) and mean nothing against another's. The rest
- * of the link stays, and a link left holding nothing is bare `?debug` again.
+ * of the link stays, and a link left holding nothing is bare `?debug` again. `shelf` and `solo` go
+ * too: `pageMode` reads them before it reads a room, so a kept one would hide the room asked for.
  */
 export function addressForRoom(search: string, id: RoomId): string {
   const params = new URLSearchParams(search);
@@ -200,6 +201,9 @@ export function addressForRoom(search: string, id: RoomId): string {
       .at(-1);
     params.set('debug', withoutRoomKeys(value));
   }
+  // Asking for a room leaves the plain shelf and the solo turntable, which would otherwise win.
+  params.delete('shelf');
+  params.delete('solo');
   params.set('room', id);
   return `?${params.toString().replace(/=(?=&|$)/g, '')}`;
 }

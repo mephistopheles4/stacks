@@ -593,6 +593,14 @@ export async function boot(
           // Dispose before mounting: two live renderers on one canvas is two
           // contexts, and the browser hands out a limited number of those.
           current.dispose();
+          // The room dresses with its own lights over what it is handed, and the link's overrides
+          // with them: hand it the panel's lighting and scene as overrides so an edit survives.
+          if (roomWanted !== undefined) {
+            roomWanted = {
+              ...roomWanted,
+              overrides: { lighting: settings.lighting, scene: settings.scene },
+            };
+          }
           const next = mount(settings);
           if (next === undefined) {
             handle = undefined;

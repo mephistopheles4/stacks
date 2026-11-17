@@ -259,6 +259,12 @@ describe('addressForRoom (the picker and the debug pane)', () => {
     expect(new URLSearchParams(address).get('room')).toBe('test-room');
   });
 
+  it('drops the shelf and solo page modes, which would hide the room asked for', () => {
+    const address = addressForRoom('?debug&shelf&solo=b1', TEST);
+    expect(address).toBe('?debug&room=test-room');
+    expect(pageMode(address, false)).toBe('room');
+  });
+
   it('reads the last non-empty debug value, as the link reader does', () => {
     const json = encodeURIComponent('{"books":{"b":2},"room":"x"}');
     const address = addressForRoom(`?debug=${json}&debug`, TEST);
