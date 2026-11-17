@@ -4,7 +4,7 @@
  */
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { READY_AND_FIND } from './device-check.ts';
+import { PROBE_READ, READY_AND_FIND, probeLost } from './device-check.ts';
 
 interface Book {
   readonly y: number;
@@ -53,5 +53,35 @@ describe('READY_AND_FIND', () => {
   it('takes the first book in view when the shift is zero', async () => {
     const answer = await find([{ y: 650 }, { y: 100 }], [0, 0]);
     expect(answer).toMatchObject({ y: 650 });
+  });
+});
+
+/** Runs the probe's read script the way a hub does, on a page whose window is `page`. */
+function readProbe(page: Record<string, unknown>): unknown {
+  const script = runInNewContext(`(function () { ${PROBE_READ} })`, {
+    window: page,
+  }) as () => unknown;
+  return script();
+}
+
+describe('PROBE_READ', () => {
+  it('answers that the page was lost when it reloaded after the probe was armed', () => {
+    // A reloaded page has a fresh window: no probe state at all. Today's main threw on this.
+    const answer = readProbe({});
+    expect(probeLost(answer)).toBe(true);
+  });
+
+  it('answers where the tap landed, and disarms, on the page that was armed', () => {
+    let stopped = 0;
+    const answer = readProbe({ __probe: { x: 2, y: 135 }, __probeStop: [() => (stopped += 1)] });
+    expect(answer).toMatchObject({ x: 2, y: 135 });
+    expect(probeLost(answer)).toBe(false);
+    expect(stopped).toBe(1);
+  });
+
+  it('answers null when the page was armed and nothing landed', () => {
+    const answer = readProbe({ __probeStop: [] });
+    expect(answer).toBeNull();
+    expect(probeLost(answer)).toBe(false);
   });
 });

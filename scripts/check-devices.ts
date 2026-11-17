@@ -46,6 +46,7 @@ import {
 import {
   DEVICES,
   HOLD_MS,
+  PAGE_RELOADED,
   PROBE_ARM,
   PROBE_READ,
   READ_AFTER_HOLD,
@@ -54,6 +55,7 @@ import {
   UNEXPECTED,
   WAIT_HELD,
   judgeDevice,
+  probeLost,
   tapShift,
   readAfterHold,
   readViewport,
@@ -172,11 +174,17 @@ async function runDevice(device: Device, key: Key, options: RunOptions): Promise
     // A real iPhone takes tap coordinates from the screen, not the page: tap once where nothing
     // listens, read where it landed, and ask for the book that much off. The shift is read first so
     // the book chosen is one whose shifted tap still falls inside the viewport.
-    const viewport = readViewport(await driver.run(PROBE_ARM));
-    if (viewport === undefined) fail(UNEXPECTED);
-    const centre = { x: Math.round(viewport.x / 2), y: Math.round(viewport.y / 2) };
-    await driver.click(centre, device.pointer);
-    const shift = tapShift(centre, await driver.run(PROBE_READ));
+    // The page can reload under the tap (a phone's browser restarts a heavy page): arm again once.
+    let shift: { x: number; y: number } | undefined;
+    for (let attempt = 0; attempt < 2 && shift === undefined; attempt += 1) {
+      const viewport = readViewport(await driver.run(PROBE_ARM));
+      if (viewport === undefined) fail(UNEXPECTED);
+      const centre = { x: Math.round(viewport.x / 2), y: Math.round(viewport.y / 2) };
+      await driver.click(centre, device.pointer);
+      const landed = await driver.run(PROBE_READ);
+      if (!probeLost(landed)) shift = tapShift(centre, landed);
+    }
+    if (shift === undefined) fail(PAGE_RELOADED);
 
     const found = readFound(await driver.runAsync(READY_AND_FIND, [shift.x, shift.y]));
     if (found === undefined) fail(UNEXPECTED);
@@ -200,6 +208,13 @@ async function runDevice(device: Device, key: Key, options: RunOptions): Promise
       key.accessKey,
       key.username,
     ]);
+    try {
+      // What the page looked like when the step failed, so a red run shows more than one line.
+      const failed = Buffer.from(await driver.screenshot(), 'base64');
+      writeFileSync(join(options.out, `${device.slug}-failed.png`), failed);
+    } catch {
+      // The session may be the thing that failed; the verdict below stands without it.
+    }
     await driver.end();
     const verdict = { ok: false, line: `FAIL ${device.label}: ${reason}` };
     const told = await driver.setStatus(verdict.ok, verdict.line);
