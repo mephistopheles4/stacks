@@ -1,0 +1,43 @@
+---
+import type { CreditRow } from '../notice/credits.ts';
+
+// One list of credit rows, for `/credits`. Markup and styles only: the rows are `buildCredits`'
+// and every string is escaped text. A row's `modified` is the line a CC BY credit must carry.
+const { rows } = Astro.props as { rows: readonly CreditRow[] };
+---
+
+<ul class="credits">
+  {
+    rows.map((row) => (
+      <li>
+        <a href={row.link}>{row.name}</a> by {row.creators.join(', ')}.{' '}
+        {row.licenceLink ? <a href={row.licenceLink}>{row.licence}</a> : row.licence}.
+        <span class="note">Used for {row.usedFor}.</span>
+        {row.modified && (
+          <span class="note">
+            <strong>Modified:</strong> {row.modified}
+          </span>
+        )}
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .credits {
+    max-width: 65ch;
+    margin: 0 0 1rem;
+    padding-left: 1.25rem;
+  }
+
+  .credits li {
+    margin-bottom: 0.9rem;
+    line-height: 1.5;
+  }
+
+  /* Each note on its own line, under the credit it belongs to. */
+  .note {
+    display: block;
+    font-size: 1rem;
+  }
+</style>
