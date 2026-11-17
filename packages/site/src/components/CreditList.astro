@@ -11,7 +11,7 @@ const { rows } = Astro.props as { rows: readonly CreditRow[] };
     rows.map((row) => (
       <li>
         <a href={row.link}>{row.name}</a> by {row.creators.join(', ')}.{' '}
-        {row.licenceLink ? <a href={row.licenceLink}>{row.licence}</a> : row.licence}.
+        Licence: {row.licenceLink ? <a href={row.licenceLink}>{row.licence}</a> : row.licence}.
         <span class="note">Used for {row.usedFor}.</span>
         {row.modified && (
           <span class="note">
