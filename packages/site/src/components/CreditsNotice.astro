@@ -1,7 +1,7 @@
 ---
 import CreditList from './CreditList.astro';
 import NoticeBody from './NoticeBody.astro';
-import { buildCredits } from '../notice/credits.ts';
+import { creditSections, headingLevels, type CreditsNoticeProps } from '../notice/credits.ts';
 import creditNotes from '../../rooms/reading-corner/credits.json';
 import roomInputs from '../../rooms/reading-corner/inputs.json';
 
@@ -16,18 +16,9 @@ import roomInputs from '../../rooms/reading-corner/inputs.json';
 // `headingId` and `tabindex` are the modal's, as `AttributionNotice`'s are. `level` is `h2` where
 // the heading sits under the page's own `h1`; `back` is the way back to the attribution notice,
 // which the modal answers by swapping panels and the fallback does not need.
-interface Props {
-  readonly headingId?: string;
-  readonly tabindex?: number;
-  readonly level?: 'h1' | 'h2';
-  readonly back?: boolean;
-}
-const { headingId, tabindex, level = 'h1', back = true } = Astro.props;
-const Heading = level;
-const Sub = level === 'h1' ? 'h2' : 'h3';
-const rows = buildCredits(roomInputs.inputs, creditNotes.credits);
-const required = rows.filter((row) => row.required);
-const courtesy = rows.filter((row) => !row.required);
+const { headingId, tabindex, level = 'h1', back = true } = Astro.props as CreditsNoticeProps;
+const { title: Heading, section: Sub } = headingLevels(level);
+const { required, courtesy } = creditSections(roomInputs.inputs, creditNotes.credits);
 ---
 
 <NoticeBody>

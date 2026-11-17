@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildCredits, type CreditInput, type CreditNote } from './credits.ts';
+import {
+  buildCredits,
+  creditSections,
+  headingLevels,
+  type CreditInput,
+  type CreditNote,
+} from './credits.ts';
 
 const input = (over: Partial<CreditInput> = {}): CreditInput => ({
   title: 'Desk',
@@ -16,12 +22,29 @@ const note = (over: Partial<CreditNote> = {}): CreditNote => ({
 });
 const DESK = 'https://example.org/desk';
 
+describe('creditSections and headingLevels', () => {
+  it('splits the rows into the ones that ask for credit and the courtesy ones', () => {
+    const { required, courtesy } = creditSections(
+      [input(), input({ page: 'https://example.org/b', licence: 'CC0' })],
+      { [DESK]: note({ name: 'Desk' }), 'https://example.org/b': note({ name: 'Other' }) },
+    );
+    expect(required.map((r) => r.name)).toEqual(['Desk']);
+    expect(courtesy.map((r) => r.name)).toEqual(['Other']);
+  });
+
+  it('puts the sections one level under the title', () => {
+    expect(headingLevels('h1')).toEqual({ title: 'h1', section: 'h2' });
+    expect(headingLevels('h2')).toEqual({ title: 'h2', section: 'h3' });
+  });
+});
+
 describe('buildCredits', () => {
   it('makes one row of the creator, link, licence and note', () => {
     expect(buildCredits([input()], { [DESK]: note() })).toEqual([
       {
         name: 'The desk',
         creators: ['Ada'],
+        creatorsText: 'Ada',
         link: DESK,
         licence: 'CC BY 4.0',
         licenceLink: 'https://creativecommons.org/licenses/by/4.0/',

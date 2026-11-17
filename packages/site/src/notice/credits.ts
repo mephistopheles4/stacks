@@ -34,6 +34,8 @@ export interface CreditNote {
 export interface CreditRow {
   readonly name: string;
   readonly creators: readonly string[];
+  /** The creators as one line, for the list. */
+  readonly creatorsText: string;
   /** Where the asset came from: an https URL. */
   readonly link: string;
   readonly licence: string;
@@ -92,6 +94,7 @@ function rowFor(page: string, group: readonly CreditInput[], note: CreditNote): 
   return {
     name: note.name,
     creators,
+    creatorsText: creators.join(', '),
     link: page,
     licence: first.licence,
     licenceLink: LICENCE_LINKS[first.licence],
@@ -124,4 +127,34 @@ export function buildCredits(
   return rows.sort(
     (a, b) => Number(b.required) - Number(a.required) || a.name.localeCompare(b.name, 'en'),
   );
+}
+
+/** What `CreditList.astro` is given. */
+export interface CreditListProps {
+  readonly rows: readonly CreditRow[];
+}
+
+/** What `CreditsNotice.astro` is given: the modal's ids, the heading level and the way back. */
+export interface CreditsNoticeProps {
+  readonly headingId?: string;
+  readonly tabindex?: number;
+  readonly level?: 'h1' | 'h2';
+  readonly back?: boolean;
+}
+
+/** The two sections of the credits: the rows that ask for credit, and the courtesy ones. */
+export function creditSections(
+  inputs: readonly CreditInput[],
+  notes: Readonly<Record<string, CreditNote>>,
+): { readonly required: CreditRow[]; readonly courtesy: CreditRow[] } {
+  const rows = buildCredits(inputs, notes);
+  return {
+    required: rows.filter((row) => row.required),
+    courtesy: rows.filter((row) => !row.required),
+  };
+}
+
+/** The heading levels under a title of `level`: the notice's own title, then its two sections. */
+export function headingLevels(level: 'h1' | 'h2'): { title: 'h1' | 'h2'; section: 'h2' | 'h3' } {
+  return { title: level, section: level === 'h1' ? 'h2' : 'h3' };
 }

@@ -1,16 +1,16 @@
 ---
-import type { CreditRow } from '../notice/credits.ts';
+import type { CreditListProps } from '../notice/credits.ts';
 
 // One list of credit rows, for the 3D credits (`CreditsNotice`). Markup and styles only: the rows are `buildCredits`'
 // and every string is escaped text. A row's `modified` is the line a CC BY credit must carry.
-const { rows } = Astro.props as { rows: readonly CreditRow[] };
+const { rows } = Astro.props as CreditListProps;
 ---
 
 <ul class="credits">
   {
     rows.map((row) => (
       <li>
-        <a href={row.link}>{row.name}</a> by {row.creators.join(', ')}.{' '}
+        <a href={row.link}>{row.name}</a> by {row.creatorsText}.{' '}
         Licence: {row.licenceLink ? <a href={row.licenceLink}>{row.licence}</a> : row.licence}.
         <span class="note">Used for {row.usedFor}.</span>
         {row.modified && (
