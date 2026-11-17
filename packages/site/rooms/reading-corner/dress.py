@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SHARED_DRESS = os.path.normpath(os.path.join(HERE, "..", "shared", "dress"))
 FACE_CAP = 25000          # a quick bake: anything denser is decimated to this
 SMALL_CAP = {"desk_sand_blotter": 4000}
+DESK_SHIFT = -0.95        # the desk group's move toward the front (#620); passed to desk_dress.dress_desk as `shift`
 
 
 def _helper(name):
@@ -139,7 +140,13 @@ MOVES = {
     "L_jerome": (-0.4575, 0.0),
     "L_melencolia_I": (-0.4575, 0.0),
     "L_knight": (-0.4575, 0.0),
-    "L_oil_lamp": (0.0, 0.4),
+    "L_oil_lamp": (0.0, 0.4 + DESK_SHIFT),
+    # the room revision (#620): the globe clear of the right wall and the chest, the desk group
+    # (desk, chair, lamp here; the props and the map above them in desk_dress.py) 0.95 toward the front
+    # so it sits centred on the longer left wall
+    "L_globe": (-0.707786, -1.357215),
+    "L_desk": (0.0, DESK_SHIFT),
+    "L_desk_chair": (0.0, DESK_SHIFT),
 }
 
 
@@ -219,7 +226,7 @@ def dress(scene, repo):
     for n in frames["HANG"]:
         _drop(n)
     dd = _helper("desk_dress")
-    dd["dress_desk"](scene, repo)
+    dd["dress_desk"](scene, repo, shift=DESK_SHIFT)
     dd["dress_floor_books"](scene, repo)
     dd["_group"]("P_encyclopedia", dd["_keep"](dd["_import"](os.path.join(PH, "book_encyclopedia_set_01", "book_encyclopedia_set_01_2k.gltf"), scene), ("book_encyclopedia",)),
                  scene, (9.5, -4.5), yaw_deg=-90, z=2.8)

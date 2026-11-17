@@ -21,11 +21,13 @@ import {
   type CoverQuad,
 } from './cover-shade.ts';
 import { changedPieces, livePieces, paintedPieces } from './painted-pieces.ts';
-import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
+import { BACKBOARD_INSET, mainRowCount, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed, type RoomView } from './shelf-url.ts';
-import { clampInto, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
+import { bookcaseBox, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
+import { createRoomOrbit } from './room-orbit.ts';
+import { BOOKCASE_STANDOFF } from './room-walk.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import {
   ABANDONED_ROWS,
@@ -630,7 +632,7 @@ function assembleShelf(
   // `slot_abandoned` (#604, spec S12). The room is asked for at mount, so the main bookcase is laid out
   // without them from the start; a room that fails ends in a rebuilt plain shelf that has them (S2.5).
   const rows = toRows(mainShelfBooks(books, options.room !== undefined), settings.books);
-  const rowCount = rowsForBookcase(rows.length);
+  const rowCount = mainRowCount(rows.length, options.room !== undefined);
   const unitHeight = rowCount * SHELF.rowHeight;
 
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
@@ -654,8 +656,13 @@ function assembleShelf(
   let framedAt = 0;
   /** Set once a room is dressed: the camera then opens at the room's view and stays in its box. */
   let roomData: RoomData | undefined;
+  /** The drag orbits, and in a room the scroll and the pinch walk (#626); the plain shelf keeps the dolly. */
+  const roomOrbit = createRoomOrbit(camera, controls);
+  const unwalk = roomOrbit.attach(renderer.domElement);
+  own({ dispose: unwalk });
 
   const frameCamera = (aspect: number): void => {
+    roomOrbit.forget();
     const framing =
       roomData === undefined
         ? frameBookcase(rowCount, aspect)
@@ -699,8 +706,10 @@ function assembleShelf(
   const lookup: BookLookup = new Map();
   // The seam: all of the arithmetic happens first, in a module with no Three.js
   // in it, and the scene graph is built from what it returned.
-  const placements = placeShelf(rows);
-  const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings);
+  // `rowCount` and not the default: in a room the case has more rows than the books fill, and the books
+  // stand on the shelves of the case that is built, the top row on its top shelf.
+  const placements = placeShelf(rows, rowCount);
+  const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings, rowCount);
   if (painters !== undefined) own(painters);
 
   const picker = own(
@@ -787,26 +796,13 @@ function assembleShelf(
   /** A pickup's hooks, when one is installed. See `FrameHooks`. */
   let hooks: FrameHooks | undefined;
 
-  /**
-   * The camera cannot stand past the room's box (spec S8.2, C7): in front of the open corner, never
-   * behind a wall, the floor or the ceiling. A drag or a zoom that pushes it out leaves it against
-   * the face, so zoom keeps the one rate the orbit gives it all the way to the bound and stops there.
-   */
-  const keepInRoom = (): void => {
-    if (roomData === undefined) return;
-    const { x, y, z } = camera.position;
-    const [cx, cy, cz] = clampInto(roomData.bounds, [x, y, z]);
-    if (cx !== x || cy !== y || cz !== z) camera.position.set(cx, cy, cz);
-  };
-
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
-    // A held book owns the camera; the orbit's damping would fight it.
-    if (hooks?.holdsCamera() !== true) {
-      controls.update();
-      keepInRoom();
-    }
+    // A held book owns the camera; the orbit's damping would fight it. The camera cannot stand past
+    // the room's box (spec S8.2, C7): see `room-orbit.ts`.
+    if (hooks?.holdsCamera() === true) roomOrbit.hold();
+    else roomOrbit.step();
     renderer.info.reset();
     if (hooks === undefined) renderFrame();
     else hooks.draw(renderFrame);
@@ -1106,6 +1102,13 @@ function assembleShelf(
         },
         ready: (loaded) => {
           roomData = loaded.data;
+          // the walk stops in front of the main bookcase, the box's back face being behind its books
+          const bookcaseSpace = bookcaseBox(
+            loaded.data.slots.slot_bookcase,
+            unitHeight,
+            BOOKCASE_STANDOFF,
+          );
+          roomOrbit.enter(loaded.data.bounds, bookcaseSpace === undefined ? [] : [bookcaseSpace]);
           // The room's lighting and scene, from its own GLB and entry. They are the theme's defaults
           // for those two groups (spec S15.1): what the panel resets to, and what a `?debug` link is a
           // difference from. A link that names the room then lays its differences over them.
@@ -1129,6 +1132,7 @@ function assembleShelf(
           loaded?.group.removeFromParent();
           room = undefined;
           roomData = undefined;
+          roomOrbit.leave();
           roomView = undefined;
           // A cancelled load is not a failed room: the page that cancelled it has the shelf it wants.
           if (!leaving.signal.aborted) {
@@ -1330,6 +1334,7 @@ function assembleShelf(
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);
       observer.disconnect();
       picker.dispose();
+      unwalk();
       controls.dispose();
       painters?.dispose();
       abandonedCase?.painters?.dispose();

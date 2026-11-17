@@ -42,6 +42,11 @@ vi.mock('three', async (importOriginal) => {
 
     setPixelRatio(): void {}
 
+    // what a mount that goes on to draw its first frame asks of it
+    render(): void {}
+
+    setSize(): void {}
+
     getContext(): undefined {
       return undefined;
     }
@@ -148,6 +153,26 @@ describe('a mount that throws', () => {
     // The picker left behind would still answer clicks, for a scene nobody sees.
     const page = listeningCanvas();
     expect(() => mountShelf(page.canvas)).toThrow(LATE);
+
+    expect(page.live()).toEqual([]);
+  });
+});
+
+describe('a mount that succeeds, and is disposed', () => {
+  it('leaves no listener on the canvas: not the controls’, the walk’s or the picker’s', () => {
+    // The walk's wheel and pointer listeners (#626) are attached at mount and used to be let go only on a throw.
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        disconnect(): void {}
+      },
+    );
+    const page = listeningCanvas();
+    const shelf = mountShelf(page.canvas);
+    expect(page.live().some((key) => key.endsWith(' wheel'))).toBe(true);
+
+    shelf.dispose();
 
     expect(page.live()).toEqual([]);
   });

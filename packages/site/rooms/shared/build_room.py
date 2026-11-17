@@ -248,15 +248,30 @@ def point_light(name, loc, watts, colour, radius=0.1):
 shell = []
 shell.append(box("floor", (34, 22, 0.1), (0, WALL_Y - 11, -0.05), M_FLOOR))
 papered = bool(args.lightmaps and args.wallpaper)
+
+
+def wall_pieces(prefix, face_y, toward, x_span):
+    """A wall's own pieces along x_span, its inner face at face_y and the room toward `toward` (-1
+    for the back wall, +1 for the front wall that closes the room, #620): the painted dado and the
+    rail, a flat board with a bead along its top and a cove under it, painted as the skirting. The
+    paper above is its own light-only mesh."""
+    cx, w = (x_span[0] + x_span[1]) / 2, x_span[1] - x_span[0]
+    return [box(prefix + "wall", (w, 0.1, DADO), (cx, face_y - toward * 0.05, DADO / 2), M_WALL),
+            box(prefix + "dado_rail", (w, 0.06, 0.16), (cx, face_y + toward * 0.03, DADO), M_SKIRT, bevel=0.012),
+            cyl(prefix + "dado_bead", 0.028, w, (cx, face_y + toward * 0.062, DADO + 0.045), M_SKIRT, rot=(0, math.pi / 2, 0), verts=16),
+            box(prefix + "dado_cove", (w, 0.03, 0.05), (cx, face_y + toward * 0.015, DADO - 0.1), M_SKIRT, bevel=0.01)]
+
+
+def skirting(prefix, face_y, toward, x_span):
+    return box(prefix + "skirting", (x_span[1] - x_span[0], 0.12, 0.45), ((x_span[0] + x_span[1]) / 2, face_y + toward * 0.06, 0.225),
+               M_SKIRT, bevel=0.02)
+
+
 if papered:  # the painted dado below the rail; the paper above is its own light-only mesh
-    shell.append(box("wall", (34, 0.1, DADO), (0, WALL_Y + 0.05, DADO / 2), M_WALL))
-    # the rail: a flat board, a bead along its top and a cove under it, painted as the skirting
-    shell.append(box("dado_rail", (34, 0.06, 0.16), (0, WALL_Y - 0.03, DADO), M_SKIRT, bevel=0.012))
-    shell.append(cyl("dado_bead", 0.028, 34, (0, WALL_Y - 0.062, DADO + 0.045), M_SKIRT, rot=(0, math.pi / 2, 0), verts=16))
-    shell.append(box("dado_cove", (34, 0.03, 0.05), (0, WALL_Y - 0.015, DADO - 0.1), M_SKIRT, bevel=0.01))
+    shell += wall_pieces("", WALL_Y, -1, (-17, 17))
 else:
     shell.append(box("wall", (34, 0.1, 12), (0, WALL_Y + 0.05, 6), M_WALL))
-shell.append(box("skirting", (34, 0.12, 0.45), (0, WALL_Y - 0.06, 0.225), M_SKIRT, bevel=0.02))
+shell.append(skirting("", WALL_Y, -1, (-17, 17)))
 lit = []  # (object, extras): light-only bakes, textured on the page from what extras name
 if args.lightmaps:
     import lightmaps
@@ -462,6 +477,14 @@ slots = [
     slot("slot_stacks", (-4.6, -2.05, 0), 15, 3.0, 2.0, 3.0),  # forward of the plant, with the stand-in stacks
     slot("slot_pile", (-2.6, -3.8, 0), -10, 2.0, 1.5, 1.5),
 ]
+# The bookcase stand-in's size is what the baked shadow on the wall was cast from. The page's live
+# bookcase must stand at least this tall and wide, or an empty shadow shows round a smaller case
+# (#620), so the bake records it: `bookcase.ts` holds its room minimum to these, a test reads them
+# off the GLB, and a rebake with another `--rows` fails that test until the minimum follows.
+slots[0]["caster_rows"] = args.rows
+slots[0]["caster_width"] = CASE_W
+slots[0]["caster_depth"] = CASE_D
+slots[0]["caster_height"] = CASE_H
 
 # ── the rest of the room, from a dressing script (the #593 audition's furniture and lights) ──
 dressed = []
@@ -478,11 +501,21 @@ if args.dress:
         bpy.data.objects.remove(stacks)
     slots += made
     # a dressing's side walls take their paper as the back wall does: tiled sharp, light apart
+    import json
     if papered:
-        import json
         for name, face_x, inward, y0, y1, z0, z1 in json.loads(scene.get("side_paper", "[]")):
             lit.append(lightmaps.side_wallpaper(name, face_x, inward, (y0, y1), z0, z1, args.wallpaper,
                                                 args.wallpaper_size, WALLPAPER_TINT, material, out_dir))
+    # a dressing that closes the room (#620): the back wall's own pieces at its front, the room's width
+    # between the side walls, so the trim and the paper are the ones the room already has
+    front = json.loads(scene.get("front_wall", "null"))
+    if front and papered:
+        fy = front["y"]
+        shell += wall_pieces("front_", fy, 1, front["trim_x"])
+        shell.append(skirting("front_", fy, 1, front["trim_x"]))
+        lit.append(lightmaps.wallpaper(fy, front["paper_x"], front["z0"], front["top"], args.wallpaper,
+                                       args.wallpaper_size, WALLPAPER_TINT, material, out_dir,
+                                       name="room_wallpaper_front", toward=1))
 
 
 # ── bake ───────────────────────────────────────────────────────────────────
