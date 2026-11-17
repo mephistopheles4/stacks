@@ -60,10 +60,16 @@ export interface Placement {
  *
  * Takes no bookcase geometry: it imports `SHELF` directly, so a test can never
  * assert about a shelf that does not ship. See ADR-0029.
+ *
+ * **`rowCount` is the bookcase's, and is the library's own (one empty shelf ahead) unless a caller
+ * builds a bookcase of another height**: the room's abandoned bookcase is locked at two rows
+ * whatever it holds (#604), so two full rows must stand on its two shelves and not be counted as
+ * three. It sets only how high each row stands, which is `scene.ts`'s height for that bookcase.
  */
-export function placeShelf(rows: readonly ShelfRow[]): Placement[][] {
-  const rowCount = rowsForBookcase(rows.length);
-
+export function placeShelf(
+  rows: readonly ShelfRow[],
+  rowCount: number = rowsForBookcase(rows.length),
+): Placement[][] {
   return rows.map((row, rowIndex) =>
     // Drawn top-down: the newest books sit on the top shelf.
     placeRow(

@@ -62,7 +62,7 @@ import { moveIn, moveOut, update as updateFlat, type FlatBook, type Screen } fro
 import { loadThoughts } from './notes.ts';
 import { paintedPieces, paperMaterial, sheetMesh } from './gutter-sheet.ts';
 import { openSpread, type OpenSpread } from './open-spread.ts';
-import { bezier, openAngle, schedule, textOpacity } from './pickup-motion.ts';
+import { bezier, openAngle, schedule, slideOffset, textOpacity } from './pickup-motion.ts';
 import { noticeIsOpen } from '../notice/open.ts';
 import { createPickupState, type PickupState, type Track } from './pickup-state.ts';
 import { buildTrack, engine, type Timeline } from './pickup-track.ts';
@@ -890,9 +890,11 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       const { group } = entry.staged;
       const o = p.o;
       const held = heldPose(entry, o, entry.turn);
+      // Out along its bookcase's front: the main bookcase faces +z, the room's abandoned bookcase
+      // is turned to face the room, and a slide along +z there would run into the next book.
       const slid = entry.home.position
         .clone()
-        .add(new THREE.Vector3(0, motion.lift * p.s, motion.slideOut * p.s));
+        .add(new THREE.Vector3(...slideOffset(motion, p.s, entry.staged.facing ?? 0)));
       group.position.copy(slid.lerp(held.position, p.u));
       group.quaternion.copy(entry.home.quaternion).slerp(held.quaternion, p.u);
       entry.rig.hinge.rotation.y = -THREE.MathUtils.degToRad(openAngle(o));

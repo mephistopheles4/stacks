@@ -15,6 +15,7 @@ All five phases are green and tagged (`phase-0` to `phase-4`). The tool runs aga
 | | |
 | --- | --- |
 | **Room** | Built; sign-off pending; hold deploy for T5. [ADR-0164](./adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md) |
+| **Room abandoned bookcase (#604, T5), in review** | [ADR-0175](./adr/0175-the-abandoned-books-leave-the-main-bookcase-for-one-of-their-own-in-the-room.md). Not run: Pixel, owner's look |
 | **Room devices (#605, T6), in review** | `pnpm preview:fixture`, the confinement probe, the tunnel launcher and the BrowserStack key rules are built and green. **Not run:** the device matrix and the preview read, which need the owner's tunnel and a preview. [ADR-0165](./adr/0165-the-fixture-preview-and-the-tunnel-launcher-carry-a-fixture-build-only.md) |
 | **O'Reilly provider removed (#450), in review** | Lookups go Open Library, then Google, with Apple for covers only. `oreilly_ourn` and `cover_source: oreilly` stay as provenance on older notes and no provider writes them. A cover added by hand needs `cover_source: unknown` written by hand. [ADR-0147](./adr/0147-oreilly-is-removed.md); the spec is [revision 4 on #450](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728372984) |
 | **Notice modals (#536), in review (PR #570)** | The Attribution link on the shelf and the Privacy link in the Ask drawer open their notice in one modal over the shelf; `/attribution` and `/privacy` stay as pages. G35, G61 and G20's `privacy` rule read it; `scripts/phone-check.ts --notice <name>` is the owner's phone run. [ADR-0146](./adr/0146-the-notices-open-in-one-modal-over-the-shelf.md), [spec](./spec/notice-modals.md). Waiting on the owner: the phone run and the screenshot review |
@@ -147,7 +148,7 @@ One line per episode, newest last. The narrative is one file per investigation i
 
 ## Notes to the next session
 
-- Run `pnpm test && pnpm build && pnpm gate:public` first. Those three are the contract; if they are green the project is where this file says it is. The device check (`pnpm check:devices`) runs after merge, on `main` only.
+- Run `pnpm test && pnpm build && pnpm gate:public` first. Those three are the contract; if they are green the project is where this file says it is.
 - **`gate:public` and the fixture build for the device check each stage a fixture vault into `packages/site/public/`.** Running them while `pnpm dev:watch` is up swaps the live site to fixture data until the next vault edit. Rebuild with `pnpm stacks build --public --assets packages/site/public`.
 - **Verify covers by eye, not by counting.** A contact sheet shows a placeholder graphic or a different book that no count distinguishes.
 - Configuration lives in `.env` (gitignored): `STACKS_VAULT`, and `GOOGLE_BOOKS_API_KEY`, without which Google Books 429s on a shared quota. There is exactly one, in the main checkout, and every worktree reads it.

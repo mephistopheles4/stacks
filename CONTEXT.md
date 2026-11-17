@@ -18,6 +18,9 @@ gate.
 The baked scene round the bookcase on the default page, a committed GLB chosen by id from a fixed list; `?shelf` is the page without it ([ADR-0164](docs/adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)).
 *Avoid*: scene (that is the three.js object).
 
+**Abandoned bookcase**:
+In the room, the second bookcase the abandoned books stand on: two rows, spine out, the most recent kept ([ADR-0175](docs/adr/0175-the-abandoned-books-leave-the-main-bookcase-for-one-of-their-own-in-the-room.md)).
+
 **Vault**:
 The folder of Obsidian notes that *is* the database. Defined by
 [invariant 1](AGENTS.md); reached only through the **adapter**, by

@@ -482,3 +482,7 @@ overrides:
 # `markdownlint-cli2`'s own globs), was added on 2026-10-06 and removed on
 # 2026-11-06, when G62 expired it: GitHub withdrew the advisory on 2026-10-23, so
 # there was nothing left to ignore (#542). The block above is the template for the next one.
+
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf # 2026-11-17, picomatch <= 4.0.7 ReDoS on repeated extglobs like `+(*)`: it needs an attacker to choose the glob, and every glob here is the repo's own, run at build time by astro, vite and the test tooling; neither `packages/ask` nor `packages/core` carries picomatch; no fixed release is published (npm latest is 4.0.7, the advisory names 4.0.8), fix pending

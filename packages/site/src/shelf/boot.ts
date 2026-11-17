@@ -99,6 +99,8 @@ declare global {
       projectBook(index: number): { x: number; y: number } | undefined;
       /** Wishlist books on the room's floor stacks, and each stack top on screen (#603). */
       readonly stacked: number;
+      /** The abandoned bookcase's books, how many are not drawn, and its rows (#604). */
+      readonly abandoned: ShelfHandle['abandoned'];
       projectStack(slot: number): { x: number; y: number } | undefined;
       projectStackBase(): { x: number; y: number } | undefined;
       /** Where the room stands on this page, and what it cost: `none` for `?shelf` and the fallback. */
@@ -593,6 +595,9 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind, pickup?: Pic
     projectBook: (index) => handle.projectBook(index),
     get stacked(): number {
       return handle.stacked;
+    },
+    get abandoned(): ShelfHandle['abandoned'] {
+      return handle.abandoned;
     },
     projectStack: (slot) => handle.projectStack(slot),
     projectStackBase: () => handle.projectStackBase(),
