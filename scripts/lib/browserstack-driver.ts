@@ -216,6 +216,12 @@ export interface Driver {
    * ran; `undefined` when the device returns no console log. Never the text of one.
    */
   consoleErrorCount(): Promise<number | undefined>;
+  /**
+   * Reports the verdict to BrowserStack's session status (`passed` or `failed`, with a short
+   * reason), so the dashboard says what the check did. Works after `end()`. Answers whether the
+   * hub took it, and never throws: a verdict the dashboard did not take is not the check's failure.
+   */
+  setStatus(passed: boolean, reason: string): Promise<boolean>;
   /** Ends the session. Never throws: it runs in a `finally`. */
   end(): Promise<void>;
 }
@@ -329,6 +335,24 @@ export function createDriver(credentials: Credentials, send: Fetcher, hub = HUB)
       // A device with no console log answers with an error status: reported as "not reported".
       if (!response.ok) return undefined;
       return countConsoleErrors(text);
+    },
+    async setStatus(passed, reason) {
+      const id = session ?? last;
+      if (id === undefined) return false;
+      try {
+        const response = await send(`${REST}/sessions/${id}.json`, {
+          method: 'PUT',
+          headers: { Authorization: authorization, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: passed ? 'passed' : 'failed',
+            reason: scrub(reason, secrets()).slice(0, 250),
+          }),
+        });
+        return response.ok;
+      } catch {
+        // The dashboard is a courtesy; the verdict was already printed.
+        return false;
+      }
     },
     async end() {
       if (session === undefined) return;
