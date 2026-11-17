@@ -47,6 +47,16 @@ beforeAll(() => {
         node('section', 'notice-privacy', '', [heading('notice-privacy-title', 'Privacy')], {
           hidden: '',
         }),
+        node(
+          'section',
+          'notice-credits',
+          '',
+          [
+            heading('notice-credits-title', '3D credits'),
+            node('a', 'credits-back', 'Back to attribution', [], { href: '/attribution' }),
+          ],
+          { hidden: '' },
+        ),
       ]),
     ],
     { 'aria-labelledby': 'notice-attribution-title' },
@@ -82,6 +92,30 @@ describe('mountNotices: a click is taken only once the dialog is open (N4)', () 
     } finally {
       refuse.mockRestore();
     }
+  });
+});
+
+describe('mountNotices: the 3D credits are a panel of this modal (#621)', () => {
+  const creditsLink = (): HTMLAnchorElement =>
+    node('a', 'credits-link', 'see the 3D credits', [], {
+      href: '/attribution#credits',
+    }) as HTMLAnchorElement;
+  const shown = (id: string): boolean => !(document.getElementById(id) as HTMLElement).hidden;
+
+  it('opens on the credits link from the attribution panel, then comes back by the way back link', () => {
+    const inside = creditsLink();
+    (document.getElementById('text') as HTMLElement).append(inside);
+    click(link);
+    expect(shown('notice-attribution')).toBe(true);
+    expect(click(inside)).toBe(true);
+    expect(dialog.open).toBe(true);
+    expect(shown('notice-credits')).toBe(true);
+    expect(shown('notice-attribution')).toBe(false);
+    expect(dialog.getAttribute('aria-labelledby')).toBe('notice-credits-title');
+    expect(click(document.getElementById('credits-back') as HTMLElement)).toBe(true);
+    expect(shown('notice-attribution')).toBe(true);
+    expect(shown('notice-credits')).toBe(false);
+    inside.remove();
   });
 });
 

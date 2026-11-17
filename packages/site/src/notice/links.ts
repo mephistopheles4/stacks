@@ -7,19 +7,27 @@
  * modal existed.
  */
 
-export type NoticeName = 'attribution' | 'privacy';
+export type NoticeName = 'attribution' | 'privacy' | 'credits';
 
-/** The exact `href` attributes that name a notice. Read with `getAttribute`, never `.href`. */
+/**
+ * The exact `href` attributes that name a notice. Read with `getAttribute`, never `.href`.
+ *
+ * The 3D credits (#621) are a third panel of the same modal, not a page of their own: their link
+ * is the attribution page's `#credits` anchor, which is also where a visitor with scripts off
+ * finds them (`attribution.astro`).
+ */
 const NOTICE_HREFS: Readonly<Record<string, NoticeName>> = {
   '/attribution': 'attribution',
   '/privacy': 'privacy',
+  '/attribution#credits': 'credits',
 };
 
 /**
  * The links `noticeFor` can answer for, as a selector: what the drawer counts as inside itself
  * (N9), so opening a notice from the shelf with the drawer open does not close the drawer.
  */
-export const NOTICE_LINK_SELECTOR = 'a[href="/attribution"], a[href="/privacy"]';
+export const NOTICE_LINK_SELECTOR =
+  'a[href="/attribution"], a[href="/privacy"], a[href="/attribution#credits"]';
 
 /** The parts of a click this decision reads. */
 export interface ClickRead {
