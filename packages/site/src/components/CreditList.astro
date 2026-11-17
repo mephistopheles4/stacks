@@ -1,7 +1,7 @@
 ---
 import type { CreditRow } from '../notice/credits.ts';
 
-// One list of credit rows, for `/credits`. Markup and styles only: the rows are `buildCredits`'
+// One list of credit rows, for the 3D credits (`CreditsNotice`). Markup and styles only: the rows are `buildCredits`'
 // and every string is escaped text. A row's `modified` is the line a CC BY credit must carry.
 const { rows } = Astro.props as { rows: readonly CreditRow[] };
 ---

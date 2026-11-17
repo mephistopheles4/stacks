@@ -17,7 +17,7 @@
  *   the allowed hosts are read from that script, so the list is in one place;
  * - **a CC BY entry is credited in the room's `SOURCES.md`**, by its author
  *   and its page URL, because that is what the licence asks;
- * - and **every input has a credit row** on `/credits` (#621): `credits.json` holds one entry
+ * - and **every input has a credit row** in the 3D credits modal (#621): `credits.json` holds one entry
  *   per page in `inputs.json` and none for a page it does not name, read through the page's own
  *   `buildCredits`, and a CC BY row says what the bake changed.
  *
@@ -209,7 +209,7 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
     expect(entries.flatMap((e) => entryFaults(e, hosts, sources))).toEqual([]);
   });
 
-  // #621: the 3D credits view (`/credits`) is `inputs.json` grouped by asset, so an input with no
+  // #621: the 3D credits modal is `inputs.json` grouped by asset, so an input with no
   // entry in `credits.json` would ship uncredited. `buildCredits` is the page's own function, so
   // this holds the page and not a copy of its rule.
   it.each(rooms)('%s: every input has a credit row, and every CC BY one is on the page', (room) => {

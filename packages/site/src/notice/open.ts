@@ -13,10 +13,12 @@ export const NOTICE_CLOSE_ID = 'notice-close';
 export const NOTICE_PANEL_IDS = {
   attribution: 'notice-attribution',
   privacy: 'notice-privacy',
+  credits: 'notice-credits',
 } as const;
 export const NOTICE_TITLE_IDS = {
   attribution: 'notice-attribution-title',
   privacy: 'notice-privacy-title',
+  credits: 'notice-credits-title',
 } as const;
 
 /** True while the notice modal is shown. */

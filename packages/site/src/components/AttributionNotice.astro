@@ -66,7 +66,7 @@ const { headingId, tabindex } = Astro.props as NoticeHeadingProps;
   </p>
   <p>
     The reading corner is made from other people&rsquo;s 3D models, textures and pictures:{' '}
-    <a href="/credits">see the 3D credits</a>.
+    <slot name="credits-trigger"><a href="/attribution#credits">see the 3D credits</a></slot>.
   </p>
   <p>Tested on real devices with <a href="https://www.browserstack.com/">BrowserStack</a>.</p>
 

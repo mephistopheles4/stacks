@@ -1,5 +1,5 @@
 /**
- * The 3D credits view's rows (#621), made from a room's `inputs.json` and its `credits.json`.
+ * The 3D credits modal's rows (#621), made from a room's `inputs.json` and its `credits.json`.
  *
  * `inputs.json` names every file the bake reads, with its author, page and licence, and has
  * several files for one asset (a model, its textures, its buffer). A credit is per asset, so the
