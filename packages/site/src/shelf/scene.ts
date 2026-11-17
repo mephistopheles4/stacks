@@ -25,8 +25,14 @@ import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
-import { clampInto, frameRoom, lightsPatch, type RoomData } from './room-data.ts';
+import { clampInto, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
+import {
+  ABANDONED_ROWS,
+  ABANDONED_SLOT,
+  abandonedShelf,
+  mainShelfBooks,
+} from './room-abandoned.ts';
 import { runRoomLoad } from './room-load.ts';
 import { showLoadingScreen } from './room-loading.ts';
 import {
@@ -147,6 +153,12 @@ export interface StagedBook {
   readonly group: THREE.Group;
   readonly entry: ShelfBook;
   readonly depth: number;
+  /**
+   * The turn about y of the bookcase this book stands in, so a pickup slides it out of its slot along
+   * that bookcase's front and not along the room's +z. Absent is 0: the main bookcase faces +z, and a
+   * book lying on a floor stack has no slot to slide out of.
+   */
+  readonly facing?: number;
 }
 
 /**
@@ -367,6 +379,16 @@ export interface ShelfHandle {
    * the order it was dealt. Both are empty without a room.
    */
   readonly stacked: number;
+  /**
+   * The abandoned bookcase's books (#604): each drawn book by id with whether it stands face out, how
+   * many abandoned books are not drawn, and how many rows the bookcase holds. Empty and zero without a
+   * room. Their index for `projectBook` and `pickUp` follows the stack books'.
+   */
+  readonly abandoned: {
+    readonly books: readonly { readonly id: string; readonly faceOut: boolean }[];
+    readonly left: number;
+    readonly rows: number;
+  };
   projectStack(slot: number): { x: number; y: number } | undefined;
   /** A screen point where the nearest thing drawn is the room's baked stack base, if one shows. */
   projectStackBase(): { x: number; y: number } | undefined;
@@ -590,7 +612,10 @@ function assembleShelf(
   const fog = new THREE.Fog(settings.scene.background);
   scene.fog = settings.scene.fog.enabled ? fog : null;
 
-  const rows = toRows(books, settings.books);
+  // In a room the abandoned books leave this bookcase for a second one of their own, at the room's
+  // `slot_abandoned` (#604, spec S12). The room is asked for at mount, so the main bookcase is laid out
+  // without them from the start; a room that fails ends in a rebuilt plain shelf that has them (S2.5).
+  const rows = toRows(mainShelfBooks(books, options.room !== undefined), settings.books);
   const rowCount = rowsForBookcase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 
@@ -924,6 +949,7 @@ function assembleShelf(
       lights,
       bookcase,
       painters,
+      abandonedCase,
       post,
       next,
       settings,
@@ -996,6 +1022,47 @@ function assembleShelf(
     stackTops = [];
   };
 
+  // ---- the abandoned books' bookcase (#604, spec S12, S11) ----------------------------------------
+  //
+  // A second bookcase, built by `buildShelf` as the main one is, at the room's `slot_abandoned`. Its
+  // books are scene children with their own positions, as the shelf's are, because a pickup reads a
+  // book's home from its group; they join the click lookup, the picker and the pickup's staged list
+  // after the wishlist books. Nothing here samples the shadow map (spec S7.4).
+  let abandonedCase: AbandonedCase | undefined;
+
+  const layAbandoned = (slots: RoomData['slots']): void => {
+    const slot = slots[ABANDONED_SLOT];
+    // A room with nowhere to put them would leave the abandoned books on no bookcase at all: that is a
+    // room that has failed, and the plain shelf has them.
+    if (slot === undefined) throw new Error(`the room has no "${ABANDONED_SLOT}"`);
+    // All of it built before any of it is added, so a throw leaves nothing in the scene to take out.
+    const made = buildAbandonedBookcase(slot, books, textures, lookup, settings);
+    scene.add(made.bookcase.group);
+    scene.updateMatrixWorld(true);
+    for (const { group, entry, frontZ } of made.placed) {
+      scene.attach(group);
+      stagedBooks.push({ group, entry, depth: frontZ * 2, facing: slot.rotationY });
+    }
+    picker.add(made.placed.map(({ group }) => group));
+    abandonedCase = made;
+  };
+
+  const clearAbandoned = (): void => {
+    if (abandonedCase === undefined) return;
+    const gone = new Set(abandonedCase.placed.map(({ group }) => group));
+    for (const { group } of abandonedCase.placed) {
+      group.removeFromParent();
+      for (const part of group.children) lookup.delete(part);
+    }
+    picker.remove(gone);
+    for (let i = stagedBooks.length - 1; i >= 0; i -= 1) {
+      if (gone.has(stagedBooks[i]!.group)) stagedBooks.splice(i, 1);
+    }
+    abandonedCase.painters?.dispose();
+    abandonedCase.bookcase.group.removeFromParent();
+    abandonedCase = undefined;
+  };
+
   // ---- the room (#602): an upgrade over the plain shelf, never a condition of it -------------------
   //
   // The shelf above is complete without it. A room that loads is put in under the loading screen and
@@ -1032,10 +1099,12 @@ function assembleShelf(
           frameCamera(camera.aspect);
           // Last, so a room that fails above it has laid nothing to take back out.
           layOnStacks(loaded.data.slots);
+          layAbandoned(loaded.data.slots);
           roomState = 'dressed';
           request.onDressed?.();
         },
         abandon: (loaded) => {
+          clearAbandoned();
           clearStacks();
           loaded?.group.removeFromParent();
           room = undefined;
@@ -1069,6 +1138,7 @@ function assembleShelf(
     headCap: mountedWith.books.headCap,
     repaint: (without) => {
       painters?.paint(settings, without);
+      abandonedCase?.painters?.paint(settings, without);
     },
     redrawShadows: () => {
       renderer.shadowMap.needsUpdate = true;
@@ -1154,14 +1224,30 @@ function assembleShelf(
       return stacked.length;
     },
 
+    get abandoned() {
+      const shown = abandonedCase?.placed ?? [];
+      return {
+        books: shown.map(({ entry }) => ({ id: entry.book.id, faceOut: entry.faceOut })),
+        left: abandonedCase?.left ?? 0,
+        rows: abandonedCase?.rows ?? 0,
+      };
+    },
+
     projectBook(index: number): { x: number; y: number } | undefined {
       const book = placed[index];
       if (book === undefined) {
-        // A wishlist book on a floor stack: its top face's middle, where it lies cover up.
-        const laid = stacked[index - placed.length];
-        if (laid === undefined) return undefined;
-        const centre = new THREE.Box3().setFromObject(laid.group).getCenter(new THREE.Vector3());
-        return toScreen(centre);
+        // After the shelf's own come the wishlist books on the floor stacks, then the abandoned
+        // bookcase's: the order they join the pickup's staged list (#603, #604).
+        const past = index - placed.length;
+        const laid = stacked[past];
+        if (laid !== undefined) {
+          // Its top face's middle, where it lies cover up.
+          const centre = new THREE.Box3().setFromObject(laid.group).getCenter(new THREE.Vector3());
+          return toScreen(centre);
+        }
+        const shelved = abandonedCase?.placed[past - stacked.length];
+        if (shelved === undefined) return undefined;
+        return toScreen(shelved.group.localToWorld(new THREE.Vector3(0, 0, shelved.frontZ)));
       }
 
       // Aim at the front face of the spine, not the centre of the box — the
@@ -1221,6 +1307,7 @@ function assembleShelf(
       picker.dispose();
       controls.dispose();
       painters?.dispose();
+      abandonedCase?.painters?.dispose();
       // `textures` is the page-lifetime cover cache and is deliberately NOT
       // disposed here — see `COVERS`. The traverse below skips what it owns.
 
@@ -1435,6 +1522,62 @@ function measureBookcaseOverflow(scene: THREE.Scene, placed: readonly PlacedBook
   return Math.max(0, worst);
 }
 
+/** The room's second bookcase with its books built, and nothing added to a scene yet. */
+interface AbandonedCase {
+  readonly bookcase: Bookcase;
+  readonly placed: readonly PlacedBook[];
+  readonly painters: Painters | undefined;
+  /** Abandoned books past the two rows: not drawn, still in `library.json`. */
+  readonly left: number;
+  /** The rows holding books, 0 to `ABANDONED_ROWS`. */
+  readonly rows: number;
+}
+
+/**
+ * The abandoned books' bookcase (#604, spec S12): `buildShelf`'s own, locked at two rows and standing
+ * where the room's `slot_abandoned` says, with the most recently abandoned books on it, every one spine
+ * out. Nothing is added to the scene: the caller does that once everything here has built.
+ *
+ * **It never samples the shadow map and casts nothing** (spec S7.4, ADR-0088): its woodwork and every
+ * book compile with no shadow fetch, so the main bookcase's woodwork stays the one program reading the
+ * map, in 2 draws (G61), and the map is fitted to the main bookcase alone.
+ *
+ * **Its painted shading follows the light as the main bookcase's does**, magnitudes only (see
+ * `BookcaseLight`): it is the whole of the shading when the panel turns real-time shadows off, and what
+ * a device that lost its context gets on the plain shelf, which has no second bookcase.
+ *
+ * Its wood is cut from a root of its own, so the two bookcases are not one board stamped twice.
+ */
+function buildAbandonedBookcase(
+  slot: Slot,
+  library: readonly LibraryBook[],
+  textures: TextureCache,
+  lookup: BookLookup,
+  settings: ShelfSettings,
+): AbandonedCase {
+  const { rows, left } = abandonedShelf(library, settings.books);
+  const bookcase = buildShelf(ABANDONED_ROWS, settings, `${woodRoot()}:abandoned`);
+  const { group } = bookcase;
+  group.name = 'abandoned_bookcase';
+  group.position.set(...slot.position);
+  group.rotation.set(0, slot.rotationY, 0);
+
+  // Two rows whatever it holds: the books are placed against two shelves, not the library's own count.
+  const { placed, painters } = buildBooks(
+    group,
+    placeShelf(rows, ABANDONED_ROWS),
+    textures,
+    lookup,
+    settings,
+    ABANDONED_ROWS,
+  );
+  receiveShadows(group, false);
+  group.traverse((part) => {
+    part.castShadow = false;
+  });
+  return { bookcase, placed, painters, left, rows: rows.length };
+}
+
 /**
  * Which book a mesh is.
  *
@@ -1454,11 +1597,12 @@ export type BookLookup = Map<THREE.Object3D, LibraryBook>;
  * pieces draw is `paintedPieces`'s.
  */
 function buildBooks(
-  scene: THREE.Scene,
+  scene: THREE.Object3D,
   placements: readonly (readonly Placement[])[],
   textures: TextureCache,
   lookup: BookLookup,
   settings: ShelfSettings,
+  rowCount: number = rowsForBookcase(placements.length),
 ): { placed: PlacedBook[]; painters: Painters | undefined } {
   // Was a separate parameter until the settings object existed, which let a
   // caller pass a `painted` that disagreed with the one the painters would later
@@ -1466,8 +1610,6 @@ function buildBooks(
   const pieces = paintedPieces(settings.shadows);
 
   const placed: PlacedBook[] = [];
-
-  const rowCount = rowsForBookcase(placements.length);
 
   placements.forEach((row) => {
     row.forEach((placement, index) => {
@@ -1570,7 +1712,7 @@ function buildBooks(
  * which a decision taken once at mount left stale until a rebuild.
  */
 class Painters {
-  readonly #scene: THREE.Scene;
+  readonly #scene: THREE.Object3D;
   /** Contacts per row of *books*, indexed as the placements are — top shelf first. */
   readonly #byRow: readonly (readonly { readonly id: string; readonly contact: Contact }[])[];
   readonly #rowCount: number;
@@ -1583,7 +1725,7 @@ class Painters {
   #without: ReadonlySet<string> = new Set();
 
   constructor(
-    scene: THREE.Scene,
+    scene: THREE.Object3D,
     placements: readonly (readonly Placement[])[],
     rowCount: number,
     mountedWith: ShelfSettings,
@@ -2194,7 +2336,11 @@ function woodRoot(): string {
   return pageWoodSeed;
 }
 
-function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
+function buildShelf(
+  rowCount: number,
+  settings: ShelfSettings,
+  root: string = woodRoot(),
+): Bookcase {
   const group = new THREE.Group();
   const castShadows = settings.shadows.casters;
   // No two members cut from the same place on the same board — offset, mirror,
@@ -2202,7 +2348,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
   // materials and +0 draw calls. Built in one place so the backboard's key
   // cannot lose the root, which is the one defect here that renders correctly
   // and only misreports. See `woodKeys`.
-  const keys = woodKeys(woodRoot(), rowCount);
+  const keys = woodKeys(root, rowCount);
 
   // Which sheet the woodwork wears, and the refusal if the request named one
   // nobody has rendered. Resolved **once, here**, because this is where the
@@ -2548,6 +2694,7 @@ function applyLive(
   lights: Lights,
   bookcase: Bookcase,
   painters: Painters | undefined,
+  abandoned: AbandonedCase | undefined,
   post: Post | undefined,
   next: ShelfSettings,
   current: ShelfSettings,
@@ -2560,6 +2707,11 @@ function applyLive(
   const needsReload: string[] = [];
   const refused: string[] = [];
   const resolved: string[] = [];
+  /**
+   * The room's second bookcase, wearing the same dials: a control that moved the main bookcase's wood
+   * and left the abandoned one's would be a control that lies (#604).
+   */
+  const twins: readonly Bookcase[] = abandoned === undefined ? [] : [abandoned.bookcase];
 
   /**
    * A *transition*: what changed since the last apply. Used for the live work,
@@ -2731,6 +2883,9 @@ function applyLive(
      */
     const shown = woodColour(next.materials.wood, bookcase.sheet?.bound() ?? false);
     bookcase.wood.color.setHex(shown);
+    for (const twin of twins) {
+      twin.wood.color.setHex(woodColour(next.materials.wood, twin.sheet?.bound() ?? false));
+    }
     applied.push(
       `wood: ${hex(current.materials.wood)} → ${hex(next.materials.wood)}` +
         (shown === next.materials.wood ? '' : ' (fallback only — the sheet has decoded)'),
@@ -2742,6 +2897,9 @@ function applyLive(
     // colour back under a decoded `dark_wood`. See the block above.
     const shown = woodColour(next.materials.woodDark, bookcase.backSheet.bound());
     bookcase.backing.color.setHex(shown);
+    for (const twin of twins) {
+      twin.backing.color.setHex(woodColour(next.materials.woodDark, twin.backSheet.bound()));
+    }
     applied.push(
       `backing: ${hex(current.materials.woodDark)} → ${hex(next.materials.woodDark)}` +
         (shown === next.materials.woodDark ? '' : ' (fallback only — the sheet has decoded)'),
@@ -2754,8 +2912,10 @@ function applyLive(
     current.materials.backingRoughness,
     next.materials.backingRoughness,
   );
-  bookcase.wood.roughness = next.materials.woodRoughness;
-  bookcase.backing.roughness = next.materials.backingRoughness;
+  for (const each of [bookcase, ...twins]) {
+    each.wood.roughness = next.materials.woodRoughness;
+    each.backing.roughness = next.materials.backingRoughness;
+  }
 
   /**
    * Live, unlike its twin on the books, and for one reason: there is a handle.
@@ -2792,6 +2952,14 @@ function applyLive(
       () => fibreMapFor(bookcase.resolved.lay) ?? null,
     );
     applyWoodFibre(bookcase.backing, next.materials.woodFibre, backingFibre);
+    for (const twin of twins) {
+      applyWoodFibre(
+        twin.wood,
+        next.materials.woodFibre,
+        () => fibreMapFor(twin.resolved.lay) ?? null,
+      );
+      applyWoodFibre(twin.backing, next.materials.woodFibre, backingFibre);
+    }
     if (fibreInForce === next.materials.woodFibre) {
       applied.push(`wood fibre: ${String(current.materials.woodFibre)} → ${String(fibreInForce)}`);
     } else {
@@ -2954,8 +3122,9 @@ function applyLive(
     current.lighting.key.aimHeight !== next.lighting.key.aimHeight;
   const drawnNow = livePieces(mountedWith.shadows, next.shadows);
   const moved = changedPieces(livePieces(mountedWith.shadows, current.shadows), drawnNow);
-  if (painters !== undefined && (lightMoved || moved.length > 0)) {
-    painters.paint(next);
+  if ((painters ?? abandoned?.painters) !== undefined && (lightMoved || moved.length > 0)) {
+    painters?.paint(next);
+    abandoned?.painters?.paint(next);
     if (lightMoved) applied.push('painted shadows repainted for the new light');
     const aside = moved.filter((piece) => !drawnNow[piece]);
     const back = moved.filter((piece) => drawnNow[piece]);

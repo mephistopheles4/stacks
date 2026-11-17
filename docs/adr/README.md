@@ -177,3 +177,4 @@ Two other files hold what these deliberately do not:
 | [0164](./0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md) | The room is the default page, and the GLB carries its camera and lights (answers #602) |
 | [0165](./0165-the-fixture-preview-and-the-tunnel-launcher-carry-a-fixture-build-only.md) | The fixture preview and the tunnel launcher carry a fixture build only, and the BrowserStack key stays out of every .env (answers #605) |
 | [0170](./0170-private-is-the-only-control-on-a-wishlist-book.md) | `private` is the only control: a wishlist book publishes unless it is private (supersedes 0009 and 0012 on wishlist books, amends 0028) |
+| [0175](./0175-the-abandoned-books-leave-the-main-bookcase-for-one-of-their-own-in-the-room.md) | The abandoned books leave the main bookcase for one of their own in the room: two rows, spine out, the most recent kept (answers #604) |
