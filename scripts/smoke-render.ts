@@ -2496,7 +2496,7 @@ async function checkAbandoned(browser: Browser, origin: string): Promise<LinesAn
         if (document.elementFromPoint(p.x, p.y) !== document.getElementById('shelf-canvas')) return undefined;
         return ${JSON.stringify(ids)}.includes(window.__shelf.bookAt(p.x, p.y)) ? { x: p.x, y: p.y } : undefined;
       })()`;
-      const at = ids.length === 0 ? undefined : await orbitUntil(page, bookAt);
+      const at = ids.length === 0 ? undefined : await orbitUntil(page, bookAt, 'right');
       const steps =
         at === undefined
           ? undefined
@@ -2515,8 +2515,15 @@ async function checkAbandoned(browser: Browser, origin: string): Promise<LinesAn
           hrefUnchanged: steps?.hrefUnchanged ?? false,
         }),
       );
+      // Where the book last stood on screen, so a miss says whether it was off screen or covered.
+      const where =
+        at === undefined
+          ? ((await page.evaluate(
+              `JSON.stringify({ at: window.__shelf.projectBook(window.__shelf.bookCount + window.__shelf.stacked), view: [innerWidth, innerHeight] })`,
+            )) as string)
+          : '';
       lines.push(
-        `${viewport}: ${steps?.picked === true ? 'one abandoned book picked up, turned, opened and put back' : 'none picked up'}`,
+        `${viewport}: ${steps?.picked === true ? 'one abandoned book picked up, turned, opened and put back' : `none picked up ${where}`}`,
       );
     } finally {
       await close();
@@ -2527,8 +2534,9 @@ async function checkAbandoned(browser: Browser, origin: string): Promise<LinesAn
 
 /**
  * The point `expression` returns once a visitor can reach it: tried where the camera stands, then
- * after real drags on the canvas, left first and then right, as a visitor turns the view. The stacks
- * stand left of the default view, so on a phone they begin off screen. A drag starts high on the
+ * after real drags on the canvas, toward `first` and then back past the start, as a visitor turns the
+ * view. The stacks stand left of the default view, so on a phone they begin off screen, and the
+ * abandoned bookcase stands right of it. A drag starts high on the
  * screen, off the books, and a drag is never a click.
  */
 /** The most drawn frames a drag's glide is waited on, and the longest, in time, on a slow runner. */
@@ -2538,6 +2546,8 @@ const SETTLE_ORBIT_MS = 10_000;
 async function orbitUntil(
   page: Page,
   expression: string,
+  /** The side to turn the view toward first: the stacks stand left of it, the abandoned bookcase right. */
+  first: 'left' | 'right' = 'left',
 ): Promise<{ x: number; y: number } | undefined> {
   const size = (await page.evaluate('({ w: innerWidth, h: innerHeight })')) as {
     w: number;
@@ -2546,7 +2556,8 @@ async function orbitUntil(
   const read = async (): Promise<{ x: number; y: number } | undefined> =>
     (await page.evaluate(expression)) as { x: number; y: number } | undefined;
   let found = await read();
-  for (const dx of [-150, -150, -150, -150, -150, -150, 150, 150, 150, 150, 150, 150]) {
+  const turn = first === 'left' ? -150 : 150;
+  for (const dx of [...Array<number>(6).fill(turn), ...Array<number>(6).fill(-turn)]) {
     if (found !== undefined) break;
     await page.mouse.move(size.w / 2, size.h * 0.2);
     await page.mouse.down();
