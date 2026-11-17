@@ -25,7 +25,7 @@ import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
-import { clampInto, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
+import { frameRoom, lightsPatch, pullIn, type RoomData, type Slot } from './room-data.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import {
   ABANDONED_ROWS,
@@ -640,8 +640,13 @@ function assembleShelf(
   let framedAt = 0;
   /** Set once a room is dressed: the camera then opens at the room's view and stays in its box. */
   let roomData: RoomData | undefined;
+  /** How far from the target the visitor asked the camera to stand (0 until it stands), and how far it does. */
+  let wished = 0;
+  let stood = 0;
+  const offset = new THREE.Vector3();
 
   const frameCamera = (aspect: number): void => {
+    wished = 0;
     const framing =
       roomData === undefined
         ? frameBookcase(rowCount, aspect)
@@ -775,24 +780,45 @@ function assembleShelf(
 
   /**
    * The camera cannot stand past the room's box (spec S8.2, C7): in front of the open corner, never
-   * behind a wall, the floor or the ceiling. A drag or a zoom that pushes it out leaves it against
-   * the face, so zoom keeps the one rate the orbit gives it all the way to the bound and stops there.
+   * behind a wall, the floor or the ceiling. **It always turns where it is dragged** (#620): a place
+   * the box cannot hold is brought in along the line to the target (`pullIn`) instead of being
+   * clamped onto a face, where the turn undid itself and the camera looked stuck. The distance the
+   * visitor asked for is kept apart (`wished`), so turning away from the wall lets it back out.
    */
-  const keepInRoom = (): void => {
-    if (roomData === undefined) return;
-    const { x, y, z } = camera.position;
-    const [cx, cy, cz] = clampInto(roomData.bounds, [x, y, z]);
-    if (cx !== x || cy !== y || cz !== z) camera.position.set(cx, cy, cz);
+  const orbit = (): void => {
+    const bounds = roomData?.bounds;
+    if (bounds === undefined) {
+      controls.update();
+      return;
+    }
+    const { target } = controls;
+    const wasWished = wished;
+    // The orbit starts from where the visitor asked the camera to stand, not from where the box left it.
+    if (wished > 0)
+      camera.position
+        .copy(target)
+        .add(offset.subVectors(camera.position, target).setLength(wished));
+    controls.update();
+    offset.subVectors(camera.position, target);
+    const asked = offset.length();
+    // A zoom changed the distance; it works from what is on screen, so a pulled-in camera does not owe it a dead stretch.
+    if (wasWished === 0) wished = asked;
+    else if (Math.abs(asked - wasWished) > 1e-6) wished = stood * (asked / wasWished);
+    offset.setLength(wished).add(target);
+    const [x, y, z] = pullIn(
+      bounds,
+      [target.x, target.y, target.z],
+      [offset.x, offset.y, offset.z],
+    );
+    camera.position.set(x, y, z);
+    stood = Math.hypot(x - target.x, y - target.y, z - target.z);
   };
 
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
     // A held book owns the camera; the orbit's damping would fight it.
-    if (hooks?.holdsCamera() !== true) {
-      controls.update();
-      keepInRoom();
-    }
+    if (hooks?.holdsCamera() !== true) orbit();
     renderer.info.reset();
     if (hooks === undefined) renderFrame();
     else hooks.draw(renderFrame);

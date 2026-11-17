@@ -197,6 +197,33 @@ export function clampInto(box: Box, point: Vec3): Vec3 {
   return [at(0), at(1), at(2)];
 }
 
+/**
+ * Where the camera stands when it wants `point` and the box may not hold it (#620): on the line from
+ * `target` to `point`, as far out as the box allows. **The view keeps its direction**, so a drag
+ * toward a wall turns the camera as far as the pointer goes and the camera comes in to the target
+ * instead of freezing against the face; turn away and the same line holds it farther out again.
+ * Clamping, which `clampInto` does, moves the camera along the face and leaves the line, so the view
+ * stops turning with the pointer. A target outside the box has no line to come in along, and the
+ * camera stands against the nearest face.
+ */
+export function pullIn(box: Box, target: Vec3, point: Vec3): Vec3 {
+  if (contains(box, point)) return point;
+  if (!contains(box, target)) return clampInto(box, point);
+  let reach = 1;
+  for (const axis of [0, 1, 2] as const) {
+    const run = point[axis] - target[axis];
+    if (run === 0) continue;
+    const wall = run > 0 ? box.max[axis] : box.min[axis];
+    reach = Math.min(reach, (wall - target[axis]) / run);
+  }
+  // the multiply can land a rounding error past the face it stops at
+  return clampInto(box, [
+    target[0] + (point[0] - target[0]) * reach,
+    target[1] + (point[1] - target[1]) * reach,
+    target[2] + (point[2] - target[2]) * reach,
+  ]);
+}
+
 function between(a: Vec3, b: Vec3): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
@@ -206,7 +233,8 @@ function between(a: Vec3, b: Vec3): number {
  * span and the height allow, so a wide window comes in until the room fills its height and the
  * corner is not left small in dark floor. **No special portrait framing** (spec S8.4): a window
  * narrower than the one the view was framed in opens as that one does, and a stand that falls
- * outside the box is clamped into it, a floor-heavy view accepted.
+ * outside the box is pulled in along the line of sight until it is inside (`pullIn`), a closer
+ * view accepted.
  */
 export function frameRoom(
   aspect: number,
@@ -221,7 +249,11 @@ export function frameRoom(
   const framedAspect = Math.max(aspect, view.aspect);
   const distance = Math.max(view.height / 2 / half, view.span / 2 / (half * framedAspect));
   const k = distance / base;
-  const [x, y, z] = clampInto(bounds, [tx + (px - tx) * k, ty + (py - ty) * k, tz + (pz - tz) * k]);
+  const [x, y, z] = pullIn(bounds, view.target, [
+    tx + (px - tx) * k,
+    ty + (py - ty) * k,
+    tz + (pz - tz) * k,
+  ]);
 
   let farthest = 0;
   for (const x of [bounds.min[0], bounds.max[0]]) {

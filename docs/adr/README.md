@@ -179,3 +179,4 @@ Two other files hold what these deliberately do not:
 | [0170](./0170-private-is-the-only-control-on-a-wishlist-book.md) | `private` is the only control: a wishlist book publishes unless it is private (supersedes 0009 and 0012 on wishlist books, amends 0028) |
 | [0171](./0171-the-smoke-gate-is-replaced-by-a-three-device-browserstack-check-after-merge.md) | The smoke gate is replaced by a three-device BrowserStack check after merge (supersedes 0108 and the deploy half of 0064; answers #618) |
 | [0175](./0175-the-abandoned-books-leave-the-main-bookcase-for-one-of-their-own-in-the-room.md) | The abandoned books leave the main bookcase for one of their own in the room: two rows, spine out, the most recent kept (answers #604) |
+| [0178](./0178-the-room-is-closed-by-its-own-wall-pieces-and-the-camera-comes-in-at-the-box.md) | The room is closed by its own wall pieces, and the camera comes in at the box instead of freezing (answers #620) |
