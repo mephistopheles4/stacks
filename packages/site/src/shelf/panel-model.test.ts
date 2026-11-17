@@ -500,6 +500,52 @@ describe('claim 8 — resync after a reset, and the base() rule', () => {
   });
 });
 
+describe('a room is a theme: its lighting and scene are the panel defaults (spec S15.1, S15.4)', () => {
+  const roomSettings = resolveSettings({
+    lighting: { key: { intensity: 3.25 } },
+    scene: { background: 0x0d0b09 },
+  });
+  const roomView = {
+    id: 'reading-corner',
+    defaults: { lighting: roomSettings.lighting, scene: roomSettings.scene },
+  };
+  const inRoom = () => ({ ...fakeHandle(NO_REPORT, roomSettings), roomView });
+
+  it('hands the address and the reset the room, which only roomView can supply', () => {
+    const handle = { ...fakeHandle(), roomView };
+    const model = createPanelModel({ handle, canRebuild: true });
+    // the shelf's own lighting is what stands; the room's is reached only through roomView
+    expect(rowOf(model.view(), 'key light/intensity').value).toBe(
+      DEFAULT_SETTINGS.lighting.key.intensity,
+    );
+    expect(rowOf(model.reset(), 'key light/intensity').value).toBe(3.25);
+  });
+
+  it('resets lighting and scene to the room, and every other group to the shelf', () => {
+    const handle = inRoom();
+    const dialled = resolveSettings({ lighting: { key: { intensity: 9 } } }, roomSettings);
+    handle.settings = {
+      ...dialled,
+      books: { ...dialled.books, headCap: dialled.books.headCap + 1 },
+    };
+    const model = createPanelModel({ handle, canRebuild: true });
+    const after = model.reset();
+    expect(rowOf(after, 'key light/intensity').value).toBe(3.25);
+    const applied = handle.applied.at(-1);
+    expect(applied?.lighting).toEqual(roomSettings.lighting);
+    expect(applied?.scene).toEqual(roomSettings.scene);
+    expect(applied?.books).toEqual(DEFAULT_SETTINGS.books);
+  });
+
+  it('hands the address the room, so a link is a difference from it', () => {
+    const model = createPanelModel({ handle: inRoom(), canRebuild: true });
+    expect(model.address().room).toBe(roomView);
+    expect(
+      createPanelModel({ handle: fakeHandle(), canRebuild: true }).address().room,
+    ).toBeUndefined();
+  });
+});
+
 describe('rowLabel — what a view puts beside a row', () => {
   it('joins lamp, label, class, and then any beyond-range or reason text', () => {
     expect(rowLabel({ lamp: 'on', label: 'x', klass: 'live' })).toBe('🟢 x · live');

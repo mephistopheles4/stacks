@@ -8,7 +8,7 @@ Read this before changing the renderer, the debug panel, or `shelf-settings.ts`.
 
 ## The page mode — `?shelf` and `?room=<id>`
 
-The default page draws the room ([ADR-0164](adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)); `?shelf` draws the bookcase alone. `?solo` wins over `?shelf`. `?room=<id>` takes only an id on the list in `room-mode.ts`. `?debug` adds Room, Shelf and Solo buttons. `window.__shelf.room()` reports the room.
+The default page draws the room ([ADR-0164](adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)); `?shelf` draws the bookcase alone. `?solo` wins over `?shelf`. `?room=<id>` takes a listed id ([ADR-0180](adr/0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md)). `?debug` adds Room, Shelf, Solo buttons. `window.__shelf.room()` reports the room.
 
 ## One book, alone — `?solo`
 
@@ -163,7 +163,7 @@ documents them with measured results.
 `?shadows=1` reaches the books reading the shadow map
 ([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)), and
 it is G61's control.
-Everything else rides in `?debug=<json>`, a diff from the defaults in the
+Everything else rides in `?debug=<json>`, a diff from the defaults (a room's, for lighting and scene) in the
 value of the parameter that mounts the instruments — so a page without `?debug`
 cannot be tuned by a link. `?tune=` is ignored: a page prints one
 console line naming the new spelling

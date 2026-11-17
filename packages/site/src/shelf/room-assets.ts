@@ -7,7 +7,7 @@ import { ktx2Textures } from './room-ktx2.ts';
 import { addCandleFlames } from './room-flames.ts';
 import { createSettler, type LoadState } from './room-loading.ts';
 import type { PreparedRoom, RoomSource } from './room-load.ts';
-import { roomFolder, type RoomId, ROOMS } from './room-mode.ts';
+import { roomFolder, roomGlbUrl, type RoomEntry, type RoomId } from './room-mode.ts';
 
 /**
  * The half of a room's load that touches three and the network (#602, spec S3, S4, S7): the GLB, its
@@ -44,6 +44,8 @@ const EMPTY_NAME = /^(slot_|view_open$|bounds_(min|max)$|live_)/;
 
 export interface AssetOptions {
   readonly id: RoomId;
+  /** The entry the id was found on: the page fetches this room's GLB and no other room's file. */
+  readonly entry: RoomEntry;
   readonly renderer: THREE.WebGLRenderer;
   /** `location.search`: only `?tex=` is read from it. */
   readonly search: string;
@@ -58,9 +60,9 @@ async function prepare(
   options: AssetOptions,
   report: (state: Partial<LoadState>) => void,
 ): Promise<LoadedRoom> {
-  const { id, renderer, search, warn } = options;
+  const { id, entry, renderer, search, warn } = options;
   const folder = roomFolder(id);
-  const url = folder + ROOMS[id].glb;
+  const url = roomGlbUrl(id, entry);
   const buffer = await download(url, (loaded, total) => {
     report({ glbLoaded: loaded, glbTotal: total });
   });

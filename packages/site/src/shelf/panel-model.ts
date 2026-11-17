@@ -8,6 +8,7 @@ import {
   TONE_MAPPING_NAMES,
   type ShelfSettings,
 } from './shelf-settings.ts';
+import type { RoomView } from './shelf-url.ts';
 import { WOOD_SPECIES, speciesPending } from './woodwork.ts';
 
 /**
@@ -891,7 +892,13 @@ export function panelView(inputs: PanelInputs): PanelView {
 /* -------------------------------------------------------------------------- */
 
 export interface PanelModelOptions {
-  readonly handle: Pick<ShelfHandle, 'settings' | 'mountedWith' | 'applySettings'>;
+  /**
+   * `roomView` is read live: a room is dressed after the panel's first draw, and the room's lighting
+   * and scene are the defaults a reset returns to and the address is a difference from (spec S15.4).
+   */
+  readonly handle: Pick<ShelfHandle, 'settings' | 'mountedWith' | 'applySettings'> & {
+    readonly roomView?: RoomView | undefined;
+  };
   /** Whether the page can remount the shelf. Absent `onRebuild` means no. */
   readonly canRebuild: boolean;
   /**
@@ -909,9 +916,9 @@ export interface PanelModel {
   /** One row's value changed by its control. */
   set(id: string, value: Value): PanelView;
   /**
-   * Back to the shipped defaults. The returned view carries every row's value,
-   * so a view that copies it has resynced every control at once, with no hook per
-   * control to leave one showing the old number.
+   * Back to the shipped defaults, which for lighting and scene are the room's own while one is
+   * dressed. The returned view carries every row's value, so a view that copies it has resynced
+   * every control at once, with no hook per control to leave one showing the old number.
    */
   reset(): PanelView;
   /** The settings to rebuild with, while something waits on a rebuild. */
@@ -922,7 +929,11 @@ export interface PanelModel {
    * lost-context record has the painted one, so a remembered fallback never
    * becomes `?shadows=0` in a link somebody shares (`writeSettings`).
    */
-  address(): { readonly settings: ShelfSettings; readonly base: ShelfSettings };
+  address(): {
+    readonly settings: ShelfSettings;
+    readonly base: ShelfSettings;
+    readonly room: RoomView | undefined;
+  };
 }
 
 export function createPanelModel(options: PanelModelOptions): PanelModel {
@@ -950,8 +961,19 @@ export function createPanelModel(options: PanelModelOptions): PanelModel {
     view,
     apply,
     set: (id, value) => apply(setRow(id, settings, value)),
-    reset: () => apply(DEFAULT_SETTINGS),
+    reset: () => {
+      const room = handle.roomView;
+      return apply(
+        room === undefined
+          ? DEFAULT_SETTINGS
+          : { ...DEFAULT_SETTINGS, lighting: room.defaults.lighting, scene: room.defaults.scene },
+      );
+    },
     pendingRebuild: () => pending,
-    address: () => ({ settings, base: options.base?.() ?? DEFAULT_SETTINGS }),
+    address: () => ({
+      settings,
+      base: options.base?.() ?? DEFAULT_SETTINGS,
+      room: handle.roomView,
+    }),
   };
 }
