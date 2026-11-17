@@ -1,62 +1,11 @@
 /**
- * G35's abandoned-bookcase cells (#604, claims C10 and C11, spec S12 and S11.3): the judges, kept apart
+ * G35's abandoned-bookcase cell (#604, claim C10, spec S12): the judges, kept apart
  * from the browser that reads, as `pickup-gate.ts` keeps its own.
  *
  * `scripts/smoke-render.ts` drives a built page under its CSP, gives it a library whose abandoned books
  * overflow two rows, and hands what it read to these functions. Each is pure, so every clause is
  * planted red in `abandoned-gate.test.ts` rather than trusted.
  */
-
-/**
- * A book picked up from the room's abandoned bookcase, at one viewport (C11). The steps are
- * `StackRead`'s, for the same pickup; what differs is where the book stands, so the read says how many
- * abandoned books were drawn, and has no base click, which this bookcase has no counterpart of:
- * nothing baked stands in its place.
- */
-export interface AbandonedPickupRead {
-  readonly viewport: string;
-  /** How many abandoned books the bookcase holds. A page with none proves nothing. */
-  readonly drawn: number;
-  readonly picked: boolean;
-  readonly arrivedClosed: boolean;
-  readonly turned: boolean;
-  readonly opened: boolean;
-  readonly pagesShown: boolean;
-  readonly closedAgain: boolean;
-  readonly wentBack: boolean;
-  readonly hrefUnchanged: boolean;
-}
-
-export function abandonedPickupFailures(read: AbandonedPickupRead | undefined): string[] {
-  if (read === undefined) return ['the abandoned bookcase was not read'];
-  const failures: string[] = [];
-  const fail = (message: string): void => {
-    failures.push(`${message} at ${read.viewport}`);
-  };
-  if (read.drawn === 0) {
-    // Everything below would read a shelf book or nothing, so it is not read.
-    fail('no book stood on the abandoned bookcase: the library has abandoned books');
-    return failures;
-  }
-  if (!read.picked) fail('a click on an abandoned-bookcase book did not pick it up');
-  if (!read.arrivedClosed) {
-    fail('a book picked up from the abandoned bookcase did not arrive closed');
-  }
-  if (!read.turned) fail('a drag did not turn the book picked up from the abandoned bookcase');
-  if (!read.opened) {
-    fail('the open control did not open the book picked up from the abandoned bookcase');
-  }
-  if (!read.pagesShown) {
-    fail('the pages are not visible with the abandoned-bookcase book open at rest');
-  }
-  if (!read.closedAgain)
-    fail('the abandoned-bookcase book would not close back to the closed rest');
-  if (!read.wentBack) fail('the abandoned-bookcase book did not go back when put back');
-  if (!read.hrefUnchanged) {
-    fail('location.href changed on a pickup from the abandoned bookcase (spec §3.9)');
-  }
-  return failures;
-}
 
 /**
  * What the abandoned bookcase holds when the library's abandoned books overflow two rows, one of them

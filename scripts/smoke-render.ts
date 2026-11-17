@@ -35,7 +35,6 @@ import {
 } from './lib/analytics-gate.ts';
 import {
   abandonedLayoutFailures,
-  abandonedPickupFailures,
   withOverflowingAbandoned,
   type LibraryRecord,
 } from './lib/abandoned-gate.ts';
@@ -2391,14 +2390,14 @@ async function checkStacks(browser: Browser, origin: string): Promise<LinesAndFa
 }
 
 /**
- * G35's abandoned-bookcase cells (#604, claims C10 and C11, spec S12 and S11.3), on a library given
+ * G35's abandoned-bookcase cell (#604, claim C10, spec S12), on a library given
  * a hundred more abandoned books than two rows hold, the most recent of them marked `face_out`: the
  * page's own `library.json` is answered by that library, so the fixture vault the rest of the run
  * reads is left as it is.
  *
- * Desktop reads the layout: the room draws the most recent books spine out, the rest are not drawn,
- * the room's main bookcase has none of them and `?shelf` has every one. Both viewports then pick one
- * book up for real. The judgements are `lib/abandoned-gate.ts`'s, every clause planted red there.
+ * It reads the layout at desktop size: the room draws the most recent books spine out, the rest are
+ * not drawn, the room's main bookcase has none of them and `?shelf` has every one. The judgement is
+ * `lib/abandoned-gate.ts`'s, every clause planted red there.
  */
 async function checkAbandoned(browser: Browser, origin: string): Promise<LinesAndFailures> {
   const lines: string[] = [];
@@ -2481,62 +2480,13 @@ async function checkAbandoned(browser: Browser, origin: string): Promise<LinesAn
     await room.close();
   }
 
-  for (const size of [DESKTOP, PHONE]) {
-    const { page, close } = await open(size, '/');
-    try {
-      const viewport = `${String(size.width)}x${String(size.height)}`;
-      const href = (await page.evaluate('location.href')) as string;
-      const ids = (await page.evaluate(
-        'window.__shelf.abandoned.books.map((b) => b.id)',
-      )) as string[];
-      // The first abandoned book's index follows the shelf's and the stacks', as `projectBook` counts.
-      const bookAt = `(() => {
-        const p = window.__shelf.projectBook(window.__shelf.bookCount + window.__shelf.stacked);
-        if (!p || p.x < 24 || p.x > innerWidth - 24 || p.y < 80 || p.y > innerHeight - 80) return undefined;
-        if (document.elementFromPoint(p.x, p.y) !== document.getElementById('shelf-canvas')) return undefined;
-        return ${JSON.stringify(ids)}.includes(window.__shelf.bookAt(p.x, p.y)) ? { x: p.x, y: p.y } : undefined;
-      })()`;
-      const at = ids.length === 0 ? undefined : await orbitUntil(page, bookAt, 'right');
-      const steps =
-        at === undefined
-          ? undefined
-          : await pickupAt(page, at, href, 'the abandoned-bookcase book');
-      failures.push(
-        ...abandonedPickupFailures({
-          viewport,
-          drawn: ids.length,
-          picked: steps?.picked ?? false,
-          arrivedClosed: steps?.arrivedClosed ?? false,
-          turned: steps?.turned ?? false,
-          opened: steps?.opened ?? false,
-          pagesShown: steps?.pagesShown ?? false,
-          closedAgain: steps?.closedAgain ?? false,
-          wentBack: steps?.wentBack ?? false,
-          hrefUnchanged: steps?.hrefUnchanged ?? false,
-        }),
-      );
-      // Where the book last stood on screen, so a miss says whether it was off screen or covered.
-      const where =
-        at === undefined
-          ? ((await page.evaluate(
-              `JSON.stringify({ at: window.__shelf.projectBook(window.__shelf.bookCount + window.__shelf.stacked), view: [innerWidth, innerHeight] })`,
-            )) as string)
-          : '';
-      lines.push(
-        `${viewport}: ${steps?.picked === true ? 'one abandoned book picked up, turned, opened and put back' : `none picked up ${where}`}`,
-      );
-    } finally {
-      await close();
-    }
-  }
   return { lines, failures };
 }
 
 /**
  * The point `expression` returns once a visitor can reach it: tried where the camera stands, then
- * after real drags on the canvas, toward `first` and then back past the start, as a visitor turns the
- * view. The stacks stand left of the default view, so on a phone they begin off screen, and the
- * abandoned bookcase stands right of it. A drag starts high on the
+ * after real drags on the canvas, left first and then right, as a visitor turns the view. The stacks
+ * stand left of the default view, so on a phone they begin off screen. A drag starts high on the
  * screen, off the books, and a drag is never a click.
  */
 /** The most drawn frames a drag's glide is waited on, and the longest, in time, on a slow runner. */
@@ -2546,8 +2496,6 @@ const SETTLE_ORBIT_MS = 10_000;
 async function orbitUntil(
   page: Page,
   expression: string,
-  /** The side to turn the view toward first: the stacks stand left of it, the abandoned bookcase right. */
-  first: 'left' | 'right' = 'left',
 ): Promise<{ x: number; y: number } | undefined> {
   const size = (await page.evaluate('({ w: innerWidth, h: innerHeight })')) as {
     w: number;
@@ -2556,8 +2504,7 @@ async function orbitUntil(
   const read = async (): Promise<{ x: number; y: number } | undefined> =>
     (await page.evaluate(expression)) as { x: number; y: number } | undefined;
   let found = await read();
-  const turn = first === 'left' ? -150 : 150;
-  for (const dx of [...Array<number>(6).fill(turn), ...Array<number>(6).fill(-turn)]) {
+  for (const dx of [-150, -150, -150, -150, -150, -150, 150, 150, 150, 150, 150, 150]) {
     if (found !== undefined) break;
     await page.mouse.move(size.w / 2, size.h * 0.2);
     await page.mouse.down();

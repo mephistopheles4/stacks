@@ -42,13 +42,13 @@
    or a lost context asks for it, follows the key light by magnitude as the main bookcase's does
    (`BookcaseLight`'s recorded assumption); it is not turned into the second bookcase's own frame.
 
-7. **G35 holds it in a browser** (`checkAbandoned`, judged by `scripts/lib/abandoned-gate.ts`, every
-   clause planted red in its spec), on the page's own `library.json` answered by one with a hundred
-   more abandoned books, the most recent marked `face_out`. At both viewports a real click picks a
-   book up from it, and it arrives closed, turns, opens, closes and goes back with `location.href`
-   unchanged. At 1440×900 it holds two rows of the newest by date, spine out, the `face_out` book
-   included; none of them is on the room's main bookcase and every one is on `?shelf`'s. The order
-   the gate expects comes from the dates it gave the books, never from the page.
+7. **G35 holds its layout in a browser** (`checkAbandoned`, judged by `scripts/lib/abandoned-gate.ts`,
+   every clause planted red in its spec), on the page's own `library.json` answered by one with a
+   hundred more abandoned books, the most recent marked `face_out`. It holds two rows of the newest
+   by date, spine out, the `face_out` book included; none of them is on the room's main bookcase and
+   every one is on `?shelf`'s. The order the gate expects comes from the dates it gave the books,
+   never from the page. **A pickup from this bookcase has no cell of its own**: the owner dropped it,
+   and a book on it is picked up by the same code as every other.
 
 ## Why
 

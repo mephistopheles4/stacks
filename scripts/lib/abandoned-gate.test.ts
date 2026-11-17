@@ -1,59 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   abandonedLayoutFailures,
-  abandonedPickupFailures,
   withOverflowingAbandoned,
   type AbandonedLayoutRead,
-  type AbandonedPickupRead,
   type LibraryRecord,
 } from './abandoned-gate.ts';
-
-describe('abandonedPickupFailures — a book picked up from the abandoned bookcase (#604, C11)', () => {
-  const clean: AbandonedPickupRead = {
-    viewport: '1440x900',
-    drawn: 40,
-    picked: true,
-    arrivedClosed: true,
-    turned: true,
-    opened: true,
-    pagesShown: true,
-    closedAgain: true,
-    wentBack: true,
-    hrefUnchanged: true,
-  };
-
-  it('is clean for a book that picks up, turns, opens, closes and goes back', () => {
-    expect(abandonedPickupFailures(clean)).toEqual([]);
-  });
-
-  it('is red with no read at all', () => {
-    expect(abandonedPickupFailures(undefined)).toHaveLength(1);
-  });
-
-  it.each<[string, Partial<AbandonedPickupRead>, RegExp]>([
-    ['no book on the bookcase', { drawn: 0 }, /no book stood on the abandoned bookcase/],
-    ['a click that picked nothing up', { picked: false }, /did not pick it up/],
-    ['a book that arrived open', { arrivedClosed: false }, /arrive closed/],
-    ['a book that would not turn', { turned: false }, /turn the book/],
-    ['a book that would not open', { opened: false }, /open control/],
-    ['pages that never showed', { pagesShown: false }, /pages are not visible/],
-    ['a book that would not close', { closedAgain: false }, /would not close/],
-    ['a book that stayed in the hand', { wentBack: false }, /go back/],
-    ['an address that moved', { hrefUnchanged: false }, /location\.href/],
-  ])('fails on %s', (_name, patch, message) => {
-    expect(abandonedPickupFailures({ ...clean, ...patch }).join(' / ')).toMatch(message);
-  });
-
-  it('stops at an empty bookcase rather than reading a shelf book as an abandoned one', () => {
-    expect(abandonedPickupFailures({ ...clean, drawn: 0, picked: false })).toHaveLength(1);
-  });
-
-  it('names the viewport it failed at', () => {
-    expect(
-      abandonedPickupFailures({ ...clean, viewport: '375x812', picked: false }).join(),
-    ).toContain('375x812');
-  });
-});
 
 describe('abandonedLayoutFailures — the most recent, spine out, off the main bookcase (#604, C10)', () => {
   const byRecency = Array.from(
