@@ -53,7 +53,7 @@ const view: RoomView = {
 };
 const box = { min: [-7.4, 0.5, 0.8] as Vec3, max: [9.4, 10.5, 18] as Vec3 };
 /** The room as it is closed (#620): the box's front comes in, to the front wall's side of it. */
-const closed = { min: [-7.4, 0.5, 0.8] as Vec3, max: [9.4, 10.5, 12.452] as Vec3 };
+const closed = { min: [-7.4, 0.5, -0.2] as Vec3, max: [9.4, 10.5, 12.452] as Vec3 };
 
 describe('the committed room (spec S7.2, S7.3, S8)', () => {
   const data = readRoomData(committedEmpties());
@@ -217,6 +217,21 @@ describe('pullIn (#620)', () => {
   it('stands a wish the box can hold exactly where it was asked', () => {
     const near = away(0, 4);
     expect(pullIn(closed, target, near)).toEqual(near);
+  });
+
+  it('never comes in closer than the page allows, at any turn of the view', () => {
+    // the box's back face is 1.535 behind the target: the nearest stand is the floor, not the face
+    const steps = Array.from({ length: 72 }, (_, i) => (((i + 0.5) / 72) * 2 - 1) * Math.PI);
+    for (const angle of steps) {
+      const stood = pullIn(closed, target, away(angle, 20), 1.5);
+      expect(contains(closed, stood)).toBe(true);
+      expect(reach(stood)).toBeGreaterThanOrEqual(1.5 - 1e-9);
+    }
+  });
+
+  it('came in past that floor before the floor was asked for', () => {
+    const stood = pullIn({ ...closed, min: [-7.4, 0.5, 0.8] }, target, away(Math.PI, 20));
+    expect(reach(stood)).toBeLessThan(1);
   });
 
   it('stands against the nearest face when the target itself is outside the box', () => {

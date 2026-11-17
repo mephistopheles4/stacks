@@ -32,6 +32,20 @@
    apart from the distance the camera stands at, so turning away from the wall lets it back out; a zoom
    works from what is on screen. `frameRoom` uses the same pull-in, so a narrow window opens on the
    owner's line of sight, closer, rather than on the box's face.
+6. **Coming in stops at `minDistance`.** The orbit's own clamps run on the place the visitor asked for,
+   and the pull-in only shortens it, so the polar limit and the far limit hold; the near limit did not,
+   and the reading corner's target stands 0.535 in front of the box's back face, so a view turned to the
+   front wall came in to half a unit. `pullIn` takes a nearest distance (the page's `minDistance`, 1.5),
+   and the box's back face moved to z -0.2 so that stand is inside it. Refusing the angle was the
+   alternative and was set aside: it freezes the 138° of turn behind the target, which is the stuck look
+   this record removes.
+7. **The main bookcase is never shorter than its baked shadow.** The wall's shadow was baked from a
+   four-row stand-in (`bookcase_proxy`), and a two-row case left that shadow empty round it. In a room
+   the case has at least `ROOM_MIN_ROWS` (4) rows, the bake writes the stand-in's size onto
+   `slot_bookcase` (`caster_rows`, `caster_width`, `caster_depth`, `caster_height`), and a test holds the
+   page's minimum to those numbers. A live shadow in place of the baked one was looked at and set aside:
+   it would be a third program reading the shadow map, which `one-shadow-reader` (G61) and
+   [ADR-0088](0088-one-program-samples-the-shadow-map-in-two-draws.md) keep at one.
 
 ## Why
 

@@ -205,10 +205,16 @@ export function clampInto(box: Box, point: Vec3): Vec3 {
  * Clamping, which `clampInto` does, moves the camera along the face and leaves the line, so the view
  * stops turning with the pointer. A target outside the box has no line to come in along, and the
  * camera stands against the nearest face.
+ *
+ * `nearest` is the closest the camera may come to the target, the page's `minDistance`: coming in
+ * stops there, so a face close behind the target cannot take the camera to a few tenths of it. The
+ * box has to hold that stand, which is the room's to arrange (`bounds_min` of the reading corner
+ * stands 1.5 behind its target); where it does not, the final clamp holds it in the box instead.
  */
-export function pullIn(box: Box, target: Vec3, point: Vec3): Vec3 {
+export function pullIn(box: Box, target: Vec3, point: Vec3, nearest = 0): Vec3 {
   if (contains(box, point)) return point;
   if (!contains(box, target)) return clampInto(box, point);
+  const away = between(target, point);
   let reach = 1;
   for (const axis of [0, 1, 2] as const) {
     const run = point[axis] - target[axis];
@@ -216,6 +222,8 @@ export function pullIn(box: Box, target: Vec3, point: Vec3): Vec3 {
     const wall = run > 0 ? box.max[axis] : box.min[axis];
     reach = Math.min(reach, (wall - target[axis]) / run);
   }
+  // a floor never takes the camera past the place that was asked for
+  if (away > 0) reach = Math.max(reach, Math.min(1, nearest / away));
   // the multiply can land a rounding error past the face it stops at
   return clampInto(box, [
     target[0] + (point[0] - target[0]) * reach,

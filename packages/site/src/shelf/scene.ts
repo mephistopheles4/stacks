@@ -813,6 +813,7 @@ function assembleShelf(
       bounds,
       [target.x, target.y, target.z],
       [offset.x, offset.y, offset.z],
+      controls.minDistance,
     );
     camera.position.set(x, y, z);
     stood = Math.hypot(x - target.x, y - target.y, z - target.z);
