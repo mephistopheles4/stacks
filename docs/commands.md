@@ -1282,7 +1282,11 @@ also set as its BrowserStack session status, and the line ends `[BrowserStack st
 `not set`. **Before every real tap the check taps once where nothing listens and reads where it
 landed**: iOS Safari takes tap coordinates from the screen, so its top bar shifted a tap 62 px up
 and the iPhone never picked a book up (the first run on `main`); a device that needs no
-correction reads zero.
+correction reads zero. **If the page reloaded between the probe and its read** — the first run on
+`main` after the room picker landed read `window.__probeStop` of a page that was gone — the
+calibration arms once more, and a second reload is the verdict `the page reloaded during the
+calibration tap, twice`. A step that fails leaves `<device>-failed.png` beside the device's
+screenshots: what the page looked like when it did.
 
 **What it cannot see**, and the owner chose it: the 50-book render, the open-spread layout, the
 CSP-violation check, and the keyboard, touch, focus, accessibility-tree and reduced-motion cells all

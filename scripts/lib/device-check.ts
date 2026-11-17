@@ -127,8 +127,12 @@ window.__probeStop = [];
 return { width: window.innerWidth, height: window.innerHeight };
 `;
 
-/** Disarms the probe and answers where it landed, or \`null\` when nothing reached the page. */
+/**
+ * Disarms the probe and answers where it landed, `null` when nothing reached the page, or
+ * `{ lost: true }` when the page the probe was armed on is gone: it reloaded between arm and read.
+ */
 export const PROBE_READ = `
+if (!window.__probeStop) return { lost: true };
 window.__probeStop.forEach(function (stop) { stop(); });
 var at = window.__probe === undefined ? null : window.__probe;
 window.__probe = undefined;
@@ -204,6 +208,13 @@ const PAGE_ERRORS: readonly string[] = [
   'no book stands in view',
   'the page script failed',
 ];
+
+export const PAGE_RELOADED = 'the page reloaded during the calibration tap, twice';
+
+/** Whether `PROBE_READ` found the page it armed gone. */
+export function probeLost(value: unknown): boolean {
+  return isRecord(value) && value.lost === true;
+}
 
 export const UNEXPECTED = 'the page returned an answer of a shape this check did not ask for';
 
