@@ -16,7 +16,9 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   binaryArgs,
+  binaryUrl,
   configFileText,
+  downloadBinary,
   onlyList,
   parseLauncherArgs,
   readKey,
@@ -70,8 +72,15 @@ describe('onlyList', () => {
 describe('readKey', () => {
   it('needs both variables, plainly shaped, and names the one that is wrong', () => {
     expect(readKey({ BROWSERSTACK_USERNAME: USER, BROWSERSTACK_ACCESS_KEY: KEY })).toEqual(key);
-    expect(readKey({ BROWSERSTACK_ACCESS_KEY: KEY })).toContain('BROWSERSTACK_USERNAME');
-    expect(readKey({ BROWSERSTACK_USERNAME: USER })).toContain('BROWSERSTACK_ACCESS_KEY');
+    const noUser = readKey({ BROWSERSTACK_ACCESS_KEY: KEY });
+    const noKey = readKey({ BROWSERSTACK_USERNAME: USER });
+    expect(noUser).toContain('BROWSERSTACK_USERNAME');
+    expect(noKey).toContain('BROWSERSTACK_ACCESS_KEY');
+    // The reader the CI step uses: a refusal never holds either value.
+    for (const refusal of [noUser, noKey].map(String)) {
+      expect(refusal).not.toContain(KEY);
+      expect(refusal).not.toContain(USER);
+    }
     expect(readKey({ BROWSERSTACK_USERNAME: USER, BROWSERSTACK_ACCESS_KEY: '' })).toContain(
       'BROWSERSTACK_ACCESS_KEY',
     );
@@ -272,5 +281,24 @@ describe('runTunnel — a fake key and a refused connection', () => {
       print: () => undefined,
     });
     expect(code).toBe(1);
+  });
+});
+
+describe('the pinned binary', () => {
+  it('is fetched from the pinned host only, and a build whose hash differs is refused and not written', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pin-test-'));
+    try {
+      const asked: string[] = [];
+      const wrong = (url: string): Promise<Response> => {
+        asked.push(url);
+        return Promise.resolve(new Response(new Uint8Array([1, 2, 3])));
+      };
+      expect(new URL(binaryUrl()).hostname).toBe('www.browserstack.com');
+      await expect(downloadBinary(dir, wrong)).rejects.toThrow('not the pinned build');
+      expect(asked).toEqual([binaryUrl()]);
+      expect(existsSync(join(dir, 'BrowserStackLocal'))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -10,7 +10,7 @@
  * reloading hit a browser that then refused to hand out a context at all.
  *
  * Nothing could have gone red. `gate:public` reads the contents of text files,
- * so it opens no JPEG; `smoke:render` screenshots a desktop GL context with
+ * so it opens no JPEG; a desktop render has
  * gigabytes of headroom. The size of what ships was measured by nothing.
  *
  * Two assertions, because two different things go wrong:

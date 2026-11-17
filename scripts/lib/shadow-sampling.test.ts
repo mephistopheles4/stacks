@@ -2,8 +2,8 @@
  * The judge behind G61 (`one-shadow-reader`), over hand-built snapshots.
  *
  * An ordinary unit test, not a gate — it takes no `docs/gates.md` row, for the
- * reason `vitest.config.ts` records about `scripts/`. The gate itself runs in
- * `pnpm smoke:render`, against a real page; this is where every configuration
+ * reason `vitest.config.ts` records about `scripts/`. The check itself ran in
+ * the retired smoke gate, against a real page; this is where every configuration
  * the phone measured is planted as a snapshot and judged, so each one is
  * asserted on every run rather than observed once.
  */

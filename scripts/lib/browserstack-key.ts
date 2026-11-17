@@ -19,15 +19,13 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { mainCheckout } from '../../packages/cli/src/env.ts';
+import { isBrowserstackName } from './browserstack-local.ts';
 import { REPO_ROOT } from './repo-root.ts';
 import { assignments, envFilePaths, type EnvFile } from './turnstile.ts';
 
-const PREFIX = 'BROWSERSTACK_';
-
-/** Whether an environment variable's name is one of BrowserStack's, in any case (Windows names are case-blind). */
-export function isBrowserstackName(name: string): boolean {
-  return name.toUpperCase().startsWith(PREFIX);
-}
+// Defined in `browserstack-local.ts`, which the device check imports: this file reads `mainCheckout`,
+// which the key-holding step must not have in its import graph.
+export { dropBrowserstack, isBrowserstackName } from './browserstack-local.ts';
 
 /** Why an env file cannot be allowed: each `BROWSERSTACK_` name it assigns, by file, never by value. */
 export function browserstackFileRefusals(files: readonly EnvFile[]): string[] {
@@ -72,9 +70,4 @@ export function browserstackRootRefusalsOnDisk(): string[] {
   return browserstackRootRefusals(REPO_ROOT, mainCheckout(), (path) =>
     existsSync(path) ? readFileSync(path, 'utf8') : undefined,
   );
-}
-
-/** The environment without any `BROWSERSTACK_` variable. */
-export function dropBrowserstack(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return Object.fromEntries(Object.entries(env).filter(([name]) => !isBrowserstackName(name)));
 }

@@ -7,20 +7,12 @@
 FROM node:24-bookworm-slim
 
 # git, so athanor's boot script makes the snapshot a one-commit repo for the
-# gates that call `git ls-files`. Chromium for `smoke`, at the path
-# smoke-render.ts probes.
-#
-# ⚠️ --no-sandbox: Docker's default seccomp profile, which athanor leaves in
-# place, stops Chromium making its user-namespace sandbox, so it refuses to
-# launch. The
-# container is the sandbox here: no network, nothing mounted, and the only page
-# it loads is the fixture site the run itself just built. The owner accepted
-# this risk on 2026-10-21; ADR-0122 records it.
+# gates that call `git ls-files`. No browser: the one gate that needed
+# Chromium, with its `--no-sandbox` shim, left in #618 (ADR-0171, which amends
+# ADR-0122 on this point), so the accepted sandbox risk left with it.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git ca-certificates chromium fonts-dejavu-core \
- && rm -rf /var/lib/apt/lists/* \
- && printf '#!/bin/sh\nexec /usr/bin/chromium --no-sandbox "$@"\n' > /usr/bin/google-chrome \
- && chmod 755 /usr/bin/google-chrome
+ && apt-get install -y --no-install-recommends git ca-certificates fonts-dejavu-core \
+ && rm -rf /var/lib/apt/lists/*
 
 # Exactly packageManager's version: any other makes pnpm fetch that one, which
 # fails offline.

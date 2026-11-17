@@ -310,8 +310,9 @@ describe('G19 — every row has a name, and the name means something', () => {
     // other row names that same stem, which self-exempts the rows where
     // derivation is impossible rather than needing an allowlist: G5 and G13
     // share `repo-hygiene`, and G16, G18, G25, G28, G35, G42, G60 and G61
-    // name no `gates/` spec at all — G35's, G60's and G61's gate is
-    // `scripts/smoke-render.ts` and G42's is a workflow job. Those declare their
+    // name no `gates/` spec at all — G35's gate is `scripts/check-devices.ts`,
+    // G60's and G61's were in a script retired in #618, and G42's is a
+    // workflow job. Those declare their
     // slug; every other row is forced to move with its file.
     //
     // ⚠️ **The count is gone rather than corrected, on this file's own

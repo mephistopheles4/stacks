@@ -48,7 +48,7 @@ export const REFUSAL = [
   'A run tests tracked files only, so `git add` a new file first, or pass `--untracked` to `athanor run`, before any `--`.',
   'The host run is the fallback only when athanor produced no result (exit 124, 125 or 137): then rerun the same command with the comment `# --host-fallback=<reason>` at the end of its line, name the reason and the exit code in your own words (no path, token or pasted error text), and say in your report that you used the fallback.',
   'A scoped mutation run (Stryker with `--mutate`) goes through athanor too: docs/commands.md, "A scoped run through athanor".',
-  '`pnpm smoke:render`, the phone check and the forms that write to the tree or keep running (`--fix`, `-u`, watch mode) stay on the host. docs/commands.md, "The agent guard", has the rest.',
+  'The phone check and the forms that write to the tree or keep running (`--fix`, `-u`, watch mode) stay on the host. docs/commands.md, "The agent guard", has the rest.',
 ].join(' ');
 
 /**

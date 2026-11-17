@@ -14,7 +14,7 @@ import { hashUnit } from './hash.ts';
  * contact rects can each be asserted in milliseconds instead of inferred from a
  * screenshot and one float.
  *
- * **This does not replace G16.** `smoke:render` measures `Box3.setFromObject`
+ * **This does not replace G16 (retired, #618).** It measured `Box3.setFromObject`
  * against the bookcase's real inner faces, and it exists precisely because the
  * arithmetic was wrong in a way that re-checking the arithmetic could not catch:
  * the cursor advances by a book's *thickness*, and a book rotated about its

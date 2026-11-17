@@ -86,7 +86,7 @@ export function resolveServedPath(
  * list refuses a bad request early and says why, and this is what makes the
  * promise *"never serve outside the folder"* true rather than likely.
  *
- * The server this replaced in `smoke-render.ts` held that promise with a
+ * The server this replaced in the old smoke gate held that promise with a
  * `startsWith(root)` on the joined path. The segment list took its place, and
  * CodeQL's `js/path-injection` then found no barrier between the URL and
  * `readFileSync` — three high alerts, on this pull request and on #382.

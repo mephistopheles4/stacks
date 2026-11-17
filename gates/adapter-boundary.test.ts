@@ -170,6 +170,11 @@ const ALLOWED = [
   // opens a note or a vault, and each refuses a build whose library is not the fixture's. The key
   // rule reads the root `.env` files by name to refuse a BrowserStack variable, never a value.
   'scripts/browserstack-local.ts',
+  // #618. The device check reads a built fixture folder and the BrowserStack key (from its
+  // environment, or the owner's credential file), writes three screenshots and a scratch folder,
+  // and the build script copies and judges the fixture site. Neither opens a note or names a vault.
+  'scripts/build-device-fixture.ts',
+  'scripts/check-devices.ts',
   'scripts/lib/browserstack-key.ts',
   'scripts/lib/browserstack-local.ts',
   'scripts/lib/confinement-probe.ts',
@@ -253,7 +258,6 @@ const ALLOWED = [
   // paths it is handed, the same way. The file it writes is gitignored on main
   // and lives on the orphan `survivors` branch. It does not know what a book is.
   'scripts/mutation-scopes.ts',
-  'scripts/smoke-render.ts',
   // Checks whether a worktree's directory and the shared `.env` are there
   // before creating one. Never opens the vault — it does not know what a book
   // is; `git` and `pnpm` do all of its real work.

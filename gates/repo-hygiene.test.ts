@@ -59,8 +59,8 @@ function matchesIgnoreRule(path: string): boolean {
  * has something non-uniform to find.
  *
  * `docs/images/` holds the README's screenshot, cropped by
- * `scripts/make-readme-image.ts` from what `pnpm smoke:render` renders — and
- * that gate renders the **50-book fixture vault**, so every title on those
+ * `scripts/make-readme-image.ts` from a device-check desktop screenshot — and
+ * that check serves the **50-book fixture build**, so every title on those
  * spines is invented too. That is the whole reason this directory can be
  * allowlisted: the same render pointed at a real vault would publish somebody's
  * reading list and somebody else's cover art, which is exactly what this row
@@ -368,7 +368,7 @@ describe('G13 — no third-party material is committed', () => {
     // in beside it goes red, and replacing this one is a deliberate act that
     // shows up in review as a changed binary rather than as a new file nobody
     // looks at. Regenerate with:
-    //   pnpm smoke:render && pnpm tsx scripts/make-readme-image.ts
+    //   pnpm tsx scripts/make-readme-image.ts <the desktop screenshot of a check:devices run>
     const images = trackedFiles().filter((path) => path.startsWith('docs/images/'));
 
     expect(

@@ -18,8 +18,8 @@ import { cliResolveConditions } from './vitest.cli-conditions.ts';
  * **The oracle survives**: `scripts/lib/sampling-hook.test.ts` calls the
  * function in-process and stays in, so `scripts/lib/sampling-hook.ts` needs
  * **no** exclusion in `stryker.scopes.json`. What leaves is only the proof
- * that the string still runs on its own, which `pnpm smoke:render` also makes
- * on every CI run.
+ * that the string still runs on its own, which the retired headless-browser
+ * gate also made on every CI run.
  *
  * ⚠️ **`scripts/commit-metrics.test.ts` is the fifth, and it is the filesystem
  * warning below made concrete a second time.** It runs `scripts/commit-metrics.ts`

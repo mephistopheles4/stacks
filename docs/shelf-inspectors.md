@@ -8,7 +8,7 @@ Read this before changing the renderer, the debug panel, or `shelf-settings.ts`.
 
 ## The page mode — `?shelf` and `?room=<id>`
 
-The default page draws the room ([ADR-0164](adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)); `?shelf` draws the bookcase alone. `?solo` wins over `?shelf`. `?room=<id>` takes only an id on the list in `room-mode.ts`; any other is the default room ([ADR-0180](adr/0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md)). `?debug` adds Room, Shelf and Solo buttons. `window.__shelf.room()` reports the room.
+The default page draws the room ([ADR-0164](adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)); `?shelf` draws the bookcase alone. `?solo` wins over `?shelf`. `?room=<id>` takes a listed id, else the default ([ADR-0180](adr/0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md)). `?debug` adds Room, Shelf and Solo buttons. `window.__shelf.room()` reports the room.
 
 ## One book, alone — `?solo`
 
@@ -27,7 +27,7 @@ and a gate that reports every renderer counter, because it moves none of them;
 
 **Stand somewhere by number, not by dragging: `window.__solo.look()`.** It takes
 `{ azimuth, elevation, distance, target }` — degrees, and distances in the book's
-own heights — and it is the sibling of the `window.__shelf` that `smoke:render`
+own heights — and it is the sibling of the `window.__shelf` that `check:devices`
 reads. A change judged from a hand-dragged orbit has no two before-and-afters
 that are the same picture, so *"it looks better"* is not checkable. `distance` is
 clamped by the inspector's own `minDistance`: it magnifies, it does not invent.
@@ -66,7 +66,7 @@ Forced, the dice are equal and the difference is the arm.
 
 ⚠️ **Byte identical is a property of the renderer as well as of the seed.**
 Two shots at one seed are byte identical under **SwiftShader**, which is what
-`pnpm smoke:render` selects when `CI=true`. On a **GPU** path the identical pair
+the retired smoke gate selected when `CI=true`. On a **GPU** path the identical pair
 differs on a few samples at worst Δ 1, and a longer settle does not shrink it.
 That residual is rasterisation, not the dice, and two seeds move orders of
 magnitude more samples. A harness asserting byte identity has to say which
@@ -127,8 +127,7 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   when it narrows again. A rebuild disposes and re-adds only this instrument's
   folder, at its index. `?debug=<json>` and the address writer are
   `shelf-url.ts`'s, and the module-level `written` flag lives in the view,
-  which loads once per page. `smoke:render` reads the rendered state once for each
-  field the view writes.
+  which loads once per page. Nothing in CI reads the rendered state of the pane now (#618).
 - **The debug pane** (`debug-pane.ts`) is one Tweakpane `Pane`, titled, collapsed
   at 700px wide or less, and **lazy** behind one dynamic import from `boot.ts`.
   It is **the only file that imports `tweakpane`, the essentials plugin and the
@@ -152,8 +151,8 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   is the owner's to shape in use. The pane is styled under the page's CSP through
   two empty `<style data-tp-style>` placeholders and a lazy `<link>`, with the
   CSS extracted from the packages' text at build time (`tuner-css.ts`). Two gates
-  hold that: one asserts no pane byte reaches a page without `?debug`, and one
-  that the pane is styled with zero violations.
+  held that, G64 and G65, retired in #618: nothing in CI asserts now that no pane
+  byte reaches a page without `?debug`, or that it is styled with zero violations.
 
 Everything the shelf looks like is one object — `ShelfSettings` in
 `shelf-settings.ts` — and the panel exports it as JSON you paste back into
@@ -242,8 +241,8 @@ To stage a loss by hand, in the console of a page that samples the map:
 Then `window.__lc.restoreContext()` inside 2.5 s for the restore path, or
 nothing for the new-canvas path. ⚠️ **A staged loss is not a driver's.** It never
 restores on its own, never takes the GPU process down and never gets the page
-blocked, which on the Pixel 10 Pro XL is what a real one does. `pnpm
-smoke:render` runs both paths this way as G60 (`context-loss-fallback`), and a
+blocked, which on the Pixel 10 Pro XL is what a real one does. the
+retired smoke gate ran both paths this way as G60 (`context-loss-fallback`), and a
 third: the new canvas refused a context, staged by making `getContext` answer
 `null` before the loss. That is where every real loss on the Pixel ended, and
 the page must show the failure sentence on its own background with the lost

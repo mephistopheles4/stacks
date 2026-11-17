@@ -9,17 +9,17 @@ contract; if you are a person, it is the same contract.
 
 ```bash
 pnpm install
-pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render
+pnpm test && pnpm build && pnpm gate:public
 ```
 
-Those four are the contract. If they are green, the project is where
-[`docs/progress.md`](docs/progress.md) says it is. CI runs all four on Node 24
-as a single required check called `gates`; `main` takes no direct pushes.
-On a pull request, `smoke:render` skips G60 and G61, which run on every push to
-`main` and at deploy ([ADR-0108](docs/adr/0108-g60-and-g61-run-after-merge-not-on-pull-requests.md)).
+Those three are the contract. If they are green, the project is where
+[`docs/progress.md`](docs/progress.md) says it is. CI runs all three on Node 24
+as a single required check called `gates`; `main` takes no direct pushes. A three-device
+BrowserStack check runs after merge, on `main` only, and no contributor needs it
+([ADR-0171](docs/adr/0171-the-smoke-gate-is-replaced-by-a-three-device-browserstack-check-after-merge.md)).
 
-**Those four are the behavioural contract, and they are not the whole of
-`gates`.** It also requires a `style` job, so a tree that passes all four can
+**Those three are the behavioural contract, and they are not the whole of
+`gates`.** It also requires a `style` job, so a tree that passes all three can
 still take a red. Run these two before pushing:
 
 ```bash
@@ -47,7 +47,7 @@ git hooks for you without asking:
 CI, so the hooks find a slip in three seconds instead of three minutes. They add
 no coverage whatsoever.
 
-**The four commands above remain the only contract.** A hook is not a gate and no
+**The three commands above remain the only contract.** A hook is not a gate and no
 hook is a required check. If yours is broken, if you skip it with `--no-verify`,
 or if it never installed, **you still pass every gate** — that promise is
 unchanged, and `--no-verify` is a supported way to work rather than a loophole.
@@ -176,7 +176,7 @@ where issues are tracked and the triage label vocabulary. How to consume the
 domain docs is in `AGENTS.md`.
 
 **None of it is required, and none of it is a condition of contributing.** The
-four commands at the top of this file are the contract. A contributor with no
+three commands at the top of this file are the contract. A contributor with no
 skills installed — or no agent at all — must be able to pass every gate, and if
 that ever stops being true it is a bug in this repo, not in your setup. Nothing
 under `docs/agents/` is read by any gate, any script, or CI, except that G71

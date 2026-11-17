@@ -18,7 +18,7 @@ in this file. See docs/adr/0056-the-constitution-is-agents-md.md.
 
 **When compacting this conversation, always preserve:** the current phase and
 which gates are green, the exact gate commands and their last output, the two
-human stop points (Phase 0 plan approval; Phase 2 first screenshot), the
+human stop points (Phase 0 plan approval; Phase 2 first device screenshots), the
 no-copyrighted-material constraint on fixtures, and any unlogged decisions still
 owed to `docs/adr/`.
 

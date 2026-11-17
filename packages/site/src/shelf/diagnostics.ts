@@ -39,7 +39,7 @@ declare global {
     /**
      * The black box's readout, published behind `?debug` and apart from
      * `window.__shelf` (which boot republishes per shelf and which is absent when
-     * none mounted). `pnpm smoke:render` reads it wherever the readout is drawn,
+     * none mounted). A check reads it wherever the readout is drawn,
      * so the plain element and the pane's folder are one source (ADR-0119, #488).
      */
     __blackbox?: { text(): string };

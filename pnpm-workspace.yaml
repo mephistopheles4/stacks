@@ -91,8 +91,8 @@ minimumReleaseAgeIgnoreMissingTime: false
 #   were trusted-published from GitHub Actions, the last being 17.0.2 on
 #   2026-07-06, and every 157.x and 158.x release since was token-published. It
 #   arrives through puppeteer-core@25.13.0, which is published with provenance
-#   and pins exactly this version, and it runs inside the deploy's own
-#   `smoke:render` gate. G67 holds this entry to the version puppeteer-core's
+#   and pins exactly this version, and nothing in this repository imports
+#   `puppeteer-core` since #618 (removing it is a follow-up). G67 holds this entry to the version puppeteer-core's
 #   lockfile snapshot depends on. On each puppeteer-core bump that moves it, this
 #   entry moves to the new exact version, **only on the owner's word and with the
 #   evidence of who published it**; a `dev-tooling` Dependabot group pull request

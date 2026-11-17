@@ -109,7 +109,7 @@
       "exclusions": [
         {
           "path": "packages/site/src/shelf/scene.ts",
-          "mechanism": "Its only oracle is `pnpm smoke:render`, which drives a headless browser. Not a Vitest spec at all, so no in-process test ever sees the active mutant."
+          "mechanism": "Its oracle was a headless-browser gate, retired in #618 (ADR-0171). Not a Vitest spec at all, so no in-process test ever sees the active mutant."
         },
         {
           "path": "packages/site/src/shelf/boot.ts",
@@ -125,7 +125,7 @@
         },
         {
           "path": "packages/site/src/shelf/tuning-panel.ts",
-          "mechanism": "The tuning panel's view, mounted by `debug-pane.ts` behind `?debug`: a loop that copies `panel-model.ts`'s output onto Tweakpane. Same browser-only chain; the oracle is the real pane in `smoke:render`, one check per field it writes. Its logic is tested where it lives, in `panel-model.ts`, and its write order against a fake of the pane in `tuning-panel.test.ts`."
+          "mechanism": "The tuning panel's view, mounted by `debug-pane.ts` behind `?debug`: a loop that copies `panel-model.ts`'s output onto Tweakpane. Same browser-only chain; its oracle was the real pane in the retired headless-browser gate, one check per field it writes. Its logic is tested where it lives, in `panel-model.ts`, and its write order against a fake of the pane in `tuning-panel.test.ts`."
         },
         {
           "path": "packages/site/src/shelf/pickup.ts",
@@ -141,7 +141,7 @@
         },
         {
           "path": "packages/site/src/shelf/blackbox-readout.ts",
-          "mechanism": "The black box readout's view, mounted by `debug-pane.ts` behind `?debug`: a handful of Tweakpane calls over a port. Same browser-only chain; the oracle is the real pane in `checkReadout` in `smoke:render`, which compares the monitor's textarea with `window.__blackbox.text()`. `blackbox-readout.test.ts` drives it with a fake folder, but the text it shows, the claim and the opening rule only mean something against Tweakpane's rendered DOM."
+          "mechanism": "The black box readout's view, mounted by `debug-pane.ts` behind `?debug`: a handful of Tweakpane calls over a port. Same browser-only chain; its oracle was the real pane in `checkReadout` in the retired headless-browser gate, which compared the monitor's textarea with `window.__blackbox.text()`. `blackbox-readout.test.ts` drives it with a fake folder, but the text it shows, the claim and the opening rule only mean something against Tweakpane's rendered DOM."
         },
         {
           "path": "packages/site/src/shelf/diagnostics.ts",
@@ -168,7 +168,7 @@
       "exclusions": [
         {
           "path": "packages/site/src/notice/modal.ts",
-          "mechanism": "Browser-only DOM glue: it drives a native `<dialog>` and reads the focus, and the project's Vitest environment is `node`, where no `<dialog>` exists. The decisions about which click opens and where Tab goes live in `links.ts` and `focus.ts`, which are measured. Four decisions stay here. Two are held by `modal.test.ts` under happy-dom, each shown red against a planted break: `preventDefault` waits for `showModal()` to succeed (N4), and a press which began in the text does not close the modal (N9). Two are held by the `smoke-render` notice cells (G35), which read the label set on open and the focus restored on close, with planted breaks made by hand."
+          "mechanism": "Browser-only DOM glue: it drives a native `<dialog>` and reads the focus, and the project's Vitest environment is `node`, where no `<dialog>` exists. The decisions about which click opens and where Tab goes live in `links.ts` and `focus.ts`, which are measured. Four decisions stay here. Two are held by `modal.test.ts` under happy-dom, each shown red against a planted break: `preventDefault` waits for `showModal()` to succeed (N4), and a press which began in the text does not close the modal (N9). Two were held by the retired headless-browser notice cells (G35), which read the label set on open and the focus restored on close, and are held by nothing in CI now (#618)."
         },
         {
           "path": "packages/site/src/notice/start.ts",
@@ -176,7 +176,7 @@
         },
         {
           "path": "packages/site/src/notice/open.ts",
-          "mechanism": "Imported only by `modal.ts`, `ask/drawer.ts` and `shelf/pickup.ts`, each excluded as browser-only, and its one function reads `HTMLDialogElement`, which the project's Vitest environment (`node`) does not define. The `smoke-render` notice cells read it through the drawer's and the shelf's stand-down."
+          "mechanism": "Imported only by `modal.ts`, `ask/drawer.ts` and `shelf/pickup.ts`, each excluded as browser-only, and its one function reads `HTMLDialogElement`, which the project's Vitest environment (`node`) does not define. The retired headless-browser notice cells read it through the drawer's and the shelf's stand-down."
         }
       ]
     },
@@ -212,8 +212,12 @@
           "mechanism": "Run by `tsx` from a pnpm script (`pnpm gate:public`); never a Vitest spec. The rules it applies live in `lib/public-build.ts`, which is in this scope."
         },
         {
-          "path": "scripts/smoke-render.ts",
-          "mechanism": "Run by `tsx` from a pnpm script (`pnpm smoke:render`), and it drives a headless browser. Never a Vitest spec."
+          "path": "scripts/check-devices.ts",
+          "mechanism": "Run by `node` from a pnpm script (`pnpm check:devices`) and by the key-holding job of `devices.yml`, and it drives real devices in BrowserStack. Never a Vitest spec. Its decisions live in `lib/device-check.ts` and `lib/browserstack-local.ts`, which are in this scope."
+        },
+        {
+          "path": "scripts/build-device-fixture.ts",
+          "mechanism": "Run by `tsx` from the `build` job of `devices.yml`, and it builds the fixture site. Never a Vitest spec. The judgement it applies lives in `lib/fixture-dist.ts`, which is in this scope."
         },
         {
           "path": "scripts/crap.ts",

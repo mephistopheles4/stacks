@@ -32,7 +32,7 @@ const BUDGETS: Readonly<Record<string, number>> = {
   'docs/notes-on-the-shelf.md': 1_350,
   'docs/progress.md': 3_560, // +60: the T6 row (#605)
   'docs/shelf-inspectors.md': 2_500,
-  'docs/spec/README.md': 4_900,
+  'docs/spec/README.md': 4_970, // +70: the #618 row, an index entry that is new
 };
 
 /** Whitespace-separated words, the count the budgets are written in. */

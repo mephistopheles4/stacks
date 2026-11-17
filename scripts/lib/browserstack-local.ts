@@ -16,10 +16,14 @@
  * ⚠️ **The config file's key name is not confirmed**: BrowserStack's page for `--config-file`
  * names no YAML keys (2026-11). `key` mirrors the `--key` flag; the first real run settles it.
  */
+import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   chmodSync,
+  closeSync,
   existsSync,
   mkdtempSync,
+  openSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -30,6 +34,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { scrub } from './browserstack-driver.ts';
 import { DEFAULT_PORT } from './ios-swipe.ts';
+
+const PREFIX = 'BROWSERSTACK_';
+
+/** Whether an environment variable's name is one of BrowserStack's, in any case (Windows names are case-blind). */
+export function isBrowserstackName(name: string): boolean {
+  return name.toUpperCase().startsWith(PREFIX);
+}
+
+/** The environment without any `BROWSERSTACK_` variable. */
+export function dropBrowserstack(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(Object.entries(env).filter(([name]) => !isBrowserstackName(name)));
+}
 
 export interface LauncherArgs {
   /** The BrowserStack Local binary the owner downloaded. */
@@ -107,6 +123,8 @@ export function binaryArgs(options: {
   readonly configFile: string;
   readonly logFile: string;
   readonly port: number;
+  /** One per run, so two tunnels on one key cannot cross (#618). */
+  readonly localIdentifier?: string;
 }): string[] {
   return [
     '--config-file',
@@ -115,6 +133,9 @@ export function binaryArgs(options: {
     onlyList(options.port),
     '--log-file',
     options.logFile,
+    ...(options.localIdentifier === undefined
+      ? []
+      : ['--local-identifier', options.localIdentifier]),
   ];
 }
 
@@ -255,4 +276,112 @@ export async function runTunnel(
     process.removeListener('exit', config.remove);
     config.remove();
   }
+}
+
+/**
+ * The binary the device check's CI job runs, pinned (#618, item 5). BrowserStack serves the binary
+ * at one address that always answers with the latest build, with no version in the URL, so the pin
+ * is the **host, the path and the SHA-256 of the bytes**; `published` is the address's own
+ * `Last-Modified`, for the human who has to bump it. A build that differs is refused and never run:
+ * the binary reads the key, so unpinned bytes would run beside it. Bump all three together.
+ */
+export const LOCAL_BINARY = {
+  host: 'www.browserstack.com',
+  path: '/local-testing/downloads/binaries/BrowserStackLocal-linux-x64',
+  sha256: '00530aa185b84545756dfa055ad32d64df1b4c4662e0e16aa0dc048501200912',
+  published: '2026-11-12',
+} as const;
+
+/** The one address the pinned binary is fetched from. */
+export function binaryUrl(): string {
+  return `https://${LOCAL_BINARY.host}${LOCAL_BINARY.path}`;
+}
+
+/** Whether `bytes` are the pinned build, byte for byte. */
+export function matchesPin(bytes: Uint8Array): boolean {
+  return createHash('sha256').update(bytes).digest('hex') === LOCAL_BINARY.sha256;
+}
+
+/**
+ * Downloads the pinned binary into `dir` and returns its path. **Refuses a build whose hash is not
+ * the pin**: nothing is written, and the message carries neither the bytes nor the hash read.
+ * A redirect is an error, so the host stays the pinned one whatever the answer says.
+ */
+export async function downloadBinary(
+  dir: string,
+  get: (url: string, init: RequestInit) => Promise<Response>,
+): Promise<string> {
+  const reply = await get(binaryUrl(), { redirect: 'error' });
+  if (!reply.ok) throw new Error(`the Local binary download answered HTTP ${String(reply.status)}`);
+  const bytes = new Uint8Array(await reply.arrayBuffer());
+  if (!matchesPin(bytes)) {
+    throw new Error('the Local binary is not the pinned build; it is refused and not run');
+  }
+  const path = join(dir, 'BrowserStackLocal');
+  writeFileSync(path, bytes, { mode: 0o700 });
+  return path;
+}
+
+/** Whether the binary's log says the tunnel is up. */
+export function tunnelIsUp(log: string): boolean {
+  return /You can now access your local server|Press Ctrl-C to exit/i.test(log);
+}
+
+/**
+ * Starts the binary with exactly these arguments, no shell, and an environment without any
+ * `BROWSERSTACK_` variable. **Its stdout and stderr go to `logFile` and nowhere else**, so nothing
+ * it says reaches a public job log; the file is outside every path the job uploads and is
+ * scrubbed of the key once the tunnel ends (`scrubLogFile`).
+ */
+export function startBinary(
+  binary: string,
+  args: readonly string[],
+  logFile: string,
+): { readonly exited: Promise<number | null>; readonly stop: () => void } {
+  const out = openSync(logFile, 'a');
+  try {
+    const child = spawn(binary, [...args], {
+      env: dropBrowserstack(process.env),
+      stdio: ['ignore', out, out],
+    });
+    const exited = new Promise<number | null>((resolve) => {
+      // A binary that cannot start ends the run the way one that crashes does.
+      child.on('error', () => {
+        resolve(null);
+      });
+      child.on('exit', (code) => {
+        resolve(code);
+      });
+    });
+    return {
+      exited,
+      stop: () => {
+        child.kill();
+      },
+    };
+  } finally {
+    closeSync(out);
+  }
+}
+
+/**
+ * Waits until `isUp()` says so, the binary ends, or `ceilingMs` passes, polling on `pause` (which a
+ * test replaces). Resolves `true` only when the tunnel came up.
+ */
+export async function waitForTunnel(
+  isUp: () => boolean,
+  exited: Promise<number | null>,
+  ceilingMs: number,
+  pause: (ms: number) => Promise<void> = (ms) => new Promise((done) => setTimeout(done, ms)),
+): Promise<boolean> {
+  let ended = false;
+  void exited.then(() => {
+    ended = true;
+  });
+  for (let waited = 0; waited <= ceilingMs; waited += 500) {
+    if (isUp()) return true;
+    if (ended) return false;
+    await pause(500);
+  }
+  return false;
 }

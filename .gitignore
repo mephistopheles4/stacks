@@ -18,7 +18,7 @@ packages/site/public/held-covers/
 # Written by the build from Tweakpane's JavaScript; see scripts/lib/tuner-css-plugin.ts.
 packages/site/src/generated/
 
-# Screenshots are regenerable via `pnpm smoke:render`; keep binaries out of the repo
+# Screenshots are regenerable (`pnpm check:devices --out`); keep binaries out of the repo
 artifacts/
 
 .env

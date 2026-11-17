@@ -1244,53 +1244,44 @@ Coverage exists in this repository for this print and for nothing else — no
 floor, no threshold, no series, no badge. See
 [ADR-0069](adr/0069-coverage-is-an-ingredient-not-a-goal.md).
 
-## `pnpm smoke:render` — the render gate, and the one program that reads the shadow map
+## `pnpm check:devices` — the three-device check
 
-**The Phase 2 gate, grown.** It builds the 50-book fixture into the site,
-serves `dist/` from its own process on a port the operating system picks, and
-drives system Chrome headless: a screenshot at `artifacts/shelf.png`, the card,
-the cover viewer and the sheet (G16, G35), six staged context losses (G60),
-and three pages counted for G61 (`one-shadow-reader`). On a workstation it asks
-Chrome for the real GPU; with `CI=true` it renders under SwiftShader, Chrome's
-software rasteriser, as the `suite` job does.
+**The Phase 2 gate, after merge.** It replaced `pnpm smoke:render`, a headless Chrome on a CI software
+renderer, with a real Pixel in Chrome, a real iPhone in Safari and Chrome on Windows, in BrowserStack,
+in parallel ([ADR-0171](adr/0171-the-smoke-gate-is-replaced-by-a-three-device-browserstack-check-after-merge.md)).
+Each device opens the fixture build through BrowserStack Local, waits until `__shelf.ready`, taps a
+book and waits until `__shelf.held()` names it with `location.href` unchanged, holds it ten seconds,
+fails if `__shelf.fallback()` is anything but `none` (a lost context), reads the console-error count
+and saves one screenshot. Every wait is on a shelf state flag with a 60-second ceiling; the ten
+seconds are the one thing measured with a clock. A device whose console log BrowserStack does not
+return prints `console: not reported` and is not failed for it.
 
-**One flag, `--pull-request`**, which `gates.yml` passes on a pull request only.
-It skips G60 and G61, which were four fifths of the step on CI, and prints
-`skipped on pull requests: G60, G61 (run after merge and at deploy)` where their
-output would be. With no flag every check runs: on a push to `main`, in
-`deploy:site` and locally. Any other argument exits non-zero before the build
-([ADR-0108](adr/0108-g60-and-g61-run-after-merge-not-on-pull-requests.md)). Just
-before the screenshot line and the verdict, the report prints a `step times` table,
-one line per timed step.
+**It runs after merge only.** `.github/workflows/devices.yml`, on a push to `main` and nothing else:
+the `build` job (no secret) builds and judges `fixtures/vault-50` and uploads `dist/`; the `devices`
+job, in the `browserstack` environment (branch policy `main` alone, the user and key as environment
+secrets), installs no package and runs `node scripts/check-devices.ts` with the key in that one step's
+`env:`. It is no required check and in no `needs`: a broken boot is red on `main` right after the
+merge, and GitHub's failure notice is the alarm. The three screenshots are the `device-screenshots`
+artifact, kept seven days.
 
-**G61's three pages**, each in a browser context of its own at 480×640, each
-with a WebGL counting hook installed before any page script:
+**By hand, for the owner** (it needs the owner's BrowserStack account):
 
-| page | what it must show |
-| --- | --- |
-| the default page, 50 books | exactly one program reads the shadow map, in at most 4 draws a frame |
-| the default page, 300 books | the same, on a bookcase at least 8 shelves tall |
-| `?receivers=all`, 50 books | red — more than one program and more than 4 draws — or the instrument is blind |
+```sh
+pnpm exec tsx scripts/build-device-fixture.ts --out artifacts/device-fixture
+pnpm check:devices --dist artifacts/device-fixture --out artifacts/devices --key-file
+```
 
-The 300-book library is generated at gate time — `pnpm fixtures:50 --books 300`,
-invented titles and the six generated covers, every book past the first 50
-coverless — and staged into `artifacts/vault-300-public/`, **never** into
-`packages/site/public/`: a second server serves its `library.json` and
-`covers/` over the same build. Nothing about it is committed.
+`--key-file` reads `~/.config/browserstack.env`; without it the user and key come from
+`BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY`. `--binary <path>` uses a Local binary you
+hold; without it the pinned one is downloaded and **refused unless its SHA-256 is the pin**
+(`LOCAL_BINARY` in `scripts/lib/browserstack-local.ts`: host, path and hash, bumped together when
+BrowserStack publishes a new build). The fixture build is judged before it is kept, never the real
+vault. Each run names its own tunnel (`device-check-<run id>`), so two runs on one key cannot cross.
 
-**Reading a red.** Each line names its clause. `(3)` or `(4)` on a default page
-means a program started reading the shadow map, or the bookcase started drawing
-more than it did: find which, before anything else. A red on `(8)` means the
-control came back green, so the hook cannot see a book program and no green
-above it means anything. **Do not raise the budget to clear it** — it is the
-shape the phone survived plus room for one member, nobody knows where the edge
-is, and why it is 4 is in `scripts/lib/shadow-sampling.ts` and in
-`docs/gates.md` under G61's own section.
-The check that settles a doubt is a phone, below.
-
-G61 adds about 20 s to the gate on a workstation, and more under SwiftShader.
-`pnpm deploy:site` runs it, so a deploy
-pays the same.
+**What it cannot see**, and the owner chose it: the 50-book render, the open-spread layout, the
+CSP-violation check, and the keyboard, touch, focus, accessibility-tree and reduced-motion cells all
+left with the smoke. A new inline style the CSP blocks shows only on the device screenshots, and the
+README image (`scripts/make-readme-image.ts <screenshot>`) is cropped from the desktop one.
 
 ## `scripts/phone-check.ts` — the check only a phone can run
 
@@ -1340,8 +1331,9 @@ cannot ask a contributor for — and a `pnpm` script is one G14 would pin in
 **Before it runs:** adb on the `PATH`, or `--adb <path>`; the phone plugged in
 with USB debugging on and the computer authorised; Chrome on the phone; and a
 build to serve. It serves `packages/site/dist/` as it stands, so the library is
-whichever one the last build staged — after `pnpm smoke:render`, the 50-book
-fixture. `--serve <dir>` points it elsewhere, and `--url https://…` loads a page
+whichever one the last build staged. `pnpm fixtures:50` makes the vault and stages
+nothing: for the 50-book fixture, build it with `scripts/build-device-fixture.ts --out
+<folder>` and pass `--serve <folder>`. `--serve <dir>` points it elsewhere, and `--url https://…` loads a page
 it does not serve at all. With two devices attached it refuses to choose:
 `--serial <id>`, from `adb devices`.
 
@@ -1405,13 +1397,12 @@ athanor run              # pnpm test
 athanor run typecheck    # pnpm typecheck
 athanor run lint         # pnpm lint
 athanor run build        # pnpm build
-athanor run smoke        # pnpm smoke:render, under SwiftShader
 athanor run --json       # one JSON object on stdout: outcome, exit code, image, timings
 athanor status           # which slots are held
 ```
 
 With the image already built, `test` takes about 20 s, `typecheck` 6 s, `lint`
-18 s, `build` 16 s and `smoke`, G60 and G61 included, about four minutes.
+18 s and `build` 16 s.
 
 **What it tests is the tracked tree as it stands**, staged or not. ⚠️ **A new
 test file you have not `git add`ed is left out** and the run says how many
@@ -1442,19 +1433,9 @@ fails outright with a network error instead of quietly reaching a server.
   a fresh repository. Every gate passes against that today; a gate that starts
   reading history, a branch name or `origin/*` will see something the host
   does not.
-- **`smoke` sets `CI=true` and runs Chromium with `--no-sandbox`.** `CI=true` is
-  what makes `smoke-render.ts` ask for SwiftShader; without it there is no GPU
-  and no WebGL context. `--no-sandbox` is because Docker's default seccomp
-  profile, which athanor leaves in place, stops Chromium making its own sandbox,
-  so it refuses to launch: measured under a plain `docker run` too, and it
-  starts only with `--security-opt seccomp=unconfined`. `/usr/bin/google-chrome` in the image is a wrapper that
-  adds it. The container is the sandbox: no network, nothing mounted, and the
-  only page loaded is the fixture site the run just built. ⚠️ **It is an
-  accepted risk, on the owner's word** (ADR-0122): if `smoke` is ever pointed at
-  a page from outside the run, that reasoning stops holding.
-- **The screenshot does not come back.** `artifacts/shelf.png` is written inside
-  the container and removed with it. `athanor run smoke` answers whether the
-  gate passes; a picture to review still needs `pnpm smoke:render` on the host.
+- **There is no browser in the image.** The one run that needed Chromium, with a
+  `--no-sandbox` wrapper and an accepted sandbox risk (ADR-0122), left with the
+  smoke gate (ADR-0171), and the risk with it.
 - **Limits are 6 GB and 4 CPUs**, under athanor's default ceilings of 8 GB and
   4. Node reads the CPU quota, so vitest starts 3 workers in the container
   rather than one per host core.
@@ -1488,7 +1469,7 @@ comes from the nightly: `gh run list --workflow metrics.yml` finds the latest
 run, and `gh run download <run id>` fetches its `mutation-report-<run id>`
 artifact. Or the owner runs one.
 
-**Never refused**: `pnpm smoke:render`, the phone check, `gate:public`,
+**Never refused**: `pnpm check:devices`, the phone check, `gate:public`,
 `deploy:site`, `lint:md`, `format`, `install`, `dev`, `worktree`,
 `pnpm stacks <cmd>`; the forms that write to the tree or keep running, which a
 container run cannot keep (`lint --fix`, `test -u`, `vitest -u`, watch mode);
@@ -1533,10 +1514,9 @@ time, from the shell or `.env`. Unset is a complete and supported build.
   `ref`, `source` and the five `utm_*` parameters.
 - **Your own visits.** Run `localStorage.plausible_ignore = 'true'` in the console of the live
   site.
-- **The gates check the shape they were asked to.** `gate:public` and `smoke:render` strip the
-  variable from their build child, so `gate:public` proves the off build only. The one way in is
-  `pnpm smoke:render --analytics-on`, which builds on and prints the other-host request count
-  (zero), the CSP violations (zero) and the script gzip bytes. G20 reads no environment variable,
+- **The gates check the shape they were asked to.** `gate:public` strips the variable from its
+  build child, so it proves the off build only; the browser check of the on build left with the
+  smoke gate (ADR-0171). G20 reads no environment variable,
   so `athanor run -- sh -c 'PUBLIC_PLAUSIBLE_DOMAIN=stacks.aymandiab.com pnpm test'` is as green as
   the plain run.
 - **Marking a book private** after it was published does not remove its past events from

@@ -13,7 +13,7 @@ const FOCUSABLE = 'button:not([disabled]), a[href]';
  *
  * Browser-only glue. `focus.ts` and `links.ts` hold the decisions about which click opens and
  * where Tab goes; `modal.test.ts` (happy-dom) holds the two that stay here, N4 and N9, and
- * `smoke-render`'s notice cells hold the rest in a real browser. Every failure here is the same
+ * the rest is browser glue that no check drives. Every failure here is the same
  * safe state: the link is left alone and navigates, as it did before the modal existed.
  */
 export function mountNotices(doc: Document, win: Window): void {

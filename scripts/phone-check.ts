@@ -49,7 +49,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-// Pure: no three and no DOM at module scope, the way smoke-render reads it.
+// Pure: no three and no DOM at module scope, as it always was.
 import { FALLBACK_KEY } from '../packages/site/src/shelf/shadow-fallback.ts';
 import { replies } from './lib/cdp-replies.ts';
 import {
@@ -809,9 +809,7 @@ async function main(): Promise<void> {
 
   const root = resolve(REPO_ROOT, options.serve ?? join('packages', 'site', 'dist'));
   if (!existsSync(join(root, 'index.html'))) {
-    throw new Error(
-      `nothing built at ${root} — run pnpm build, or pnpm smoke:render for the 50-book fixture`,
-    );
+    throw new Error(`nothing built at ${root} — run pnpm build`);
   }
   const served = await serveDist({
     root,

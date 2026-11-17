@@ -310,7 +310,7 @@ export interface ApplyReport {
 
 export interface ShelfHandle {
   dispose(): void;
-  /** Books currently on the shelf, in draw order. Used by the smoke gate. */
+  /** Books currently on the shelf, in draw order. Read by the device check. */
   readonly bookCount: number;
   /**
    * Shelves in the bookcase, the empty one ahead included. G61 reads it to know
@@ -401,7 +401,7 @@ export interface ShelfHandle {
    * shelf with no room, and for one whose room has not come up.
    */
   readonly roomView: RoomView | undefined;
-  /** Where the room stands, and what it cost: for the smoke gates and the black box. */
+  /** Where the room stands, and what it cost: for the black box. */
   readonly room: {
     readonly state: RoomState;
     readonly draws: number;

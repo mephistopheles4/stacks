@@ -10,7 +10,7 @@
  *
  * ## One implementation, two callers
  *
- * `pnpm smoke:render` installs it with `page.evaluateOnNewDocument` and
+ * A page installs it with `page.evaluateOnNewDocument` and
  * `scripts/phone-check.ts` with CDP's `Page.addScriptToEvaluateOnNewDocument`.
  * Both take a **string**, `samplingHookSource()`, never the function itself.
  *

@@ -145,10 +145,4 @@ describe('the gate scripts name gateBuildEnv at the calls that start a build (S5
     expect(source).toContain('runShell(');
     expect(callsMissing(source, 'runShell(', 'gateBuildEnv(')).toEqual([]);
   });
-
-  it('holds smoke-render.ts to it: env comes from gateBuildEnv and every spawn call lists env', () => {
-    const source = read('../smoke-render.ts');
-    expect(source).toContain('env: NodeJS.ProcessEnv = gateBuildEnv(process.env)');
-    expect(callsMissing(source, 'spawn(', 'env,')).toEqual([]);
-  });
 });

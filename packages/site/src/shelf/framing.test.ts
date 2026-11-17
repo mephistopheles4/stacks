@@ -3,7 +3,7 @@ import { SHELF } from './bookcase.ts';
 import { BOOKCASE_WIDTH, fogRange, frameBookcase, type FogReach, type Framing } from './framing.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 
-/** Today's fixture: `pnpm smoke:render`'s library stands on four shelves. */
+/** Today's fixture: the 50-book library stands on four shelves. */
 const TODAY_ROWS = 4;
 /** `rowsForBookcase` for the 273-book library that rendered black in #383. */
 const LARGE_ROWS = 17;

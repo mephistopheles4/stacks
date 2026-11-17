@@ -302,12 +302,12 @@ alert at high or above. Those two are the contract, not any convention above
 them. Before proposing a change, run:
 
 ```bash
-athanor run && athanor run build && pnpm gate:public && pnpm smoke:render
+athanor run && athanor run build && pnpm gate:public
 ```
 
 The first two are `pnpm test` and `pnpm build` in a sealed container, the
 default in [`AGENTS.md`](../../AGENTS.md), and a Claude Code session is refused
-the host form while athanor works; the last two stay on the host. Without
+the host form while athanor works; the last stays on the host. Without
 athanor, run the `pnpm` forms.
 
 A defect worth fixing is usually worth a named gate that goes red — see

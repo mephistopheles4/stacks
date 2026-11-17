@@ -107,12 +107,12 @@ describe('G14 — documented commands', () => {
     ).toEqual([]);
   });
 
-  it('keeps the four gate commands documented, by name', () => {
-    // CONTRIBUTING.md calls these four "the contract". Named individually so
+  it('keeps the three gate commands documented, by name', () => {
+    // CONTRIBUTING.md calls these three "the contract". Named individually so
     // that dropping one from the docs cannot be masked by the set comparisons
     // above, which only ever check what still exists against what is written.
     const documented = documentedCommandsSection();
-    for (const command of ['pnpm test', 'pnpm build', 'pnpm gate:public', 'pnpm smoke:render']) {
+    for (const command of ['pnpm test', 'pnpm build', 'pnpm gate:public']) {
       expect(documented, `${command} is the contract and must stay documented`).toContain(command);
     }
   });
