@@ -163,7 +163,7 @@ Two other files hold what these deliberately do not:
 | [0137](./0137-a-picked-up-book-arrives-closed.md) | A picked-up book arrives closed, and the visitor opens it (supersedes ADR-0102 in part) |
 | [0138](./0138-the-closed-book-in-hand-turns-and-the-dialog-goes.md) | The closed book in your hand turns, and the examining dialog goes (supersedes 0109 and 0137 in part) |
 | [0139](./0139-optional-plausible-direct-to-plausible-io.md) | Plausible is optional, bundled from npm, and reports straight to plausible.io (amends 0065, 0128, 0053 and 0072's count) |
-| [0140](./0140-stay-on-pages-until-the-hostname-switch-is-tried.md) | Stay on Pages until the hostname switch is tried (answers #535) |
+| [0140](./0140-stay-on-pages-until-the-hostname-switch-is-tried.md) | Stay on Pages until the hostname switch is tried (amends 0118; answers #535) |
 | [0145](./0145-new-specs-live-on-their-issues.md) | New specs live on their issues, and the ones written before stay files |
 | [0146](./0146-the-notices-open-in-one-modal-over-the-shelf.md) | The attribution and privacy notices open in one modal over the shelf (amends 0138 and 0139) |
 | [0147](./0147-oreilly-is-removed.md) | O'Reilly is removed as a metadata provider (supersedes 0038) |
@@ -179,3 +179,4 @@ Two other files hold what these deliberately do not:
 | [0170](./0170-private-is-the-only-control-on-a-wishlist-book.md) | `private` is the only control: a wishlist book publishes unless it is private (supersedes 0009 and 0012 on wishlist books, amends 0028) |
 | [0171](./0171-the-smoke-gate-is-replaced-by-a-three-device-browserstack-check-after-merge.md) | The smoke gate is replaced by a three-device BrowserStack check after merge (supersedes 0108 and the deploy half of 0064; answers #618) |
 | [0175](./0175-the-abandoned-books-leave-the-main-bookcase-for-one-of-their-own-in-the-room.md) | The abandoned books leave the main bookcase for one of their own in the room: two rows, spine out, the most recent kept (answers #604) |
+| [0180](./0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md) | A theme is a room, and the visitor picks it from a fixed list: the id is checked before it is used, the pick is remembered, the picker is hidden while one room exists (answers #606) |
