@@ -40,3 +40,12 @@ Coverage against flake and agent time, decided by the owner's direction. Lost fo
 render, the open-spread layout, the CSP-violation check, the keyboard, touch, focus and
 accessibility cells, and any warning before merge. A broken boot shows on `main` right after the
 merge, red, and the device screenshots are what a human looks at.
+
+## What else left with it
+
+The athanor image drops Chromium and its `--no-sandbox` wrapper, so the sandbox risk the owner
+accepted in [ADR-0122](0122-athanor-runs-the-suite-in-a-sealed-container.md) for the `smoke` run
+has no user, and that part of ADR-0122 no longer holds. Six rows of `docs/gates.md` are retired
+(G16, G59, G60, G61, G64, G65) and G35 is reduced to the device check's pickup step, ⬜ until a
+live run is seen red. `puppeteer-core` has no caller in the repo's scripts and stays installed
+until a follow-up removes it with its lockfile and G67 entries.

@@ -258,7 +258,6 @@ const ALLOWED = [
   // paths it is handed, the same way. The file it writes is gitignored on main
   // and lives on the orphan `survivors` branch. It does not know what a book is.
   'scripts/mutation-scopes.ts',
-  'scripts/smoke-render.ts',
   // Checks whether a worktree's directory and the shared `.env` are there
   // before creating one. Never opens the vault — it does not know what a book
   // is; `git` and `pnpm` do all of its real work.

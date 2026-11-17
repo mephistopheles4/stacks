@@ -433,7 +433,7 @@ const CSP_META = /<meta\s+http-equiv="content-security-policy"\s+content="([^"]*
  * `connect-src 'self'` is still the line the issue was written for: the shelf's
  * only outbound request is `fetch('/library.json')`, same origin, and that was a
  * property measured **once, by grep**. A `fetch` to a third party added tomorrow
- * passed `pnpm test`, `pnpm build`, `pnpm gate:public` and `pnpm smoke:render`
+ * passed `pnpm test`, `pnpm build`, and `pnpm gate:public`
  * without comment.
  *
  * ⚠️ **Two origins were added for the Ask the library drawer** (#532,

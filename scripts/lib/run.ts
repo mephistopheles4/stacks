@@ -40,8 +40,8 @@
  * being left to be re-derived a third time.
  *
  * What is deliberately *not* here: process lifecycle. `dev-watch` keeps a pair
- * of long-lived children and takes the other down when one dies; `smoke-render`
- * wraps a build in a promise. Both spawn asynchronously and own their children
+ * of long-lived children and takes the other down when one dies; a former
+ * gate wrapped a build in a promise. Both spawn asynchronously and own their children
  * afterwards, so they take `shellCommand` and nothing else. Absorbing those two
  * into a helper would mean four modes of one function to save two lines.
  */

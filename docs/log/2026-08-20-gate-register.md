@@ -3299,7 +3299,7 @@ repo-wide. The row had no observed-red line before this pass; it has one now.
 
 ### G35 — `enhanced-card`
 
-**Gate:** [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts)
+**Gate:** `scripts/smoke-render.ts`
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no `EXEMPT`/allowlist construct found in
@@ -3707,7 +3707,7 @@ vaults, 3 file-scoped vitest runs.
 
 ### G16 — `books-in-case`
 
-**Gate:** [`pnpm smoke:render`](../../scripts/smoke-render.ts)
+**Gate:** `pnpm smoke:render`
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
@@ -6142,7 +6142,7 @@ rather than observed once.
 
 ### G59 — `large-library-lit`
 
-**Gate:** [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts), judged by [`scripts/lib/large-library-lit.ts`](../../scripts/lib/large-library-lit.ts)
+**Gate:** `scripts/smoke-render.ts`, judged by `scripts/lib/large-library-lit.ts`
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6206,7 +6206,7 @@ rasteriser in the same run, and that is why it could be expected to travel.
 
 ### G60 — `context-loss-fallback`
 
-**Gate:** [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts) — `checkContextLossFallback`
+**Gate:** `scripts/smoke-render.ts` — `checkContextLossFallback`
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6311,7 +6311,7 @@ and `painted loss`.
 
 ### G61 — `one-shadow-reader`
 
-**Gate:** [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts) — `checkShadowReaders`, over [`scripts/lib/shadow-sampling.ts`](../../scripts/lib/shadow-sampling.ts) and [`scripts/lib/sampling-hook.ts`](../../scripts/lib/sampling-hook.ts)
+**Gate:** `scripts/smoke-render.ts` — `checkShadowReaders`, over [`scripts/lib/shadow-sampling.ts`](../../scripts/lib/shadow-sampling.ts) and [`scripts/lib/sampling-hook.ts`](../../scripts/lib/sampling-hook.ts)
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6512,7 +6512,7 @@ reverted as separate steps, with the file's hash or `git diff` checked after.
 
 ### G64 — `tuner-split`
 
-**Gate:** `checkTuner` in [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts), run by `pnpm smoke:render`
+**Gate:** `checkTuner` in `scripts/smoke-render.ts`, run by `pnpm smoke:render`
 **Date:** 2026-10-09
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
@@ -6548,7 +6548,7 @@ read after.
 
 ### G65 — `styled-pane`
 
-**Gate:** `checkTuner` in [`scripts/smoke-render.ts`](../../scripts/smoke-render.ts), run by `pnpm smoke:render`; the extractor's anchors and the page's placeholders in [`packages/site/src/shelf/tuner-css.test.ts`](../../packages/site/src/shelf/tuner-css.test.ts)
+**Gate:** `checkTuner` in `scripts/smoke-render.ts`, run by `pnpm smoke:render`; the extractor's anchors and the page's placeholders in [`packages/site/src/shelf/tuner-css.test.ts`](../../packages/site/src/shelf/tuner-css.test.ts)
 **Date:** 2026-10-09
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 

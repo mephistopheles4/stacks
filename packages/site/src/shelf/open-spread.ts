@@ -24,8 +24,7 @@ import { pageBlock, type CaseEntry } from './binding-case.ts';
  *   face down on the block while the book is shut. Turned 180° about the hinge,
  *   its inner edge lands on the gutter, exactly against the right page's.
  *
- * Pure and free of `three`, so each criterion is an exact unit test here, and
- * `smoke-render.ts` measures the built scene against the same three.
+ * Pure and free of `three`, so each criterion is an exact unit test here.
  */
 
 /** What the spread is cut from. */

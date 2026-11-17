@@ -26,7 +26,7 @@ Then the phase-specific check from `AGENTS.md` → "Phase gates":
 | --- | --- |
 | 0 | `pnpm stacks --help` lists all four commands; `pnpm dev` renders an empty shelf |
 | 1 | `pnpm stacks build` on fixtures → valid `library.json`; malformed fixture logged + skipped |
-| 2 | `pnpm smoke:render` → non-blank `artifacts/shelf.png`; click-opens-card test passes |
+| 2 | `pnpm check:devices` (run by CI after merge) passes on all three devices; its screenshots are looked at |
 | 3 | `--public` output greps clean for `NOTE_BODY_CANARY_do_not_ship`; OG image exists |
 
 **Show the output.** Reviewing evidence is faster than re-running the check.

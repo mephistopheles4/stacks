@@ -187,7 +187,7 @@ Every phase: `pnpm test && pnpm build` green, plus:
 - **Phase 1 (data layer):** `pnpm stacks build` on fixtures produces valid library.json with exactly the well-formed books; malformed fixture logged + skipped; tests cover ISBN hit / fuzzy title / API miss / malformed frontmatter (use cached API fixtures, no live calls in tests — gated by G21 (`no-live-network`), which records
   any request the suite makes and fails the test that made it; `vi.stubGlobal`
   is the escape hatch).
-- **Phase 2 (shelf):** `pnpm smoke:render` (headless puppeteer screenshot of the shelf) produces a non-blank PNG at `artifacts/shelf.png`; 50-book fixture renders; clicking a book (integration test via puppeteer) picks it up: the shelf reports the held state for the clicked book, closed, with the page layer carrying that book's title and its pages hidden; a click on the held book opens it, and the pages show; `location.href` is unchanged across both.
+- **Phase 2 (shelf):** `pnpm check:devices`, which CI runs after merge, loads the 50-book fixture build on a real Pixel, a real iPhone and Windows Chrome in BrowserStack: the shelf reports ready, a click picks a book up with `location.href` unchanged, ten seconds held lose no WebGL context, no console error, one screenshot a device ([ADR-0171](docs/adr/0171-the-smoke-gate-is-replaced-by-a-three-device-browserstack-check-after-merge.md)).
 - **Phase 3 (public build):** `pnpm stacks build --public` output contains no note-body text outside `notes/` (grep gate against a canary planted in fixture note bodies, below and beside `## Thoughts`), and `notes/` carries the ship phrase planted inside one while the notes stage is on (`PUBLISH_THOUGHTS`) — switched off, `notes/` must hold no file; the committed share card reaches `dist/` intact.
 - **Phase 4 (Audiobookshelf import):** import against mock ABS API dedupes by ISBN then normalized title+author; re-running import is idempotent.
 
@@ -196,7 +196,7 @@ Every phase: `pnpm test && pnpm build` green, plus:
 - **Assign an issue to yourself before you cut a branch or a worktree for it** — any issue an agent picks up, not only a wayfinder ticket. Reading, searching and triaging need no claim; the claim is due before the first durable artifact exists. **The assignee is an advisory, not a lock**: it records that somebody intends to work the issue, so the next session can decide knowingly, and it prevents nothing. Read it back through a window — **an assignment less than one hour old is presumed live** — and on finding a live one, take a different issue, or establish that whoever holds it has finished before carrying on. Nothing needs unassigning when work is abandoned, because the window expires the presumption on its own. ⚠️ **The case the tracker cannot answer is an assignee that is already your own account.** Every session here authenticates as the same user, so *mine, claimed a minute ago* and *free to take* are the same record. Establish outside the tracker whether another of your own sessions holds it; your own name on it is not permission. The invocation lives in [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md), and this rule is [not gated, deliberately](docs/gates.md#not-gated-deliberately).
 - Commit at every green gate with a one-paragraph summary. Never batch multiple phases into one commit. **The subject is conventional and the body is that paragraph** — `<type>(<scope>): <subject>`, type from `build chore ci docs feat fix perf refactor revert style test`, scope optional and from `core cli site gates docs ci`. The type list is this repository's own decision: Conventional Commits mandates only `feat` and `fix`. ⚠️ **`docs` and `ci` are each a type *and* a scope, which is fine**: `docs: x`, `docs(docs): x` and `feat(docs): x` all pass, because the two slots are read separately and never compared. Both lists are parsed out of this sentence by `gates/pr-conventions.test.ts` (G55), so editing either here moves the checker or turns the build red. Branch names follow [Conventional Branch](https://conventionalbranch.org/) — `<type>/<description>`, lowercase `a-z`, `0-9` and hyphens, with no consecutive, leading or trailing hyphen, and trunk branches unprefixed. **Dots are allowed in a `release/` description and nowhere else** — `release/v1.2.0` is conformant — under the same no-consecutive, no-leading, no-trailing rule, and never adjacent to a hyphen. ⚠️ **`scripts/worktree.ts` is more permissive than this and is not the contract**: its `BRANCH` guard admits dots anywhere, plus underscores and uppercase, because it exists to refuse a path that would break the script. A branch you cut yourself is `<type>/<issue>-<slug>`: `fix/273-gates-in-the-dry-run`. ⚠️ **Four of this repo's prefixes are local extensions and not in the spec** — `docs/`, which Conventional Branch files under `chore/`, and `research/`, `prototype/` and `experiment/` for a branch that never becomes a commit; keep them, each says something `chore/` does not. ⚠️ **Put both on the pull request too, and treat that copy as the real one**: this repo squash-merges with `PR_TITLE`/`PR_BODY`, so the pull request title *is* the subject that reaches `main` and the local one is discarded ([ADR-0057](docs/adr/0057-the-pull-request-title-is-the-commit-subject.md)). A branch the harness named (`claude/…`) breaks no rule; rename it to a purposeful `<type>/<issue>-<slug>` before the first commit if you like. ⚠️ **The pull request half is gated; the local subject and the branch name are not** (G55, `pr-conventions`): the title and body a squash-merge lands are read on every `pull_request` event, and a branch that never opens a pull request is never read.
 - When you make a decision the brief left open (library choice, API quirk, workaround), record it in [`docs/adr/`](docs/adr/) in the same commit — if it is hard to reverse, surprising without context, and a real trade-off. A gate lesson goes to [`docs/gates.md`](docs/gates.md) instead.
-- In Phase 2, save a screenshot to `artifacts/` on every meaningful visual change — the human reviews aesthetics from these.
+- In Phase 2, a visual change is reviewed from a screenshot: the device check's, or one taken by hand into `artifacts/`.
 - If a gate can't pass after 3 distinct approaches, stop, write up what you tried in `docs/blockers.md`, and end the session rather than thrashing.
 - Do not add dependencies without noting why in the relevant record under [`docs/adr/`](docs/adr/). Prefer zero-dep solutions for small utilities.
 - Before you rule on anything security, read [`docs/threat-model.md`](docs/threat-model.md), boundaries first. Data loss in a vault with no attacker is no class there, and its gates (G1, G3, G4, G32, the staging-folder rule) stay. Loosening them, adding or widening a class, or changing the scope needs a new spec comment from the owner.
@@ -224,8 +224,7 @@ pnpm lint:md:fix         # the same, applying the seven fixes measured safe here
 pnpm stacks <cmd>        # run the CLI from source
 pnpm worktree <branch>   # a second checkout, cut from origin/main and installed
 pnpm fixtures:50         # regenerate the 50-book fixture vault   (--books N for vault-N)
-pnpm smoke:render        # phase 2 gate: headless shelf screenshot
-pnpm check:devices       # the fixture build on a Pixel, an iPhone and Windows Chrome, in BrowserStack
+pnpm check:devices       # phase 2 gate: the fixture build on three real devices, in BrowserStack
                          #   (--dist <fixture build> --out <folder>; CI runs it after merge only)
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
@@ -243,10 +242,10 @@ pnpm metrics:commit      # put that record on the orphan `metrics` branch
 pnpm trend:sync          # pull that record into the local store, put the page up, and ask the live site what it serves
 ```
 
-`pnpm deploy:site` runs the four gates **first** and builds from the real vault
-**last**, because `gate:public` and `smoke:render` both stage a *fixture* vault
-into `packages/site/public/` — run either after the real build and you publish
-eight invented books. It then re-checks the actual `dist/` before uploading: the
+`pnpm deploy:site` runs the three gates **first** and builds from the real vault
+**last**, because `gate:public` stages a *fixture* vault into
+`packages/site/public/` — run it after the real build and you publish eight
+invented books. It then re-checks the actual `dist/` before uploading: the
 gates prove the code path is safe using fixtures, and say nothing about the
 folder about to go on the internet. `--dry-run` stops before the upload;
 `--check-only` builds and uploads nothing, and goes to asking the live site which
@@ -289,17 +288,13 @@ page says at the top; there is no confidence figure on it and there will not be
 one ([ADR-0062](docs/adr/0062-the-dashboard-is-provisioned-from-the-repo.md)).
 
 **Run the suite through `athanor run` by default** — `test`, `typecheck`,
-`lint`, `build` and `smoke` — rather than `pnpm` on the host. Each run gets a
+`lint` and `build` — rather than `pnpm` on the host. Each run gets a
 fresh, offline Linux container holding a snapshot of the working tree, so
 sessions running in parallel never meet in the file system or on a port, and
 `athanor status` shows which slots are held. It is the default where it is
 installed, and **still not a gate**: not a dependency, not a `pnpm` script, and
 nothing in CI reads it, so a contributor without it runs the same commands with
-`pnpm` and loses nothing. Two runs stay on the host. ⚠️ **`athanor run smoke`
-is a pass or a fail, not a picture** — the screenshot stays in the container —
-so a visual change also runs `pnpm smoke:render` on the host, where
-`artifacts/shelf.png` is what the human reviews; and the phone check runs on the
-host because the phone is plugged into it. How to run it, and what differs from the host, is in
+`pnpm` and loses nothing. The phone check stays on the host, because the phone is plugged into it. How to run it, and what differs from the host, is in
 [`docs/commands.md`](docs/commands.md)
 ([ADR-0122](docs/adr/0122-athanor-runs-the-suite-in-a-sealed-container.md)).
 
@@ -310,7 +305,7 @@ or `tsc --noEmit` run directly; when athanor is missing it says nothing. When an
 athanor run produced no result — exit 124, 125 or 137 — rerun the host command
 with the comment `# --host-fallback=<reason>` at the end of its line, naming the
 reason and the exit code in your own words with no path, token or pasted error
-text, and say in your report that you used it. The two host runs above, and the
+text, and say in your report that you used it. The host run above, and the
 forms that write to the tree or keep running (`--fix`, `-u`, watch mode), are
 never refused. **Agents run only scoped mutation runs**, through athanor by the
 recipe in `docs/commands.md`, with the report in `artifacts/stryker/scoped/` and

@@ -138,7 +138,7 @@ requests are honoured.
 | `pnpm build` | typecheck + static site build |
 | `pnpm worktree <branch>` | a second checkout, cut from `origin/main` and installed |
 | `pnpm fixtures:50` | regenerate the 50-book fixture vault |
-| `pnpm smoke:render` | headless shelf screenshot gate |
+| `pnpm check:devices` | the fixture build on three real devices in BrowserStack (CI runs it after merge) |
 | `pnpm gate:public` | proves the public build leaks no note text |
 | `pnpm deploy:site` | gates, then build from the real vault, then publish |
 
@@ -163,7 +163,7 @@ in both directions so that coverage is a checked fact rather than a claim.
 ## Contributing
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The short
-version: `pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render` is
+version: `pnpm test && pnpm build && pnpm gate:public` is
 the contract, and a defect worth fixing is usually worth a gate that goes red.
 Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
 

@@ -8,8 +8,8 @@
  *
  * Two things this script exists to get right.
  *
- * **Order.** `gate:public` and `smoke:render` both stage a *fixture* vault into
- * `packages/site/public/`. Run either one after building from the real vault and
+ * **Order.** `gate:public` stages a *fixture* vault into
+ * `packages/site/public/`. Run it after building from the real vault and
  * the folder holds eight invented books; deploy that and you have published the
  * fixtures. So the gates run first and the real build runs last, always, and
  * that is not a style preference — it is the difference between publishing your
@@ -816,7 +816,7 @@ const builtConnectSrc = analyticsBuilt === 'on' ? ["'self'", PLAUSIBLE_ORIGIN] :
 
 // ── 1. The gates. These stage FIXTURE data — which is why they go first ─────
 //
-// **Four refusals, and no flag clears any of them.** Each `run` below refuses by
+// **Three refusals, and no flag clears any of them.** Each `run` below refuses by
 // failing the command. `--check-only` skips them for a reason that is not an
 // override — it builds nothing, so there is nothing to gate — and `--dry-run`
 // runs every one.
@@ -833,7 +833,6 @@ if (checkOnly) {
   run('pnpm', ['test']);
   run('pnpm', ['run', 'typecheck']);
   run('pnpm', ['gate:public']);
-  run('pnpm', ['smoke:render']);
 }
 
 // ── 2. The real build. Last, so it overwrites whatever the gates staged ─────

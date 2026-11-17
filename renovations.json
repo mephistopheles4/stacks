@@ -141,7 +141,7 @@
       "date": "2026-10-21",
       "stamp": "configHash",
       "value": "sha256:4d1873870fe0763896b6054005bbd7c3046ff5fccae41450260d9119858e4c41",
-      "reason": "The shelf scope gained one browser-only exclusion, blackbox-readout.ts, the black box readout's view mounted by the debug pane behind ?debug (#494, #488): a handful of Tweakpane calls over a port, whose oracle is the readout check in smoke:render. A zero-mutant residual of the kind the 2026-10-09 entry declared, though blackbox-readout.test.ts drives it with a fake folder. Mutant counts were not run and no file set was compared; the change adds one excluded file and removes none.",
+      "reason": "The shelf scope gained one browser-only exclusion, blackbox-readout.ts, the black box readout's view mounted by the debug pane behind ?debug (#494, #488): a handful of Tweakpane calls over a port, whose oracle was the readout check in the headless-browser gate retired in #618. A zero-mutant residual of the kind the 2026-10-09 entry declared, though blackbox-readout.test.ts drives it with a fake folder. Mutant counts were not run and no file set was compared; the change adds one excluded file and removes none.",
       "pr": 505,
       "preserves": true
     },
@@ -184,6 +184,14 @@
       "reason": "A tenth mutation scope, packages/site/src/notice, was declared for the notice modals (#536, docs/spec/notice-modals.md). The configuration gained one scope and one mutate glob and no existing scope changed, so the nine older scopes' mutated files and mutant inventories are as they were and their windows are declared preserved; the new scope starts unarmed with its own window. Reasoned from the configuration diff, which is the one added scope, and not from a mutation run: the directory holds two pure modules with their specs, measured, and three browser-only files (modal.ts, start.ts, open.ts) excluded with a mechanism each; none of the nine older globs matches a file under packages/site/src/notice.",
       "pr": 570,
       "preserves": true
+    },
+    {
+      "date": "2026-11-17",
+      "stamp": "configHash",
+      "value": "sha256:7c8c957c9c374b5d7dac42886aff6bf6c59411dce3fee1413c9e1447289da8d9",
+      "reason": "The scripts scope's exclusions changed for the device check (#618, ADR-0171): scripts/smoke-render.ts left the list because the file is deleted, and scripts/check-devices.ts and scripts/build-device-fixture.ts joined it, each run by a pnpm script or a workflow and never a Vitest spec. The smoke gate's lib modules (flat-layer-gate, large-library-lit, page-watch, pickup-gate, settle) and their specs were deleted from the mutated set, and device-check.ts joined it, so the scripts scope's inventory moved. Reasoned from the configuration diff, not from a mutation run.",
+      "pr": 619,
+      "preserves": false
     }
   ]
 }

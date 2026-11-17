@@ -19,7 +19,7 @@ import {
  * `Box3.setFromObject` against the bookcase's real inner faces on a rendered scene,
  * because the arithmetic was wrong in a way re-checking the arithmetic could not
  * catch. Everything here can only check that the placements say what they mean
- * to say; only `pnpm smoke:render` confirms the scene agrees with them.
+ * to say; nothing in CI confirms the scene agrees with them.
  */
 
 function book(id: string, over: Partial<LibraryBook> = {}): LibraryBook {

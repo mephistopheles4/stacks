@@ -8,8 +8,7 @@
  * Tweakpane's bindings, folders and buttons (#496). It takes the folder
  * `debug-pane.ts` made for it and imports nothing from Tweakpane, not even as a
  * type (`FolderSlice`, ADR-0119). A behaviour that gets view code of its own
- * here needs a browser check of its own in `pnpm smoke:render`, which reads the
- * rendered state once for each field this file writes.
+ * here has no browser check in CI (#618); read the real pane under `?debug`.
  *
  * "Removable in one file" is now **two files and the shell's wiring**: this view
  * and `panel-model.ts`, and in the shell the tuning panel is not one `slots.add`

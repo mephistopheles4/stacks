@@ -255,18 +255,18 @@ so invariants 1, 2 and 4 hold by structure.
 
 ### Device-cloud checks
 
-**Crosses:** out, by the owner's hand: the BrowserStack credential, in an
-`Authorization` header to the Automate hub, and the fixture build, over
-BrowserStack Local's one-port tunnel, to a cloud phone. In: the hub's and the
-page's replies to `scripts/ios-swipe-check.ts`.
+**Crosses:** out, by the owner's hand and after merge from `devices.yml`: the
+BrowserStack key, in an `Authorization` header to the Automate hub, and the fixture
+build, over Local's one-port tunnel, to a cloud phone. In: the hub's and the page's
+replies.
 
 **Controls:**
 
-- *Repo.* The probe reads `~/.config/browserstack.env`, sends the credential only
-  to a constant HTTPS address, masks it and the session id in every error, and
-  never prints page text. Not the file at rest, or the tunnel's command line.
-- *Repo.* `--serve` serves `packages/site/dist` on 127.0.0.1 only; `--check-served`
-  and `--local` refuse unless every title is a fixture title, at one moment only.
+- *Repo.* The key goes only to constant HTTPS addresses and is masked.
+  In CI it is an environment secret of `browserstack` (branch policy `main`
+  alone), read by one step that installs no package and checks the Local binary
+  against a pinned SHA-256; the build is made in a job with no secret.
+- *Repo.* Only fixture titles are served.
 - *Owner's hand.* The tunnel runs with `--only` one port and `--force-local` off.
 
 **Residual:** A device cloud runs the probe.

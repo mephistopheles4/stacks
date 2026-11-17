@@ -14,8 +14,8 @@
  * cannot reach: measured, the dry run failed on `stryMutAct_9fa48 is not
  * defined` and took the whole mutation run with it. It is `tsx`'s `__name`
  * again, from a second tool. ⚠️ **Nor can it prove the `tsx` half** — Vitest's
- * transform need not inject `__name` — which the CI run of `pnpm smoke:render`
- * proves: a hook that throws never reports itself, and G61's first clause says
+ * transform need not inject `__name` — which a run on a page
+ * proves: a hook that throws never reports itself, and G61's first clause said
  * so.
  */
 

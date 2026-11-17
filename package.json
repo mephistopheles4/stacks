@@ -22,7 +22,6 @@
     "stacks": "tsx packages/cli/src/index.ts",
     "worktree": "tsx scripts/worktree.ts",
     "fixtures:50": "tsx scripts/make-50-book-fixture.ts",
-    "smoke:render": "tsx scripts/smoke-render.ts",
     "check:devices": "node scripts/check-devices.ts",
     "gate:public": "tsx scripts/check-public-build.ts",
     "mutation:run": "stryker run",
@@ -67,12 +66,6 @@
       "build": [
         "pnpm",
         "build"
-      ],
-      "smoke": [
-        "env",
-        "CI=true",
-        "pnpm",
-        "smoke:render"
       ]
     },
     "memory": "6g",

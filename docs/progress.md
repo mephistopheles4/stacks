@@ -147,8 +147,8 @@ One line per episode, newest last. The narrative is one file per investigation i
 
 ## Notes to the next session
 
-- Run `pnpm test && pnpm build && pnpm smoke:render && pnpm gate:public` first. Those four are the contract; if they are green the project is where this file says it is.
-- **`smoke:render` and `gate:public` each stage their own fixture vault into `packages/site/public/`.** Running them while `pnpm dev:watch` is up swaps the live site to fixture data until the next vault edit. Rebuild with `pnpm stacks build --public --assets packages/site/public`.
+- Run `pnpm test && pnpm build && pnpm gate:public` first. Those three are the contract; if they are green the project is where this file says it is. The device check (`pnpm check:devices`) runs after merge, on `main` only.
+- **`gate:public` and the fixture build for the device check each stage a fixture vault into `packages/site/public/`.** Running them while `pnpm dev:watch` is up swaps the live site to fixture data until the next vault edit. Rebuild with `pnpm stacks build --public --assets packages/site/public`.
 - **Verify covers by eye, not by counting.** A contact sheet shows a placeholder graphic or a different book that no count distinguishes.
 - Configuration lives in `.env` (gitignored): `STACKS_VAULT`, and `GOOGLE_BOOKS_API_KEY`, without which Google Books 429s on a shared quota. There is exactly one, in the main checkout, and every worktree reads it.
 - Still open: whether the print and audiobook editions of one title should collapse into a single spine. They render as two.

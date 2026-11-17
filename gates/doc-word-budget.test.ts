@@ -23,7 +23,7 @@ import { expectFound, readRepoFile, trackedFiles } from './repo.ts';
 
 /** File → the most words it may hold. Words are whitespace-separated runs. */
 const BUDGETS: Readonly<Record<string, number>> = {
-  'AGENTS.md': 6_137, // +17: pnpm check:devices, which the second commit of #618 pays back
+  'AGENTS.md': 6_120, // +20: pnpm preview:fixture, a command that is new (#605)
   'CONTEXT.md': 3_950,
   'CONTRIBUTING.md': 1_750,
   'docs/agents/issue-tracker.md': 2_750,
@@ -32,7 +32,7 @@ const BUDGETS: Readonly<Record<string, number>> = {
   'docs/notes-on-the-shelf.md': 1_350,
   'docs/progress.md': 3_560, // +60: the T6 row (#605)
   'docs/shelf-inspectors.md': 2_500,
-  'docs/spec/README.md': 4_900,
+  'docs/spec/README.md': 4_970, // +70: the #618 row, an index entry that is new
 };
 
 /** Whitespace-separated words, the count the budgets are written in. */
