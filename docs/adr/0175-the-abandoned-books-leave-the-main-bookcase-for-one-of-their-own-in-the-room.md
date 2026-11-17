@@ -50,6 +50,12 @@
    never from the page. **A pickup from this bookcase has no cell of its own**: the owner dropped it,
    and a book on it is picked up by the same code as every other.
 
+8. **An unrelated advisory is ignored in this change, by the owner's word.** picomatch <= 4.0.7
+   (GHSA-fc5q-39xc-vjpf, high) has no fixed release on npm, and it failed `audit` for every
+   pull request, this one included. It is an `auditConfig.ignoreGhsas` entry dated 2026-11-17 under
+   [ADR-0095](0095-a-comment-carries-the-date-and-an-ignore-expires-in-30-days.md), so it expires
+   after 30 days and ends when a fixed version is published. No dependency is added or changed.
+
 ## Why
 
 The room's layout is the owner's: a bookcase of parked books against the right wall, the clock and the
