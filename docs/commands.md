@@ -1277,6 +1277,12 @@ hold; without it the pinned one is downloaded and **refused unless its SHA-256 i
 (`LOCAL_BINARY` in `scripts/lib/browserstack-local.ts`: host, path and hash, bumped together when
 BrowserStack publishes a new build). The fixture build is judged before it is kept, never the real
 vault. Each run names its own tunnel (`device-check-<run id>`), so two runs on one key cannot cross.
+`--device pixel|iphone|desktop` runs that one device, to diagnose it. Each device's verdict is
+also set as its BrowserStack session status, and the line ends `[BrowserStack status: set]` or
+`not set`. **Before every real tap the check taps once where nothing listens and reads where it
+landed**: iOS Safari takes tap coordinates from the screen, so its top bar shifted a tap 62 px up
+and the iPhone never picked a book up (the first run on `main`); a device that needs no
+correction reads zero.
 
 **What it cannot see**, and the owner chose it: the 50-book render, the open-spread layout, the
 CSP-violation check, and the keyboard, touch, focus, accessibility-tree and reduced-motion cells all
