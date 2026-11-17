@@ -169,17 +169,19 @@ async function runDevice(device: Device, key: Key, options: RunOptions): Promise
     await driver.setScriptTimeout(SCRIPT_TIMEOUT_MS);
     await driver.navigate(`http://bs-local.com:${String(options.port)}/`);
 
-    const found = readFound(await driver.runAsync(READY_AND_FIND));
-    if (found === undefined) fail(UNEXPECTED);
-    if ('error' in found) fail(found.error);
-
     // A real iPhone takes tap coordinates from the screen, not the page: tap once where nothing
-    // listens, read where it landed, and ask for the book that much off.
+    // listens, read where it landed, and ask for the book that much off. The shift is read first so
+    // the book chosen is one whose shifted tap still falls inside the viewport.
     const viewport = readViewport(await driver.run(PROBE_ARM));
     if (viewport === undefined) fail(UNEXPECTED);
     const centre = { x: Math.round(viewport.x / 2), y: Math.round(viewport.y / 2) };
     await driver.click(centre, device.pointer);
     const shift = tapShift(centre, await driver.run(PROBE_READ));
+
+    const found = readFound(await driver.runAsync(READY_AND_FIND, [shift.x, shift.y]));
+    if (found === undefined) fail(UNEXPECTED);
+    if ('error' in found) fail(found.error);
+
     await driver.click({ x: found.x + shift.x, y: found.y + shift.y }, device.pointer);
     const held = readHeld(await driver.runAsync(WAIT_HELD, [found.title, found.href]));
     if (held === undefined) fail(UNEXPECTED);

@@ -69,7 +69,8 @@ var until = async function (test, ms) {
 
 /**
  * Waits for the shelf to report ready, then finds a book standing in view: its projected point,
- * its title (read off `library.json` by the id under that point) and the page's address. Answers
+ * its title (read off `library.json` by the id under that point) and the page's address. It takes the
+ * tap's calibrated shift and skips a book whose shifted tap point would fall outside the viewport. Answers
  * `{ error }` with one of this file's sentences, or `{ x, y, title, href }`.
  */
 export const READY_AND_FIND = `${UNTIL}
@@ -77,6 +78,9 @@ export const READY_AND_FIND = `${UNTIL}
   var ready = await until(function () { return window.__shelf && window.__shelf.ready === true; }, ${String(WAIT_CEILING_MS)});
   if (!ready) return { error: 'the shelf never reported ready' };
   var shelf = window.__shelf;
+  // The tap goes where the book is plus the calibrated shift, and that point has to be in the viewport.
+  var shiftX = arguments[0];
+  var shiftY = arguments[1];
   var library = await (await fetch('/library.json', { cache: 'no-store' })).json();
   // The loading screen fades out over the canvas after ready, and a tap on it picks nothing up:
   // a book counts as in view once the canvas is the element under its point.
@@ -85,6 +89,9 @@ export const READY_AND_FIND = `${UNTIL}
       var at = shelf.projectBook(i);
       if (at === undefined) continue;
       if (at.x < 0 || at.y < 0 || at.x > window.innerWidth || at.y > window.innerHeight) continue;
+      var tapX = at.x + shiftX;
+      var tapY = at.y + shiftY;
+      if (tapX < 0 || tapY < 0 || tapX >= window.innerWidth || tapY >= window.innerHeight) continue;
       if (document.elementFromPoint(at.x, at.y) !== document.getElementById('shelf-canvas')) continue;
       var id = shelf.bookAt(at.x, at.y);
       if (id === undefined) continue;
