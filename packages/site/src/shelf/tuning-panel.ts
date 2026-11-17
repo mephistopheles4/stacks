@@ -39,13 +39,13 @@ import { createPanelModel, type PanelView, type RowView } from './panel-model.ts
 import type { BindingSlice, FolderSlice, Instrument } from './pane-slots.ts';
 import type { ShelfHandle } from './scene.ts';
 import type { ShelfSettings } from './shelf-settings.ts';
-import { keepSettingsInAddress, writeSettings } from './shelf-url.ts';
+import { keepSettingsInAddress, writeSettings, type RoomView } from './shelf-url.ts';
 
 /** What the panel reads and drives of the shelf. */
 export type TuningHandle = Pick<
   ShelfHandle,
   'settings' | 'mountedWith' | 'applySettings' | 'stats'
->;
+> & { readonly roomView?: RoomView | undefined };
 
 export interface TuningOptions {
   readonly handle: TuningHandle;
@@ -126,8 +126,8 @@ export function mountTuningPanel(folder: FolderSlice, options: TuningOptions): (
 
   const persist = (): void => {
     written = true;
-    const { settings, base } = model.address();
-    writeSettings(settings, base);
+    const { settings, base, room } = model.address();
+    writeSettings(settings, base, room);
   };
 
   const edit = (id: string, value: Value): void => {

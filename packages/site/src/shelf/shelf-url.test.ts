@@ -4,9 +4,12 @@ import { resolveSettings, DEFAULT_SETTINGS, type ShelfSettings } from './shelf-s
 import {
   bookLimit,
   carriesSettings,
+  debugCarriesRoomGroups,
+  debugRoom,
   keepSettingsInAddress,
   readSettings,
   retiredTuneHint,
+  splitRoomGroups,
   woodSeed,
   writeSettings,
 } from './shelf-url.ts';
@@ -476,6 +479,106 @@ describe('writeSettings writes the diff into ?debug', () => {
   it('round-trips through readSettings', () => {
     const url = write(dialled, '?debug');
     expect(read(url.slice(1)).renderer.exposure).toBe(1.4);
+  });
+});
+
+describe('a link made in a room (spec S15.3, S15.4)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const roomLights = {
+    ...DEFAULT_SETTINGS,
+    lighting: {
+      ...DEFAULT_SETTINGS.lighting,
+      key: { ...DEFAULT_SETTINGS.lighting.key, intensity: 3.25 },
+    },
+    scene: { ...DEFAULT_SETTINGS.scene, background: 0x0d0b09 },
+  };
+  const room = { id: 'reading-corner', defaults: roomLights };
+
+  const write = (settings: ShelfSettings, search: string, withRoom = true): string => {
+    let url = '';
+    vi.stubGlobal('window', {
+      location: { search, pathname: '/' },
+      history: {
+        replaceState: (_: unknown, __: string, next: string) => {
+          url = next;
+        },
+      },
+    });
+    writeSettings(settings, DEFAULT_SETTINGS, withRoom ? room : undefined);
+    return url;
+  };
+
+  const diffOf = (url: string): unknown =>
+    JSON.parse(new URLSearchParams(url.slice(1)).get('debug') || 'null');
+
+  it('records the room and writes nothing else while the room is as it shipped', () => {
+    expect(diffOf(write(roomLights, '?debug'))).toEqual({ room: 'reading-corner' });
+  });
+
+  it('writes lighting and scene as differences from the room, not from the shelf', () => {
+    const dimmer = {
+      ...roomLights,
+      lighting: {
+        ...roomLights.lighting,
+        key: { ...roomLights.lighting.key, intensity: 1 },
+      },
+    };
+    const diff = diffOf(write(dimmer, '?debug')) as {
+      room: string;
+      lighting: { key: { intensity: number } };
+    };
+    expect(diff.room).toBe('reading-corner');
+    expect(diff.lighting.key.intensity).toBe(1);
+  });
+
+  it('writes the room-less diff, as before, when no room is on the page', () => {
+    // the room's lights differ from the shelf's, so on a page with no room they are a difference
+    expect(diffOf(write(roomLights, '?debug', false))).toMatchObject({ lighting: {} });
+    expect(diffOf(write(DEFAULT_SETTINGS, '?debug', false))).toBeNull();
+  });
+
+  it('reads the room id out of the link, as text and nothing else', () => {
+    const link = (value: unknown): URLSearchParams =>
+      new URLSearchParams(`debug=${encodeURIComponent(JSON.stringify({ room: value }))}`);
+    expect(debugRoom(link('reading-corner'))).toBe('reading-corner');
+    for (const value of [1, null, ['x'], { id: 'x' }, true])
+      expect(debugRoom(link(value))).toBeUndefined();
+    expect(debugRoom(new URLSearchParams('debug'))).toBeUndefined();
+    expect(debugRoom(new URLSearchParams('debug=%7Bnot-json'))).toBeUndefined();
+  });
+
+  it('does not warn about a room key, which is a setting of its own', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    readSettings(new URLSearchParams(`debug=${encodeURIComponent('{"room":"reading-corner"}')}`));
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('splits a patch into the groups a room owns and the rest', () => {
+    const patch = readSettings(
+      new URLSearchParams(
+        `debug=${encodeURIComponent(JSON.stringify({ lighting: { key: { intensity: 2 } }, scene: { background: 1 }, exposure: 1.2 }))}&aa=0`,
+      ),
+    );
+    const { groups, rest } = splitRoomGroups(patch);
+    expect(Object.keys(groups).sort()).toEqual(['lighting', 'scene']);
+    expect(rest.lighting).toBeUndefined();
+    expect(rest.scene).toBeUndefined();
+    expect(rest.renderer).toEqual({ exposure: 1.2, antialias: false });
+    expect(splitRoomGroups({}).groups).toEqual({});
+  });
+
+  it('says whether a link carries the groups a room owns', () => {
+    const link = (diff: object): URLSearchParams =>
+      new URLSearchParams(`debug=${encodeURIComponent(JSON.stringify(diff))}`);
+    expect(debugCarriesRoomGroups(link({ lighting: { key: { intensity: 2 } } }))).toBe(true);
+    expect(debugCarriesRoomGroups(link({ scene: { background: 1 } }))).toBe(true);
+    expect(debugCarriesRoomGroups(link({ room: 'reading-corner', exposure: 1.2 }))).toBe(false);
+    expect(debugCarriesRoomGroups(link({ lighting: {} }))).toBe(false);
+    expect(debugCarriesRoomGroups(new URLSearchParams('debug'))).toBe(false);
   });
 });
 

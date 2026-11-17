@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_ROOM_ID, ROOMS } from './room-mode.ts';
 
 /**
  * A mount that throws halfway lets go of what it made.
@@ -160,7 +161,11 @@ describe('a mount asked for a room that throws (spec S16)', () => {
       return Promise.reject(new Error('no network here'));
     });
     const page = listeningCanvas();
-    expect(() => mountShelf(page.canvas, [], { room: { id: 'reading-corner' } })).toThrow(LATE);
+    expect(() =>
+      mountShelf(page.canvas, [], {
+        room: { id: DEFAULT_ROOM_ID, entry: ROOMS['reading-corner'] },
+      }),
+    ).toThrow(LATE);
 
     expect(fetched).toEqual([]);
     expect(page.live()).toEqual([]);
