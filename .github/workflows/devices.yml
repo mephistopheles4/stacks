@@ -1,0 +1,109 @@
+# The three-device check: the fixture build on a real Pixel, a real iPhone and Chrome on
+# Windows, through BrowserStack Local (#618, ADR-0171). It runs **after merge only**, on a push to
+# `main`, and it is no required check: a broken boot shows here, red, right after the merge, and
+# GitHub's own failure notice is the alarm. It runs on no pull request, so no pull request, fork or
+# branch ever holds the key.
+#
+# ⚠️ **The key lives in an environment, and the environment is the control.** `browserstack` has a
+# deployment branch policy that allows `main` alone, and the user and key are *environment* secrets
+# there, never repository ones. A repository secret reaches any branch pushed to this repository
+# through a new or edited workflow, before anyone has read it; an environment secret does not.
+# `scripts/lib/key-job.test.ts` holds the rest: only this file may name the environment, and its
+# `on:` is exactly a push to `main`. Another trigger (`pull_request_target`, `workflow_run`,
+# `workflow_dispatch`, `schedule`) would pass the branch policy on `main` and must stay out.
+#
+# ⚠️ **Two jobs, so the key never sits beside installed packages.** `build` has no secret: it
+# installs, builds `fixtures/vault-50`, judges the build (`judgeFixtureDist`, which loads sharp)
+# and uploads `dist/`. `devices` installs no package and runs only Node's own type stripping over
+# files of this repository. The setup actions run before the key step, and they sit under the class
+# "What you install and CI run" in docs/threat-model.md.
+
+name: devices
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Two quick merges ask for six sessions on a plan of five: the newer run cancels the older.
+concurrency:
+  group: devices
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build the fixture site
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Builds the 50-book fixture vault into a folder of its own and judges it (G20's rules and
+      # the fixture marker) before anything is kept. Nothing here is a secret.
+      - name: build and judge the fixture site
+        run: pnpm exec tsx scripts/build-device-fixture.ts --out device-fixture-dist
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-dist
+          path: device-fixture-dist
+          if-no-files-found: error
+          retention-days: 1
+
+  devices:
+    name: three devices
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: browserstack
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      # By exact name, into a folder of the runner's temp area and not the checkout's scripts, with
+      # no `run-id` and no token: it takes this run's artifact and no other.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-dist
+          path: ${{ runner.temp }}/site-dist
+
+      # The one step that holds the key, through `env:` and nowhere else: never a command line, a
+      # URL or a log. `NODE_OPTIONS` is set empty so no earlier action can have set a `--require`
+      # that runs beside it. The script downloads the pinned BrowserStack Local binary, refuses it
+      # on a hash mismatch, and writes the binary's own output to a log outside every upload path.
+      - name: check:devices
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          NODE_OPTIONS: ''
+        run: node scripts/check-devices.ts --dist "$RUNNER_TEMP/site-dist" --out "$RUNNER_TEMP/device-screenshots"
+
+      # Exact paths: the three screenshots a human looks at, and nothing else.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: device-screenshots
+          path: |
+            ${{ runner.temp }}/device-screenshots/pixel.png
+            ${{ runner.temp }}/device-screenshots/iphone.png
+            ${{ runner.temp }}/device-screenshots/desktop.png
+          if-no-files-found: warn
+          retention-days: 7

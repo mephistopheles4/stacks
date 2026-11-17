@@ -23,7 +23,7 @@ import { expectFound, readRepoFile, trackedFiles } from './repo.ts';
 
 /** File → the most words it may hold. Words are whitespace-separated runs. */
 const BUDGETS: Readonly<Record<string, number>> = {
-  'AGENTS.md': 6_120, // +20: pnpm preview:fixture, a command that is new (#605)
+  'AGENTS.md': 6_137, // +17: pnpm check:devices, which the second commit of #618 pays back
   'CONTEXT.md': 3_950,
   'CONTRIBUTING.md': 1_750,
   'docs/agents/issue-tracker.md': 2_750,

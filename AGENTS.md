@@ -225,6 +225,8 @@ pnpm stacks <cmd>        # run the CLI from source
 pnpm worktree <branch>   # a second checkout, cut from origin/main and installed
 pnpm fixtures:50         # regenerate the 50-book fixture vault   (--books N for vault-N)
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
+pnpm check:devices       # the fixture build on a Pixel, an iPhone and Windows Chrome, in BrowserStack
+                         #   (--dist <fixture build> --out <folder>; CI runs it after merge only)
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
 pnpm deploy:ask          # the Ask the library Worker: main only   (--dry-run, --ai-off, --ai-on, --gateway <id>)

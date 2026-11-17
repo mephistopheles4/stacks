@@ -20,6 +20,19 @@
 /** The W3C hub BrowserStack Automate serves. */
 export const HUB = 'https://hub-cloud.browserstack.com/wd/hub';
 
+/** The Automate REST API, which serves a session's console log after it ran. */
+export const REST = 'https://api.browserstack.com/automate';
+
+/**
+ * How many `ERROR` lines a console log holds, or `undefined` when it holds none to read. BrowserStack's
+ * console log is plain text, one entry a line, each carrying its level. Only the count leaves: the
+ * text of an error is a page's and is never printed.
+ */
+export function countConsoleErrors(log: string): number | undefined {
+  if (log.trim() === '') return undefined;
+  return log.split(/\r?\n/).filter((line) => /\bERROR\b/.test(line)).length;
+}
+
 /** The longest hub message an error prints. */
 export const MESSAGE_LIMIT = 200;
 
@@ -87,27 +100,43 @@ export function describeFailure(
 }
 
 export interface Capabilities {
-  readonly deviceName: string;
+  /** A phone's name. Absent for a desktop browser, which is named by `os` instead. */
+  readonly deviceName?: string;
   readonly osVersion: string;
   readonly browserName: string;
   /** Whether the device reaches the owner's machine through BrowserStack Local. */
   readonly local: boolean;
   readonly sessionName: string;
+  /** A desktop operating system (`Windows`). Absent means a real phone: `realMobile` is set. */
+  readonly os?: string;
+  /** The build's name. Defaults to the swipe check's. */
+  readonly buildName?: string;
+  /** The tunnel this session reaches: one per run, so two runs on one key cannot cross. */
+  readonly localIdentifier?: string;
+  /** `errors` records the session's console errors, which `consoleErrorCount` reads back. */
+  readonly consoleLogs?: 'errors';
 }
 
-/** The W3C new-session body: BrowserStack's own `bstack:options` carries the device. */
+/**
+ * The W3C new-session body: BrowserStack's own `bstack:options` carries the device. A phone sets
+ * `realMobile`; a desktop browser names its `os` and takes the latest browser version.
+ */
 export function sessionBody(caps: Capabilities): unknown {
+  const desktop = caps.os !== undefined;
   return {
     capabilities: {
       alwaysMatch: {
         browserName: caps.browserName,
+        ...(desktop ? { browserVersion: 'latest' } : {}),
         'bstack:options': {
-          deviceName: caps.deviceName,
-          osVersion: caps.osVersion,
-          realMobile: 'true',
+          ...(desktop
+            ? { os: caps.os, osVersion: caps.osVersion }
+            : { deviceName: caps.deviceName, osVersion: caps.osVersion, realMobile: 'true' }),
           local: caps.local ? 'true' : 'false',
+          ...(caps.localIdentifier === undefined ? {} : { localIdentifier: caps.localIdentifier }),
+          ...(caps.consoleLogs === undefined ? {} : { consoleLogs: caps.consoleLogs }),
           projectName: 'stacks',
-          buildName: 'ios-swipe-check',
+          buildName: caps.buildName ?? 'ios-swipe-check',
           sessionName: caps.sessionName,
         },
       },
@@ -144,6 +173,28 @@ export function swipeActions(from: Point, to: Point, dragMs: number): unknown {
   };
 }
 
+/**
+ * A W3C `actions` body for one pointer: move to `at`, press, release. A `touch` pointer for a
+ * phone, so the page sees a tap; a `mouse` pointer for a desktop, so it sees a click.
+ */
+export function clickActions(at: Point, pointerType: 'touch' | 'mouse'): unknown {
+  return {
+    actions: [
+      {
+        type: 'pointer',
+        id: 'pointer',
+        parameters: { pointerType },
+        actions: [
+          { type: 'pointerMove', duration: 0, x: Math.round(at.x), y: Math.round(at.y) },
+          { type: 'pointerDown', button: 0 },
+          { type: 'pause', duration: 50 },
+          { type: 'pointerUp', button: 0 },
+        ],
+      },
+    ],
+  };
+}
+
 export type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 
 export interface Driver {
@@ -157,6 +208,14 @@ export interface Driver {
   /** The same, for a script that calls its last argument with the result. */
   runAsync(script: string, args?: readonly unknown[]): Promise<unknown>;
   swipe(from: Point, to: Point, dragMs: number): Promise<void>;
+  click(at: Point, pointerType: 'touch' | 'mouse'): Promise<void>;
+  /** The viewport as a PNG, base64-encoded. */
+  screenshot(): Promise<string>;
+  /**
+   * How many console errors the session logged, read from the Automate REST API after the page
+   * ran; `undefined` when the device returns no console log. Never the text of one.
+   */
+  consoleErrorCount(): Promise<number | undefined>;
   /** Ends the session. Never throws: it runs in a `finally`. */
   end(): Promise<void>;
 }
@@ -173,13 +232,15 @@ export function createDriver(credentials: Credentials, send: Fetcher, hub = HUB)
   const encoded = Buffer.from(`${credentials.user}:${credentials.key}`).toString('base64');
   const authorization = `Basic ${encoded}`;
   let session: string | undefined;
+  /** The last session opened, which its console log is read from after it ends. */
+  let last: string | undefined;
   /** Every value that must never print, however the hub or the transport words it. */
   const secrets = (): string[] => [
     authorization,
     encoded,
     credentials.key,
     credentials.user,
-    ...(session === undefined ? [] : [session]),
+    ...(last === undefined ? [] : [last]),
   ];
 
   const call = async (method: string, path: string, body?: unknown): Promise<unknown> => {
@@ -223,6 +284,7 @@ export function createDriver(credentials: Credentials, send: Fetcher, hub = HUB)
       const id = value?.sessionId;
       if (typeof id !== 'string' || id === '') throw new HubError('the hub returned no session');
       session = id;
+      last = id;
     },
     async navigate(url) {
       await call('POST', sessionPath('/url'), { url });
@@ -238,6 +300,35 @@ export function createDriver(credentials: Credentials, send: Fetcher, hub = HUB)
     },
     async swipe(from, to, dragMs) {
       await call('POST', sessionPath('/actions'), swipeActions(from, to, dragMs));
+    },
+    async click(at, pointerType) {
+      await call('POST', sessionPath('/actions'), clickActions(at, pointerType));
+    },
+    async screenshot() {
+      const value = await call('GET', sessionPath('/screenshot'));
+      if (typeof value !== 'string' || value === '') {
+        throw new HubError('the hub returned no screenshot');
+      }
+      return value;
+    },
+    async consoleErrorCount() {
+      const id = session ?? last;
+      if (id === undefined) throw new HubError('no session is open');
+      let response: Response;
+      try {
+        response = await send(`${REST}/sessions/${id}/consolelogs`, {
+          method: 'GET',
+          headers: { Authorization: authorization, Accept: 'application/json' },
+        });
+      } catch (error) {
+        throw new HubError(
+          `console log request failed: ${scrub(error instanceof Error ? error.message : '', secrets())}`,
+        );
+      }
+      const text = await response.text();
+      // A device with no console log answers with an error status: reported as "not reported".
+      if (!response.ok) return undefined;
+      return countConsoleErrors(text);
     },
     async end() {
       if (session === undefined) return;

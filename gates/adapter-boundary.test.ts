@@ -170,6 +170,11 @@ const ALLOWED = [
   // opens a note or a vault, and each refuses a build whose library is not the fixture's. The key
   // rule reads the root `.env` files by name to refuse a BrowserStack variable, never a value.
   'scripts/browserstack-local.ts',
+  // #618. The device check reads a built fixture folder and the BrowserStack key (from its
+  // environment, or the owner's credential file), writes three screenshots and a scratch folder,
+  // and the build script copies and judges the fixture site. Neither opens a note or names a vault.
+  'scripts/build-device-fixture.ts',
+  'scripts/check-devices.ts',
   'scripts/lib/browserstack-key.ts',
   'scripts/lib/browserstack-local.ts',
   'scripts/lib/confinement-probe.ts',
