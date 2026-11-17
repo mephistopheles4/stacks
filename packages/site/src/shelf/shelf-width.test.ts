@@ -76,8 +76,8 @@ function rowsOf(books: readonly LibraryBook[]): ShelfRow[] {
  * is about and the sharpest mutation detector here.
  *
  * **G16 is still the backstop.** Everything here asserts what
- * the placements claim; only `pnpm smoke:render` confirms the scene agrees, and
- * it exists because the arithmetic was once wrong in a way that re-checking the
+ * the placements claim; only a render confirms the scene agrees, and
+ * G16 existed because the arithmetic was once wrong in a way that re-checking the
  * arithmetic could not catch.
  */
 
@@ -259,7 +259,7 @@ function charged(row: ShelfRow): number {
  * spend against a model the cursor cannot move, and
  * `leaves a row no slack a book could have used`, which is the one assertion
  * here with a cursor-free number on one side. Beyond all of them is G16: only
- * `pnpm smoke:render` measures a rendered scene against the bookcase's real inner
+ * a render measured a rendered scene against the bookcase's real inner
  * faces, which is why ADR-0042 names it as the backstop rather than this file.
  */
 const ROW_END = -SHELF.width / 2 + USABLE_WIDTH;

@@ -83,13 +83,13 @@ declare global {
   }
 
   interface Window {
-    /** Read by `pnpm smoke:render` to assert the shelf really drew books. */
+    /** Read by `pnpm check:devices` to know the shelf is up, and by `scripts/phone-check.ts`. */
     __shelf?: {
       bookCount: number;
       /** Shelves in the bookcase. G61 reads it to know its large page is tall. */
       rowCount: number;
       ready: boolean;
-      /** Worst breach of the bookcase's sides, in world units. See `smoke:render`. */
+      /** Worst breach of the bookcase's sides, in world units. */
       bookcaseOverflow: number;
       shaderErrors: readonly string[];
       /** The live shelf's `profile`, so the gate can read what a fallback drew. */
@@ -106,7 +106,7 @@ declare global {
       /** Where the room stands on this page, and what it cost: `none` for `?shelf` and the fallback. */
       room(): ShelfHandle['room'];
       /**
-       * Every analytics event asked for since load, sent or not, so `smoke:render`
+       * Every analytics event asked for since load, sent or not, so a check
        * can count call sites with the tracker never started
        * (docs/spec/optional-plausible.md S4, C8). It never leaves the page.
        */
@@ -577,7 +577,7 @@ export async function boot(
 /**
  * Republished after every remount.
  *
- * `window.__shelf` is what `pnpm smoke:render` reads, and it closes over one
+ * `window.__shelf` is what `pnpm check:devices` reads, and it closes over one
  * handle. A rebuild makes a new one, so without this the gate would be asking a
  * disposed shelf how many books it has.
  */

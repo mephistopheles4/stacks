@@ -1,11 +1,11 @@
 /**
- * What `pnpm gate:public` and `pnpm smoke:render` share about analytics, as pure
- * functions: what a gate's build child may inherit (both gates), and how
- * `smoke:render` judges the events the shelf asked for
+ * What the gates share about analytics, as pure functions: what a gate's build
+ * child may inherit, and how the events the shelf asked for are judged
  * (docs/spec/optional-plausible.md S5, S10, C8).
  *
- * The browser steps stay in `smoke-render.ts`; this holds the judgement, so a
- * wrong call count is a failure a test has watched.
+ * ⚠️ **The browser half left with the smoke gate (#618, ADR-0171)**: the judgement
+ * of the events and of the foreign requests has no caller now, and stays as the
+ * spec for it says, with the tests that have watched it fail.
  */
 import { PRODUCTION_HOST, type Attempt } from '../../packages/site/src/analytics/events.ts';
 import { SWITCH_VARIABLE } from '../../packages/site/src/analytics/switch.ts';
@@ -19,8 +19,8 @@ export type { Attempt };
  * `runShell` inherits `process.env`, so a `PUBLIC_PLAUSIBLE_DOMAIN` set where
  * `deploy:site` runs would otherwise reach a gate's build and turn it into an
  * on build. The gates check the shape they were asked to, so the variable is
- * removed, and `smoke:render --analytics-on` is the one way in: it sets the
- * variable to the production host for its own child and nothing else (S5, X6).
+ * removed, and `analyticsOn` is the one way in: it sets the variable to the
+ * production host for the child it is given and nothing else (S5, X6).
  */
 export function gateBuildEnv(parent: NodeJS.ProcessEnv, analyticsOn = false): NodeJS.ProcessEnv {
   const { [SWITCH_VARIABLE]: _removed, ...rest } = parent;

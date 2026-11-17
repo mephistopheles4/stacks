@@ -13,7 +13,7 @@ import { mountTuningPanel, tuningPanel, type TuningHandle } from './tuning-panel
  * a clamp back into the bound object and fires `change` for it, `refresh()` fires
  * `change` for any value that differs from the one the control last showed, and
  * a range that narrows leaves the next refresh a float step off. A real pane is
- * checked by `pnpm smoke:render`; this file is the part Node can run.
+ * not checked in CI; this file is the part Node can run.
  */
 
 const EPSILON_STEP = 2 ** -50;

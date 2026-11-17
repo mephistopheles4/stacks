@@ -153,7 +153,7 @@ export class ContextRefused extends Error {
  * throws, and G60's `refused` case allows that line and no other. Every other
  * throw is logged here with the original error, stack and all, because the
  * page's `catch` used to swallow it whole — the woodwork join's message, written
- * to be loud, reached nobody, and `pnpm smoke:render` said *"Page errors:
+ * to be loud, reached nobody, and the render check said *"Page errors:
  * (none captured)"*.
  */
 export function mountFailed(

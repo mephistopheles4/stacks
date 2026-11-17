@@ -83,9 +83,7 @@ const PASSES = [
   'athanor run -- pnpm vitest run gates/commands.test.ts',
   'athanor run -- pnpm test',
   "athanor run -- sh -c 'pnpm test'",
-  'athanor run -- pnpm exec stryker run --incremental --mutate scripts/lib/settle.ts',
-  'pnpm smoke:render',
-  'pnpm run smoke:render',
+  'athanor run -- pnpm exec stryker run --incremental --mutate scripts/lib/serve-dist.ts',
   'node scripts/phone-check.ts',
   'pnpm exec tsx scripts/phone-check.ts',
   'pnpm gate:public',
@@ -168,9 +166,9 @@ const FULL_MUTATION = [
 
 // C12: a scoped mutation run, guarded like any other host run.
 const SCOPED_MUTATION = [
-  'pnpm mutation:run --mutate scripts/lib/settle.ts',
-  'pnpm exec stryker run -m scripts/lib/settle.ts',
-  'npx stryker run --mutate=scripts/lib/settle.ts',
+  'pnpm mutation:run --mutate scripts/lib/serve-dist.ts',
+  'pnpm exec stryker run -m scripts/lib/serve-dist.ts',
+  'npx stryker run --mutate=scripts/lib/serve-dist.ts',
   'pnpm exec stryker run --incremental --incrementalFile artifacts/stryker/incremental.json',
 ];
 
@@ -286,7 +284,7 @@ describe('C6: the refusal is fixed text', () => {
       '125',
       '137',
       'own words',
-      'smoke:render',
+      'phone check',
     ]) {
       expect(REFUSAL).toContain(part);
     }

@@ -16,8 +16,8 @@
  * frame beside every cover. G15's own docblock records what that arithmetic did
  * the last time nobody was doing it: 8.4 MB of covers decoded to 314 MB, the
  * renderer was killed on a phone, and the reload hit a browser that then refused
- * to hand out a context at all. `smoke:render` screenshots a desktop context
- * with gigabytes of headroom and would see none of it.
+ * to hand out a context at all. a desktop render has
+ * gigabytes of headroom and would see none of it.
  *
  * ## Two caps, because two different things go wrong
  *

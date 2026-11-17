@@ -3,9 +3,9 @@
  * shadow map, and in how many draws a frame.
  *
  * Pure. The page half is `sampling-hook.ts`, which counts what WebGL was asked
- * to do and hands back a `SamplingSnapshot`; `pnpm smoke:render` turns that
+ * to do and hands back a `SamplingSnapshot`; a page run turns that
  * into a `SamplingRun` and asks this file for a verdict. `scripts/phone-check.ts`
- * asks the same questions of a run on a phone, so a phone report and the CI gate
+ * asks the same questions of a run on a phone, so a phone report and the old CI gate
  * print the same numbers.
  *
  * ## Why these numbers

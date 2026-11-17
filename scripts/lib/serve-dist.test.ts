@@ -4,8 +4,8 @@
  * An ordinary unit test, not a gate — it takes no `docs/gates.md` row, for the
  * reason `vitest.config.ts` records about `scripts/`. Only the pure half is
  * tested: the server itself would need a socket, and G21 (`no-live-network`)
- * guards `fetch` for the whole suite. `pnpm smoke:render` exercises the rest on
- * every run, since nothing loads without it.
+ * guards `fetch` for the whole suite. `pnpm check:devices` and the fixture preview exercise the
+ * rest, since nothing loads without it.
  *
  * ⚠️ **Segments, never a joined path**, so every expectation below is a literal
  * that means the same thing on Windows and on a CI runner — the host-dependent

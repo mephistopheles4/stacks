@@ -72,7 +72,7 @@ explain.
 
 ## Checks
 
-- [ ] `pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render` green locally
+- [ ] `pnpm test && pnpm build && pnpm gate:public` green locally
 - [ ] No third-party copyrighted material added — no real covers, blurbs or note text
 - [ ] Any allowlist entry I added in `gates/` is justified in a comment beside it
 

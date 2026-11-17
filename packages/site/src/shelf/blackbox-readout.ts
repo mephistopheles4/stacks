@@ -14,7 +14,7 @@
  *
  * The text is the port's `text()` whole, live part and record part, the same
  * string `window.__blackbox.text()` returns. A Tweakpane read-only multiline
- * monitor draws into a `<textarea>`, so `pnpm smoke:render` compares its `.value`
+ * monitor draws into a `<textarea>`, so a check compares its `.value`
  * with the hook rather than reading `textContent`.
  */
 import type { DiagnosticsPort } from './diagnostics.ts';

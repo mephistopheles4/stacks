@@ -2,7 +2,7 @@
  * The shadow a held book's spread wears where its two pages meet.
  *
  * The spread is flat on purpose: spec §3.6 lays both pages in one plane square
- * to the camera, and `smoke-render.ts` measures it. Two coplanar sheets under
+ * to the camera. Two coplanar sheets under
  * one material light identically, so the fold between them vanished and the
  * open book read as one tan board. A real page curves down into the gutter and
  * falls into its own shadow there; this bakes that shadow in, as a colour the

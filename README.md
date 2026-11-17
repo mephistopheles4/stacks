@@ -138,7 +138,7 @@ requests are honoured.
 | `pnpm build` | typecheck + static site build |
 | `pnpm worktree <branch>` | a second checkout, cut from `origin/main` and installed |
 | `pnpm fixtures:50` | regenerate the 50-book fixture vault |
-| `pnpm smoke:render` | headless shelf screenshot gate |
+| `pnpm check:devices` | the fixture build on three real devices in BrowserStack (CI runs it after merge) |
 | `pnpm gate:public` | proves the public build leaks no note text |
 | `pnpm deploy:site` | gates, then build from the real vault, then publish |
 
@@ -163,16 +163,19 @@ in both directions so that coverage is a checked fact rather than a claim.
 ## Contributing
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The short
-version: `pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render` is
+version: `pnpm test && pnpm build && pnpm gate:public` is
 the contract, and a defect worth fixing is usually worth a gate that goes red.
 Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
-
-This project is tested with BrowserStack.
 
 The repo also carries optional configuration for a set of
 [engineering skills](https://github.com/mattpocock/skills) under
 [`docs/agents/`](docs/agents/). **They are entirely optional** — nothing in the
 workflow requires them, and every gate passes without a single one installed.
+
+## Tested with BrowserStack
+
+This project is tested with [BrowserStack](https://www.browserstack.com/). Each
+merge to `main` is tested on three real devices, unless a newer merge cancels its run.
 
 ## Documentation
 

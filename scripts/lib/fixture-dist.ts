@@ -69,7 +69,7 @@ export function judgeFixtureLibrary(library: unknown): Judged {
 /**
  * Builds the 50-book fixture site and copies it to `scratch`, replacing what was there.
  *
- * It stages the fixture into `packages/site/public/` as `gate:public` and `smoke:render` do, so
+ * It stages the fixture into `packages/site/public/` as `gate:public` does, so
  * a real `pnpm deploy:site` after it must run its own build last, which it always does
  * (docs/commands.md). The copy is what is judged, served and uploaded: nothing here reads
  * `packages/site/dist` after the copy, and nothing outside `artifacts/` is written.
