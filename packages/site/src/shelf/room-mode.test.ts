@@ -10,12 +10,14 @@ import {
   readRemembered,
   remember,
   roomFolder,
+  roomEntry,
   roomGlbUrl,
   roomIdFrom,
   ROOM_KEY,
   ROOMS,
   roomsListed,
   showsPicker,
+  startingRoom,
   type Catalogue,
   type RoomId,
 } from './room-mode.ts';
@@ -162,6 +164,12 @@ describe('which room a page loads (S15.3)', () => {
     expect(roomIdFrom(link, 'reading-corner', TEST_ROOMS)).toBe('test-room');
   });
 
+  it('opens a debug link with a diff and no room id against the default room, not the remembered one', () => {
+    const link = `?debug=${encodeURIComponent('{"lighting":{"key":{"intensity":2}}}')}`;
+    expect(roomIdFrom(link, 'test-room', TEST_ROOMS)).toBe(DEFAULT_ROOM_ID);
+    expect(roomIdFrom('?debug', 'test-room', TEST_ROOMS)).toBe('test-room');
+  });
+
   it('loads the default room for an id that is not on the list, wherever it came from', () => {
     for (const bad of ['attic', '', '../../etc', 'constructor', '__proto__', 'toString']) {
       expect(roomIdFrom(`?room=${encodeURIComponent(bad)}`, 'test-room', TEST_ROOMS)).toBe(
@@ -183,7 +191,7 @@ describe('which room a page loads (S15.3)', () => {
   it('serves only the chosen room: its GLB under its own folder', () => {
     const id = roomIdFrom('?room=test-room', undefined, TEST_ROOMS);
     expect(roomFolder(id)).toBe('/rooms/test-room/');
-    expect(roomGlbUrl(id, TEST_ROOMS)).toBe('/rooms/test-room/test.glb');
+    expect(roomGlbUrl(id, roomEntry(id, TEST_ROOMS))).toBe('/rooms/test-room/test.glb');
   });
 });
 
@@ -205,7 +213,7 @@ describe('the remembered room (S15.3)', () => {
   it('survives a store that is missing or that throws, and loads the default room', () => {
     expect(readRemembered(undefined, TEST_ROOMS)).toBeUndefined();
     expect(() => {
-      remember(undefined, 'test-room');
+      remember(undefined, 'test-room', TEST_ROOMS);
     }).not.toThrow();
     const blocked = {
       getItem: () => {
@@ -220,7 +228,7 @@ describe('the remembered room (S15.3)', () => {
     };
     expect(readRemembered(blocked, TEST_ROOMS)).toBeUndefined();
     expect(() => {
-      remember(blocked, 'test-room');
+      remember(blocked, 'test-room', TEST_ROOMS);
     }).not.toThrow();
   });
 
@@ -251,8 +259,45 @@ describe('addressForRoom (the picker and the debug pane)', () => {
     expect(new URLSearchParams(address).get('room')).toBe('test-room');
   });
 
+  it('reads the last non-empty debug value, as the link reader does', () => {
+    const json = encodeURIComponent('{"books":{"b":2},"room":"x"}');
+    const address = addressForRoom(`?debug=${json}&debug`, TEST);
+    expect(JSON.parse(new URLSearchParams(address).get('debug') ?? '')).toEqual({
+      books: { b: 2 },
+    });
+  });
+
   it('leaves a bare ?debug bare when the link held only the room', () => {
     const address = addressForRoom(`?debug=${encodeURIComponent('{"room":"x"}')}`, TEST);
     expect(address).toBe('?debug&room=test-room');
+  });
+});
+
+describe('the room a page opens with (C15)', () => {
+  it('keeps a pick across a reload: the bare address reads it back', () => {
+    const store = memoryStore();
+    remember(store, 'test-room', TEST_ROOMS);
+    expect(startingRoom('', store, TEST_ROOMS)).toBe('test-room');
+    expect(startingRoom('?debug', store, TEST_ROOMS)).toBe('test-room');
+  });
+
+  it('writes nothing to a store, whatever the address or the stored value says', () => {
+    const store = memoryStore({ [ROOM_KEY]: 'attic' });
+    expect(startingRoom('?room=attic', store, TEST_ROOMS)).toBe(DEFAULT_ROOM_ID);
+    expect(startingRoom('?room=test-room', store, TEST_ROOMS)).toBe('test-room');
+    expect(startingRoom('', store, TEST_ROOMS)).toBe(DEFAULT_ROOM_ID);
+    expect(store.writes).toEqual([]);
+  });
+
+  it('is the default room with no store, and with one that throws', () => {
+    const blocked = {
+      getItem: () => {
+        throw new Error('SecurityError');
+      },
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    };
+    expect(startingRoom('', undefined, TEST_ROOMS)).toBe(DEFAULT_ROOM_ID);
+    expect(startingRoom('', blocked, TEST_ROOMS)).toBe(DEFAULT_ROOM_ID);
   });
 });

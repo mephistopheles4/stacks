@@ -19,8 +19,9 @@
    decides**: `?room=attic` is the default room, not whatever the browser remembers.
 3. **The choice is remembered in `localStorage`**, under one key (`stacks.room`) holding the id and
    nothing else, read and written inside `try`/`catch`. A pick writes it; opening a `?room=` link
-   does not. A blocked or full store means the pick lasts for the load it was made on. Nothing
-   leaves the browser.
+   does not. A blocked or full store means the pick lasts for the load it was made on. The stored
+   value never leaves the browser; the address a pick opens carries the id to the host, as the room's
+   file addresses do, and it is an id from a public list.
 4. **The picker is a labelled `<select>` over the bottom edge of the page** and is **not built while
    `ROOMS` holds one room**: the page then has no picker, hidden or otherwise. A pick opens the page
    again at the address that asks for it, as a mode switch does, so the room not chosen is never
@@ -29,8 +30,9 @@
    lighting and scene come from its GLB's empties and its entry, and are what the panel shows, what
    "reset to shipped defaults" returns to, and what the written `lighting` and `scene` are a
    difference from. A link that names a room lays its differences over the room once it is dressed.
-   **A link with no room id was made before themes**: its lighting and scene meant the shelf's, so a
-   room keeps its own and the pane says so in one line. `?shelf` and the plain shelf a failed room
+   **A link that does not name this room** (no room id, so made before themes; another room's id; or
+   one not on the list) was made against other defaults: the room keeps its own lighting and scene
+   and the pane says so in one line. `?shelf` and the plain shelf a failed room
    ends on read such a link as they always did. The pane also reaches every room, a button each.
 6. **The machinery is proved with a test room that is never on the list.** `ROOMS` is the page's own
    catalogue; the functions take a `Catalogue`, and the tests hand in one with a second room. A test

@@ -82,6 +82,9 @@ export function showsPicker(catalogue: Catalogue = ROOMS): boolean {
  * **The first source that says anything decides**, so a source that names something that is not a
  * room means the default room and does not fall through to a later one: an address that asks for
  * `attic` gets the default, not whatever the browser remembers. An empty `?room=` is that too.
+ * **A `?debug=<json>` link that carries a diff and no room id opens the default room** (S15.4): it was
+ * made against a room's defaults, so a room the visitor happened to pick last is not its room. A bare
+ * `?debug`, which only switches the instruments on, still takes the remembered room.
  */
 export function roomIdFrom(
   search: string,
@@ -89,7 +92,8 @@ export function roomIdFrom(
   catalogue: Catalogue = ROOMS,
 ): RoomId {
   const params = new URLSearchParams(search);
-  const asked = params.get('room') ?? debugRoom(params) ?? remembered;
+  const linked = params.getAll('debug').some((value) => value !== '');
+  const asked = params.get('room') ?? debugRoom(params) ?? (linked ? undefined : remembered);
   return isRoomId(asked, catalogue) ? asked : DEFAULT_ROOM_ID;
 }
 
@@ -98,9 +102,22 @@ export function roomFolder(id: RoomId): string {
   return `/rooms/${id}/`;
 }
 
-/** The one file a page fetches first for a room: its GLB. */
-export function roomGlbUrl(id: RoomId, catalogue: Catalogue = ROOMS): string {
-  return roomFolder(id) + roomEntry(id, catalogue).glb;
+/** The one file a page fetches first for a room: its GLB. The loader builds its address here and nowhere else. */
+export function roomGlbUrl(id: RoomId, entry: RoomEntry): string {
+  return roomFolder(id) + entry.glb;
+}
+
+/**
+ * The room a page opens with, from the address and from what the browser remembers: the one place the
+ * page puts the two together (spec S15.3), so a reload that keeps a pick, and a blocked or unusable
+ * store that means the default room, are rules a test holds. It reads storage and never writes it.
+ */
+export function startingRoom(
+  search: string,
+  store: StoreLike | undefined,
+  catalogue: Catalogue = ROOMS,
+): RoomId {
+  return roomIdFrom(search, readRemembered(store, catalogue), catalogue);
 }
 
 /** The one key the page keeps in `localStorage`, and what it holds: a room id and nothing else. */
@@ -175,7 +192,14 @@ export function addressFor(search: string, mode: PageMode): string {
  */
 export function addressForRoom(search: string, id: RoomId): string {
   const params = new URLSearchParams(search);
-  if (params.has('debug')) params.set('debug', withoutRoomKeys(params.getAll('debug').at(-1)));
+  if (params.has('debug')) {
+    // The last non-empty value, as `debugRoom` and `readDiff` read it.
+    const value = params
+      .getAll('debug')
+      .filter((v) => v !== '')
+      .at(-1);
+    params.set('debug', withoutRoomKeys(value));
+  }
   params.set('room', id);
   return `?${params.toString().replace(/=(?=&|$)/g, '')}`;
 }

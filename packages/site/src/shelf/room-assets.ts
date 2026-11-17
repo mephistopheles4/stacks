@@ -7,7 +7,7 @@ import { ktx2Textures } from './room-ktx2.ts';
 import { addCandleFlames } from './room-flames.ts';
 import { createSettler, type LoadState } from './room-loading.ts';
 import type { PreparedRoom, RoomSource } from './room-load.ts';
-import { roomFolder, type RoomEntry, type RoomId } from './room-mode.ts';
+import { roomFolder, roomGlbUrl, type RoomEntry, type RoomId } from './room-mode.ts';
 
 /**
  * The half of a room's load that touches three and the network (#602, spec S3, S4, S7): the GLB, its
@@ -62,7 +62,7 @@ async function prepare(
 ): Promise<LoadedRoom> {
   const { id, entry, renderer, search, warn } = options;
   const folder = roomFolder(id);
-  const url = folder + entry.glb;
+  const url = roomGlbUrl(id, entry);
   const buffer = await download(url, (loaded, total) => {
     report({ glbLoaded: loaded, glbTotal: total });
   });

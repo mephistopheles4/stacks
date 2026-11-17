@@ -350,12 +350,6 @@ per-member figure is drawn off — no default, and never in the settings diff (`
 renderer, the debug panel, or `shelf-settings.ts`** — it carries why each exists,
 what only they can see, and the rule that a control must not lie.
 
-**`?room=<id>` is not an inspector but a visitor's choice** ([ADR-0180](docs/adr/0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md)):
-a theme is a room, picked from a visible picker that is not built while the fixed
-list in `room-mode.ts` holds one room. An id from the address, from a
-`?debug=<json>` link or from `localStorage` is checked against that list before it
-reaches a path, and one that is not on it loads the default room and writes nothing.
-
 ## Decisions
 
 Every choice this project has already made, one file each, lives in

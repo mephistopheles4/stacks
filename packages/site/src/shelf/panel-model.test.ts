@@ -511,9 +511,14 @@ describe('a room is a theme: its lighting and scene are the panel defaults (spec
   };
   const inRoom = () => ({ ...fakeHandle(NO_REPORT, roomSettings), roomView });
 
-  it('shows the active room values in the lighting and scene controls', () => {
-    const model = createPanelModel({ handle: inRoom(), canRebuild: true });
-    expect(rowOf(model.view(), 'key light/intensity').value).toBe(3.25);
+  it('hands the address and the reset the room, which only roomView can supply', () => {
+    const handle = { ...fakeHandle(), roomView };
+    const model = createPanelModel({ handle, canRebuild: true });
+    // the shelf's own lighting is what stands; the room's is reached only through roomView
+    expect(rowOf(model.view(), 'key light/intensity').value).toBe(
+      DEFAULT_SETTINGS.lighting.key.intensity,
+    );
+    expect(rowOf(model.reset(), 'key light/intensity').value).toBe(3.25);
   });
 
   it('resets lighting and scene to the room, and every other group to the shelf', () => {
