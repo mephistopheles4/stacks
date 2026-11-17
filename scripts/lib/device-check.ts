@@ -74,13 +74,14 @@ var until = async function (test, ms) {
  * `{ error }` with one of this file's sentences, or `{ x, y, title, href }`.
  */
 export const READY_AND_FIND = `${UNTIL}
+// The tap goes where the book is plus the calibrated shift, and that point has to be in the viewport.
+// Read here: inside the async function below, \`arguments\` would be that function's own, always empty.
+var shiftX = arguments[0];
+var shiftY = arguments[1];
 (async function () {
   var ready = await until(function () { return window.__shelf && window.__shelf.ready === true; }, ${String(WAIT_CEILING_MS)});
   if (!ready) return { error: 'the shelf never reported ready' };
   var shelf = window.__shelf;
-  // The tap goes where the book is plus the calibrated shift, and that point has to be in the viewport.
-  var shiftX = arguments[0];
-  var shiftY = arguments[1];
   var library = await (await fetch('/library.json', { cache: 'no-store' })).json();
   // The loading screen fades out over the canvas after ready, and a tap on it picks nothing up:
   // a book counts as in view once the canvas is the element under its point.
