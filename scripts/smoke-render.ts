@@ -33,6 +33,12 @@ import {
   judgeAnalyticsCalls,
   type Attempt,
 } from './lib/analytics-gate.ts';
+import {
+  abandonedLayoutFailures,
+  abandonedPickupFailures,
+  withOverflowingAbandoned,
+  type LibraryRecord,
+} from './lib/abandoned-gate.ts';
 import { LONG_BOOK_PARAGRAPHS, LONG_BOOK_TITLE } from './lib/fixture-books.ts';
 import { lightingOf, litFailures, type Frame, type Lighting } from './lib/large-library-lit.ts';
 import {
@@ -120,11 +126,15 @@ const VIEWPORT = { width: 1440, height: 900 };
  * the right thing when the fixture generator changes. Wishlist books are not
  * shelved — you do not own them yet.
  */
-function expectedBookCount(path: string): number {
+function expectedBookCount(path: string, inRoom = false): number {
   const library = JSON.parse(readFileSync(path, 'utf8')) as {
     books: { status: string }[];
   };
-  return library.books.filter((book) => book.status !== 'wishlist').length;
+  // In the room the abandoned books stand on a bookcase of their own (#604), so the main bookcase's
+  // count is the library's shelved books less them. `?shelf` keeps them on it.
+  return library.books.filter(
+    (book) => book.status !== 'wishlist' && !(inRoom && book.status === 'abandoned'),
+  ).length;
 }
 
 /**
@@ -304,6 +314,9 @@ async function main(): Promise<void> {
       const flatLayer = await timed('G35 flat layer (#599)', () => checkFlatLayer(browser, origin));
       const room = await timed('room page (#602)', () => checkRoom(browser, origin));
       const stacks = await timed('G35 floor stacks (#603)', () => checkStacks(browser, origin));
+      const abandoned = await timed('G35 abandoned bookcase (#604)', () =>
+        checkAbandoned(browser, origin),
+      );
       const controls = await timed('G35 closed book controls', () =>
         checkClosedControls(browser, origin),
       );
@@ -354,6 +367,7 @@ async function main(): Promise<void> {
         flatLayer,
         room,
         stacks,
+        abandoned,
         controls,
         drawerCells,
         overlap,
@@ -2377,6 +2391,141 @@ async function checkStacks(browser: Browser, origin: string): Promise<LinesAndFa
 }
 
 /**
+ * G35's abandoned-bookcase cells (#604, claims C10 and C11, spec S12 and S11.3), on a library given
+ * a hundred more abandoned books than two rows hold, the most recent of them marked `face_out`: the
+ * page's own `library.json` is answered by that library, so the fixture vault the rest of the run
+ * reads is left as it is.
+ *
+ * Desktop reads the layout: the room draws the most recent books spine out, the rest are not drawn,
+ * the room's main bookcase has none of them and `?shelf` has every one. Both viewports then pick one
+ * book up for real. The judgements are `lib/abandoned-gate.ts`'s, every clause planted red there.
+ */
+async function checkAbandoned(browser: Browser, origin: string): Promise<LinesAndFailures> {
+  const lines: string[] = [];
+  const failures: string[] = [];
+  const base = (await (await fetch(`${origin}/library.json`)).json()) as {
+    books: LibraryRecord[];
+  };
+  const template = base.books.find((b) => b.status === 'read' && typeof b.cover === 'string');
+  if (template === undefined) {
+    return { lines, failures: ['the fixture has no covered book to copy'] };
+  }
+  const overflow = withOverflowingAbandoned(base, template);
+  const body = JSON.stringify(overflow.library);
+  const shelved = overflow.library.books.filter((b) => b.status !== 'wishlist');
+
+  /** A page of its own, whose library is the overflowing one. */
+  const open = async (
+    size: { width: number; height: number },
+    path: string,
+  ): Promise<{ page: Page; close: () => Promise<void> }> => {
+    const context = await browser.createBrowserContext();
+    const page = await context.newPage();
+    await page.setViewport(size);
+    page.on('pageerror', (error: unknown) => {
+      failures.push(
+        `abandoned page error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname === '/library.json') {
+        void request.respond({ status: 200, contentType: 'application/json', body });
+      } else {
+        void request.continue();
+      }
+    });
+    await visit(page, origin, path);
+    return { page, close: () => context.close() };
+  };
+
+  const room = await open(DESKTOP, '/');
+  try {
+    const seen = JSON.parse(
+      (await room.page.evaluate(
+        'JSON.stringify({ ...window.__shelf.abandoned, bookCount: window.__shelf.bookCount })',
+      )) as string,
+    ) as {
+      books: { id: string; faceOut: boolean }[];
+      left: number;
+      rows: number;
+      bookCount: number;
+    };
+    const plain = await open(DESKTOP, '/?shelf');
+    let plainShelf = 0;
+    try {
+      plainShelf = Number(await plain.page.evaluate('window.__shelf.bookCount'));
+    } finally {
+      await plain.close();
+    }
+    const read = {
+      total: overflow.library.books.filter((b) => b.status === 'abandoned').length,
+      drawn: seen.books.map((b) => b.id),
+      left: seen.left,
+      rows: seen.rows,
+      drawnFaceOut: seen.books.filter((b) => b.faceOut).length,
+      newest: overflow.newest,
+      byRecency: overflow.byRecency,
+      roomShelf: seen.bookCount,
+      expectedRoomShelf: shelved.filter((b) => b.status !== 'abandoned').length,
+      plainShelf,
+      expectedPlainShelf: shelved.length,
+    };
+    failures.push(...abandonedLayoutFailures(read));
+    lines.push(
+      `${String(read.drawn.length)} of ${String(read.total)} abandoned books on the bookcase, ` +
+        `${String(read.rows)} rows, ${String(read.drawnFaceOut)} cover-forward, ` +
+        `${String(read.left)} not drawn; ?shelf holds ${String(read.plainShelf)}`,
+    );
+  } finally {
+    await room.close();
+  }
+
+  for (const size of [DESKTOP, PHONE]) {
+    const { page, close } = await open(size, '/');
+    try {
+      const viewport = `${String(size.width)}x${String(size.height)}`;
+      const href = (await page.evaluate('location.href')) as string;
+      const ids = (await page.evaluate(
+        'window.__shelf.abandoned.books.map((b) => b.id)',
+      )) as string[];
+      // The first abandoned book's index follows the shelf's and the stacks', as `projectBook` counts.
+      const bookAt = `(() => {
+        const p = window.__shelf.projectBook(window.__shelf.bookCount + window.__shelf.stacked);
+        if (!p || p.x < 24 || p.x > innerWidth - 24 || p.y < 80 || p.y > innerHeight - 80) return undefined;
+        if (document.elementFromPoint(p.x, p.y) !== document.getElementById('shelf-canvas')) return undefined;
+        return ${JSON.stringify(ids)}.includes(window.__shelf.bookAt(p.x, p.y)) ? { x: p.x, y: p.y } : undefined;
+      })()`;
+      const at = ids.length === 0 ? undefined : await orbitUntil(page, bookAt);
+      const steps =
+        at === undefined
+          ? undefined
+          : await pickupAt(page, at, href, 'the abandoned-bookcase book');
+      failures.push(
+        ...abandonedPickupFailures({
+          viewport,
+          drawn: ids.length,
+          picked: steps?.picked ?? false,
+          arrivedClosed: steps?.arrivedClosed ?? false,
+          turned: steps?.turned ?? false,
+          opened: steps?.opened ?? false,
+          pagesShown: steps?.pagesShown ?? false,
+          closedAgain: steps?.closedAgain ?? false,
+          wentBack: steps?.wentBack ?? false,
+          hrefUnchanged: steps?.hrefUnchanged ?? false,
+        }),
+      );
+      lines.push(
+        `${viewport}: ${steps?.picked === true ? 'one abandoned book picked up, turned, opened and put back' : 'none picked up'}`,
+      );
+    } finally {
+      await close();
+    }
+  }
+  return { lines, failures };
+}
+
+/**
  * The point `expression` returns once a visitor can reach it: tried where the camera stands, then
  * after real drags on the canvas, left first and then right, as a visitor turns the view. The stacks
  * stand left of the default view, so on a phone they begin off screen. A drag starts high on the
@@ -2497,16 +2646,53 @@ async function readStacks(page: Page, viewport: string): Promise<StackRead> {
   })()`;
   const book = await orbitUntil(page, bookAt);
   if (book === undefined) return read;
+  return { ...read, ...(await pickupAt(page, book, href, 'the stack book')) };
+}
+
+/** What a real pickup from a point on the canvas did, step by step: `lib/pickup-gate.ts`'s `StackRead`, less the base. */
+interface PickupSteps {
+  picked: boolean;
+  arrivedClosed: boolean;
+  turned: boolean;
+  opened: boolean;
+  pagesShown: boolean;
+  closedAgain: boolean;
+  wentBack: boolean;
+  hrefUnchanged: boolean;
+}
+
+/**
+ * Clicks a book at `book` for real and takes it through the whole of a pickup, as a visitor would: it
+ * arrives closed, a drag turns it, the open control opens it, the close control closes it and the
+ * put-back sends it home with the address unchanged. `what` names the book in a timeout's message.
+ * A step that did not happen leaves it and every later one false.
+ */
+async function pickupAt(
+  page: Page,
+  book: { x: number; y: number },
+  href: string,
+  what: string,
+): Promise<PickupSteps> {
+  const steps: PickupSteps = {
+    picked: false,
+    arrivedClosed: false,
+    turned: false,
+    opened: false,
+    pagesShown: false,
+    closedAgain: false,
+    wentBack: false,
+    hrefUnchanged: false,
+  };
   await page.mouse.click(Math.round(book.x), Math.round(book.y));
   // As long as the other cells wait for a pickup: the runner draws at a few frames a second, and the
   // pickup is stepped from the shelf's own frame, so 4 s was one slow run short (CI, #616).
-  read.picked = await searchFor(page, HELD, 12_000);
-  if (!read.picked) return read;
+  steps.picked = await searchFor(page, HELD, 12_000);
+  if (!steps.picked) return steps;
 
-  read.arrivedClosed = await until(
+  steps.arrivedClosed = await until(
     page,
     `${CLOSED_AT_REST} && Math.abs(window.__shelf.held().boardAngle) <= ${String(CLOSED_TOLERANCE_DEG)}`,
-    'the stack book to come to rest held, closed',
+    `${what} to come to rest held, closed`,
   );
   // A real drag on the canvas turns it, as `turnOne` does for a shelf book.
   const box = (await page.evaluate('({ w: innerWidth, h: innerHeight })')) as {
@@ -2518,18 +2704,18 @@ async function readStacks(page: Page, viewport: string): Promise<StackRead> {
   await page.mouse.down();
   await page.mouse.move(box.w / 2 + 120, box.h / 2, { steps: 8 });
   await page.mouse.up();
-  read.turned = Math.abs((await turnOf(page)).yaw - before.yaw) > 1;
+  steps.turned = Math.abs((await turnOf(page)).yaw - before.yaw) > 1;
   await page.keyboard.press('Home');
 
-  read.opened = await openBook(page, 'the stack book');
-  read.pagesShown = (await page.evaluate(
+  steps.opened = await openBook(page, what);
+  steps.pagesShown = (await page.evaluate(
     `(() => { const pages = [...document.querySelectorAll('.held-page')]; return pages.length === 2 && pages.every((p) => p.style.visibility === 'visible'); })()`,
   )) as boolean;
-  read.closedAgain = (await closeBy(page, CLOSE_CONTROL)).atClosedRest;
+  steps.closedAgain = (await closeBy(page, CLOSE_CONTROL)).atClosedRest;
   await putBackAndSettle(page);
-  read.wentBack = (await page.evaluate(NOTHING_HELD)) as boolean;
-  read.hrefUnchanged = ((await page.evaluate('location.href')) as string) === href;
-  return read;
+  steps.wentBack = (await page.evaluate(NOTHING_HELD)) as boolean;
+  steps.hrefUnchanged = ((await page.evaluate('location.href')) as string) === href;
+  return steps;
 }
 
 /** The held book, closed at rest, picked up through the shelf's hook. */
@@ -4706,7 +4892,7 @@ async function checkShadowReaders(
       page.role === 'gate' ? judgeSampling(run) : [...judgeControl(run), ...errors];
     if (page.role === 'gate') {
       found.push(...errors);
-      const expected = expectedBookCount(page.library);
+      const expected = expectedBookCount(page.library, asksForRoom(page.url(main, large)));
       if (read.bookCount !== expected) {
         found.push(
           `(7) ${String(read.bookCount)} books on the shelf, where the library has ${String(expected)}`,
@@ -5810,6 +5996,7 @@ function report(result: {
   flatLayer: LinesAndFailures;
   room: LinesAndFailures;
   stacks: LinesAndFailures;
+  abandoned: LinesAndFailures;
   controls: LinesAndFailures;
   drawerCells: DrawerChecked;
   overlap: LinesAndFailures;
@@ -5840,6 +6027,7 @@ function report(result: {
     flatLayer,
     room,
     stacks,
+    abandoned,
     controls,
     drawerCells,
     overlap,
@@ -5962,6 +6150,7 @@ function report(result: {
   console.log('room page (#602)');
   for (const line of room.lines) console.log(`  ${line}`);
   for (const line of stacks.lines) console.log(`  ${line}`);
+  for (const line of abandoned.lines) console.log(`  ${line}`);
   console.log('the closed book and its controls (#531)');
   for (const line of controls.lines) console.log(`  ${line}`);
   console.log('the Ask drawer over a held book (#531)');
@@ -6043,6 +6232,7 @@ function report(result: {
     ...flatLayer.failures,
     ...room.failures,
     ...stacks.failures,
+    ...abandoned.failures,
     ...controls.failures,
     ...drawerCells.failures,
     ...notices.failures,

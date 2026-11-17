@@ -38,6 +38,23 @@ export function schedule(motion: PickupMotion): Schedule {
   };
 }
 
+/**
+ * How far a book has come out of its slot at slide progress `s`: up by `lift`, and forward by
+ * `slideOut` along the front of the bookcase it stands in, `facing` radians about y from +z (#604).
+ *
+ * The main bookcase faces +z, so its books slide along +z and `facing` is 0. The room's abandoned
+ * bookcase is turned to face the room: a slide along +z there would run sideways along its shelf and
+ * into the next book.
+ */
+export function slideOffset(
+  motion: PickupMotion,
+  s: number,
+  facing: number,
+): readonly [x: number, y: number, z: number] {
+  const out = motion.slideOut * s;
+  return [out * Math.sin(facing), motion.lift * s, out * Math.cos(facing)];
+}
+
 /** The open spread's resting angle, fixed rather than tuned (spec §3.6). */
 export const OPEN_DEGREES = 180;
 
