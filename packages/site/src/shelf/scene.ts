@@ -706,8 +706,10 @@ function assembleShelf(
   const lookup: BookLookup = new Map();
   // The seam: all of the arithmetic happens first, in a module with no Three.js
   // in it, and the scene graph is built from what it returned.
-  const placements = placeShelf(rows);
-  const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings);
+  // `rowCount` and not the default: in a room the case has more rows than the books fill, and the books
+  // stand on the shelves of the case that is built, the top row on its top shelf.
+  const placements = placeShelf(rows, rowCount);
+  const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings, rowCount);
   if (painters !== undefined) own(painters);
 
   const picker = own(
@@ -1332,6 +1334,7 @@ function assembleShelf(
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);
       observer.disconnect();
       picker.dispose();
+      unwalk();
       controls.dispose();
       painters?.dispose();
       abandonedCase?.painters?.dispose();

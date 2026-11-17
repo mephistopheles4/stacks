@@ -76,6 +76,11 @@ export function createRoomOrbit(
     if (walked) {
       settle();
     } else {
+      // A pointer handler may have swung the camera out of the box since the last frame's pull-in
+      // (`OrbitControls` updates inside each handler), and a walk leaves a camera outside the box where
+      // it is: bring it in the way `orbit` would have, before the first step.
+      offset.subVectors(camera.position, target).setLength(wished).add(target);
+      camera.position.set(...pullIn(box, at(target), at(offset), controls.minDistance));
       walked = true;
       radius = Math.min(radius, controls.minDistance);
     }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { describe, expect, it } from 'vitest';
-import { type Box, bookcaseBox } from './room-data.ts';
+import { type Box, bookcaseBox, contains } from './room-data.ts';
 import { createRoomOrbit } from './room-orbit.ts';
 import { BOOKCASE_STANDOFF, WALK_PER_NOTCH, WALK_PER_PINCH_PIXEL } from './room-walk.ts';
 
@@ -220,6 +220,23 @@ describe('the camera in a room (#620, #626)', () => {
     r.send('wheel', { deltaY: 100, deltaMode: 0 });
     r.frames(80);
     expect(r.view.position.distanceTo(atFront)).toBeCloseTo(WALK_PER_NOTCH, 6);
+  });
+
+  it('brings a camera a pointer handler swung out of the box back in before its first walk step', () => {
+    const r = room([1, 5, 12], [1, 5, 1]);
+    r.frames(2);
+    const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
+    r.send('pointerdown', { ...mouse, clientX: 100, clientY: 400 });
+    // OrbitControls runs update() inside each handler, so these turn the camera with no frame between
+    for (let i = 1; i <= 10; i += 1) {
+      r.send('pointermove', { ...mouse, clientX: 100 + i * 100, clientY: 400 });
+    }
+    const swung = r.view.position;
+    expect(contains(box, [swung.x, swung.y, swung.z])).toBe(false);
+    r.send('wheel', { deltaY: -100, deltaMode: 0 });
+    r.frames(1);
+    const stood = r.view.position;
+    expect(contains(box, [stood.x, stood.y, stood.z])).toBe(true);
   });
 
   it('comes in toward a close wall along the line, and goes back out as the view turns away', () => {
