@@ -173,8 +173,8 @@ export interface PageHandles {
   readonly controls: HeldControls;
 }
 
-/** What the panel says of a `?debug` link made before themes that carries lighting or scene (S15.4). */
-const LEGACY_LINK_NOTICE =
+/** What the panel says of a `?debug` link that does not name this room but carries lighting or scene (S15.4). */
+const FOREIGN_LINK_NOTICE =
   'This link was not made in this room: its lighting and scene are ignored and the room keeps its own.';
 
 export async function boot(
@@ -261,15 +261,16 @@ export async function boot(
     matchMedia('(prefers-reduced-data: reduce)').matches,
   );
   // Which room (spec S15.3): `?room=`, then a `?debug` link's, then the visitor's last pick, then the
-  // default, each checked against the one list before it is used.
+  // default, each checked against the one list before it is used. A link that carries a diff and no
+  // room id skips the last pick and opens the default room (`roomIdFrom`).
   const chosen = startingRoom(window.location.search, store);
   // A link that names the room this page loads records lighting and scene as differences from that
-  // room's defaults. One that names no room was made before themes and meant the shelf's own, and one
-  // that names another room (or one that is not on the list) was made against that room's defaults;
-  // a room takes neither, and the pane says so.
+  // room's defaults. One that does not name this room (no room id, so made before themes or on a page
+  // with no room dressed; another room's id; or one not on the list) was made against other defaults;
+  // a room takes none of its lighting or scene, and the pane says so.
   const linkNamesRoom = debugRoom(params) === chosen;
   const roomGroups = splitRoomGroups(asked);
-  const legacyLink = mode === 'room' && !linkNamesRoom && debugCarriesRoomGroups(params);
+  const linkNotForRoom = mode === 'room' && !linkNamesRoom && debugCarriesRoomGroups(params);
   let roomWanted: RoomRequest | undefined =
     mode === 'room'
       ? {
@@ -404,8 +405,8 @@ export async function boot(
   const remount = (where: Surface): boolean => {
     const old = handle;
     const stood = paintedOf(old?.settings ?? resolveSettings(asked, base));
-    // A room that failed ends on the plain shelf, which reads a link made before themes as it always
-    // did: the lighting and scene held back for the room are put back (ADR-0180 item 5).
+    // A room that failed ends on the plain shelf, which reads a link that does not name a room as it
+    // always did: the lighting and scene held back for the room are put back (ADR-0180 item 5).
     const painted =
       old?.room.state === 'failed' && !linkNamesRoom
         ? resolveSettings(roomGroups.groups, stood)
@@ -584,7 +585,7 @@ export async function boot(
             window.location.assign(search);
           },
           rooms: { list: roomsListed(ROOMS), current: chosen },
-          ...(legacyLink ? { notice: LEGACY_LINK_NOTICE } : {}),
+          ...(linkNotForRoom ? { notice: FOREIGN_LINK_NOTICE } : {}),
         },
         tunable: live.tunable,
         blackbox,

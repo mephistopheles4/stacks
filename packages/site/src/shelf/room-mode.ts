@@ -120,7 +120,7 @@ export function startingRoom(
   return roomIdFrom(search, readRemembered(store, catalogue), catalogue);
 }
 
-/** The one key the page keeps in `localStorage`, and what it holds: a room id and nothing else. */
+/** The key the room pick is kept under in `localStorage`: a room id and nothing else. */
 export const ROOM_KEY = 'stacks.room';
 
 /**

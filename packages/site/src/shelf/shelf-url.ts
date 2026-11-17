@@ -518,8 +518,8 @@ export function splitRoomGroups(patch: SettingsPatch): {
 
 /**
  * Whether a `?debug=<json>` link carries lighting or scene values: the two groups a room owns, so a
- * link made before themes existed (it carries them and no room id) meant the shelf's own and says
- * nothing about a room's (spec S15.4).
+ * link that carries them and no room id was made against the shelf's own, or against another room,
+ * and says nothing about this room's (spec S15.4).
  */
 export function debugCarriesRoomGroups(params: URLSearchParams): boolean {
   const patch = readDiff(params);

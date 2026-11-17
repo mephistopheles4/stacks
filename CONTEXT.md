@@ -15,7 +15,7 @@ gate.
 ### Books and the shelf
 
 **Room**:
-The baked scene round the bookcase on the default page, a committed GLB chosen by id from a fixed list; `?shelf` is the page without it ([ADR-0164](docs/adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)).
+The baked scene round the bookcase on the default page, a committed GLB chosen by id from a fixed list; `?shelf` is the page without it ([ADR-0164](docs/adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md))). A theme is a room ([ADR-0180](docs/adr/0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md)).
 *Avoid*: scene (that is the three.js object).
 
 **Abandoned bookcase**:

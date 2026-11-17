@@ -74,11 +74,13 @@ describe('the page-mode instrument, with rooms (spec S15.4)', () => {
 
   it('shows the notice as read-only text, and nothing when there is none', () => {
     const withNotice = fakeFolder();
-    modeSwitch(sources({ notice: 'This link predates themes.' })).mount(withNotice.folder);
+    modeSwitch(sources({ notice: 'This link was not made in this room.' })).mount(
+      withNotice.folder,
+    );
     expect(withNotice.bindings).toEqual([
       expect.objectContaining({
         key: 'notice',
-        value: 'This link predates themes.',
+        value: 'This link was not made in this room.',
         params: expect.objectContaining({ readonly: true }) as unknown,
       }),
     ]);
