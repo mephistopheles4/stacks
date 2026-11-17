@@ -232,22 +232,6 @@ export function pullIn(box: Box, target: Vec3, point: Vec3, nearest = 0): Vec3 {
   ]);
 }
 
-/**
- * How far from its target the visitor wants the camera after the orbit has moved it (#620).
- *
- * `wasWished` is what they wanted before (0 before the camera has stood anywhere), `stood` is where
- * the box left the camera, and `asked` is the distance the orbit just produced from the wished
- * place. A turn leaves the distance alone, so the wish stands and the camera can go back out when it
- * turns away from a wall. A zoom changes it, and works from what is on screen: scrolling in on a
- * camera the box has pulled in moves it in from where it is, with no dead stretch to scroll through
- * first.
- */
-export function wishAfterOrbit(wasWished: number, stood: number, asked: number): number {
-  if (wasWished === 0) return asked;
-  if (Math.abs(asked - wasWished) <= 1e-6) return wasWished;
-  return stood * (asked / wasWished);
-}
-
 function between(a: Vec3, b: Vec3): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }

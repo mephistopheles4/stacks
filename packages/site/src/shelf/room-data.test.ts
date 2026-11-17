@@ -11,7 +11,6 @@ import {
   RoomDataError,
   type RoomView,
   type Vec3,
-  wishAfterOrbit,
 } from './room-data.ts';
 import { mainRowCount, ROOM_MIN_ROWS, SHELF } from './bookcase.ts';
 import { FOV } from './framing.ts';
@@ -236,26 +235,6 @@ describe('pullIn (#620)', () => {
 
   it('stands against the nearest face when the target itself is outside the box', () => {
     expect(pullIn(closed, [50, 1, 1], [60, 1, 1])).toEqual(clampInto(closed, [60, 1, 1]));
-  });
-});
-
-describe('wishAfterOrbit (#620)', () => {
-  it('takes the first distance the orbit gives as the wish', () => {
-    expect(wishAfterOrbit(0, 0, 11)).toBe(11);
-  });
-
-  it('keeps the wish through a turn, which leaves the distance alone', () => {
-    expect(wishAfterOrbit(14, 6, 14)).toBe(14);
-  });
-
-  it('zooms from what is on screen when the box has pulled the camera in', () => {
-    // wished 14, standing at 6: a zoom in by a fifth (the orbit's 14 -> 11.2) leaves it at 4.8
-    expect(wishAfterOrbit(14, 6, 11.2)).toBeCloseTo(4.8, 9);
-    expect(wishAfterOrbit(14, 6, 14.7)).toBeCloseTo(6.3, 9);
-  });
-
-  it('zooms as the orbit does when the camera stands where it was wished', () => {
-    expect(wishAfterOrbit(8, 8, 6.4)).toBeCloseTo(6.4, 9);
   });
 });
 

@@ -25,14 +25,8 @@ import { BACKBOARD_INSET, mainRowCount, PLANK_INSET, rowsForBookcase, SHELF } fr
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
-import {
-  frameRoom,
-  lightsPatch,
-  pullIn,
-  type RoomData,
-  type Slot,
-  wishAfterOrbit,
-} from './room-data.ts';
+import { frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
+import { createRoomOrbit } from './room-orbit.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import {
   ABANDONED_ROWS,
@@ -647,13 +641,13 @@ function assembleShelf(
   let framedAt = 0;
   /** Set once a room is dressed: the camera then opens at the room's view and stays in its box. */
   let roomData: RoomData | undefined;
-  /** How far from the target the visitor asked the camera to stand (0 until it stands), and how far it does. */
-  let wished = 0;
-  let stood = 0;
-  const offset = new THREE.Vector3();
+  /** The drag orbits, and in a room the scroll and the pinch walk (#626); the plain shelf keeps the dolly. */
+  const roomOrbit = createRoomOrbit(camera, controls);
+  const unwalk = roomOrbit.attach(renderer.domElement);
+  own({ dispose: unwalk });
 
   const frameCamera = (aspect: number): void => {
-    wished = 0;
+    roomOrbit.forget();
     const framing =
       roomData === undefined
         ? frameBookcase(rowCount, aspect)
@@ -785,45 +779,13 @@ function assembleShelf(
   /** A pickup's hooks, when one is installed. See `FrameHooks`. */
   let hooks: FrameHooks | undefined;
 
-  /**
-   * The camera cannot stand past the room's box (spec S8.2, C7): in front of the open corner, never
-   * behind a wall, the floor or the ceiling. **It always turns where it is dragged** (#620): a place
-   * the box cannot hold is brought in along the line to the target (`pullIn`) instead of being
-   * clamped onto a face, where the turn undid itself and the camera looked stuck. The distance the
-   * visitor asked for is kept apart (`wished`), so turning away from the wall lets it back out.
-   */
-  const orbit = (): void => {
-    const bounds = roomData?.bounds;
-    if (bounds === undefined) {
-      controls.update();
-      return;
-    }
-    const { target } = controls;
-    const wasWished = wished;
-    // The orbit starts from where the visitor asked the camera to stand, not from where the box left it.
-    if (wished > 0) {
-      offset.subVectors(camera.position, target).setLength(wished);
-      camera.position.copy(target).add(offset);
-    }
-    controls.update();
-    offset.subVectors(camera.position, target);
-    wished = wishAfterOrbit(wasWished, stood, offset.length());
-    offset.setLength(wished).add(target);
-    const [x, y, z] = pullIn(
-      bounds,
-      [target.x, target.y, target.z],
-      [offset.x, offset.y, offset.z],
-      controls.minDistance,
-    );
-    camera.position.set(x, y, z);
-    stood = Math.hypot(x - target.x, y - target.y, z - target.z);
-  };
-
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
-    // A held book owns the camera; the orbit's damping would fight it.
-    if (hooks?.holdsCamera() !== true) orbit();
+    // A held book owns the camera; the orbit's damping would fight it. The camera cannot stand past
+    // the room's box (spec S8.2, C7): see `room-orbit.ts`.
+    if (hooks?.holdsCamera() === true) roomOrbit.hold();
+    else roomOrbit.step();
     renderer.info.reset();
     if (hooks === undefined) renderFrame();
     else hooks.draw(renderFrame);
@@ -1121,6 +1083,7 @@ function assembleShelf(
         },
         ready: (loaded) => {
           roomData = loaded.data;
+          roomOrbit.enter(loaded.data.bounds);
           applySettings(
             resolveSettings(
               lightsPatch(loaded.data.lights, ROOMS[request.id].background),
@@ -1140,6 +1103,7 @@ function assembleShelf(
           loaded?.group.removeFromParent();
           room = undefined;
           roomData = undefined;
+          roomOrbit.leave();
           // A cancelled load is not a failed room: the page that cancelled it has the shelf it wants.
           if (!leaving.signal.aborted) {
             roomState = 'failed';

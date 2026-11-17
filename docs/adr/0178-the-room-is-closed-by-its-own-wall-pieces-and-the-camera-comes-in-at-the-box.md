@@ -29,9 +29,9 @@
    the box cannot hold is brought in along the line to the target (`pullIn`, `room-data.ts`) instead of
    clamped onto a face. Clamping moved the camera along the face and left the line of sight, so a drag
    toward a wall undid itself and the camera looked stuck. The distance the visitor asked for is kept
-   apart from the distance the camera stands at, so turning away from the wall lets it back out; a zoom
-   works from what is on screen. `frameRoom` uses the same pull-in, so a narrow window opens on the
-   owner's line of sight, closer, rather than on the box's face.
+   apart from the distance the camera stands at, so turning away from the wall lets it back out.
+   `frameRoom` uses the same pull-in, so a narrow window opens on the owner's line of sight, closer,
+   rather than on the box's face.
 6. **Coming in stops at `minDistance`.** The orbit's own clamps run on the place the visitor asked for,
    and the pull-in only shortens it, so the polar limit and the far limit hold; the near limit did not,
    and the reading corner's target stands 0.535 in front of the box's back face, so a view turned to the
@@ -46,6 +46,18 @@
    page's minimum to those numbers. A live shadow in place of the baked one was looked at and set aside:
    it would be a third program reading the shadow map, which `one-shadow-reader` (G61) and
    [ADR-0088](0088-one-program-samples-the-shadow-map-in-two-draws.md) keep at one.
+8. **The scroll walks; it does not dolly** ([#626](https://github.com/mephistopheles4/stacks/issues/626)).
+   `OrbitControls`' dolly takes a share of what is left, so it slows near the target and stops at
+   `minDistance`, and the target is a point beside the side table, so it never heads for a book. In a
+   room it is off (`enableZoom`, and `enablePan`, which two fingers would otherwise drive), and a wheel
+   notch or a pinch walks the camera **and its target together** along the view, a fixed distance a
+   step (`walk`, `room-walk.ts`; `room-orbit.ts` queues it and takes a little each frame). The camera
+   stays in the box; the target stands as far ahead as it did unless the box ends first, and then on
+   that face, so the orbit still has a target the pull-in can use. Straight ahead and not toward the
+   cursor, which is a later choice. The dolly was first kept and repaired, and the reason it needed
+   repairing is the reason to drop it: every `OrbitControls` handler runs `update()` itself, so a camera
+   put back to its wished distance each frame (item 5) undid the dolly and the scroll did nothing.
+   The plain shelf keeps the dolly.
 
 ## Why
 
