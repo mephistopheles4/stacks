@@ -11,7 +11,10 @@
  * with a number or a fixed word in it.
  */
 
-import type { Capabilities } from './browserstack-driver.ts';
+import type { Capabilities, Point } from './browserstack-driver.ts';
+
+/** The most a tap may land from where it was asked and still be the browser's own offset, in px. */
+const MAX_TAP_SHIFT = 300;
 
 export interface Device {
   /** The file name its screenshot takes, and the name of its session. */
@@ -96,6 +99,58 @@ export const READY_AND_FIND = `${UNTIL}
   return inView ? found : { error: 'no book stands in view' };
 })().then(done, function () { done({ error: 'the page script failed' }); });
 `;
+
+/**
+ * Arms a calibration tap: capturing listeners on the window record where the first pointer or touch
+ * lands and stop it there, so the probe picks nothing up. Answers the viewport's size.
+ */
+export const PROBE_ARM = `
+window.__probe = undefined;
+window.__probeStop = [];
+['pointerdown', 'touchstart', 'pointerup', 'touchend', 'click'].forEach(function (type) {
+  var handler = function (event) {
+    var at = event.changedTouches && event.changedTouches[0] ? event.changedTouches[0] : event;
+    if (window.__probe === undefined) window.__probe = { x: at.clientX, y: at.clientY };
+    event.stopImmediatePropagation();
+  };
+  window.addEventListener(type, handler, true);
+  window.__probeStop.push(function () { window.removeEventListener(type, handler, true); });
+});
+return { width: window.innerWidth, height: window.innerHeight };
+`;
+
+/** Disarms the probe and answers where it landed, or \`null\` when nothing reached the page. */
+export const PROBE_READ = `
+window.__probeStop.forEach(function (stop) { stop(); });
+var at = window.__probe === undefined ? null : window.__probe;
+window.__probe = undefined;
+return at;
+`;
+
+/** The viewport size `PROBE_ARM` answered, or `undefined` when it is not two positive numbers. */
+export function readViewport(value: unknown): Point | undefined {
+  if (!isRecord(value)) return undefined;
+  const { width, height } = value;
+  if (typeof width !== 'number' || typeof height !== 'number') return undefined;
+  return width > 0 && height > 0 ? { x: width, y: height } : undefined;
+}
+
+/**
+ * How far a tap lands from where it was asked: the page asked for `asked` and a probe landed at
+ * `landed`. iOS Safari takes tap coordinates from the screen and not the page, so a tap lands the
+ * height of the browser's top bar above where it was asked, and the shift is the difference.
+ * `{ x: 0, y: 0 }` when the probe landed nowhere, or the shift is more than a browser's bar, which
+ * leaves a device that needs no correction exactly as it was.
+ */
+export function tapShift(asked: Point, landed: unknown): Point {
+  const none = { x: 0, y: 0 };
+  if (!isRecord(landed)) return none;
+  const { x, y } = landed;
+  if (typeof x !== 'number' || typeof y !== 'number') return none;
+  const shift = { x: Math.round(asked.x - x), y: Math.round(asked.y - y) };
+  const sane = (n: number): boolean => Math.abs(n) <= MAX_TAP_SHIFT;
+  return sane(shift.x) && sane(shift.y) ? shift : none;
+}
 
 /**
  * Waits for the shelf to name the clicked book as held, closed and at rest. Takes the title and the
