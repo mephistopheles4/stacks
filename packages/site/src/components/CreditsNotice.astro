@@ -1,0 +1,44 @@
+---
+import CreditList from './CreditList.astro';
+import NoticeBody from './NoticeBody.astro';
+import { creditSections, headingLevels, type CreditsNoticeProps } from '../notice/credits.ts';
+import creditNotes from '../../rooms/reading-corner/credits.json';
+import roomInputs from '../../rooms/reading-corner/inputs.json';
+
+// The 3D credits (#621): every asset the room is baked from, with its creator, a link to where it
+// came from, its licence and what the bake changed. The one copy of the text, for the panel of the
+// modal on the shelf, the panel of the modal on `/attribution` and that page's no-script fallback.
+// The rows are `inputs.json` grouped by asset, so an input cannot ship without one: `buildCredits`
+// stops the build on an input with no entry in `credits.json`, and G75 (`room-inputs`) holds the
+// same. Markup only; every string is escaped text, and the only links are the https ones the rows
+// carry.
+//
+// `headingId` and `tabindex` are the modal's, as `AttributionNotice`'s are. `level` is `h2` where
+// the heading sits under the page's own `h1`; `back` is the way back to the attribution notice,
+// which the modal answers by swapping panels and the fallback does not need.
+const { headingId, tabindex, level = 'h1', back = true } = Astro.props as CreditsNoticeProps;
+const { title: Heading, section: Sub } = headingLevels(level);
+const { required, courtesy } = creditSections(roomInputs.inputs, creditNotes.credits);
+---
+
+<NoticeBody>
+  <Heading id={headingId} tabindex={tabindex}>3D credits</Heading>
+
+  <p>
+    The reading corner is baked from the work below. Each asset is credited to its creator and
+    linked to where it came from, and the note under it says how it was changed to fit the room.
+  </p>
+
+  <Sub>Credit required</Sub>
+  <p>
+    Used under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>, which asks for
+    this credit.
+  </p>
+  <CreditList rows={required} />
+
+  <Sub>CC0 and public domain</Sub>
+  <p>These need no credit and are listed as a courtesy.</p>
+  <CreditList rows={courtesy} />
+
+  {back && <p class="back"><a href="/attribution">Back to attribution</a></p>}
+</NoticeBody>
