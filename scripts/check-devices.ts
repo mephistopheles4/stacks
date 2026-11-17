@@ -163,7 +163,7 @@ async function runDevice(device: Device, key: Key, options: RunOptions): Promise
     measured = { ...measured, held };
 
     await sleep(HOLD_MS);
-    const after = readAfterHold(await driver.run(READ_AFTER_HOLD));
+    const after = readAfterHold(await driver.run(READ_AFTER_HOLD, [found.href]));
     if (after === undefined) fail(UNEXPECTED);
     measured = { ...measured, after };
 

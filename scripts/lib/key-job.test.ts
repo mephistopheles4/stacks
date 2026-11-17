@@ -100,8 +100,10 @@ describe('the environment gate', () => {
 
   it('lets only devices.yml name the browserstack environment', () => {
     expect(workflows).toContain('devices.yml');
-    // `environment: browserstack`, or the mapping form: `environment:` then `name: browserstack`.
-    const names = /\benvironment\s*:[^\n]*(\n[^\n]*)?browserstack/;
+    // `environment: browserstack`, or the mapping form: `environment:` then `name: browserstack`,
+    // with the mapping's other key, `url:`, allowed in between.
+    const names =
+      /\benvironment\s*:[^\n]*(?:\n[ \t]+url\s*:[^\n]*)?\n?[ \t]*(?:name\s*:\s*)?browserstack/;
     const naming = workflows.filter((name) => names.test(text(name).replace(/#[^\n]*/g, '')));
     expect(naming).toEqual(['devices.yml']);
   });

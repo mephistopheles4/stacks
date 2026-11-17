@@ -1331,8 +1331,9 @@ cannot ask a contributor for — and a `pnpm` script is one G14 would pin in
 **Before it runs:** adb on the `PATH`, or `--adb <path>`; the phone plugged in
 with USB debugging on and the computer authorised; Chrome on the phone; and a
 build to serve. It serves `packages/site/dist/` as it stands, so the library is
-whichever one the last build staged — after `pnpm fixtures:50` and a build, the
-50-book fixture. `--serve <dir>` points it elsewhere, and `--url https://…` loads a page
+whichever one the last build staged. `pnpm fixtures:50` makes the vault and stages
+nothing: for the 50-book fixture, build it with `scripts/build-device-fixture.ts --out
+<folder>` and pass `--serve <folder>`. `--serve <dir>` points it elsewhere, and `--url https://…` loads a page
 it does not serve at all. With two devices attached it refuses to choose:
 `--serial <id>`, from `adb devices`.
 

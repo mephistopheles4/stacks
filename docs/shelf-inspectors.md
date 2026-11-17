@@ -151,8 +151,8 @@ instrument is the **pickup tuner**, onto the ordinary page. None of them exists 
   is the owner's to shape in use. The pane is styled under the page's CSP through
   two empty `<style data-tp-style>` placeholders and a lazy `<link>`, with the
   CSS extracted from the packages' text at build time (`tuner-css.ts`). Two gates
-  hold that: one asserts no pane byte reaches a page without `?debug`, and one
-  that the pane is styled with zero violations.
+  held that, G64 and G65, retired in #618: nothing in CI asserts now that no pane
+  byte reaches a page without `?debug`, or that it is styled with zero violations.
 
 Everything the shelf looks like is one object — `ShelfSettings` in
 `shelf-settings.ts` — and the panel exports it as JSON you paste back into

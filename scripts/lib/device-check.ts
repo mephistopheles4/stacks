@@ -113,10 +113,17 @@ var before = arguments[1];
 })().then(done, function () { done({ error: 'the page script failed' }); });
 `;
 
-/** What the shelf says about its context after the hold. Synchronous: nothing to wait for. */
+/**
+ * What the shelf says about its context after the hold, and whether the address is still the
+ * one the page had before the click (argument 0). Synchronous: nothing to wait for.
+ */
 export const READ_AFTER_HOLD = `
 var h = window.__shelf && window.__shelf.held();
-return { fallback: window.__shelf ? String(window.__shelf.fallback()) : '', stillHeld: h !== undefined };
+return {
+  fallback: window.__shelf ? String(window.__shelf.fallback()) : '',
+  stillHeld: h !== undefined,
+  sameAddress: location.href === arguments[0],
+};
 `;
 
 /** What `READY_AND_FIND` answered, checked for the shape asked for. */
@@ -166,13 +173,24 @@ export interface AfterHold {
   /** The fallback kind, when it is a plain lower-case word; `unreadable` otherwise. */
   readonly fallback: string;
   readonly stillHeld: boolean;
+  readonly sameAddress: boolean;
 }
 
 export function readAfterHold(value: unknown): AfterHold | undefined {
   if (!isRecord(value)) return undefined;
-  const { fallback, stillHeld } = value;
-  if (typeof fallback !== 'string' || typeof stillHeld !== 'boolean') return undefined;
-  return { fallback: /^[a-z-]{1,20}$/.test(fallback) ? fallback : 'unreadable', stillHeld };
+  const { fallback, stillHeld, sameAddress } = value;
+  if (
+    typeof fallback !== 'string' ||
+    typeof stillHeld !== 'boolean' ||
+    typeof sameAddress !== 'boolean'
+  ) {
+    return undefined;
+  }
+  return {
+    fallback: /^[a-z-]{1,20}$/.test(fallback) ? fallback : 'unreadable',
+    stillHeld,
+    sameAddress,
+  };
 }
 
 /** One device's result: the line printed for it, and whether it passed. */
@@ -193,7 +211,7 @@ export interface Measured {
 /**
  * The verdict for one device. It fails when the click did not hold the book, the address changed,
  * the context was lost (the fallback is anything but `none`), the book was not still held after
- * the hold, or the console logged an error. A device with no console log is `console: not
+ * the hold, the address changed during it, or the console logged an error. A device with no console log is `console: not
  * reported`, and that never fails it.
  */
 export function judgeDevice(device: Device, measured: Measured): Verdict {
@@ -206,6 +224,7 @@ export function judgeDevice(device: Device, measured: Measured): Verdict {
       problems.push(`the shelf fell back (${measured.after.fallback})`);
     }
     if (!measured.after.stillHeld) problems.push('the book was not still held');
+    if (!measured.after.sameAddress) problems.push('the address changed during the hold');
   }
   if (measured.consoleErrors !== undefined && measured.consoleErrors > 0) {
     problems.push(`${String(measured.consoleErrors)} console error(s)`);

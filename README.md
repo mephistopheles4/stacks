@@ -175,7 +175,7 @@ workflow requires them, and every gate passes without a single one installed.
 ## Tested with BrowserStack
 
 This project is tested with [BrowserStack](https://www.browserstack.com/). Each
-merge to `main` is tested on three real devices.
+merge to `main` is tested on three real devices, unless a newer merge cancels its run.
 
 ## Documentation
 
