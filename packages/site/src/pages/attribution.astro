@@ -1,14 +1,28 @@
 ---
 import AttributionNotice from '../components/AttributionNotice.astro';
+import CreditsNotice from '../components/CreditsNotice.astro';
 import NoticePage from '../components/NoticePage.astro';
 
 // The site's second page, and its first legal-notice surface. The layout and the `noindex` are
 // `NoticePage`'s; the text and its type are `AttributionNotice`'s, shared with the modal over
 // the shelf (docs/spec/notice-modals.md).
+//
+// The 3D credits (#621) open over the page from the Credits section's button, with a backdrop, the
+// way they open in the shelf's modal. This page ships no script (`gate:public`'s `csp` rule), so
+// the dialog here is the platform's own: a `popover` and its `popovertarget` button, which light
+// dismiss and Escape close. The text is `CreditsNotice`, the shelf modal's panel.
 ---
 
 <NoticePage title="Attribution — Stacks" description="Where this shelf's book data comes from.">
   <AttributionNotice>
+    <button
+      slot="credits-trigger"
+      type="button"
+      class="credits-open"
+      popovertarget="credits-popover"
+    >
+      see the 3D credits
+    </button>
     <!--
       The site has no navigation, no header link and nothing that has ever gone
       anywhere, so a browser back button is not a way back for someone who
@@ -16,4 +30,86 @@ import NoticePage from '../components/NoticePage.astro';
     -->
     <p class="back"><a href="/">Back to the shelf</a></p>
   </AttributionNotice>
+  <div id="credits-popover" class="credits-popover" popover role="dialog" aria-labelledby="credits-popover-title">
+    <button
+      type="button"
+      class="credits-close"
+      popovertarget="credits-popover"
+      popovertargetaction="hide"
+      aria-label="Close"
+    >
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+        <path d="M3 3l10 10M13 3L3 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+    </button>
+    <CreditsNotice headingId="credits-popover-title" level="h2" back={false} />
+  </div>
 </NoticePage>
+
+<style>
+  /* The button reads as the link it stands in for, beside the page's own links. */
+  .credits-open {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #e8dccd;
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+    cursor: pointer;
+  }
+
+  .credits-open:hover,
+  .credits-open:focus-visible {
+    color: #fff4e6;
+  }
+
+  /* The same sheet as the shelf's modal: capped at the viewport, scrolling inside itself. */
+  .credits-popover {
+    box-sizing: border-box;
+    width: min(42rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 1.25rem clamp(1.25rem, 5vw, 2.5rem) clamp(1.25rem, 5vw, 2.5rem);
+    overflow: auto;
+    border: 1px solid rgba(242, 232, 220, 0.2);
+    border-radius: 0.75rem;
+    background: #1a1613;
+    color: #c9b8a4;
+  }
+
+  .credits-popover::backdrop {
+    background: rgba(10, 8, 7, 0.72);
+  }
+
+  .credits-popover :global(h2:first-of-type) {
+    padding-right: 3.5rem;
+  }
+
+  .credits-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 1px solid rgba(242, 232, 220, 0.4);
+    border-radius: 50%;
+    background: transparent;
+    color: #f2e8dc;
+    cursor: pointer;
+  }
+
+  .credits-close:hover {
+    background: rgba(242, 232, 220, 0.12);
+  }
+
+  .credits-popover :global(:focus-visible),
+  .credits-open:focus-visible {
+    outline: 2px solid #f2e8dc;
+    outline-offset: 2px;
+  }
+</style>

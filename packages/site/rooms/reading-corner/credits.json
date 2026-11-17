@@ -1,0 +1,151 @@
+{
+  "room": "reading-corner",
+  "about": "What the credits view says about each asset beyond what inputs.json holds: its name, where it is used and how the bake changed it. One entry per page URL in inputs.json. The creator, link and licence are read from inputs.json and never copied here. `modified` is a sentence saying what was changed, or null for an asset used exactly as its author made it; it is never empty, because CC BY 4.0 asks that a change be indicated.",
+  "credits": {
+    "https://polyhaven.com/a/Chandelier_03": {
+      "name": "Chandelier 03",
+      "usedFor": "the chandelier",
+      "modified": "Placed and scaled in the room, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://polyhaven.com/a/treasure_chest": {
+      "name": "Treasure Chest",
+      "usedFor": "the chest",
+      "modified": "Placed and scaled in the room, decimated for the bake, and baked with the room's light into new textures. A throw built here lies over it."
+    },
+    "https://polyhaven.com/a/vintage_pocket_watch": {
+      "name": "Vintage Pocket Watch",
+      "usedFor": "the watch on the desk",
+      "modified": "Placed and scaled on the desk, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://polyhaven.com/a/postcard_set_01": {
+      "name": "Postcard Set 01",
+      "usedFor": "the postcards",
+      "modified": "Three of the set kept, placed and scaled on the desk, and baked with the room's light into new textures."
+    },
+    "https://polyhaven.com/a/mantel_clock_01": {
+      "name": "Mantel Clock 01",
+      "usedFor": "the clock",
+      "modified": "Placed and scaled in the room, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://polyhaven.com/a/book_encyclopedia_set_01": {
+      "name": "Book Encyclopedia Set 01",
+      "usedFor": "the encyclopedias",
+      "modified": "Placed and scaled in the room, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://polyhaven.com/a/side_table_tall_01": {
+      "name": "Side Table Tall 01",
+      "usedFor": "the side table",
+      "modified": "Placed and scaled in the room, and baked with the room's light into its own unwrap."
+    },
+    "https://polyhaven.com/a/plank_flooring": {
+      "name": "Plank Flooring",
+      "usedFor": "the floor",
+      "modified": "Its diffuse map only, re-encoded as WebP and darkened on the page."
+    },
+    "https://polyhaven.com/a/american_walnut_veneer": {
+      "name": "American Walnut Veneer",
+      "usedFor": "the picture frames",
+      "modified": "Its diffuse map only, used as the wood of frames built here."
+    },
+    "https://polyhaven.com/a/floral_jacquard": {
+      "name": "Floral Jacquard",
+      "usedFor": "the desk chair's damask",
+      "modified": "Recoloured crimson, then re-encoded."
+    },
+    "https://polyhaven.com/a/leather_red_02": {
+      "name": "Leather Red 02",
+      "usedFor": "the hero chair's leather",
+      "modified": "Its maps used as the leather of a chair built here, and re-encoded."
+    },
+    "https://polyhaven.com/a/black_walnut_veneer_01": {
+      "name": "Black Walnut Veneer 01",
+      "usedFor": "the hero chair's wood",
+      "modified": "Its maps used as the wood of a chair built here, and re-encoded."
+    },
+    "https://www.metmuseum.org/art/collection/search/336228": {
+      "name": "Melencolia I, 1514",
+      "usedFor": "a framed print",
+      "modified": "Resized and re-encoded as a texture, set in a frame built here and baked with the room's light."
+    },
+    "https://www.metmuseum.org/art/collection/search/336229": {
+      "name": "Saint Jerome in His Study, 1514",
+      "usedFor": "a framed print",
+      "modified": "Resized and re-encoded as a texture, set in a frame built here and baked with the room's light."
+    },
+    "https://www.metmuseum.org/art/collection/search/336223": {
+      "name": "Knight, Death and the Devil, 1513",
+      "usedFor": "a framed print",
+      "modified": "Resized and re-encoded as a texture, set in a frame built here and baked with the room's light."
+    },
+    "https://www.metmuseum.org/art/collection/search/437394": {
+      "name": "Aristotle with a Bust of Homer, 1653",
+      "usedFor": "a framed print",
+      "modified": "Resized and re-encoded as a texture, set in a frame built here and baked with the room's light."
+    },
+    "https://www.metmuseum.org/art/collection/search/11122": {
+      "name": "The Gulf Stream, 1899",
+      "usedFor": "a framed print",
+      "modified": "Resized and re-encoded as a texture, set in a frame built here and baked with the room's light."
+    },
+    "https://commons.wikimedia.org/wiki/File:Frances_(Appleton)_Longfellow_to_Emmeline_(Austin)_Wadsworth,_22_September_1851_(1a6fb63e-4035-449d-a2fb-c2110e3af2e6).jpg": {
+      "name": "Letter from Frances Longfellow to Emmeline Wadsworth, 22 September 1851",
+      "usedFor": "the half-written letter on the desk",
+      "modified": "Its left page cut from the two-page scan and laid on a sheet of paper built here."
+    },
+    "https://sketchfab.com/3d-models/1ab9bf841df04c07b1819be596327629": {
+      "name": "Monstera Deliciosa Potted Mid-Century plant",
+      "usedFor": "the plant",
+      "modified": "Placed and scaled in the room, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://sketchfab.com/3d-models/ac061b3de2b9480d8ca175e9fdc0c785": {
+      "name": "Victorian Desk",
+      "usedFor": "the desk",
+      "modified": "Placed and scaled in the room, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://sketchfab.com/3d-models/40688b848b6044f6af306ecdf2b8b105": {
+      "name": "Chair (England) 1750-60",
+      "usedFor": "the desk chair",
+      "modified": "A scan with no colour: its red walnut and dark carving are painted here after the Cooper Hewitt's photographs, its seat is cut away and rebuilt here, and the whole is placed, scaled, decimated and baked with the room's light."
+    },
+    "https://sketchfab.com/3d-models/54245a6f6f8a425d93dfa3892445cab4": {
+      "name": "Globe on a wooden stand in Victorian style",
+      "usedFor": "the globe",
+      "modified": "Placed and scaled in the room, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://sketchfab.com/3d-models/fb7b850b5aa04cb48999f4cd58d7eaca": {
+      "name": "Lamp (Bankers Lamp)",
+      "usedFor": "the banker's lamp",
+      "modified": "Placed and enlarged in the room, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://sketchfab.com/3d-models/280db303f4d64354aa3e7b71f4652813": {
+      "name": "Vintage Desk Assets",
+      "usedFor": "the books on the desk and in the floor's two stacks, the inkwell, the pen and the world map above the desk",
+      "modified": "Cut into its separate pieces, each placed and scaled; the map made opaque; all baked with the room's light into new textures."
+    },
+    "https://sketchfab.com/3d-models/303b287819a84f7496bd92f5d69710c7": {
+      "name": "Letter",
+      "usedFor": "the sealed letter",
+      "modified": "Scaled down from about fifteen times too big to 21 cm, laid flat on the desk, and baked with the room's light into new textures."
+    },
+    "https://sketchfab.com/3d-models/f9128bd394214539af2ac80e4204bd35": {
+      "name": "Metal Round Glasses",
+      "usedFor": "the spectacles",
+      "modified": "Placed and scaled on the desk, decimated for the bake, and baked with the room's light into new textures."
+    },
+    "https://sketchfab.com/3d-models/51ed4daff7a147ee859a85cbbbea1f09": {
+      "name": "Sand Blotter EOA:2022.154 OE414",
+      "usedFor": "the sand blotter (a scan)",
+      "modified": "Decimated to 4,000 faces, placed and scaled, and baked with the room's light into new textures."
+    },
+    "https://www.metmuseum.org/art/collection/search/446642": {
+      "name": "Silk Animal Carpet, object 446642",
+      "usedFor": "the rug",
+      "modified": "Flattened from the photograph, its worn margin painted over and its fringe and pile built here, and re-encoded as WebP."
+    },
+    "https://www.metmuseum.org/art/collection/search/398344": {
+      "name": "Willow, William Morris, 1874, object 398344",
+      "usedFor": "the wallpaper",
+      "modified": "One tile cut from the photograph, its contrast raised, and re-encoded as WebP."
+    }
+  }
+}

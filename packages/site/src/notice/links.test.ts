@@ -20,6 +20,11 @@ describe('noticeFor: which notice a click opens', () => {
     expect(noticeFor('/privacy', plain)).toBe('privacy');
   });
 
+  it('opens the 3D credits for a plain click on the attribution page’s #credits link (#621)', () => {
+    expect(noticeFor('/attribution#credits', plain)).toBe('credits');
+    expect(noticeFor('/attribution#credits', { ...plain, ctrlKey: true })).toBeUndefined();
+  });
+
   it.each([
     ['ctrl', { ctrlKey: true }],
     ['meta', { metaKey: true }],

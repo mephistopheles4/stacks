@@ -1,12 +1,13 @@
 ---
 import AttributionNotice from '../components/AttributionNotice.astro';
+import CreditsNotice from '../components/CreditsNotice.astro';
 import PrivacyNotice from '../components/PrivacyNotice.astro';
 
-// The attribution and privacy notices as one modal over the shelf
-// (docs/spec/notice-modals.md N1, N3): both texts rendered into this page, one panel shown at a
-// time, opened by a plain click on a link to `/attribution` or `/privacy`. The text is the same
-// components the two direct pages use, so there is one copy of each notice. Markup and styles
-// only; `modal.ts` holds the behaviour. The ids are the seam (`open.ts`).
+// The attribution, privacy and 3D credits notices as one modal over the shelf
+// (docs/spec/notice-modals.md N1, N3; the credits panel is #621): their texts rendered into this page, one panel shown at
+// a time, opened by a plain click on a link to `/attribution`, `/privacy` or `/attribution#credits`.
+// The text is the same components the direct pages use, so there is one copy of each notice.
+// Markup and styles only; `modal.ts` holds the behaviour. The ids are the seam (`open.ts`).
 ---
 
 <dialog id="notice-dialog" class="notice-dialog" aria-labelledby="notice-attribution-title">
@@ -21,6 +22,9 @@ import PrivacyNotice from '../components/PrivacyNotice.astro';
     </section>
     <section id="notice-privacy" hidden>
       <PrivacyNotice headingId="notice-privacy-title" tabindex={-1} />
+    </section>
+    <section id="notice-credits" hidden>
+      <CreditsNotice headingId="notice-credits-title" tabindex={-1} />
     </section>
   </div>
 </dialog>
