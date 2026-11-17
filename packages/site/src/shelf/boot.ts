@@ -3,7 +3,8 @@ import { attempted, type Attempt } from '../analytics/events.ts';
 import { onPickUpRequest } from '../ask/bridge.ts';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
-import { pageMode, roomIdFrom } from './room-mode.ts';
+import { pageMode, roomEntry, roomsListed, ROOMS, startingRoom } from './room-mode.ts';
+import { mountRoomPicker } from './room-picker.ts';
 import {
   createPickup,
   loopPickups,
@@ -40,7 +41,15 @@ import {
   UNAVAILABLE_MESSAGE,
 } from './shelf-notice.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
-import { bookLimit, readSettings, retiredTuneHint, soloBook } from './shelf-url.ts';
+import {
+  bookLimit,
+  debugCarriesRoomGroups,
+  debugRoom,
+  readSettings,
+  retiredTuneHint,
+  soloBook,
+  splitRoomGroups,
+} from './shelf-url.ts';
 
 /**
  * Wires the page up: load the library, mount the shelf, pick a book up on click.
@@ -164,6 +173,10 @@ export interface PageHandles {
   readonly controls: HeldControls;
 }
 
+/** What the panel says of a `?debug` link that does not name this room but carries lighting or scene (S15.4). */
+const FOREIGN_LINK_NOTICE =
+  'This link was not made in this room: its lighting and scene are ignored and the room keeps its own.';
+
 export async function boot(
   canvas: HTMLCanvasElement,
   page: PageHandles,
@@ -247,10 +260,23 @@ export async function boot(
     window.location.search,
     matchMedia('(prefers-reduced-data: reduce)').matches,
   );
+  // Which room (spec S15.3): `?room=`, then a `?debug` link's, then the visitor's last pick, then the
+  // default, each checked against the one list before it is used. A link that carries a diff and no
+  // room id skips the last pick and opens the default room (`roomIdFrom`).
+  const chosen = startingRoom(window.location.search, store);
+  // A link that names the room this page loads records lighting and scene as differences from that
+  // room's defaults. One that does not name this room (no room id, so made before themes or on a page
+  // with no room dressed; another room's id; or one not on the list) was made against other defaults;
+  // a room takes none of its lighting or scene, and the pane says so.
+  const linkNamesRoom = debugRoom(params) === chosen;
+  const roomGroups = splitRoomGroups(asked);
+  const linkNotForRoom = mode === 'room' && !linkNamesRoom && debugCarriesRoomGroups(params);
   let roomWanted: RoomRequest | undefined =
     mode === 'room'
       ? {
-          id: roomIdFrom(window.location.search),
+          id: chosen,
+          entry: roomEntry(chosen),
+          ...(linkNamesRoom ? { overrides: roomGroups.groups } : {}),
           // The room's lights are in the settings now: the panel shows them.
           onDressed: () => {
             if (handle !== undefined) showPanel?.(handle);
@@ -378,7 +404,13 @@ export async function boot(
    */
   const remount = (where: Surface): boolean => {
     const old = handle;
-    const painted = paintedOf(old?.settings ?? resolveSettings(asked, base));
+    const stood = paintedOf(old?.settings ?? resolveSettings(asked, base));
+    // A room that failed ends on the plain shelf, which reads a link that does not name a room as it
+    // always did: the lighting and scene held back for the room are put back (ADR-0180 item 5).
+    const painted =
+      old?.room.state === 'failed' && !linkNamesRoom
+        ? resolveSettings(roomGroups.groups, stood)
+        : stood;
     roomWanted = undefined; // the plain shelf, painted: the room is not reloaded on this page
     old?.dispose();
     handle = undefined;
@@ -442,7 +474,7 @@ export async function boot(
   // URL (partial) → the total object the shelf runs, folded onto the base the
   // record chose. `shelf-url.ts` owns the query vocabulary in both directions;
   // nothing else parses or writes it.
-  handle = mount(resolveSettings(asked, base));
+  handle = mount(resolveSettings(mode === 'room' ? roomGroups.rest : asked, base));
   if (handle === undefined) showNotice(surface, failure);
 
   const initial = initialState(record, asked.shadows?.enabled, handle?.gpu);
@@ -505,6 +537,19 @@ export async function boot(
   if (handle === undefined) return undefined;
 
   const host = surface.parentElement ?? document.body;
+  // The visible picker (spec S15.2): built only for a page that draws a room, and only while the
+  // list holds more than one. A pick opens the page again at the room it asks for.
+  if (mode === 'room') {
+    mountRoomPicker({
+      host,
+      current: chosen,
+      store,
+      search: () => window.location.search,
+      open: (search) => {
+        window.location.assign(search);
+      },
+    });
+  }
   const live = createPickup(handle.stage, {
     status: page.status,
     host,
@@ -539,6 +584,8 @@ export async function boot(
           open: (search) => {
             window.location.assign(search);
           },
+          rooms: { list: roomsListed(ROOMS), current: chosen },
+          ...(linkNotForRoom ? { notice: FOREIGN_LINK_NOTICE } : {}),
         },
         tunable: live.tunable,
         blackbox,
@@ -547,6 +594,14 @@ export async function boot(
           // Dispose before mounting: two live renderers on one canvas is two
           // contexts, and the browser hands out a limited number of those.
           current.dispose();
+          // The room dresses with its own lights over what it is handed, and the link's overrides
+          // with them: hand it the panel's lighting and scene as overrides so an edit survives.
+          if (roomWanted !== undefined) {
+            roomWanted = {
+              ...roomWanted,
+              overrides: { lighting: settings.lighting, scene: settings.scene },
+            };
+          }
           const next = mount(settings);
           if (next === undefined) {
             handle = undefined;
