@@ -68,28 +68,34 @@ describe('buildCredits', () => {
   });
 
   it('reads null as unmodified', () => {
-    expect(buildCredits([input()], { [DESK]: note({ modified: null }) })[0]?.modified).toBeUndefined();
+    expect(
+      buildCredits([input()], { [DESK]: note({ modified: null }) })[0]?.modified,
+    ).toBeUndefined();
   });
 
   it('refuses an input with no entry, naming its page', () => {
-    expect(() => buildCredits([input()], {})).toThrow(/no entry in credits\.json for https:\/\/example\.org\/desk/);
-  });
-
-  it('refuses an entry no input names', () => {
-    expect(() => buildCredits([input()], { [DESK]: note(), 'https://example.org/gone': note() })).toThrow(
-      /credits a page no input names: https:\/\/example\.org\/gone/,
+    expect(() => buildCredits([input()], {})).toThrow(
+      /no entry in credits\.json for https:\/\/example\.org\/desk/,
     );
   });
 
+  it('refuses an entry no input names', () => {
+    expect(() =>
+      buildCredits([input()], { [DESK]: note(), 'https://example.org/gone': note() }),
+    ).toThrow(/credits a page no input names: https:\/\/example\.org\/gone/);
+  });
+
   it('refuses an empty modified, a non-https link and mixed licences', () => {
-    expect(() => buildCredits([input()], { [DESK]: note({ modified: '' }) })).toThrow(/empty `modified`/);
+    expect(() => buildCredits([input()], { [DESK]: note({ modified: '' }) })).toThrow(
+      /empty `modified`/,
+    );
     expect(() =>
       buildCredits([input({ page: 'http://example.org/desk' })], {
         'http://example.org/desk': note(),
       }),
     ).toThrow(/not an https link/);
-    expect(() =>
-      buildCredits([input(), input({ licence: 'CC0' })], { [DESK]: note() }),
-    ).toThrow(/more than one licence/);
+    expect(() => buildCredits([input(), input({ licence: 'CC0' })], { [DESK]: note() })).toThrow(
+      /more than one licence/,
+    );
   });
 });

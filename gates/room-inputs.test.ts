@@ -41,7 +41,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildCredits, type CreditInput, type CreditNote } from '../packages/site/src/notice/credits.ts';
+import {
+  buildCredits,
+  type CreditInput,
+  type CreditNote,
+} from '../packages/site/src/notice/credits.ts';
 import { REPO_ROOT, ROOM_SUPPORT_FOLDERS, expectFound } from './repo.ts';
 
 const ROOMS = 'packages/site/rooms';
@@ -218,7 +222,10 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
     const ccBy = rows.filter((r) => r.required);
     expect(ccBy.length, `${room}: required rows`).toBeGreaterThanOrEqual(1);
     for (const row of ccBy) {
-      expect(row.modified, `${room}: ${row.name} is CC BY and says nothing of changes`).toBeDefined();
+      expect(
+        row.modified,
+        `${room}: ${row.name} is CC BY and says nothing of changes`,
+      ).toBeDefined();
     }
   });
 
@@ -237,9 +244,9 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
 
     it('on a new input added with no entry', () => {
       const added = { ...(entries[0] as Entry), page: 'https://polyhaven.com/a/not_credited' };
-      expect(() => buildCredits([...(entries as CreditInput[]), added as CreditInput], notes)).toThrow(
-        /not_credited/,
-      );
+      expect(() =>
+        buildCredits([...(entries as CreditInput[]), added as CreditInput], notes),
+      ).toThrow(/not_credited/);
     });
   });
 
