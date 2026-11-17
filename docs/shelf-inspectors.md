@@ -8,7 +8,9 @@ Read this before changing the renderer, the debug panel, or `shelf-settings.ts`.
 
 ## The page mode — `?shelf` and `?room=<id>`
 
-The default page draws the room ([ADR-0164](adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)); `?shelf` draws the bookcase alone. `?solo` wins over `?shelf`. `?room=<id>` takes only an id on the list in `room-mode.ts`. `?debug` adds Room, Shelf and Solo buttons. `window.__shelf.room()` reports the room.
+The default page draws the room ([ADR-0164](adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)); `?shelf` draws the bookcase alone. `?solo` wins over `?shelf`. `?room=<id>` takes only an id on the list in `room-mode.ts`: so does the `room` a `?debug=<json>` link carries, and so does the one id the page keeps in `localStorage` (`stacks.room`), and one that is not on the list means the default room and writes nothing ([ADR-0180](adr/0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md)). `?room=` beats the link's, which beats storage. `?debug` adds Room, Shelf and Solo buttons, and a button for each room once there is more than one. `window.__shelf.room()` reports the room.
+
+**A theme is a room.** The picker (a labelled select at the bottom of the page) shows only while the list holds more than one room; a pick is remembered and opens the page at `?room=<id>`. In a room, the panel's lighting and scene are that room's, "reset to shipped defaults" returns to them, and a written `?debug` link carries the room's id and the differences from *its* lighting and scene. A link with no `room` and with lighting or scene was made before themes: a room keeps its own and the pane says so. The tests prove all of it with a second room that is never on the list.
 
 ## One book, alone — `?solo`
 

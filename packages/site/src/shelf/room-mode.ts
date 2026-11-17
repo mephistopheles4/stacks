@@ -1,4 +1,5 @@
-import { soloBook } from './shelf-url.ts';
+import type { StoreLike } from './shadow-fallback.ts';
+import { debugRoom, soloBook } from './shelf-url.ts';
 
 /**
  * Which page this is: the room around the bookcase, the bookcase alone, or one book (#602, spec S2).
@@ -16,44 +17,128 @@ export type PageMode = 'room' | 'shelf' | 'solo';
  */
 export const DEFAULT_PAGE_MODE: Exclude<PageMode, 'solo'> = 'room';
 
-/** What a room is to the page: its GLB, and the ground colour behind it. */
+/** What a room is to the page: its name in the picker, its GLB, and the ground colour behind it. */
 export interface RoomEntry {
+  /** What the picker and the debug pane call the room. Set as text, never as markup. */
+  readonly label: string;
   /** The packed GLB, in `public/rooms/<id>/`. */
   readonly glb: string;
   /** The scene's background while this room is drawn (the prototype's room lighting held it). */
   readonly background: number;
 }
 
+/** A list of rooms by id. The page's own is `ROOMS`; a test hands in one with a room that never ships. */
+export type Catalogue = Readonly<Record<string, RoomEntry>>;
+
+declare const roomIdBrand: unique symbol;
+
 /**
- * **The fixed list.** Spec S15.3: a room id from `?room=`, and later from storage or a `?debug`
- * link, is looked up here and never concatenated into a path. It holds one room until the themes
- * ticket (T7) adds a test room, and the second room is the last ticket.
+ * An id that was found on a catalogue: the only kind of string `roomFolder` and the loader take, so a
+ * value from the address, from storage or from a `?debug` link cannot reach a path without having been
+ * through `isRoomId` (spec S15.3). A type and nothing at run time.
+ */
+export type RoomId = string & { readonly [roomIdBrand]: true };
+
+/**
+ * **The fixed list.** Spec S15.3: a room id from `?room=`, from storage and from a `?debug` link is
+ * looked up here and never concatenated into a path. A theme is a room (S15.1), so adding one is one
+ * entry here and its folder under `public/rooms/`. It holds one room until the second is built (T8):
+ * the picker is hidden while it does, and a test room proves the machinery without ever being on it.
  */
 export const ROOMS = {
-  'reading-corner': { glb: 'room-audition.glb', background: 0x0d0b09 },
-} as const satisfies Record<string, RoomEntry>;
+  'reading-corner': { label: 'Reading corner', glb: 'room-audition.glb', background: 0x0d0b09 },
+} as const satisfies Catalogue;
 
-export type RoomId = keyof typeof ROOMS;
-
-export const DEFAULT_ROOM_ID: RoomId = 'reading-corner';
+export const DEFAULT_ROOM_ID = 'reading-corner' as RoomId;
 
 /** Own keys only: `?room=constructor` and `?room=__proto__` are not rooms. */
-export function isRoomId(value: unknown): value is RoomId {
-  return typeof value === 'string' && Object.hasOwn(ROOMS, value);
+export function isRoomId(value: unknown, catalogue: Catalogue = ROOMS): value is RoomId {
+  return typeof value === 'string' && Object.hasOwn(catalogue, value);
+}
+
+/** The entry for an id that was found on `catalogue`. */
+export function roomEntry(id: RoomId, catalogue: Catalogue = ROOMS): RoomEntry {
+  const entry = catalogue[id];
+  if (entry === undefined) throw new Error(`room "${id}" is not on the list`);
+  return entry;
+}
+
+/** Every room, in the list's order, for the picker and the debug pane. */
+export function roomsListed(
+  catalogue: Catalogue = ROOMS,
+): readonly { readonly id: RoomId; readonly label: string }[] {
+  return Object.entries(catalogue).map(([id, entry]) => ({ id: id as RoomId, label: entry.label }));
+}
+
+/** The picker shows when there is a choice to make: it is hidden while the list holds one room (S15.2). */
+export function showsPicker(catalogue: Catalogue = ROOMS): boolean {
+  return Object.keys(catalogue).length > 1;
 }
 
 /**
- * `?room=<id>`: a room on the list, else the default. An empty value, an unknown one and an absent
- * one all mean the default room (spec S2.7).
+ * Which room this page loads (spec S2.7, S15.3): `?room=<id>` first, then the `room` a `?debug`
+ * link carries, then the room the visitor picked last time (`remembered`), then the default.
+ *
+ * **The first source that says anything decides**, so a source that names something that is not a
+ * room means the default room and does not fall through to a later one: an address that asks for
+ * `attic` gets the default, not whatever the browser remembers. An empty `?room=` is that too.
  */
-export function roomIdFrom(search: string): RoomId {
-  const asked = new URLSearchParams(search).get('room');
-  return isRoomId(asked) ? asked : DEFAULT_ROOM_ID;
+export function roomIdFrom(
+  search: string,
+  remembered?: string,
+  catalogue: Catalogue = ROOMS,
+): RoomId {
+  const params = new URLSearchParams(search);
+  const asked = params.get('room') ?? debugRoom(params) ?? remembered;
+  return isRoomId(asked, catalogue) ? asked : DEFAULT_ROOM_ID;
 }
 
 /** Where a room's files are served from: `/rooms/<id>/`, for an id already on the list. */
 export function roomFolder(id: RoomId): string {
   return `/rooms/${id}/`;
+}
+
+/** The one file a page fetches first for a room: its GLB. */
+export function roomGlbUrl(id: RoomId, catalogue: Catalogue = ROOMS): string {
+  return roomFolder(id) + roomEntry(id, catalogue).glb;
+}
+
+/** The one key the page keeps in `localStorage`, and what it holds: a room id and nothing else. */
+export const ROOM_KEY = 'stacks.room';
+
+/**
+ * The room the visitor picked last time, or `undefined`: no store, a store that throws (a blocked
+ * `localStorage`), nothing there, or a value that is not on the list. **Writes nothing in any of
+ * them**: a value that is not a room is left where it is and the default room loads (spec S15.3).
+ */
+export function readRemembered(
+  store: StoreLike | undefined,
+  catalogue: Catalogue = ROOMS,
+): RoomId | undefined {
+  if (store === undefined) return undefined;
+  try {
+    const value = store.getItem(ROOM_KEY);
+    return isRoomId(value, catalogue) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Remembers a pick, best effort. It writes only an id on the list, so what storage holds is always
+ * one of them or whatever somebody put there by hand, which `readRemembered` refuses.
+ */
+export function remember(
+  store: StoreLike | undefined,
+  id: string,
+  catalogue: Catalogue = ROOMS,
+): void {
+  if (store === undefined || !isRoomId(id, catalogue)) return;
+  try {
+    store.setItem(ROOM_KEY, id);
+  } catch {
+    // A full or blocked store means the pick lasts for this page load; nothing else is lost.
+  }
 }
 
 /**
@@ -79,4 +164,34 @@ export function addressFor(search: string, mode: PageMode): string {
   if (mode === 'solo') params.set('solo', '');
   const query = params.toString().replace(/=(?=&|$)/g, '');
   return query === '' ? '?' : `?${query}`;
+}
+
+/**
+ * The address that asks for a room: `?room=<id>` over the rest of the address.
+ *
+ * The `?debug=<json>` link's own `room` goes, and so do its lighting and scene: they are one room's
+ * differences from that room's defaults (spec S15.4) and mean nothing against another's. The rest
+ * of the link stays, and a link left holding nothing is bare `?debug` again.
+ */
+export function addressForRoom(search: string, id: RoomId): string {
+  const params = new URLSearchParams(search);
+  if (params.has('debug')) params.set('debug', withoutRoomKeys(params.getAll('debug').at(-1)));
+  params.set('room', id);
+  return `?${params.toString().replace(/=(?=&|$)/g, '')}`;
+}
+
+/** A `?debug` value without the keys one room owns; a value that is not an object is left as it is. */
+function withoutRoomKeys(raw: string | undefined): string {
+  if (raw === undefined || raw === '') return '';
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return raw;
+  const rest = Object.entries(parsed).filter(
+    ([key]) => !['room', 'lighting', 'scene'].includes(key),
+  );
+  return rest.length === 0 ? '' : JSON.stringify(Object.fromEntries(rest));
 }

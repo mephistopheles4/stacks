@@ -290,6 +290,7 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
 export function writeSettings(
   settings: ShelfSettings,
   base: ShelfSettings = DEFAULT_SETTINGS,
+  room?: RoomView,
 ): void {
   const params = new URLSearchParams(window.location.search);
   const d = base;
@@ -313,7 +314,7 @@ export function writeSettings(
   probe('painted', s.painted !== d.shadows.painted, s.painted ? '1' : '0');
 
   // `set` keeps `debug` where it already sat, so a diff does not reorder the query.
-  params.set('debug', diffText(settings) ?? '');
+  params.set('debug', diffText(settings, room) ?? '');
   params.delete('tune');
 
   /**
@@ -344,11 +345,17 @@ export function writeSettings(
  * leaves a hand-typed address exactly as it was. Returns the remover.
  */
 export function keepSettingsInAddress(
-  current: () => { readonly settings: ShelfSettings; readonly base?: ShelfSettings } | undefined,
+  current: () =>
+    | {
+        readonly settings: ShelfSettings;
+        readonly base?: ShelfSettings;
+        readonly room?: RoomView | undefined;
+      }
+    | undefined,
 ): () => void {
   const rewrite = (): void => {
     const now = current();
-    if (now !== undefined) writeSettings(now.settings, now.base);
+    if (now !== undefined) writeSettings(now.settings, now.base, now.room);
   };
   window.addEventListener('popstate', rewrite);
   return () => {
@@ -360,6 +367,8 @@ export function keepSettingsInAddress(
 
 /** The half of the settings with no historic spelling, as a diff from defaults. */
 interface Diff {
+  /** The room the link was made in: an id, checked against the list before it is used (spec S15.3). */
+  room?: unknown;
   effects?: unknown;
   lighting?: unknown;
   scene?: unknown;
@@ -369,11 +378,23 @@ interface Diff {
   exposure?: number;
 }
 
-function diffText(settings: ShelfSettings): string | undefined {
+/**
+ * The room a page has dressed, as far as the address is concerned (spec S15.4): its id, and the
+ * lighting and scene it shipped with. **A theme's defaults for those two groups**, so a link records
+ * the differences from the room and not from the shelf; every other group stays the shelf's own.
+ */
+export interface RoomView {
+  readonly id: string;
+  readonly defaults: Pick<ShelfSettings, 'lighting' | 'scene'>;
+}
+
+function diffText(settings: ShelfSettings, room?: RoomView): string | undefined {
   const d = DEFAULT_SETTINGS;
+  const owned = room?.defaults ?? d;
   const diff: Diff = {
-    ...(same(settings.lighting, d.lighting) ? {} : { lighting: settings.lighting }),
-    ...(same(settings.scene, d.scene) ? {} : { scene: settings.scene }),
+    ...(room === undefined ? {} : { room: room.id }),
+    ...(same(settings.lighting, owned.lighting) ? {} : { lighting: settings.lighting }),
+    ...(same(settings.scene, owned.scene) ? {} : { scene: settings.scene }),
     ...(same(settings.materials, d.materials) ? {} : { materials: settings.materials }),
     ...(same(settings.books, d.books) ? {} : { books: settings.books }),
     ...(same(settings.effects, d.effects) ? {} : { effects: settings.effects }),
@@ -451,6 +472,7 @@ function readDiff(params: URLSearchParams): SettingsPatch {
 
 /** Every top-level key `?debug` reads; any other is refused, as `conform` refuses below. */
 const DIFF_KEYS: readonly string[] = [
+  'room',
   'effects',
   'lighting',
   'scene',
@@ -459,6 +481,52 @@ const DIFF_KEYS: readonly string[] = [
   'toneMapping',
   'exposure',
 ] satisfies readonly (keyof Diff)[];
+
+/**
+ * The room id a `?debug=<json>` link carries, as the text it holds, or `undefined` when it holds
+ * none or holds something that is not text (spec S15.3). **Not checked here**: whether it is a room
+ * is `room-mode.ts`'s one list, and a string that is not on it is never turned into a path.
+ */
+export function debugRoom(params: URLSearchParams): string | undefined {
+  const raw = params
+    .getAll('debug')
+    .filter((value) => value !== '')
+    .at(-1);
+  if (raw === undefined) return undefined;
+  const room = diffObject(raw)?.room;
+  return typeof room === 'string' ? room : undefined;
+}
+
+/**
+ * A patch split into the two groups a room owns and everything else (spec S15.4): on a page that
+ * draws a room, lighting and scene are the room's to set, so the link's own are held back until the
+ * room is dressed and laid over its defaults, and only when the link names a room.
+ */
+export function splitRoomGroups(patch: SettingsPatch): {
+  readonly groups: SettingsPatch;
+  readonly rest: SettingsPatch;
+} {
+  const { lighting, scene, ...rest } = patch;
+  return {
+    groups: {
+      ...(lighting === undefined ? {} : { lighting }),
+      ...(scene === undefined ? {} : { scene }),
+    },
+    rest,
+  };
+}
+
+/**
+ * Whether a `?debug=<json>` link carries lighting or scene values: the two groups a room owns, so a
+ * link made before themes existed (it carries them and no room id) meant the shelf's own and says
+ * nothing about a room's (spec S15.4).
+ */
+export function debugCarriesRoomGroups(params: URLSearchParams): boolean {
+  const patch = readDiff(params);
+  return [patch.lighting, patch.scene].some(
+    (group) => group !== undefined && Object.keys(group).length > 0,
+  );
+}
 
 /** `?debug`'s value as an object, or `undefined` when it is not JSON or not an object. */
 function diffObject(raw: string): Diff | undefined {

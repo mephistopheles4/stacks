@@ -24,7 +24,7 @@ import { changedPieces, livePieces, paintedPieces } from './painted-pieces.ts';
 import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
-import { woodSeed } from './shelf-url.ts';
+import { woodSeed, type RoomView } from './shelf-url.ts';
 import { clampInto, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import {
@@ -42,7 +42,7 @@ import {
   stackSlots,
   type LaidBook,
 } from './room-wishlist.ts';
-import { ROOMS, type RoomId } from './room-mode.ts';
+import type { RoomEntry, RoomId } from './room-mode.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
@@ -53,6 +53,7 @@ import {
   resolveSettings,
   type ShadowSettings,
   type ShadowTypeName,
+  type SettingsPatch,
   type ShelfSettings,
   type ToneMappingName,
 } from './shelf-settings.ts';
@@ -394,6 +395,12 @@ export interface ShelfHandle {
   projectStackBase(): { x: number; y: number } | undefined;
   /** What picking a book up reaches into. See `pickup.ts`. */
   readonly stage: ShelfStage;
+  /**
+   * The room on the page once it is dressed, and the lighting and scene it shipped with: what the
+   * panel resets to and what a `?debug` link is a difference from (spec S15.4). `undefined` for a
+   * shelf with no room, and for one whose room has not come up.
+   */
+  readonly roomView: RoomView | undefined;
   /** Where the room stands, and what it cost: for the smoke gates and the black box. */
   readonly room: {
     readonly state: RoomState;
@@ -461,6 +468,13 @@ export interface MountOptions {
 
 export interface RoomRequest {
   readonly id: RoomId;
+  /** The room's entry on the list the id was found on: its GLB and its ground colour. */
+  readonly entry: RoomEntry;
+  /**
+   * What a `?debug` link that names this room says of its lighting and scene, laid over the room's own
+   * defaults once it is dressed (spec S15.4). Absent: the room's defaults stand.
+   */
+  readonly overrides?: SettingsPatch;
   /** The room is on, its lights and camera in: the panel shows the room's values. */
   readonly onDressed?: () => void;
   /** The room failed to load, or stalled: the page is drawing the plain shelf and will not retry. */
@@ -1070,6 +1084,7 @@ function assembleShelf(
   // drawn, then its camera and its box. A room that fails, or stalls past a minute, is taken out and
   // the shelf stands as it was built (spec S2.5, S3.4).
   let room: LoadedRoom | undefined;
+  let roomView: RoomView | undefined;
   let roomState: RoomState = options.room === undefined ? 'none' : 'loading';
   const leaving = new AbortController();
   const request = options.room;
@@ -1077,6 +1092,7 @@ function assembleShelf(
     void runRoomLoad(
       roomAssets({
         id: request.id,
+        entry: request.entry,
         renderer,
         search: window.location.search,
         warn: (message) => {
@@ -1090,12 +1106,16 @@ function assembleShelf(
         },
         ready: (loaded) => {
           roomData = loaded.data;
-          applySettings(
-            resolveSettings(
-              lightsPatch(loaded.data.lights, ROOMS[request.id].background),
-              settings,
-            ),
-          );
+          // The room's lighting and scene, from its own GLB and entry. They are the theme's defaults
+          // for those two groups (spec S15.1): what the panel resets to, and what a `?debug` link is a
+          // difference from. A link that names the room then lays its differences over them.
+          const patch = lightsPatch(loaded.data.lights, request.entry.background);
+          const defaults = resolveSettings(patch, DEFAULT_SETTINGS);
+          roomView = {
+            id: request.id,
+            defaults: { lighting: defaults.lighting, scene: defaults.scene },
+          };
+          applySettings(resolveSettings(request.overrides ?? {}, resolveSettings(patch, settings)));
           frameCamera(camera.aspect);
           // Last, so a room that fails above it has laid nothing to take back out.
           layOnStacks(loaded.data.slots);
@@ -1109,6 +1129,7 @@ function assembleShelf(
           loaded?.group.removeFromParent();
           room = undefined;
           roomData = undefined;
+          roomView = undefined;
           // A cancelled load is not a failed room: the page that cancelled it has the shelf it wants.
           if (!leaving.signal.aborted) {
             roomState = 'failed';
@@ -1156,6 +1177,10 @@ function assembleShelf(
     gpu: describeGpu(renderer),
     bookcaseOverflow: measureBookcaseOverflow(scene, placed),
     shaderErrors,
+
+    get roomView() {
+      return roomView;
+    },
 
     get room() {
       return {

@@ -3,7 +3,15 @@ import { attempted, type Attempt } from '../analytics/events.ts';
 import { onPickUpRequest } from '../ask/bridge.ts';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountDiagnostics, type DiagnosticsPort } from './diagnostics.ts';
-import { pageMode, roomIdFrom } from './room-mode.ts';
+import {
+  pageMode,
+  readRemembered,
+  roomEntry,
+  roomIdFrom,
+  roomsListed,
+  ROOMS,
+} from './room-mode.ts';
+import { mountRoomPicker } from './room-picker.ts';
 import {
   createPickup,
   loopPickups,
@@ -40,7 +48,15 @@ import {
   UNAVAILABLE_MESSAGE,
 } from './shelf-notice.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
-import { bookLimit, readSettings, retiredTuneHint, soloBook } from './shelf-url.ts';
+import {
+  bookLimit,
+  debugCarriesRoomGroups,
+  debugRoom,
+  readSettings,
+  retiredTuneHint,
+  soloBook,
+  splitRoomGroups,
+} from './shelf-url.ts';
 
 /**
  * Wires the page up: load the library, mount the shelf, pick a book up on click.
@@ -164,6 +180,10 @@ export interface PageHandles {
   readonly controls: HeldControls;
 }
 
+/** What the panel says of a `?debug` link made before themes that carries lighting or scene (S15.4). */
+const LEGACY_LINK_NOTICE =
+  'This link predates themes: its lighting and scene were for the shelf, so the room keeps its own.';
+
 export async function boot(
   canvas: HTMLCanvasElement,
   page: PageHandles,
@@ -247,10 +267,20 @@ export async function boot(
     window.location.search,
     matchMedia('(prefers-reduced-data: reduce)').matches,
   );
+  // Which room (spec S15.3): `?room=`, then a `?debug` link's, then the visitor's last pick, then the
+  // default, each checked against the one list before it is used.
+  const chosen = roomIdFrom(window.location.search, readRemembered(store));
+  // A link that names a room records lighting and scene as differences from that room's defaults; one
+  // that does not was made before themes and meant the shelf's own, which a room does not take.
+  const linkNamesRoom = debugRoom(params) !== undefined;
+  const roomGroups = splitRoomGroups(asked);
+  const legacyLink = mode === 'room' && !linkNamesRoom && debugCarriesRoomGroups(params);
   let roomWanted: RoomRequest | undefined =
     mode === 'room'
       ? {
-          id: roomIdFrom(window.location.search),
+          id: chosen,
+          entry: roomEntry(chosen),
+          ...(linkNamesRoom ? { overrides: roomGroups.groups } : {}),
           // The room's lights are in the settings now: the panel shows them.
           onDressed: () => {
             if (handle !== undefined) showPanel?.(handle);
@@ -442,7 +472,7 @@ export async function boot(
   // URL (partial) → the total object the shelf runs, folded onto the base the
   // record chose. `shelf-url.ts` owns the query vocabulary in both directions;
   // nothing else parses or writes it.
-  handle = mount(resolveSettings(asked, base));
+  handle = mount(resolveSettings(mode === 'room' ? roomGroups.rest : asked, base));
   if (handle === undefined) showNotice(surface, failure);
 
   const initial = initialState(record, asked.shadows?.enabled, handle?.gpu);
@@ -505,6 +535,19 @@ export async function boot(
   if (handle === undefined) return undefined;
 
   const host = surface.parentElement ?? document.body;
+  // The visible picker (spec S15.2): built only for a page that draws a room, and only while the
+  // list holds more than one. A pick opens the page again at the room it asks for.
+  if (mode === 'room') {
+    mountRoomPicker({
+      host,
+      current: chosen,
+      store,
+      search: () => window.location.search,
+      open: (search) => {
+        window.location.assign(search);
+      },
+    });
+  }
   const live = createPickup(handle.stage, {
     status: page.status,
     host,
@@ -539,6 +582,8 @@ export async function boot(
           open: (search) => {
             window.location.assign(search);
           },
+          rooms: { list: roomsListed(ROOMS), current: chosen },
+          ...(legacyLink ? { notice: LEGACY_LINK_NOTICE } : {}),
         },
         tunable: live.tunable,
         blackbox,
