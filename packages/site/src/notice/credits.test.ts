@@ -52,8 +52,9 @@ describe('buildCredits', () => {
         input(),
       ],
       {
-        'https://example.org/a': note({ name: 'A' }),
-        'https://example.org/b': note({ name: 'B' }),
+        // named against the input order, so the name tie-break is what puts A before B
+        'https://example.org/a': note({ name: 'B' }),
+        'https://example.org/b': note({ name: 'A' }),
         [DESK]: note({ name: 'Z' }),
       },
     );
@@ -62,7 +63,8 @@ describe('buildCredits', () => {
       ['A', false],
       ['B', false],
     ]);
-    expect(rows[1]?.licenceLink).toBeUndefined();
+    expect(rows[1]?.licenceLink).toBe('https://creativecommons.org/publicdomain/zero/1.0/');
+    expect(rows[2]?.licenceLink).toBeUndefined();
   });
 
   it('reads null as unmodified', () => {
