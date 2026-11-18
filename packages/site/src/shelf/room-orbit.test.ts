@@ -339,6 +339,15 @@ describe('the camera in a room (#637)', () => {
     pan(r, 100, 0);
     r.frames(10);
     expect(r.view.position.distanceTo(r.controls.target)).toBeGreaterThan(7.9);
+    // the distance alone would also hold for a camera snapped in and turned back out: it went sideways by
+    // the pan and no nearer. OrbitControls pans 2 * distance * tan(fov / 2) * dx / clientHeight, the content
+    // following the pointer, and damping has played out all but 0.95 ** 41 of it
+    const full = (2 * 8 * Math.tan(THREE.MathUtils.degToRad(FOV) / 2) * 100) / 800;
+    const shifted = 1 - r.view.position.x;
+    expect(shifted).toBeGreaterThan(full * 0.95 * (1 - 0.95 ** 40));
+    expect(shifted).toBeLessThan(full * 1.001);
+    expect(r.view.position.z).toBeCloseTo(12, 9);
+    expect(r.view.position.y).toBeCloseTo(5, 9);
   });
 });
 
