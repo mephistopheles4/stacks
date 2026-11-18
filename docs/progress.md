@@ -145,6 +145,7 @@ One line per episode, newest last. The narrative is one file per investigation i
 - 2026-11-12 — [The agent docs history, cut from the spec index, shelf docs and `commands.md`](./log/2026-11-12-agent-docs-history.md)
 - 2026-11-12 — [`progress.md` before the cleanup](./log/2026-11-12-progress-before-the-cleanup.md)
 - 2026-11-15 — [iOS scroll, real iPhone (#599)](./log/2026-11-15-ios-scroll-on-a-real-iphone.md)
+- 2026-11-17 — [The ceiling trim on the closed room (#631)](./log/2026-11-17-the-ceiling-trim-on-the-closed-room.md)
 
 ## Notes to the next session
 

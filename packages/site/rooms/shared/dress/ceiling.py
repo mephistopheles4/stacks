@@ -1,6 +1,6 @@
 """#593: the room's ceiling, an old popcorn plaster in a smoked cream, at the back wall's own height
 (build_room.py runs the back wall's paper to 12 units), with a stepped cornice of boards and beads
-round the three walls where they meet it. Baked in its own atlas, so the popcorn's grain is the bake's.
+round the four walls where they meet it. Baked in its own atlas, so the popcorn's grain is the bake's.
 
     exec(open("ceiling.py").read(), g); g["dress_ceiling"](scene)
 """
@@ -103,10 +103,11 @@ def _popcorn():
     return m
 
 
-def dress_ceiling(scene, left_x=-7.89, right_x=9.89, back_y=0.5, front_y=-15.0, walls_front=-10.0, top=TOP):
+def dress_ceiling(scene, left_x=-7.89, right_x=9.89, back_y=0.5, front_y=-15.0, walls_front=-13.0, top=TOP):
     """The ceiling from wall to wall and from the back wall to past the opening view's camera
-    (y -14.3), so a visitor looking up sees plaster; the cornice along the back wall and both side walls,
-    as far as the side walls run (side_walls.py y0)."""
+    (y -14.3), so a visitor looking up sees plaster; the cornice along the back wall, both side walls and
+    the front wall that closes the room (#631), as far as the side walls run (side_walls.py y0, which
+    walls_front must equal)."""
     root = bpy.data.objects.new("ceiling_dress", None)
     scene.collection.objects.link(root)
     me = bpy.data.meshes.new("ceiling_dress_plaster")
@@ -129,6 +130,8 @@ def dress_ceiling(scene, left_x=-7.89, right_x=9.89, back_y=0.5, front_y=-15.0, 
         ("back", Matrix(((-1, 0, 0, right_x), (0, -1, 0, back_y), (0, 0, 1, 0), (0, 0, 0, 1))), right_x - left_x),
         ("left", Matrix(((0, 1, 0, left_x), (-1, 0, 0, back_y), (0, 0, 1, 0), (0, 0, 0, 1))), back_y - walls_front),
         ("right", Matrix(((0, -1, 0, right_x), (1, 0, 0, walls_front), (0, 0, 1, 0), (0, 0, 0, 1))), back_y - walls_front),
+        # the front wall's face is the plane y = walls_front, the room on its +y side
+        ("front", Matrix(((1, 0, 0, left_x), (0, 1, 0, walls_front), (0, 0, 1, 0), (0, 0, 0, 1))), right_x - left_x),
     )
     for name, frame, length in walls:
         bm = bmesh.new()
