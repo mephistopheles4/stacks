@@ -23,10 +23,11 @@ import {
 import { changedPieces, livePieces, paintedPieces } from './painted-pieces.ts';
 import { BACKBOARD_INSET, mainRowCount, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
 import { bookCase, pageBlock } from './binding-case.ts';
-import { fogRange, FOV, frameBookcase } from './framing.ts';
+import { fogOutside, fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed, type RoomView } from './shelf-url.ts';
 import { bookcaseBox, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
 import { createCentrePick } from './room-anchor.ts';
+import { stripOuterFaces } from './room-cutaway.ts';
 import { createRoomOrbit } from './room-orbit.ts';
 import { BOOKCASE_STANDOFF } from './room-walk.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
@@ -676,9 +677,22 @@ function assembleShelf(
     controls.maxDistance = framing.maxDistance;
     controls.update();
 
-    const range = fogRange(settings.scene.fog, framedAt);
-    fog.near = range.near;
-    fog.far = range.far;
+    placeFog(0);
+  };
+
+  /**
+   * The fog and the far plane for a camera `outside` the room's box (#637, spec S7). The fog's range is
+   * read from the live settings, so the panel's sliders still move what they say. The projection matrix
+   * is rebuilt only when the far plane moves.
+   */
+  const placeFog = (outside: number): void => {
+    const next = fogOutside(fogRange(settings.scene.fog, framedAt), outside);
+    fog.near = next.near;
+    fog.far = next.far;
+    if (camera.far !== next.cameraFar) {
+      camera.far = next.cameraFar;
+      camera.updateProjectionMatrix();
+    }
   };
 
   frameCamera(16 / 9);
@@ -797,6 +811,7 @@ function assembleShelf(
   /** A pickup's hooks, when one is installed. See `FrameHooks`. */
   let hooks: FrameHooks | undefined;
 
+  const roomBox = new THREE.Box3();
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
@@ -804,6 +819,13 @@ function assembleShelf(
     // the room's box (spec S8.2, C7): see `room-orbit.ts`.
     if (hooks?.holdsCamera() === true) roomOrbit.hold();
     else roomOrbit.step();
+    // A camera standing outside the room would fade it into the fog, which is measured from the opening view.
+    if (roomData !== undefined) {
+      const { min, max } = roomData.bounds;
+      roomBox.min.set(...min);
+      roomBox.max.set(...max);
+      placeFog(roomBox.distanceToPoint(camera.position));
+    }
     renderer.info.reset();
     if (hooks === undefined) renderFrame();
     else hooks.draw(renderFrame);
@@ -1099,6 +1121,8 @@ function assembleShelf(
       {
         add: (loaded) => {
           room = loaded;
+          // every wall drawn from the inside only, before a frame can draw an outer face (#637)
+          stripOuterFaces(loaded.group, loaded.data.bounds);
           scene.add(loaded.group);
         },
         ready: (loaded) => {
@@ -1134,6 +1158,8 @@ function assembleShelf(
           room = undefined;
           roomData = undefined;
           roomOrbit.leave();
+          // the far plane and the fog go back to the plain shelf's
+          placeFog(0);
           roomView = undefined;
           // A cancelled load is not a failed room: the page that cancelled it has the shelf it wants.
           if (!leaving.signal.aborted) {

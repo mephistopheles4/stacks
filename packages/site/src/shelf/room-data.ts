@@ -16,6 +16,16 @@ import type { SettingsPatch } from './shelf-settings.ts';
 
 export type Vec3 = readonly [number, number, number];
 
+/**
+ * Which of a room's meshes are cut away (#637, spec S6.4): `stripOuterFaces` drops the faces of every mesh
+ * under a node named like this that point out of the room, so the camera can stand outside it. The name
+ * read is the mesh's parent's (in a GLB a mesh always has one, even an unnamed one), else its own.
+ *
+ * **A theme room's GLB must use these names to be cut away**: `room_shell*`, `room_walls*`,
+ * `room_ceiling*`, `room_wallpaper*`, or exactly `room_floor`. There is no per-mesh flag.
+ */
+export const CUTAWAY_NAMES = /^room_(shell|walls|ceiling|wallpaper|floor$)/;
+
 /** A node of the GLB as the page's walk sees it: its place in the room, and its extras. */
 export interface Empty {
   readonly name: string;
