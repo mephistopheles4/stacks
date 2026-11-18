@@ -23,6 +23,8 @@ export type Vec3 = readonly [number, number, number];
  *
  * **A theme room's GLB must use these names to be cut away**: `room_shell*`, `room_walls*`,
  * `room_ceiling*`, `room_wallpaper*`, or exactly `room_floor`. There is no per-mesh flag.
+ * Put the name on the node *above* the mesh's node, as the room GLB does: for a one-primitive node
+ * `GLTFLoader` returns the mesh itself under the node's name, so a name on that node is never read.
  */
 export const CUTAWAY_NAMES = /^room_(shell|walls|ceiling|wallpaper|floor$)/;
 
