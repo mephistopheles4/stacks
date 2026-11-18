@@ -264,6 +264,20 @@ describe('the camera in a room (#637)', () => {
     expect(r.counted('hold')).toBe(1);
   });
 
+  it('C3: a right drag with Shift turns in OrbitControls, so it does not place the anchor as a pan does', () => {
+    // CodeRabbit finding on room-orbit.ts: with Shift held, OrbitControls turns on the right button
+    // and pans on the left, so classing every right-button drag as a pan repicked the anchor
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    r.phase('shift right');
+    r.send('pointerdown', { ...mouse, button: 2, buttons: 2, shiftKey: true });
+    expect(r.counted('shift right')).toBe(0);
+    r.send('pointerup', { ...mouse, button: 2, buttons: 0, shiftKey: true });
+    // the unmodified right button still pans, and so places it
+    r.send('pointerdown', { ...mouse, button: 2, buttons: 2 });
+    expect(r.counted('shift right')).toBe(1);
+  });
+
   it('C5b: a pinch raycasts at most once per 100 ms', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
     r.frames(1);

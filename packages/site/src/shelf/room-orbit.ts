@@ -273,7 +273,9 @@ export function createRoomOrbit(
         }
         return;
       }
-      panning = button === 2 || shiftKey || ctrlKey || metaKey;
+      // OrbitControls' own rule: the left button pans with a modifier and turns without, the right turns with one and pans without
+      const modified = shiftKey || ctrlKey || metaKey;
+      panning = button === 0 ? modified : button === 2 && !modified;
       if (panning && reachable !== undefined) reanchor();
       if (panning) moved = true;
       else if (reachable !== undefined && moved) {
