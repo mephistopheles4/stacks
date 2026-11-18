@@ -222,6 +222,14 @@ describe('the camera in a room (#637)', () => {
     turn(r);
     expect(r.counted('after the pinch')).toBe(1);
 
+    // the second finger landing is a pan's start and places the anchor, the first finger does not
+    r.phase('fingers');
+    r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+    expect(r.counted('fingers')).toBe(0);
+    r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+    expect(r.counted('fingers')).toBe(1);
+    lift(r);
+
     // a pan places it once at its start, however long it runs, and once again at the first turn
     r.phase('pan');
     pan(r, 100, 0);
@@ -427,11 +435,9 @@ describe('the keyboard (#637, C10)', () => {
     const r = room([1, 5, 8], [1, 5, 2]);
     const start = r.view.position.clone();
     for (const tagName of ['INPUT', 'TEXTAREA', 'SELECT']) {
-      expect(r.key('keydown', 'KeyW', { target: { tagName } }).prevented).toBe(false);
+      r.key('keydown', 'KeyW', { target: { tagName } });
     }
-    expect(
-      r.key('keydown', 'KeyW', { target: { tagName: 'DIV', isContentEditable: true } }).prevented,
-    ).toBe(false);
+    r.key('keydown', 'KeyW', { target: { tagName: 'DIV', isContentEditable: true } });
     for (const held of ['ctrlKey', 'metaKey', 'altKey']) {
       r.key('keydown', 'KeyW', { [held]: true });
       r.key('keydown', 'Space', { [held]: true });
@@ -500,6 +506,22 @@ describe('the keyboard (#637, C10)', () => {
     expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
   });
 
+  it('S9.3: a wheel walk queued when a book is picked up is dropped, not played out over the held book', () => {
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    const start = r.view.position.clone();
+    r.send('wheel', { deltaY: -300, deltaMode: 0 });
+    r.orbit.hold();
+    r.frames(10);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+  });
+
+  it('S9.3: the wheel is taken in a room, so the page does not scroll under it', () => {
+    // OrbitControls' own zoom is off in a room, so only the walk's listener can have prevented it
+    const r = room([1, 5, 8], [1, 5, 5]);
+    expect(r.send('wheel', { deltaY: -100, deltaMode: 0 }).prevented).toBe(true);
+  });
+
   it('C10: a key pressed on the body and let go with a button focused, or a dialog open, is no longer held', () => {
     const r = room([1, 5, 8], [1, 5, 2]);
     r.key('keydown', 'KeyW');
@@ -522,7 +544,7 @@ describe('leaving a room puts every field back (#637, C16)', () => {
       before: (c) => {
         c.enableZoom = true;
         c.enablePan = false;
-        c.enableRotate = true;
+        c.enableRotate = false;
         c.panSpeed = 1.5;
         c.minDistance = 1.5;
         c.maxDistance = 30;
@@ -532,6 +554,7 @@ describe('leaving a room puts every field back (#637, C16)', () => {
     r.frames(3);
     expect(r.controls.enableZoom).toBe(false);
     expect(r.controls.enablePan).toBe(true);
+    expect(r.controls.enableRotate).toBe(true);
     expect(r.controls.maxPolarAngle).toBeCloseTo(Math.PI * 0.9, 9);
     r.orbit.leave();
     expect({
@@ -545,7 +568,7 @@ describe('leaving a room puts every field back (#637, C16)', () => {
     }).toEqual({
       enableZoom: true,
       enablePan: false,
-      enableRotate: true,
+      enableRotate: false,
       panSpeed: 1.5,
       minDistance: 1.5,
       maxDistance: 30,
