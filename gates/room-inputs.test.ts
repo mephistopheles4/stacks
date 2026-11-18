@@ -15,8 +15,11 @@
  *   refuses at run time;
  * - **either `manual: true` or a fetch `url` on a host `fetch_inputs.py` allows**;
  *   the allowed hosts are read from that script, so the list is in one place;
- * - and **a CC BY entry is credited in the room's `SOURCES.md`**, by its author
- *   and its page URL, because that is what the licence asks.
+ * - **a CC BY entry is credited in the room's `SOURCES.md`**, by its author
+ *   and its page URL, because that is what the licence asks;
+ * - and **every input has a credit row** in the 3D credits modal (#621): `credits.json` holds one entry
+ *   per page in `inputs.json` and none for a page it does not name, read through the page's own
+ *   `buildCredits`, and a CC BY row says what the bake changed.
  *
  * ## What it does not say
  *
@@ -38,6 +41,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import {
+  buildCredits,
+  type CreditInput,
+  type CreditNote,
+} from '../packages/site/src/notice/credits.ts';
 import { REPO_ROOT, ROOM_SUPPORT_FOLDERS, expectFound } from './repo.ts';
 
 const ROOMS = 'packages/site/rooms';
@@ -147,6 +155,15 @@ function load(room: string) {
   return { entries: doc.inputs, sources };
 }
 
+function loadCredits(room: string): Record<string, CreditNote> {
+  const doc = JSON.parse(readFileSync(join(REPO_ROOT, ROOMS, room, 'credits.json'), 'utf8')) as {
+    credits: Record<string, CreditNote>;
+  };
+  return doc.credits;
+}
+
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 describe('G75 — every room bake input is named, licensed and credited', () => {
   const rooms = roomIds();
   const hosts = fetchHosts();
@@ -190,6 +207,47 @@ describe('G75 — every room bake input is named, licensed and credited', () => 
       `${room}: a destination named twice`,
     ).toEqual([]);
     expect(entries.flatMap((e) => entryFaults(e, hosts, sources))).toEqual([]);
+  });
+
+  // #621: the 3D credits modal is `inputs.json` grouped by asset, so an input with no
+  // entry in `credits.json` would ship uncredited. `buildCredits` is the page's own function, so
+  // this holds the page and not a copy of its rule.
+  it.each(rooms)('%s: every input has a credit row, and every CC BY one is on the page', (room) => {
+    const { entries } = load(room);
+    const notes = loadCredits(room);
+    const rows = buildCredits(entries as CreditInput[], notes);
+    expect(rows.length, `${room}: credit rows`).toBeGreaterThanOrEqual(10);
+    const pages = new Set(entries.map((e) => String(e.page)));
+    expect(rows.map((r) => r.link).sort()).toEqual([...pages].sort());
+    const ccBy = rows.filter((r) => r.required);
+    expect(ccBy.length, `${room}: required rows`).toBeGreaterThanOrEqual(1);
+    for (const row of ccBy) {
+      expect(
+        row.modified,
+        `${room}: ${row.name} is CC BY and says nothing of changes`,
+      ).toBeDefined();
+    }
+  });
+
+  describe('the credits are shown red', () => {
+    const room = rooms[0] as string;
+    const { entries } = load(room);
+    const notes = loadCredits(room);
+
+    it('on an input whose page has no credits.json entry', () => {
+      const [dropped, ...rest] = Object.keys(notes);
+      const without = Object.fromEntries(rest.map((page) => [page, notes[page] as CreditNote]));
+      expect(() => buildCredits(entries as CreditInput[], without)).toThrow(
+        new RegExp(`no entry in credits.json for .*${escapeRegExp(dropped as string)}`),
+      );
+    });
+
+    it('on a new input added with no entry', () => {
+      const added = { ...(entries[0] as Entry), page: 'https://polyhaven.com/a/not_credited' };
+      expect(() =>
+        buildCredits([...(entries as CreditInput[]), added as CreditInput], notes),
+      ).toThrow(/not_credited/);
+    });
   });
 
   describe('is shown red on a copy of a real entry', () => {

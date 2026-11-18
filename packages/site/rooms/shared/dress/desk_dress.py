@@ -236,7 +236,8 @@ def dress_floor_books(scene, repo, seed=FLOOR_SEED):
     return roots
 
 
-def dress_desk(scene, repo, frame_build=None):
+def dress_desk(scene, repo, frame_build=None, shift=0.0):
+    """`shift` slides the desk group along y: the props, and the map pinned above them."""
     sf = os.path.join(INPUTS, "sketchfab")
     ph = os.path.join(INPUTS, "polyhaven")
     hobu = os.path.join(sf, "vintage_desk_assets", "vintage_desk_assets.glb")
@@ -270,6 +271,8 @@ def dress_desk(scene, repo, frame_build=None):
     for i, (o, (x, y, yaw)) in enumerate(zip(pc, ((-5.62, -6.95, 95), (-5.75, -6.8, 112), (-5.58, -6.7, 80)))):
         # laid flat this way the address side is up: the fronts are modern colour photographs
         roots.append(_group(f"desk_postcard_{i}", [o], scene, (x, y), yaw_deg=yaw, lay_flat=True, z=TOP + 0.002 * M + 0.0006 * M * i))
+    for r in roots:
+        r.location.y += shift
     # Hobu's world map pinned to the wall above the desk as a loose sheet, no frame (the owner's
     # call), two and a half times his size so it spans almost the desk (the owner's call again): its
     # desk curl pressed nearly flat against the wall, one brass tack at the top
@@ -293,7 +296,7 @@ def dress_desk(scene, repo, frame_build=None):
                 for link in list(pb.inputs["Metallic"].links):
                     m.node_tree.links.remove(link)
                 pb.inputs["Metallic"].default_value = 0.0
-    sheet = _group("map_above_desk", mp, scene, (LEFT_WALL_X + 0.012 * M, -5.415), size=2.5, z=3.8)
+    sheet = _group("map_above_desk", mp, scene, (LEFT_WALL_X + 0.012 * M, -5.415 + shift), size=2.5, z=3.8)
     roots.append(sheet)
     bpy.context.view_layer.update()
     # nothing of the curled sheet may pass into the wall (the owner saw corners through it): its

@@ -46,13 +46,19 @@ import {
 import {
   DEVICES,
   HOLD_MS,
+  PAGE_RELOADED,
+  PROBE_ARM,
+  PROBE_READ,
   READ_AFTER_HOLD,
   READY_AND_FIND,
   SCRIPT_TIMEOUT_MS,
   UNEXPECTED,
   WAIT_HELD,
   judgeDevice,
+  probeLost,
+  tapShift,
   readAfterHold,
+  readViewport,
   readFound,
   readHeld,
   runId,
@@ -74,6 +80,8 @@ interface Args {
   readonly binary: string | undefined;
   readonly keyFile: boolean;
   readonly port: number;
+  /** One device's slug, for a run that diagnoses it; every device when absent. */
+  readonly device: string | undefined;
 }
 
 /** The arguments, or the sentence that says why they are refused. */
@@ -84,7 +92,13 @@ function parseArgs(argv: readonly string[]): Args | string {
     const arg = argv[at];
     if (arg === '--key-file') {
       keyFile = true;
-    } else if (arg === '--dist' || arg === '--out' || arg === '--binary' || arg === '--port') {
+    } else if (
+      arg === '--dist' ||
+      arg === '--out' ||
+      arg === '--binary' ||
+      arg === '--port' ||
+      arg === '--device'
+    ) {
       const value = argv[at + 1];
       if (value === undefined || value.startsWith('--')) return `${arg} needs a value`;
       values.set(arg, value);
@@ -99,7 +113,11 @@ function parseArgs(argv: readonly string[]): Args | string {
   if (out === undefined) return '--out <the screenshot folder> is required';
   const port = Number(values.get('--port') ?? DEFAULT_PORT);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) return '--port is not a usable port';
-  return { dist, out, binary: values.get('--binary'), keyFile, port };
+  const device = values.get('--device');
+  if (device !== undefined && !DEVICES.some((known) => known.slug === device)) {
+    return `--device is one of ${DEVICES.map((known) => known.slug).join(', ')}`;
+  }
+  return { dist, out, binary: values.get('--binary'), keyFile, port, device };
 }
 
 function fail(message: string): never {
@@ -153,11 +171,26 @@ async function runDevice(device: Device, key: Key, options: RunOptions): Promise
     await driver.setScriptTimeout(SCRIPT_TIMEOUT_MS);
     await driver.navigate(`http://bs-local.com:${String(options.port)}/`);
 
-    const found = readFound(await driver.runAsync(READY_AND_FIND));
+    // A real iPhone takes tap coordinates from the screen, not the page: tap once where nothing
+    // listens, read where it landed, and ask for the book that much off. The shift is read first so
+    // the book chosen is one whose shifted tap still falls inside the viewport.
+    // The page can reload under the tap (a phone's browser restarts a heavy page): arm again once.
+    let shift: { x: number; y: number } | undefined;
+    for (let attempt = 0; attempt < 2 && shift === undefined; attempt += 1) {
+      const viewport = readViewport(await driver.run(PROBE_ARM));
+      if (viewport === undefined) fail(UNEXPECTED);
+      const centre = { x: Math.round(viewport.x / 2), y: Math.round(viewport.y / 2) };
+      await driver.click(centre, device.pointer);
+      const landed = await driver.run(PROBE_READ);
+      if (!probeLost(landed)) shift = tapShift(centre, landed);
+    }
+    if (shift === undefined) fail(PAGE_RELOADED);
+
+    const found = readFound(await driver.runAsync(READY_AND_FIND, [shift.x, shift.y]));
     if (found === undefined) fail(UNEXPECTED);
     if ('error' in found) fail(found.error);
 
-    await driver.click({ x: found.x, y: found.y }, device.pointer);
+    await driver.click({ x: found.x + shift.x, y: found.y + shift.y }, device.pointer);
     const held = readHeld(await driver.runAsync(WAIT_HELD, [found.title, found.href]));
     if (held === undefined) fail(UNEXPECTED);
     measured = { ...measured, held };
@@ -175,8 +208,20 @@ async function runDevice(device: Device, key: Key, options: RunOptions): Promise
       key.accessKey,
       key.username,
     ]);
+    try {
+      // What the page looked like when the step failed, so a red run shows more than one line.
+      const failed = Buffer.from(await driver.screenshot(), 'base64');
+      writeFileSync(join(options.out, `${device.slug}-failed.png`), failed);
+    } catch {
+      // The session may be the thing that failed; the verdict below stands without it.
+    }
     await driver.end();
-    return { ok: false, line: `FAIL ${device.label}: ${reason}` };
+    const verdict = { ok: false, line: `FAIL ${device.label}: ${reason}` };
+    const told = await driver.setStatus(verdict.ok, verdict.line);
+    return {
+      ...verdict,
+      line: `${verdict.line} [BrowserStack status: ${told ? 'set' : 'not set'}]`,
+    };
   }
   await driver.end();
   let consoleErrors: number | undefined;
@@ -185,7 +230,9 @@ async function runDevice(device: Device, key: Key, options: RunOptions): Promise
   } catch {
     consoleErrors = undefined;
   }
-  return judgeDevice(device, { ...measured, consoleErrors });
+  const verdict = judgeDevice(device, { ...measured, consoleErrors });
+  const told = await driver.setStatus(verdict.ok, verdict.line);
+  return { ...verdict, line: `${verdict.line} [BrowserStack status: ${told ? 'set' : 'not set'}]` };
 }
 
 async function main(): Promise<number> {
@@ -253,7 +300,10 @@ async function main(): Promise<number> {
     console.log('the tunnel is up');
 
     const options = { port: args.port, out: args.out, build, identifier };
-    const verdicts = await Promise.all(DEVICES.map((device) => runDevice(device, key, options)));
+    const chosen = DEVICES.filter(
+      (device) => args.device === undefined || device.slug === args.device,
+    );
+    const verdicts = await Promise.all(chosen.map((device) => runDevice(device, key, options)));
     for (const verdict of verdicts) console.log(verdict.line);
     return verdicts.every((verdict) => verdict.ok) ? 0 : 1;
   } finally {

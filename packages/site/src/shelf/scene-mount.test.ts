@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_ROOM_ID, ROOMS } from './room-mode.ts';
 
 /**
  * A mount that throws halfway lets go of what it made.
@@ -40,6 +41,11 @@ vi.mock('three', async (importOriginal) => {
     }
 
     setPixelRatio(): void {}
+
+    // what a mount that goes on to draw its first frame asks of it
+    render(): void {}
+
+    setSize(): void {}
 
     getContext(): undefined {
       return undefined;
@@ -152,6 +158,26 @@ describe('a mount that throws', () => {
   });
 });
 
+describe('a mount that succeeds, and is disposed', () => {
+  it('leaves no listener on the canvas: not the controls’, the walk’s or the picker’s', () => {
+    // The walk's wheel and pointer listeners (#626) are attached at mount and used to be let go only on a throw.
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        disconnect(): void {}
+      },
+    );
+    const page = listeningCanvas();
+    const shelf = mountShelf(page.canvas);
+    expect(page.live().some((key) => key.endsWith(' wheel'))).toBe(true);
+
+    shelf.dispose();
+
+    expect(page.live()).toEqual([]);
+  });
+});
+
 describe('a mount asked for a room that throws (spec S16)', () => {
   it('starts no room: nothing is fetched, no screen is raised, and no listener is left', () => {
     const fetched: unknown[] = [];
@@ -160,7 +186,11 @@ describe('a mount asked for a room that throws (spec S16)', () => {
       return Promise.reject(new Error('no network here'));
     });
     const page = listeningCanvas();
-    expect(() => mountShelf(page.canvas, [], { room: { id: 'reading-corner' } })).toThrow(LATE);
+    expect(() =>
+      mountShelf(page.canvas, [], {
+        room: { id: DEFAULT_ROOM_ID, entry: ROOMS['reading-corner'] },
+      }),
+    ).toThrow(LATE);
 
     expect(fetched).toEqual([]);
     expect(page.live()).toEqual([]);

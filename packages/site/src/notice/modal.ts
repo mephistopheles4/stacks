@@ -2,7 +2,7 @@ import { tabTarget } from './focus.ts';
 import { noticeFor, type NoticeName } from './links.ts';
 import { NOTICE_CLOSE_ID, NOTICE_DIALOG_ID, NOTICE_PANEL_IDS, NOTICE_TITLE_IDS } from './open.ts';
 
-const NAMES: readonly NoticeName[] = ['attribution', 'privacy'];
+const NAMES: readonly NoticeName[] = ['attribution', 'privacy', 'credits'];
 
 /** What can take focus inside the modal: the close button and the links of the shown panel. */
 const FOCUSABLE = 'button:not([disabled]), a[href]';

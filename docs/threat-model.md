@@ -92,6 +92,8 @@ optional-Plausible spec).
   `scripts/browserstack-local.ts`, `scripts/preview-fixture.ts`,
   `scripts/lib/browserstack-key.ts`, `scripts/lib/browserstack-local.ts`,
   `scripts/lib/confinement-probe.ts`, `scripts/lib/fixture-dist.ts`.
+- *Repo.* A room id reaches a path only as a key of `ROOMS` (`isRoomId`); any other loads
+  the default room ([ADR-0180](adr/0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md)).
 - *Host.* None. Whatever is uploaded is public.
 
 **Residual:** What you publish.
@@ -206,8 +208,7 @@ build telemetry from CI, which the owner's machine switches off.
 
 - *GitHub.* Dependabot alerts and security updates, secret scanning, push
   protection and CodeQL default setup (Actions, JavaScript and TypeScript) are
-  on. Alerts and updates trail a disclosure, CodeQL blocks only a new security alert at
-  high or above or a new error, and no gate reads these settings, so each lapses silently when
+  on. Alerts and updates trail a disclosure, and no gate reads these settings, so each lapses silently when
   switched off.
 - *Repo.* pnpm runs install scripts for `esbuild` and `sharp` only; a release
   must be seven days old, trust downgrades are refused, each lockfile entry is
@@ -281,8 +282,7 @@ replies.
   program, process, account, file and memory made there: the vault and its notes
   at rest, `.cache/`, `.env`, other local accounts. Text a provider or an import
   wrote into a note stays outside input. A hostile vault is the machine's. A
-  `cover:` value that escapes its directory is too, though one implementation
-  with a containment check guards it (G10).
+  `cover:` value that escapes its directory is too (G10).
 - **Data loss in a vault with no attacker** is not a class here. Its gates stay:
   G1, G3, G4 and G32, and the rule that the public build deletes only inside its
   own staging folder. Loosening any of them is a spec change.

@@ -133,6 +133,24 @@ export const USABLE_WIDTH = SHELF.width - SHELF.endReserve;
  */
 const MIN_ROWS = 2;
 
-export function rowsForBookcase(usedRows: number): number {
-  return Math.max(usedRows + 1, MIN_ROWS);
+/**
+ * The fewest rows the main bookcase has in a room: the height of the stand-in its shadow on the wall
+ * was baked from (#620). A smaller case in front of that shadow leaves a dark, empty one round it,
+ * taller and wider than the case. The bake writes the stand-in's size into the GLB (`slot_bookcase`'s
+ * `caster_*`), and `room-data.test.ts` holds this to it, so a rebake with another `--rows` is a red
+ * test and not a shadow nobody explains. The width and depth already agree: `SHELF`'s own.
+ *
+ * **This is the trade `MIN_ROWS` above argues against**, made for rooms only: a small library sits in
+ * a four-row case with empty shelves, because the baked shadow needs that case more than the room
+ * needs the books framed large (the camera there walks up to a spine).
+ */
+export const ROOM_MIN_ROWS = 4;
+
+export function rowsForBookcase(usedRows: number, minRows: number = MIN_ROWS): number {
+  return Math.max(usedRows + 1, minRows);
+}
+
+/** The main bookcase's rows: the library's own, and in a room no fewer than the shadow behind it. */
+export function mainRowCount(usedRows: number, inRoom: boolean): number {
+  return rowsForBookcase(usedRows, inRoom ? ROOM_MIN_ROWS : MIN_ROWS);
 }

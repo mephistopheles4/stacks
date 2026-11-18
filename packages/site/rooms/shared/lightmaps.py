@@ -88,21 +88,25 @@ def floor(o, wall_y, material, out_dir):
     return o, {"albedo": "tex/plank_flooring_diff.webp", "tint": list(FLOOR_TINT)}
 
 
-def wallpaper(wall_y, x_span, z0, z1, scan, tile_m, tint, material, out_dir):
-    """The papered wall above the dado rail: one quad facing the room. UV0: world units / one
-    repeat of the paper, so it tiles at its real size and stays sharp; UV1: the quad itself."""
+def wallpaper(wall_y, x_span, z0, z1, scan, tile_m, tint, material, out_dir, name="room_wallpaper", toward=-1):
+    """The papered wall above the dado rail: one quad facing the room, which lies toward -y of
+    the back wall (`toward` -1) and toward +y of the front wall that closes it (+1). UV0: world
+    units / one repeat of the paper, running left to right as the room sees it, so it tiles at its
+    real size and stays sharp; UV1: the quad itself."""
     x0, x1 = x_span
-    me = bpy.data.meshes.new("room_wallpaper")
-    # counter-clockwise seen from the room (-y), so the face points at it
-    me.from_pydata([(x0, wall_y, z0), (x1, wall_y, z0), (x1, wall_y, z1), (x0, wall_y, z1)], [], [(0, 1, 2, 3)])
-    o = bpy.data.objects.new("room_wallpaper", me)
+    me = bpy.data.meshes.new(name)
+    quad = [(x0, wall_y, z0), (x1, wall_y, z0), (x1, wall_y, z1), (x0, wall_y, z1)]
+    # counter-clockwise seen from the room, so the face points at it
+    me.from_pydata(quad if toward < 0 else quad[::-1], [], [(0, 1, 2, 3)])
+    o = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(o)
     me.uv_layers.new(name="UVMap")
     me.uv_layers.new(name="bake")
     tw, th = tile_m[0] * UNITS_PER_M, tile_m[1] * UNITS_PER_M
-    _set_uv(o, "UVMap", lambda co: (co.x / tw, (co.z - z0) / th))
+    along = 1.0 if toward < 0 else -1.0  # facing +y the room's right is +x; facing -y it is -x
+    _set_uv(o, "UVMap", lambda co: (along * co.x / tw, (co.z - z0) / th))
     _set_uv(o, "bake", lambda co: ((co.x - x0) / (x1 - x0), (co.z - z0) / (z1 - z0)))
-    o.data.materials.append(_image_material(material, "wallpaper", scan, tint, rough=0.85))
+    o.data.materials.append(_image_material(material, name, scan, tint, rough=0.85))
     rel = "tex/" + os.path.splitext(os.path.basename(scan))[0] + ".webp"
     save_image(bpy.data.images.load(scan), os.path.join(out_dir, rel), raw=True)
     return o, {"albedo": rel, "tint": list(tint)}
