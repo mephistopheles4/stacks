@@ -101,7 +101,13 @@ function listeningCanvas(): Listening {
 beforeEach(() => {
   three.renderers.length = 0;
   three.refuse = false;
-  vi.stubGlobal('window', { devicePixelRatio: 1, location: { search: '' } });
+  // the room's keys listen on the window (#637)
+  vi.stubGlobal('window', {
+    devicePixelRatio: 1,
+    location: { search: '' },
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  });
   // The painted textures ask for a 2D canvas, and each does without one; an
   // image a loader asks for never arrives.
   const element = (): object => ({

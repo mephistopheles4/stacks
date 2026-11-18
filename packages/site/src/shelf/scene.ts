@@ -26,6 +26,7 @@ import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed, type RoomView } from './shelf-url.ts';
 import { bookcaseBox, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
+import { createCentrePick } from './room-anchor.ts';
 import { createRoomOrbit } from './room-orbit.ts';
 import { BOOKCASE_STANDOFF } from './room-walk.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
@@ -656,8 +657,8 @@ function assembleShelf(
   let framedAt = 0;
   /** Set once a room is dressed: the camera then opens at the room's view and stays in its box. */
   let roomData: RoomData | undefined;
-  /** The drag orbits, and in a room the scroll and the pinch walk (#626); the plain shelf keeps the dolly. */
-  const roomOrbit = createRoomOrbit(camera, controls);
+  /** In a room the drag turns about an anchor at the centre of the screen and the scroll and the pinch walk (#637); the plain shelf keeps the dolly. */
+  const roomOrbit = createRoomOrbit(camera, controls, createCentrePick(scene, camera));
   const unwalk = roomOrbit.attach(renderer.domElement);
   own({ dispose: unwalk });
 
