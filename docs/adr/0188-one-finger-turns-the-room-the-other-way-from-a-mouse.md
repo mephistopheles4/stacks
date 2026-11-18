@@ -2,6 +2,7 @@
 
 **Date:** 2026-11-17
 **Status:** accepted, built in [#635](https://github.com/mephistopheles4/stacks/issues/635). Amends the turn described in [ADR-0178](0178-the-room-is-closed-by-its-own-wall-pieces-and-the-camera-comes-in-at-the-box.md) and [ADR-0185](0185-two-fingers-pan-the-room-and-a-pinch-or-a-pan-is-decided-once-per-touch.md), which left it as `OrbitControls` has it.
+**Superseded by:** [ADR-0192](0192-the-room-turns-pans-and-zooms-with-orbitcontrols-about-an-anchor-at-the-centre-of-the-screen.md)
 **Issue:** [#635](https://github.com/mephistopheles4/stacks/issues/635), part of the room ([#593](https://github.com/mephistopheles4/stacks/issues/593))
 
 ## Decision
