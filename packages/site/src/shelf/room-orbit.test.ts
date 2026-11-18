@@ -355,14 +355,15 @@ describe('the camera stays within bounds (#637, C7)', () => {
     });
 
     it('C7: a pan at it stops at its face', () => {
-      // above the case's top, panning down into it
-      const r = room([1, 12, 2.5], [1, 5, 2.5], { keepOut: [shelves] });
+      // beside the case's west end, looking along -z, so screen right is +x: a drag to the left moves the
+      // camera right, into the end face
+      const r = room([-6, 5, 2.6], [-6, 5, -3], { keepOut: [shelves] });
       r.frames(2);
       for (let i = 0; i < 20; i += 1) {
-        pan(r, 0, -300);
+        pan(r, -100, 0);
         expect(inside(r)).toBe(false);
       }
-      expect(r.view.position.y).toBeGreaterThanOrEqual(shelves.max[1] - 1e-9);
+      expect(r.view.position.x).toBeCloseTo(shelves.min[0], 6);
     });
   });
 
