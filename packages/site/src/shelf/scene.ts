@@ -656,7 +656,7 @@ function assembleShelf(
    */
   let framed = false;
   let framedAt = 0;
-  /** Set once a room is dressed: the camera then opens at the room's view and stays in its box. */
+  /** Set once a room is dressed: the camera then opens at the room's view. */
   let roomData: RoomData | undefined;
   /** In a room the drag turns about an anchor at the centre of the screen and the scroll and the pinch walk (#637); the plain shelf keeps the dolly. */
   const roomOrbit = createRoomOrbit(camera, controls, createCentrePick(scene, camera));

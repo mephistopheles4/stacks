@@ -5,8 +5,9 @@ import type { SettingsPatch } from './shelf-settings.ts';
  * What the page reads off a room's GLB, and what it does with it (#602, spec S7.2, S7.3, S8).
  *
  * **Code never hard-codes a room position.** The room's GLB carries named empties: `slot_*` place
- * live things, `view_open` is where the camera opens, `bounds_min` and `bounds_max` are the box it
- * stays in, and `live_ambient`, `live_key`, `live_fill` and `live_lamp` are the live lights, placed
+ * live things, `view_open` is where the camera opens, `bounds_min` and `bounds_max` are the room's
+ * box: the walls the cutaway cuts; the camera may stand up to 50 units outside it, and
+ * `live_ambient`, `live_key`, `live_fill` and `live_lamp` are the live lights, placed
  * from the lights that baked it (`packages/site/rooms/<room>/room-data.json` is where a person
  * writes them; `shared/add_room_data.mjs` puts them in the GLB). A GLB missing one the page needs
  * is a room that failed, and the page draws the plain shelf (S2.5): `RoomDataError` says which.

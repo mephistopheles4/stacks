@@ -76,7 +76,7 @@ export function frameBookcase(rowCount: number, aspect: number): Framing {
   };
 }
 
-/** The fog as authored: where it begins and ends, in framing distances. */
+/** Where the fog begins and ends: in framing distances as authored, in world units once `fogRange` has scaled it. */
 export interface FogReach {
   readonly near: number;
   readonly far: number;
@@ -103,7 +103,7 @@ export function fogRange(fog: FogReach, distance: number): FogReach {
 
 /** The far plane's own distance, in a room or out of it, unless a camera standing outside the room needs more. */
 const FAR_PLANE = 100;
-/** How far past the fog's end the far plane goes, so the fog hides the cut before the plane does. */
+/** How far past the fog's end the far plane goes, so the fog has faded everything before the far plane clips it. */
 const FAR_SLACK = 10;
 
 export interface FogOutside extends FogReach {

@@ -60,20 +60,20 @@ export function chooseAnchor(
 }
 
 /**
- * The scale a zoom step is multiplied by (S5.6): the distance to what is ahead, clamped to 1..40, over 6.
- * So a notch is a share of the distance ahead, and closes in on a book as steadily as it crosses the room.
- * With nothing ahead it is 1.
- */
-export function zoomStep(ahead: number | undefined): number {
-  return Math.min(ZOOM_FARTHEST, Math.max(ZOOM_NEAREST, ahead ?? ZOOM_REFERENCE)) / ZOOM_REFERENCE;
-}
-
-/**
  * `OrbitControls`' `panSpeed` for a camera `reach` from its anchor (S5.7). It pans in proportion to that
  * distance, so under `PAN_FLOOR` the speed rises to make up what the distance lacks.
  */
 export function panSpeedFor(reach: number): number {
   return reach > 0 ? Math.max(1, PAN_FLOOR / reach) : 1;
+}
+
+/**
+ * The scale a zoom step is multiplied by (S5.6): the distance to what is ahead, clamped to 1..40, over 6.
+ * So a notch is a share of the distance ahead, and closes in on a book as steadily as it crosses the room.
+ * With nothing ahead it is 1.
+ */
+export function zoomScaleFor(ahead: number | undefined): number {
+  return Math.min(ZOOM_FARTHEST, Math.max(ZOOM_NEAREST, ahead ?? ZOOM_REFERENCE)) / ZOOM_REFERENCE;
 }
 
 /**

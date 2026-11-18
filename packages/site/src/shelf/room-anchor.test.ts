@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseAnchor, panSpeedFor, zoomStep } from './room-anchor.ts';
+import { chooseAnchor, panSpeedFor, zoomScaleFor } from './room-anchor.ts';
 import type { Box, Vec3 } from './room-data.ts';
 
 const room: Box = { min: [-10, 0, -10], max: [10, 10, 10] };
@@ -60,9 +60,9 @@ describe('panSpeedFor (#637, C4: S5.7)', () => {
   });
 });
 
-describe('zoomStep (#637, C5: S5.6)', () => {
+describe('zoomScaleFor (#637, C5: S5.6)', () => {
   it('is 1, 1/6, 1, 2 and 40/6 with nothing ahead, and 0.5, 6, 12 and 100 ahead', () => {
-    const scales = [undefined, 0.5, 6, 12, 100].map(zoomStep);
+    const scales = [undefined, 0.5, 6, 12, 100].map(zoomScaleFor);
     expect(scales[0]).toBe(1);
     expect(scales[1]).toBeCloseTo(1 / 6, 12);
     expect(scales[2]).toBe(1);

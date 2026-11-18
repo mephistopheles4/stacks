@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { chooseAnchor, panSpeedFor, zoomStep } from './room-anchor.ts';
+import { chooseAnchor, panSpeedFor, zoomScaleFor } from './room-anchor.ts';
 import { type Box, type Vec3, clampInto } from './room-data.ts';
 import { WALK_PER_NOTCH, WALK_PER_PINCH_PIXEL, notchesOf } from './room-walk.ts';
 
@@ -80,7 +80,7 @@ function pushOut(space: Box, p: Vec3): Vec3 {
  * Outside a room (`leave`, and before `enter`) it is `OrbitControls` as it was.
  */
 export interface RoomOrbit {
-  /** The room is dressed: the camera turns about an anchor inside `bounds` grown, and stays out of `keepOut` (the main bookcase). */
+  /** The room is dressed: the camera turns about an anchor inside the room's box grown by `OUTSIDE`, and stays out of `keepOut` (the main bookcase). */
   enter(bounds: Box, keepOut?: readonly Box[]): void;
   /** The room failed or was taken down: every `OrbitControls` field the room changed is put back. */
   leave(): void;
@@ -121,16 +121,16 @@ export function createRoomOrbit(
       }
     | undefined;
   /** The box the camera may stand in: the room's, grown by `OUTSIDE`. */
-  let bounds: Box | undefined;
-  /** The room's own box, kept apart from `bounds`. */
+  let reachable: Box | undefined;
+  /** The room's own box, kept apart from `reachable`. */
   let room: Box | undefined;
   let keepOut: readonly Box[] = [];
-  /** How far from the anchor the visitor asked to stand: the spin goes back out to it. */
+  /** How far from the anchor the visitor asked to stand: the turn goes back out to it. */
   let wished = 0;
   let anchorDue = true;
   /**
-   * A walk, a pinch or a pan has moved the camera since the anchor was set: the next spin places it again
-   * on what is at the centre of the screen. A spin alone never moves it.
+   * A walk, a pinch or a pan has moved the camera since the anchor was set: the next turn places it again
+   * on what is at the centre of the screen. A turn alone never moves it.
    */
   let moved = false;
   let pending = 0;
@@ -140,7 +140,7 @@ export function createRoomOrbit(
   let spread: number | undefined;
   const dir = new THREE.Vector3();
   const offset = new THREE.Vector3();
-  /** Where the camera stood before this frame's spin. */
+  /** Where the camera stood before this frame's turn. */
   const before = new THREE.Vector3();
   const side = new THREE.Vector3();
   const keys = new Set<string>();
@@ -192,17 +192,16 @@ export function createRoomOrbit(
     controls.target.z += fixed[2] - was[2];
   };
 
-  const free = (box: Box, p: Vec3): boolean =>
-    p.every((v, a) => v >= box.min[a]! && v <= box.max[a]!) &&
+  const free = (p: Vec3): boolean =>
     !keepOut.some((s) => p.every((v, a) => v > s.min[a]! && v < s.max[a]!));
 
   /**
-   * A spin. The anchor stays and the camera stands `wished` from it, or as near as the room and the
-   * bookcase allow along the line to the anchor. Nearer than `TURN_IN_PLACE`, it stops coming in: the
-   * camera stays where it stood and the rest of the drag turns the view about it, so a wall never holds
-   * a drag still.
+   * A turn. The anchor stays and the camera stands `wished` from it, or as near as the main bookcase's
+   * keep-out allows along the line to the anchor; past the outer limit it slides along it. Nearer than
+   * `TURN_IN_PLACE` it stops coming in: the camera stays where it stood and the rest of the drag turns
+   * the view about it, so the bookcase never holds a drag still.
    */
-  const confineSpin = (box: Box): void => {
+  const confineTurn = (box: Box): void => {
     const target = at(controls.target);
     offset.subVectors(camera.position, controls.target).normalize();
     const along = (t: number): Vec3 => [
@@ -212,13 +211,9 @@ export function createRoomOrbit(
     ];
     // the farthest place on the line out from the anchor that is free of the keep-out; the outer limit
     // holds the camera by sliding along it, never by pulling it in toward the anchor
-    const open = {
-      min: [-Infinity, -Infinity, -Infinity] as const,
-      max: [Infinity, Infinity, Infinity] as const,
-    };
     let reach = 0;
     for (let i = SAMPLES; i >= 1; i -= 1) {
-      if (free(open, along(i / SAMPLES))) {
+      if (free(along(i / SAMPLES))) {
         reach = i / SAMPLES;
         break;
       }
@@ -234,7 +229,7 @@ export function createRoomOrbit(
 
   /**
    * A scroll notch or a pinch moves a share of the distance to what is ahead rather than a fixed
-   * length (`zoomStep`). A raycast through the whole room on every pointermove is costly on a phone:
+   * length (`zoomScaleFor`). A raycast through the whole room on every pointermove is costly on a phone:
    * it runs once per `PICK_EVERY_MS`.
    */
   let zoomAt = -Infinity;
@@ -244,7 +239,7 @@ export function createRoomOrbit(
     if (t - zoomAt < PICK_EVERY_MS) return zoomLast;
     zoomAt = t;
     camera.updateMatrixWorld();
-    zoomLast = zoomStep(pickAhead());
+    zoomLast = zoomScaleFor(pickAhead());
     return zoomLast;
   };
 
@@ -255,7 +250,7 @@ export function createRoomOrbit(
 
   const attach = (element: Listening): (() => void) => {
     const onWheel = (event: Event): void => {
-      if (bounds === undefined) return;
+      if (reachable === undefined) return;
       const { deltaY, deltaMode } = event as WheelEvent;
       event.preventDefault();
       pending += notchesOf(deltaY, deltaMode) * WALK_PER_NOTCH * zoomScale();
@@ -269,18 +264,18 @@ export function createRoomOrbit(
         panning = fingers.size >= 2;
         // a pan drags what is under the centre of the screen: pick it as the anchor when the pan
         // starts, or the pan runs at the rate of an anchor a walk has carried far ahead
-        if (fingers.size === 2 && bounds !== undefined) reanchor();
+        if (fingers.size === 2 && reachable !== undefined) reanchor();
         if (panning) moved = true;
-        if (fingers.size === 1 && bounds !== undefined && moved) {
+        if (fingers.size === 1 && reachable !== undefined && moved) {
           reanchor();
           moved = false;
         }
         return;
       }
       panning = button === 2 || shiftKey || ctrlKey || metaKey;
-      if (panning && bounds !== undefined) reanchor();
+      if (panning && reachable !== undefined) reanchor();
       if (panning) moved = true;
-      else if (bounds !== undefined && moved) {
+      else if (reachable !== undefined && moved) {
         reanchor();
         moved = false;
       }
@@ -294,14 +289,14 @@ export function createRoomOrbit(
       const apart = readSpread();
       // a held book owns the camera, and the page disables the controls while it does
       if (
-        bounds !== undefined &&
+        reachable !== undefined &&
         !holding &&
         controls.enabled &&
         apart !== undefined &&
         spread !== undefined
       ) {
         walkBy((apart - spread) * WALK_PER_PINCH_PIXEL * zoomScale());
-        confineBoth(bounds);
+        confineBoth(reachable);
       }
       spread = apart;
     };
@@ -321,7 +316,7 @@ export function createRoomOrbit(
     };
     const onKeyDown = (event: Event): void => {
       const { code, ctrlKey, metaKey, altKey } = event as KeyboardEvent;
-      if (bounds === undefined || holding || !KEYS.has(code)) return;
+      if (reachable === undefined || holding || !KEYS.has(code)) return;
       if (ctrlKey || metaKey || altKey || !takesKeys(event)) return;
       // Space would otherwise scroll the page
       if (code === 'Space') event.preventDefault();
@@ -368,7 +363,7 @@ export function createRoomOrbit(
         maxPolarAngle: controls.maxPolarAngle,
       };
       room = box;
-      bounds = {
+      reachable = {
         min: [box.min[0] - OUTSIDE, box.min[1] - OUTSIDE, box.min[2] - OUTSIDE],
         max: [box.max[0] + OUTSIDE, box.max[1] + OUTSIDE, box.max[2] + OUTSIDE],
       };
@@ -383,7 +378,7 @@ export function createRoomOrbit(
       pending = 0;
     },
     leave() {
-      bounds = undefined;
+      reachable = undefined;
       room = undefined;
       keepOut = [];
       if (saved !== undefined) Object.assign(controls, saved);
@@ -404,11 +399,11 @@ export function createRoomOrbit(
       keyTurning = false;
     },
     walkBy(distance) {
-      if (bounds !== undefined) pending += distance;
+      if (reachable !== undefined) pending += distance;
     },
     step() {
       holding = false;
-      if (bounds === undefined) {
+      if (reachable === undefined) {
         controls.update();
         return;
       }
@@ -421,7 +416,7 @@ export function createRoomOrbit(
         walkBy(part);
         pending -= part;
         if (Math.abs(pending) < 1e-6) pending = 0;
-        confineBoth(bounds);
+        confineBoth(reachable);
       }
       const t = now();
       const dt = Math.min(0.1, (t - lastStep) / 1000);
@@ -434,8 +429,8 @@ export function createRoomOrbit(
       const rise = axis('Space', 'KeyC');
       const speed =
         KEY_WALK * dt * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? KEY_SPRINT : 1);
-      // a key turn is a spin: it picks a new anchor when it starts after a move, as a drag does, and
-      // keeps that anchor while it lasts, so walking and turning together orbit as they go
+      // a key turn picks a new anchor when it starts after a move, as a drag does, and keeps that
+      // anchor while it lasts, so walking and turning together orbit as they go
       if (turn !== 0 && !keyTurning && moved) {
         reanchor();
         moved = false;
@@ -443,7 +438,7 @@ export function createRoomOrbit(
       keyTurning = turn !== 0;
       if (forward !== 0) {
         walkBy(forward * speed);
-        confineBoth(bounds);
+        confineBoth(reachable);
       }
       if (right !== 0 || rise !== 0) {
         moved = true;
@@ -456,7 +451,7 @@ export function createRoomOrbit(
         side.y = rise * speed;
         camera.position.add(side);
         controls.target.add(side);
-        confineBoth(bounds);
+        confineBoth(reachable);
       }
       before.copy(camera.position);
       if (turn !== 0) {
@@ -471,8 +466,8 @@ export function createRoomOrbit(
       // OrbitControls pans in proportion to the anchor's distance: a surface right in front never crawls
       controls.panSpeed = panSpeedFor(camera.position.distanceTo(controls.target));
       controls.update();
-      if (panning) confineBoth(bounds);
-      else confineSpin(bounds);
+      if (panning) confineBoth(reachable);
+      else confineTurn(reachable);
     },
     attach,
   };

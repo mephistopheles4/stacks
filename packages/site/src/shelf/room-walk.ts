@@ -2,7 +2,7 @@
  * Walking through the room (#626, #637): the scroll and the pinch move the camera forward and back
  * along the view instead of dollying toward the orbit target. The room orbit (`room-orbit.ts`) moves the
  * camera **and its anchor together**, `WALK_PER_NOTCH` and `WALK_PER_PINCH_PIXEL` a step, scaled by what
- * is ahead (`zoomStep`).
+ * is ahead (`zoomScaleFor`).
  *
  * No `three` and no DOM, so vitest's node environment runs every rule here.
  */
