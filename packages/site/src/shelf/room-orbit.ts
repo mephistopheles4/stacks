@@ -292,7 +292,14 @@ export function createRoomOrbit(
       finger.x = clientX;
       finger.y = clientY;
       const apart = readSpread();
-      if (bounds !== undefined && apart !== undefined && spread !== undefined) {
+      // a held book owns the camera, and the page disables the controls while it does
+      if (
+        bounds !== undefined &&
+        !holding &&
+        controls.enabled &&
+        apart !== undefined &&
+        spread !== undefined
+      ) {
         walkBy((apart - spread) * WALK_PER_PINCH_PIXEL * zoomScale());
         confineBoth(bounds);
       }

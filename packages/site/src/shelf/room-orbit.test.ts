@@ -486,6 +486,19 @@ describe('the keyboard (#637, C10)', () => {
     expect(r.view.position.distanceTo(back)).toBeLessThan(1e-9);
   });
 
+  it('C10: a pinch while a book is held does not walk the camera', () => {
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    const start = r.view.position.clone();
+    // the page calls hold() every frame a book is held, and the pickup disables OrbitControls
+    r.controls.enabled = false;
+    r.orbit.hold();
+    pinch(r, 200, 5);
+    r.orbit.hold();
+    r.frames(1);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+  });
+
   it('C10: a key pressed on the body and let go with a button focused, or a dialog open, is no longer held', () => {
     const r = room([1, 5, 8], [1, 5, 2]);
     r.key('keydown', 'KeyW');
