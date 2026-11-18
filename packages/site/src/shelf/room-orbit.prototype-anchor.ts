@@ -82,6 +82,8 @@ export function createAnchorOrbit(
     maxPolarAngle: controls.maxPolarAngle,
   };
   let bounds: Box | undefined;
+  /** The room's own box, kept apart from `bounds` once a cutaway grows those. */
+  let room: Box | undefined;
   let keepOut: readonly Box[] = [];
   /** How far from the anchor the visitor asked to stand: the spin goes back out to it. */
   let wished = 0;
@@ -108,9 +110,33 @@ export function createAnchorOrbit(
   };
 
   const reanchor = (): void => {
+    note('anchor');
     if (pivot !== 'auto') return anchorAt(pivot);
     camera.updateMatrixWorld();
     const hit = pickAhead();
+    if (room !== undefined) {
+      const inside = room;
+      // an anchor outside the room swings the camera through a huge arc: anchor on the point of the
+      // line of sight nearest the room's centre instead
+      dir.subVectors(controls.target, camera.position).normalize();
+      const point = (t: number): Vec3 => [
+        camera.position.x + dir.x * t,
+        camera.position.y + dir.y * t,
+        camera.position.z + dir.z * t,
+      ];
+      const inRoom = (p: Vec3): boolean =>
+        p.every((v, a) => v >= inside.min[a]! && v <= inside.max[a]!);
+      if (hit === undefined || !inRoom(point(hit))) {
+        const centre = new THREE.Vector3(
+          (inside.min[0] + inside.max[0]) / 2,
+          (inside.min[1] + inside.max[1]) / 2,
+          (inside.min[2] + inside.max[2]) / 2,
+        );
+        const nearest = centre.sub(camera.position).dot(dir);
+        note(`anchor off-room ${hit?.toFixed(1) ?? '-'} -> ${nearest.toFixed(1)}`);
+        return anchorAt(Math.max(AUTO_NEAREST, Math.min(nearest, hit ?? Infinity)));
+      }
+    }
     anchorAt(hit === undefined || hit < AUTO_NEAREST || hit > AUTO_FARTHEST ? AUTO_FALLBACK : hit);
   };
 
@@ -195,6 +221,7 @@ export function createAnchorOrbit(
       const { pointerId, pointerType, clientX, clientY, button, shiftKey, ctrlKey, metaKey } =
         event as PointerEvent;
       if (pointerType === 'touch') {
+        note(`down ${pointerId} (${fingers.size + 1})`);
         fingers.set(pointerId, { x: clientX, y: clientY });
         spread = readSpread();
         panning = fingers.size >= 2;
@@ -213,6 +240,7 @@ export function createAnchorOrbit(
       finger.y = clientY;
       const now = readSpread();
       if (bounds !== undefined && now !== undefined && spread !== undefined) {
+        if (Math.abs(now - spread) > 20) note(`pinch ${(now - spread).toFixed(0)}px`);
         walkBy((now - spread) * WALK_PER_PINCH_PIXEL);
         confineBoth(bounds);
       }
@@ -221,6 +249,7 @@ export function createAnchorOrbit(
     const onUp = (event: Event): void => {
       const { pointerId, pointerType } = event as PointerEvent;
       if (pointerType === 'touch') {
+        note(`${event.type === 'pointercancel' ? 'cancel' : 'up'} ${pointerId}`);
         fingers.delete(pointerId);
         spread = readSpread();
         // a pan's momentum plays out as a pan; the next touch decides again
@@ -243,7 +272,22 @@ export function createAnchorOrbit(
     };
   };
 
+  const trail: string[] = [];
+  const note = (line: string): void => {
+    trail.push(line);
+    if (trail.length > 14) trail.shift();
+  };
+  let lastCamera = new THREE.Vector3();
   const debug = (): void => {
+    const jump = camera.position.distanceTo(lastCamera);
+    if (jump > 2) note(`jump ${jump.toFixed(2)} f=${fingers.size} pan=${panning}`);
+    lastCamera = camera.position.clone();
+    const el = typeof document === 'undefined' ? null : document.getElementById('anchor-debug');
+    if (el !== null)
+      el.textContent = [
+        `d=${camera.position.distanceTo(controls.target).toFixed(2)} w=${wished.toFixed(2)} f=${fingers.size} pan=${panning}`,
+        ...trail,
+      ].join('\n');
     (globalThis as { __anchorCam?: unknown }).__anchorCam = {
       pivot,
       wished: +wished.toFixed(3),
@@ -258,6 +302,7 @@ export function createAnchorOrbit(
   return {
     enter(box, spaces = []) {
       // past the walls, the ceiling and the floor by CUTAWAY units
+      room = box;
       bounds = cutaway
         ? {
             min: [box.min[0] - CUTAWAY, box.min[1] - CUTAWAY, box.min[2] - CUTAWAY],
@@ -380,6 +425,14 @@ export function mountCamSwitcher(doc: Document, cam: string, pivot: Pivot, cutaw
     }
   }
   doc.body.append(bar);
+  const box = doc.createElement('pre');
+  box.id = 'anchor-debug';
+  box.setAttribute(
+    'style',
+    'position:fixed;left:8px;top:90px;z-index:9999;margin:0;padding:4px 6px;background:#000a;color:#0f0;' +
+      'font:11px/1.25 monospace;pointer-events:none;white-space:pre',
+  );
+  doc.body.append(box);
 }
 
 /**
