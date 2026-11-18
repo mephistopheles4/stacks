@@ -15,7 +15,7 @@
  */
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { type Box, type Vec3, clampInto, pullIn } from './room-data.ts';
+import { type Box, type Vec3, clampInto } from './room-data.ts';
 import { WALK_PER_NOTCH, WALK_PER_PINCH_PIXEL, notchesOf } from './room-walk.ts';
 import type { RoomOrbit } from './room-orbit.ts';
 
@@ -30,6 +30,10 @@ const AUTO_FALLBACK = 6;
 const AUTO_NEAREST = 0.5;
 const AUTO_FARTHEST = 60;
 const NEAREST = 0.05;
+/** A spin comes in toward the anchor no nearer than this (about 60 cm); past it, it turns in place. */
+const TURN_IN_PLACE = 1.5;
+/** Steps along the line out from the anchor when looking for where the camera can stand. */
+const SAMPLES = 48;
 
 /** A point inside `space` is moved out through its nearest face. */
 function pushOut(space: Box, p: Vec3): Vec3 {
@@ -83,6 +87,8 @@ export function createAnchorOrbit(
   let spread: number | undefined;
   const dir = new THREE.Vector3();
   const offset = new THREE.Vector3();
+  /** Where the camera stood before this frame's spin. */
+  const before = new THREE.Vector3();
   const at = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
 
   /** Puts the anchor `distance` ahead along the line the camera looks down. */
@@ -124,12 +130,39 @@ export function createAnchorOrbit(
     controls.target.z += fixed[2] - was[2];
   };
 
-  /** A spin: the anchor stays, the camera stands `wished` from it or as near as the room allows. */
+  const free = (box: Box, p: Vec3): boolean =>
+    p.every((v, a) => v >= box.min[a]! && v <= box.max[a]!) &&
+    !keepOut.some((s) => p.every((v, a) => v > s.min[a]! && v < s.max[a]!));
+
+  /**
+   * A spin. The anchor stays and the camera stands `wished` from it, or as near as the room and the
+   * bookcase allow along the line to the anchor. Nearer than `TURN_IN_PLACE`, it stops coming in: the
+   * camera stays where it stood and the rest of the drag turns the view about it, so a wall never holds
+   * a drag still.
+   */
   const confineSpin = (box: Box): void => {
-    offset.subVectors(camera.position, controls.target).setLength(wished).add(controls.target);
-    let p = pullIn(box, at(controls.target), at(offset), NEAREST);
-    for (const space of keepOut) p = pushOut(space, p);
-    camera.position.set(...p);
+    const target = at(controls.target);
+    offset.subVectors(camera.position, controls.target).normalize();
+    const along = (t: number): Vec3 => [
+      target[0] + offset.x * wished * t,
+      target[1] + offset.y * wished * t,
+      target[2] + offset.z * wished * t,
+    ];
+    // the farthest place on the line out from the anchor that is free
+    let reach = 0;
+    for (let i = SAMPLES; i >= 1; i -= 1) {
+      if (free(box, along(i / SAMPLES))) {
+        reach = i / SAMPLES;
+        break;
+      }
+    }
+    if (reach * wished >= TURN_IN_PLACE) {
+      camera.position.set(...along(reach));
+      return;
+    }
+    // turn in place: the camera back where it stood, looking the way the drag turned it
+    camera.position.copy(before);
+    controls.target.copy(before).addScaledVector(offset, -wished);
   };
 
   const readSpread = (): number | undefined => {
@@ -260,6 +293,7 @@ export function createAnchorOrbit(
         if (Math.abs(pending) < 1e-6) pending = 0;
         confineBoth(bounds);
       }
+      before.copy(camera.position);
       controls.update();
       if (panning) confineBoth(bounds);
       else confineSpin(bounds);
