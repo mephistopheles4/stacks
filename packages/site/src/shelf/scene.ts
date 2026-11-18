@@ -815,8 +815,8 @@ function assembleShelf(
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
-    // A held book owns the camera; the orbit's damping would fight it. The camera cannot stand past
-    // the room's box (spec S8.2, C7): see `room-orbit.ts`.
+    // A held book owns the camera; the orbit's damping would fight it. The camera may stand up to 50
+    // units outside the room's box and no farther (#637, spec S5.8): see `room-orbit.ts`.
     if (hooks?.holdsCamera() === true) roomOrbit.hold();
     else roomOrbit.step();
     // A camera standing outside the room would fade it into the fog, which is measured from the opening view.
