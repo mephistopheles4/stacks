@@ -70,6 +70,31 @@ function enterReach(box: Box, point: Vec3, direction: Vec3): number {
   return near >= 0 && near <= far ? near : Infinity;
 }
 
+/** How far inside a keep-out's faces counts as the face itself: far above rounding, far below anything a person sees. */
+const FACE = 1e-10;
+
+/**
+ * How far a camera can go along `direction` before it enters `space` (a keep-out). **The walk and the
+ * pan both stop at the space's real face and both read "inside" by this one test**: a camera within
+ * `FACE` of a face, or on it, is outside (so one standing on a face can slide along it, and one a
+ * rounding error inside it is stopped and not taken for being already in), and a line that would enter
+ * is stopped at the real face and never inside it. Were the two to differ, a pan that parked the camera
+ * a hair inside the face would leave a walk to read it as already inside the case and take it through.
+ */
+function keepOutReach(space: Box, point: Vec3, direction: Vec3): number {
+  const drawnIn = enterReach(
+    {
+      min: [space.min[0] + FACE, space.min[1] + FACE, space.min[2] + FACE],
+      max: [space.max[0] - FACE, space.max[1] - FACE, space.max[2] - FACE],
+    },
+    point,
+    direction,
+  );
+  // The test above decides whether the line enters at all; the stop is the real face, which is met first
+  // where the camera is outside it. A camera in the `FACE` band has no real face ahead, and stops where it is.
+  return drawnIn === Infinity ? Infinity : Math.min(drawnIn, enterReach(space, point, direction));
+}
+
 export interface Stand {
   readonly camera: Vec3;
   readonly target: Vec3;
@@ -108,7 +133,7 @@ export function walk(
   const moved = Math.min(
     Math.abs(distance),
     reachOfBox(box, camera, heading),
-    ...keepOut.map((space) => enterReach(space, camera, heading)),
+    ...keepOut.map((space) => keepOutReach(space, camera, heading)),
   );
   const sign = distance >= 0 ? 1 : -1;
   const stood = clampInto(box, [
@@ -125,4 +150,61 @@ export function walk(
   ];
   // where the box holds the target, the multiply can land a rounding error past the face it stops at
   return { camera: stood, target: away <= reach ? clampInto(box, lookAt) : lookAt };
+}
+
+/** World units a two-finger or a mouse pan moves the camera for each pixel the fingers or the pointer go. */
+export const PAN_PER_PIXEL = 0.01;
+
+const cross = (a: Vec3, b: Vec3): Vec3 => [
+  a[1] * b[2] - a[2] * b[1],
+  a[2] * b[0] - a[0] * b[2],
+  a[0] * b[1] - a[1] * b[0],
+];
+
+/**
+ * One pan (#632) of `right` world units along the screen's right and `up` along its up, the camera
+ * **and its target together**, so the view keeps its direction and its distance.
+ *
+ * - Screen right is the view's direction crossed with the world's up, and screen up is the one square
+ *   to both, so a pan stays on the screen's plane however the view is pitched. A view straight up or
+ *   down has no right and stands still.
+ * - **The camera slides along the box's faces** (`clampInto`) and goes on along the others, so a pan
+ *   into a corner is not a pan that stops: the walk stops at a face because it has one line to go
+ *   along, the pan has a plane.
+ * - **`keepOut`** are spaces the camera does not pan into (the main bookcase): a pan that would enter
+ *   one stops at its face, and one along its face goes on, since a camera standing on a face is
+ *   outside it. A camera already inside one is not held there.
+ * - The target goes exactly as far as the camera went, so it may leave the box.
+ *
+ * `camera` is inside the box, which the orbit's pull-in keeps true.
+ */
+export function pan(
+  box: Box,
+  camera: Vec3,
+  target: Vec3,
+  right: number,
+  up: number,
+  keepOut: readonly Box[] = [],
+): Stand {
+  const ahead = unit(camera, target);
+  if (ahead === undefined || !contains(box, camera)) return { camera, target };
+  const across = cross(ahead, [0, 1, 0]);
+  const width = Math.hypot(...across);
+  if (width < 1e-6) return { camera, target };
+  const side: Vec3 = [across[0] / width, across[1] / width, across[2] / width];
+  const rise = cross(side, ahead);
+  const wanted = clampInto(box, [
+    camera[0] + side[0] * right + rise[0] * up,
+    camera[1] + side[1] * right + rise[1] * up,
+    camera[2] + side[2] * right + rise[2] * up,
+  ]);
+  const heading = unit(camera, wanted);
+  if (heading === undefined) return { camera, target };
+  const wished = Math.hypot(wanted[0] - camera[0], wanted[1] - camera[1], wanted[2] - camera[2]);
+  const moved = Math.min(wished, ...keepOut.map((space) => keepOutReach(space, camera, heading)));
+  const step: Vec3 = [heading[0] * moved, heading[1] * moved, heading[2] * moved];
+  return {
+    camera: clampInto(box, [camera[0] + step[0], camera[1] + step[1], camera[2] + step[2]]),
+    target: [target[0] + step[0], target[1] + step[1], target[2] + step[2]],
+  };
 }

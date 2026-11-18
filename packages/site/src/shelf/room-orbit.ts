@@ -1,7 +1,15 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { type Box, type Vec3, pullIn } from './room-data.ts';
-import { WALK_PER_NOTCH, WALK_PER_PINCH_PIXEL, notchesOf, walk } from './room-walk.ts';
+import { type TwoFingerSplit, createTwoFingerSplit } from './room-gesture.ts';
+import {
+  PAN_PER_PIXEL,
+  WALK_PER_NOTCH,
+  WALK_PER_PINCH_PIXEL,
+  notchesOf,
+  pan,
+  walk,
+} from './room-walk.ts';
 
 /** The share of a walk still to go that one frame takes, so a step eases in instead of jumping. */
 const EASE = 0.25;
@@ -11,9 +19,10 @@ const REST = 0.005;
 type Listening = Pick<HTMLElement, 'addEventListener' | 'removeEventListener'>;
 
 /**
- * How the camera moves in a room (#620, #626): a drag orbits the target, the scroll and the pinch
- * walk the camera and the target forward and back (`walk`), and the camera never leaves the room's
- * box.
+ * How the camera moves in a room (#620, #626, #632): a drag orbits the target, the scroll and the
+ * pinch walk the camera and the target forward and back (`walk`), two fingers moving together, a
+ * right-button drag and a shift-drag pan them sideways and up and down (`pan`), and the camera
+ * never leaves the room's box.
  *
  * **Orbit.** It always turns where it is dragged: a place the box cannot hold is brought in along
  * the line to the target (`pullIn`) and no nearer than `minDistance`, instead of being clamped onto
@@ -25,6 +34,11 @@ type Listening = Pick<HTMLElement, 'addEventListener' | 'removeEventListener'>;
  * first step on, the drag turns the view about the camera**, as turning a head would: the target
  * stands `minDistance` ahead and swings, and the camera stays where it walked, so no face can hold
  * the turn. Before the first step the drag orbits the far target the opening view was framed round.
+ *
+ * **Pan.** A touch of two fingers is a pinch or a pan, decided once (`room-gesture.ts`) from samples
+ * taken a frame apart, when both fingers have reported. While two fingers are down the drag does not
+ * turn the view, so a pan does not turn it by the midpoint's movement. A pan queues and eases as a
+ * walk does, and starts the same pivot (it moves the camera too).
  *
  * Outside a room (`leave`, and before `enter`) it is `OrbitControls` as it was.
  */
@@ -42,6 +56,8 @@ export interface RoomOrbit {
   hold(): void;
   /** Queues a walk of `distance` world units, forward positive. */
   walkBy(distance: number): void;
+  /** Queues a pan of `right` world units along the screen's right and `up` along its up. */
+  panBy(right: number, up: number): void;
   /** One frame: the queued walk, then the orbit. */
   step(): void;
   /** Listens for the wheel and the pinch on `element`; returns what takes them off again. */
@@ -60,6 +76,16 @@ export function createRoomOrbit(
   let radius = 0;
   /** The walk still to take. */
   let pending = 0;
+  /** The pan still to take, along the screen's right and up. */
+  let panRight = 0;
+  let panUp = 0;
+  /** Touches down, by pointer. */
+  const fingers = new Map<number, { x: number; y: number }>();
+  /** What the last frame saw of two fingers, and how they split into a pinch or a pan. */
+  let split: TwoFingerSplit | undefined;
+  let seen = { spread: 0, x: 0, y: 0 };
+  /** The mouse button or shift-drag that is panning, if one is. */
+  let dragging: { id: number; x: number; y: number } | undefined;
   /** Set by the first step of a walk: the pivot has come in to the camera (see `walkFrame`). */
   let walked = false;
   /** Where the visitor stands once they have walked: the camera, whatever a pointer handler did to it. */
@@ -101,8 +127,59 @@ export function createRoomOrbit(
     const done = camera.position.distanceTo(from);
     pending = done < Math.abs(part) - 1e-9 ? 0 : pending - part;
     if (Math.abs(pending) < 1e-6) pending = 0;
+    panFrame(box);
     stand.copy(camera.position);
     wished = camera.position.distanceTo(target);
+  };
+
+  /** The queued pan, a share of it a frame as the walk is, with the camera and the target going together. */
+  const panFrame = (box: Box): void => {
+    const share = (left: number): number => (Math.abs(left) < REST ? left : left * EASE);
+    const right = share(panRight);
+    const up = share(panUp);
+    const from = camera.position.clone();
+    const stood = pan(box, at(camera.position), at(controls.target), right, up, keepOut);
+    camera.position.set(...stood.camera);
+    controls.target.set(...stood.target);
+    const asked = Math.hypot(right, up);
+    // a pan the case or the wall stopped dead would only press on it; one that slid goes on
+    if (asked > 1e-9 && camera.position.distanceTo(from) < 1e-9) {
+      panRight = 0;
+      panUp = 0;
+    } else {
+      panRight -= right;
+      panUp -= up;
+    }
+    if (Math.abs(panRight) < 1e-6) panRight = 0;
+    if (Math.abs(panUp) < 1e-6) panUp = 0;
+  };
+
+  const readFingers = (): { spread: number; x: number; y: number } => {
+    const [a, b] = [...fingers.values()];
+    return a === undefined || b === undefined
+      ? { spread: 0, x: 0, y: 0 }
+      : { spread: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  };
+
+  /** Starts a gesture afresh from where the fingers are now, or ends it when they are not two. */
+  const rebase = (): void => {
+    split = fingers.size === 2 ? createTwoFingerSplit() : undefined;
+    seen = readFingers();
+  };
+
+  /**
+   * Once a frame, what two fingers did since the last: read here and not in the pointer handlers
+   * because a handler hears one finger at a time, and a fast pan looks like half a pinch until the
+   * other finger reports. A frame is when both have.
+   */
+  const sample = (): void => {
+    if (split === undefined || fingers.size !== 2) return;
+    const now = readFingers();
+    const moved = split.move(now.spread - seen.spread, now.x - seen.x, now.y - seen.y);
+    seen = now;
+    orbitApi.walkBy(moved.pinch * WALK_PER_PINCH_PIXEL);
+    // the room follows the fingers, so the camera goes the other way
+    orbitApi.panBy(-moved.panX * PAN_PER_PIXEL, moved.panY * PAN_PER_PIXEL);
   };
 
   /**
@@ -155,38 +232,65 @@ export function createRoomOrbit(
       event.preventDefault();
       orbitApi.walkBy(notchesOf(deltaY, deltaMode) * WALK_PER_NOTCH);
     };
-    const fingers = new Map<number, { x: number; y: number }>();
-    const spread = (): number => {
-      const [a, b] = [...fingers.values()];
-      return a === undefined || b === undefined ? 0 : Math.hypot(a.x - b.x, a.y - b.y);
-    };
     const onDown = (event: Event): void => {
-      const { pointerId, pointerType, clientX, clientY } = event as PointerEvent;
-      if (pointerType === 'touch') fingers.set(pointerId, { x: clientX, y: clientY });
+      const { pointerId, pointerType, clientX, clientY, button, shiftKey } = event as PointerEvent;
+      if (pointerType === 'touch') {
+        fingers.set(pointerId, { x: clientX, y: clientY });
+        // two fingers are a pinch or a pan, and neither turns the view
+        if (bounds !== undefined && fingers.size >= 2) controls.enableRotate = false;
+        rebase();
+      } else if (
+        pointerType === 'mouse' &&
+        bounds !== undefined &&
+        (button === 2 || (button === 0 && shiftKey))
+      ) {
+        dragging = { id: pointerId, x: clientX, y: clientY };
+      }
     };
     const onMove = (event: Event): void => {
-      const { pointerId, clientX, clientY } = event as PointerEvent;
+      const { pointerId, clientX, clientY, buttons } = event as PointerEvent;
+      if (dragging?.id === pointerId) {
+        if (buttons === 0) dragging = undefined;
+        else {
+          orbitApi.panBy(
+            -(clientX - dragging.x) * PAN_PER_PIXEL,
+            (clientY - dragging.y) * PAN_PER_PIXEL,
+          );
+          dragging.x = clientX;
+          dragging.y = clientY;
+        }
+        return;
+      }
       const finger = fingers.get(pointerId);
       if (finger === undefined) return;
-      const before = fingers.size === 2 ? spread() : 0;
       finger.x = clientX;
       finger.y = clientY;
-      if (before > 0) orbitApi.walkBy((spread() - before) * WALK_PER_PINCH_PIXEL);
     };
+    const release = (event: Event): void => {
+      const { pointerId } = event as PointerEvent;
+      if (dragging?.id === pointerId) dragging = undefined;
+      if (!fingers.delete(pointerId)) return;
+      rebase();
+      if (bounds !== undefined && fingers.size < 2) controls.enableRotate = true;
+    };
+    /** A lift is the end of what the fingers did, so what they moved since the last frame is taken first. */
     const onUp = (event: Event): void => {
-      fingers.delete((event as PointerEvent).pointerId);
+      sample();
+      release(event);
     };
+    /** A cancel is the browser taking the touch away: what it moved since the last frame is not taken. */
+    const onCancel = release;
     element.addEventListener('wheel', onWheel, { passive: false });
     element.addEventListener('pointerdown', onDown);
     element.addEventListener('pointermove', onMove);
     element.addEventListener('pointerup', onUp);
-    element.addEventListener('pointercancel', onUp);
+    element.addEventListener('pointercancel', onCancel);
     return () => {
       element.removeEventListener('wheel', onWheel);
       element.removeEventListener('pointerdown', onDown);
       element.removeEventListener('pointermove', onMove);
       element.removeEventListener('pointerup', onUp);
-      element.removeEventListener('pointercancel', onUp);
+      element.removeEventListener('pointercancel', onCancel);
     };
   };
 
@@ -194,6 +298,8 @@ export function createRoomOrbit(
     wished = 0;
     radius = 0;
     pending = 0;
+    panRight = 0;
+    panUp = 0;
     walked = false;
   };
 
@@ -210,28 +316,39 @@ export function createRoomOrbit(
       keepOut = [];
       controls.enableZoom = true;
       controls.enablePan = true;
+      controls.enableRotate = true;
       forget();
     },
     forget,
     hold() {
       wished = 0;
       pending = 0;
+      panRight = 0;
+      panUp = 0;
+      rebase();
     },
     walkBy(distance) {
       if (bounds !== undefined) pending += distance;
     },
+    panBy(right, up) {
+      if (bounds === undefined) return;
+      panRight += right;
+      panUp += up;
+    },
     step() {
       if (bounds === undefined) {
+        rebase();
         controls.update();
         return;
       }
+      sample();
       if (wished === 0) {
         stand.copy(camera.position);
         wished = camera.position.distanceTo(controls.target);
         // after a hold the camera may stand elsewhere: once walked, the pivot is wherever it now is
         if (radius === 0 || walked) radius = wished;
       }
-      if (pending !== 0) walkFrame(bounds);
+      if (pending !== 0 || panRight !== 0 || panUp !== 0) walkFrame(bounds);
       if (walked) headTurn();
       else orbit(bounds);
     },
