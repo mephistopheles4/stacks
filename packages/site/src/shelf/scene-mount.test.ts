@@ -96,7 +96,7 @@ const LATE = new Error('staged: the mount throws after every other part is made'
 
 interface Listening {
   readonly canvas: HTMLCanvasElement;
-  /** Listeners still attached to the canvas and the document it sits in. */
+  /** Listeners still attached to the canvas, the document it sits in and the window the room's keys use. */
   live(): string[];
 }
 
@@ -112,6 +112,12 @@ function listeningCanvas(): Listening {
     },
   });
   const root = target('document');
+  // the room's keys listen on the window (#637): record them like the canvas's, in place of the plain stub
+  vi.stubGlobal('window', {
+    devicePixelRatio: 1,
+    location: { search: '' },
+    ...target('window'),
+  });
   const canvas = {
     ...target('canvas'),
     style: {},
@@ -209,6 +215,9 @@ describe('a mount that succeeds, and is disposed', () => {
     const page = listeningCanvas();
     const shelf = mountShelf(page.canvas);
     expect(page.live().some((key) => key.endsWith(' wheel'))).toBe(true);
+    expect(page.live()).toEqual(
+      expect.arrayContaining(['window keydown', 'window keyup', 'window blur']),
+    );
 
     shelf.dispose();
 
