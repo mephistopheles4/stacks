@@ -94,10 +94,10 @@ function room(
   controls.update();
   const clock = { t: 0 };
   /** Picks by the phase the test says it is in. */
-  const picks = { phase: 'enter', by: new Map<string, number>() };
+  const picks = { phase: 'enter', by: new Map<string, number>(), hit };
   const pick = (): number | undefined => {
     picks.by.set(picks.phase, (picks.by.get(picks.phase) ?? 0) + 1);
-    return hit;
+    return picks.hit;
   };
   const orbit = createRoomOrbit(view, controls, pick, { now: () => clock.t });
   orbit.enter(box, keepOut);
@@ -112,6 +112,10 @@ function room(
     picks.phase = name;
   };
   const counted = (name: string): number => picks.by.get(name) ?? 0;
+  /** What the centre pick finds from now on. */
+  const seeing = (ahead: number | undefined): void => {
+    picks.hit = ahead;
+  };
   const key = (
     type: 'keydown' | 'keyup',
     code: string,
@@ -120,7 +124,7 @@ function room(
   const blur = (): void => {
     keyboard.send('blur', {});
   };
-  return { ...canvas, view, controls, orbit, frames, clock, phase, counted, key, blur };
+  return { ...canvas, view, controls, orbit, frames, clock, phase, counted, seeing, key, blur };
 }
 
 type Room = ReturnType<typeof room>;
@@ -294,6 +298,17 @@ describe('the camera in a room (#637)', () => {
     expect(r.counted('one finger left')).toBe(1);
   });
 
+  it('C4: the pan rate for a close hit is set when the pan starts, before its first move can reach OrbitControls', () => {
+    // CodeRabbit finding on room-orbit.ts: the rate was written once a frame, so a move in the frame the
+    // pan began in ran at the rate of the anchor the pan replaced
+    const r = room([1, 5, 8], [1, 5, 2]);
+    r.frames(2);
+    expect(r.controls.panSpeed).toBeCloseTo(1, 6);
+    r.seeing(0.5);
+    r.send('pointerdown', { ...mouse, shiftKey: true, clientX: 640, clientY: 400 });
+    expect(r.controls.panSpeed).toBeCloseTo(4, 6);
+  });
+
   it('C5b: a pinch raycasts at most once per 100 ms', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
     r.frames(1);
@@ -315,7 +330,8 @@ describe('the camera in a room (#637)', () => {
     r.frames(2);
     // `frameCamera` sets this after `enter`, and OrbitControls clamps to it every frame
     r.controls.maxDistance = 3;
-    r.frames(1);
+    // the pan comes before the next step (C6's order, and a CodeRabbit finding on this test): OrbitControls
+    // updates inside the pointermove, so the limits must already be put back by then
     pan(r, 100, 0);
     r.frames(10);
     expect(r.view.position.distanceTo(r.controls.target)).toBeGreaterThan(7.9);

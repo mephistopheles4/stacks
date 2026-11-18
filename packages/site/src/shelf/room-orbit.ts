@@ -159,6 +159,19 @@ export function createRoomOrbit(
     wished = distance;
   };
 
+  /**
+   * What `OrbitControls` reads, put as the room wants it. Written every step, and also where an event can
+   * reach `OrbitControls` first: it updates inside its own pointermove, so a limit the page's framing set
+   * since the last step would snap the camera in, and a pan rate for the anchor the pan replaced would
+   * run that move at the wrong speed. `OrbitControls` pans in proportion to the anchor's distance, so a
+   * surface right in front never crawls (`panSpeedFor`).
+   */
+  const fit = (): void => {
+    controls.minDistance = NEAREST;
+    controls.maxDistance = Infinity;
+    controls.panSpeed = panSpeedFor(camera.position.distanceTo(controls.target));
+  };
+
   const reanchor = (): void => {
     camera.updateMatrixWorld();
     const hit = pickAhead();
@@ -166,6 +179,7 @@ export function createRoomOrbit(
     if (dir.lengthSq() < 1e-12) camera.getWorldDirection(dir);
     dir.normalize();
     anchorAt(chooseAnchor(hit, room, at(camera.position), at(dir)));
+    fit();
   };
 
   /** Camera and anchor forward together along the view. */
@@ -259,6 +273,7 @@ export function createRoomOrbit(
     const onDown = (event: Event): void => {
       const { pointerId, pointerType, clientX, clientY, button, shiftKey, ctrlKey, metaKey } =
         event as PointerEvent;
+      if (reachable !== undefined) fit();
       if (pointerType === 'touch') {
         fingers.set(pointerId, { x: clientX, y: clientY });
         spread = readSpread();
@@ -285,6 +300,7 @@ export function createRoomOrbit(
     };
     const onMove = (event: Event): void => {
       const { pointerId, clientX, clientY } = event as PointerEvent;
+      if (reachable !== undefined) fit();
       const finger = fingers.get(pointerId);
       if (finger === undefined) return;
       finger.x = clientX;
@@ -470,10 +486,7 @@ export function createRoomOrbit(
       }
       // the page's framing sets OrbitControls' maxDistance after `enter`, and OrbitControls clamps to
       // it every frame: a pan, which nothing puts back, snapped the camera in to it
-      controls.minDistance = NEAREST;
-      controls.maxDistance = Infinity;
-      // OrbitControls pans in proportion to the anchor's distance: a surface right in front never crawls
-      controls.panSpeed = panSpeedFor(camera.position.distanceTo(controls.target));
+      fit();
       controls.update();
       if (panning) confineBoth(reachable);
       else confineTurn(reachable);
