@@ -30,6 +30,10 @@ const AUTO_FALLBACK = 6;
 const AUTO_NEAREST = 0.5;
 const AUTO_FARTHEST = 60;
 const NEAREST = 0.05;
+/** How far past the walls a cutaway camera may go, in world units (about 4 m). */
+const CUTAWAY = 10;
+/** The cut stands this far inside the wall, so the panelling's thickness goes with it. */
+const CUT_PAST_WALL = 0.6;
 /** A spin comes in toward the anchor no nearer than this (about 60 cm); past it, it turns in place. */
 const TURN_IN_PLACE = 1.5;
 /** Steps along the line out from the anchor when looking for where the camera can stand. */
@@ -68,6 +72,10 @@ export function createAnchorOrbit(
   pivot: Pivot,
   /** How far ahead the first surface at the centre of the screen is, if there is one. */
   pickAhead: () => number | undefined,
+  /** `?walls=cutaway`: the camera may leave the room, and the one-sided walls it is behind are not drawn. */
+  cutaway = false,
+  /** Sets the one clipping plane the renderer uses, or clears it. */
+  setCut: (plane: THREE.Plane | null) => void = () => undefined,
 ): RoomOrbit {
   const saved = {
     minDistance: controls.minDistance,
@@ -75,6 +83,42 @@ export function createAnchorOrbit(
     maxPolarAngle: controls.maxPolarAngle,
   };
   let bounds: Box | undefined;
+  /** The room itself, when `bounds` has been grown past it for a cutaway. */
+  let room: Box | undefined;
+  const cut = new THREE.Plane();
+  const view = new THREE.Vector3();
+  const entry = new THREE.Vector3();
+
+  /**
+   * A camera outside the room looks in through a wall: everything nearer than where the line of sight
+   * enters the room is clipped, so the near wall (and its panelling) is cut away.
+   */
+  const updateCut = (): void => {
+    if (room === undefined) return setCut(null);
+    const p = at(camera.position);
+    const inside = p.every((v, a) => v >= room!.min[a]! && v <= room!.max[a]!);
+    if (inside) return setCut(null);
+    view.subVectors(controls.target, camera.position).normalize();
+    // slab test: how far along the view the ray enters the room
+    let near = 0;
+    let far = Infinity;
+    for (const a of [0, 1, 2] as const) {
+      const d = view.getComponent(a);
+      const o = p[a];
+      if (Math.abs(d) < 1e-9) {
+        if (o < room.min[a] || o > room.max[a]) return setCut(null);
+        continue;
+      }
+      const t1 = (room.min[a] - o) / d;
+      const t2 = (room.max[a] - o) / d;
+      near = Math.max(near, Math.min(t1, t2));
+      far = Math.min(far, Math.max(t1, t2));
+    }
+    if (near > far) return setCut(null);
+    entry.copy(camera.position).addScaledVector(view, near + CUT_PAST_WALL);
+    cut.setFromNormalAndCoplanarPoint(view, entry);
+    setCut(cut);
+  };
   let keepOut: readonly Box[] = [];
   /** How far from the anchor the visitor asked to stand: the spin goes back out to it. */
   let wished = 0;
@@ -243,7 +287,14 @@ export function createAnchorOrbit(
 
   return {
     enter(box, spaces = []) {
-      bounds = box;
+      // past the walls by CUTAWAY units on every side and above, never below the floor
+      room = cutaway ? box : undefined;
+      bounds = cutaway
+        ? {
+            min: [box.min[0] - CUTAWAY, box.min[1], box.min[2] - CUTAWAY],
+            max: [box.max[0] + CUTAWAY, box.max[1] + CUTAWAY, box.max[2] + CUTAWAY],
+          }
+        : box;
       keepOut = spaces;
       controls.enableZoom = false;
       controls.enablePan = true;
@@ -256,6 +307,8 @@ export function createAnchorOrbit(
     },
     leave() {
       bounds = undefined;
+      room = undefined;
+      setCut(null);
       keepOut = [];
       controls.enableZoom = true;
       controls.minDistance = saved.minDistance;
@@ -297,6 +350,7 @@ export function createAnchorOrbit(
       controls.update();
       if (panning) confineBoth(bounds);
       else confineSpin(bounds);
+      updateCut();
       debug();
     },
     attach,
@@ -304,7 +358,11 @@ export function createAnchorOrbit(
 }
 
 /** PROTOTYPE switcher: a pill at the bottom to flip `?cam=` and the anchor. */
-export function mountCamSwitcher(doc: Document, cam: string, pivot: Pivot): void {
+export function readCutaway(search: string): boolean {
+  return new URLSearchParams(search).get('walls') === 'cutaway';
+}
+
+export function mountCamSwitcher(doc: Document, cam: string, pivot: Pivot, cutaway = false): void {
   const bar = doc.createElement('div');
   bar.setAttribute(
     'style',
@@ -337,6 +395,11 @@ export function mountCamSwitcher(doc: Document, cam: string, pivot: Pivot): void
     ),
   );
   if (cam === 'anchor') {
+    bar.append(
+      button(cutaway ? 'walls: cut' : 'walls: solid', () =>
+        go({ walls: cutaway ? 'solid' : 'cutaway' }),
+      ),
+    );
     const fixed = pivot === 'auto' ? 3 : pivot;
     bar.append(
       button(pivot === 'auto' ? 'fixed' : 'auto', () =>

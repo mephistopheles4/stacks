@@ -27,7 +27,12 @@ import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed, type RoomView } from './shelf-url.ts';
 import { bookcaseBox, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
 import { createRoomOrbit } from './room-orbit.ts';
-import { createAnchorOrbit, mountCamSwitcher, readPivot } from './room-orbit.prototype-anchor.ts';
+import {
+  createAnchorOrbit,
+  mountCamSwitcher,
+  readCutaway,
+  readPivot,
+} from './room-orbit.prototype-anchor.ts';
 import { BOOKCASE_STANDOFF } from './room-walk.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import {
@@ -662,6 +667,8 @@ function assembleShelf(
   const camSearch = typeof location === 'undefined' ? '' : location.search;
   const cam = new URLSearchParams(camSearch).get('cam') === 'anchor' ? 'anchor' : 'current';
   const pivot = readPivot(camSearch);
+  const cutaway = readCutaway(camSearch);
+  (globalThis as { __scene?: unknown }).__scene = scene;
   const centreCaster = new THREE.Raycaster();
   const screenCentre = new THREE.Vector2(0, 0);
   /** How far ahead the first drawn mesh at the centre of the screen is. */
@@ -676,9 +683,11 @@ function assembleShelf(
   };
   const roomOrbit =
     cam === 'anchor'
-      ? createAnchorOrbit(camera, controls, pivot, pickAhead)
+      ? createAnchorOrbit(camera, controls, pivot, pickAhead, cutaway, (plane) => {
+          renderer.clippingPlanes = plane === null ? [] : [plane];
+        })
       : createRoomOrbit(camera, controls);
-  if (typeof document !== 'undefined') mountCamSwitcher(document, cam, pivot);
+  if (typeof document !== 'undefined') mountCamSwitcher(document, cam, pivot, cutaway);
   const unwalk = roomOrbit.attach(renderer.domElement);
   own({ dispose: unwalk });
 
