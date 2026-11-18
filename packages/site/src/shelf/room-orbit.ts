@@ -146,6 +146,8 @@ export function createRoomOrbit(
   const keys = new Set<string>();
   let lastStep = now();
   let keyTurning = false;
+  /** A held book owns the camera: no key is taken, and every key held is dropped. */
+  let holding = false;
   const at = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
 
   /** Puts the anchor `distance` ahead along the line the camera looks down. */
@@ -303,18 +305,22 @@ export function createRoomOrbit(
       spread = readSpread();
       // a pan's momentum plays out as a pan, so `panning` stays; the next touch decides again
     };
-    // WASD walks and strafes, Q and E orbit the anchor; on the window, since the canvas rarely has focus
-    const typing = (event: Event): boolean => {
-      const el = event.target as HTMLElement | null;
-      return el !== null && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+    // WASD walks and strafes, Q and E turn about the anchor; on the window, since the canvas rarely has focus
+    /** Where a key may be taken from: the page itself or the canvas, never a control the page's own keys belong to. */
+    const takesKeys = (event: Event): boolean => {
+      const el = event.target as { tagName?: string } | null;
+      if (el !== element && el?.tagName !== 'BODY') return false;
+      return typeof document === 'undefined' || document.querySelector('dialog[open]') === null;
     };
     const onKeyDown = (event: Event): void => {
       const { code, ctrlKey, metaKey, altKey } = event as KeyboardEvent;
-      if (typing(event) || ctrlKey || metaKey || altKey || !KEYS.has(code)) return;
+      if (bounds === undefined || holding || !KEYS.has(code)) return;
+      if (ctrlKey || metaKey || altKey || !takesKeys(event)) return;
       // Space would otherwise scroll the page
       if (code === 'Space') event.preventDefault();
       keys.add(code);
     };
+    // a key let go always lets go, whatever has focus by then: it was taken when it went down
     const onKeyUp = (event: Event): void => {
       keys.delete((event as KeyboardEvent).code);
     };
@@ -376,6 +382,8 @@ export function createRoomOrbit(
       if (saved !== undefined) Object.assign(controls, saved);
       saved = undefined;
       pending = 0;
+      keys.clear();
+      keyTurning = false;
     },
     forget() {
       anchorDue = true;
@@ -384,11 +392,15 @@ export function createRoomOrbit(
     hold() {
       anchorDue = true;
       pending = 0;
+      holding = true;
+      keys.clear();
+      keyTurning = false;
     },
     walkBy(distance) {
       if (bounds !== undefined) pending += distance;
     },
     step() {
+      holding = false;
       if (bounds === undefined) {
         controls.update();
         return;

@@ -112,10 +112,15 @@ function room(
     picks.phase = name;
   };
   const counted = (name: string): number => picks.by.get(name) ?? 0;
-  const key = (type: 'keydown' | 'keyup', code: string): void => {
-    keyboard.send(type, { code, target: { tagName: 'BODY' } });
+  const key = (
+    type: 'keydown' | 'keyup',
+    code: string,
+    event: Record<string, unknown> = {},
+  ): { prevented: boolean } => keyboard.send(type, { code, target: { tagName: 'BODY' }, ...event });
+  const blur = (): void => {
+    keyboard.send('blur', {});
   };
-  return { ...canvas, view, controls, orbit, frames, clock, phase, counted, key };
+  return { ...canvas, view, controls, orbit, frames, clock, phase, counted, key, blur };
 }
 
 type Room = ReturnType<typeof room>;
@@ -377,21 +382,123 @@ describe('the camera stays within bounds (#637, C7)', () => {
   });
 });
 
-describe('the keys that move the camera (#637, C7)', () => {
-  it('C7: W walks forward and S back, and Shift makes it three times faster', () => {
-    const slow = room([1, 5, 8], [1, 5, 2]);
-    slow.key('keydown', 'KeyW');
-    slow.frames(5, 100);
-    const fast = room([1, 5, 8], [1, 5, 2]);
-    fast.key('keydown', 'ShiftLeft');
-    fast.key('keydown', 'KeyW');
-    fast.frames(5, 100);
-    expect(8 - slow.view.position.z).toBeCloseTo(6 * 0.5, 6);
-    expect(8 - fast.view.position.z).toBeCloseTo(3 * 6 * 0.5, 6);
-    slow.key('keyup', 'KeyW');
-    slow.key('keydown', 'KeyS');
-    slow.frames(5, 100);
-    expect(slow.view.position.z).toBeCloseTo(8, 6);
+describe('the keyboard (#637, C10)', () => {
+  /** Holds `code` for `n` frames of 100 ms, as a visitor on the page does. */
+  const hold = (r: Room, code: string, n = 5): void => {
+    r.key('keydown', code);
+    r.frames(n, 100);
+    r.key('keyup', code);
+  };
+  const angleAbout = (r: Room, from: THREE.Vector3): number => {
+    const before = from.clone().sub(r.controls.target).setY(0).normalize();
+    const after = r.view.position.clone().sub(r.controls.target).setY(0).normalize();
+    return Math.atan2(before.x * after.z - before.z * after.x, before.dot(after));
+  };
+
+  it('C10: each key, by its code, moves or turns the camera as S8.1 says', () => {
+    // looking along -z: forward is -z and right is +x
+    const moved = (code: string, shift = false): THREE.Vector3 => {
+      const r = room([1, 5, 8], [1, 5, 2]);
+      if (shift) r.key('keydown', 'ShiftLeft');
+      hold(r, code);
+      return r.view.position.clone().sub(new THREE.Vector3(1, 5, 8));
+    };
+    // 5 frames of 100 ms at 6 units a second
+    expect(moved('KeyW').z).toBeCloseTo(-3, 6);
+    expect(moved('KeyS').z).toBeCloseTo(3, 6);
+    expect(moved('KeyD').x).toBeCloseTo(3, 6);
+    expect(moved('KeyA').x).toBeCloseTo(-3, 6);
+    expect(moved('Space').y).toBeCloseTo(3, 6);
+    expect(moved('KeyC').y).toBeCloseTo(-3, 6);
+    expect(moved('KeyW', true).z).toBeCloseTo(-9, 6);
+    // Q and E turn about the anchor, a quarter turn a second, in opposite ways
+    const turned = (code: string): number => {
+      const r = room([1, 5, 8], [1, 5, 2]);
+      const start = r.view.position.clone();
+      hold(r, code, 10);
+      return angleAbout(r, start);
+    };
+    expect(Math.abs(turned('KeyQ'))).toBeCloseTo(Math.PI / 2, 6);
+    expect(turned('KeyE')).toBeCloseTo(-turned('KeyQ'), 6);
+  });
+
+  it('C10: nothing moves while typing in an input, with Ctrl, Meta or Alt held, or after a blur', () => {
+    const r = room([1, 5, 8], [1, 5, 2]);
+    const start = r.view.position.clone();
+    for (const tagName of ['INPUT', 'TEXTAREA', 'SELECT']) {
+      expect(r.key('keydown', 'KeyW', { target: { tagName } }).prevented).toBe(false);
+    }
+    expect(
+      r.key('keydown', 'KeyW', { target: { tagName: 'DIV', isContentEditable: true } }).prevented,
+    ).toBe(false);
+    for (const held of ['ctrlKey', 'metaKey', 'altKey']) {
+      r.key('keydown', 'KeyW', { [held]: true });
+      r.key('keydown', 'Space', { [held]: true });
+    }
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+    // a key held when the window loses focus is dropped
+    r.key('keydown', 'KeyW');
+    r.blur();
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+  });
+
+  it('C10: off a room, a Space keydown is not taken and no key is held', () => {
+    // the plain shelf and ?solo never enter a room; a room taken down leaves
+    const r = room([1, 5, 8], [1, 5, 2]);
+    r.orbit.leave();
+    expect(r.key('keydown', 'Space').prevented).toBe(false);
+    r.key('keydown', 'KeyW');
+    r.orbit.enter(box);
+    r.frames(5, 100);
+    expect(r.view.position.z).toBeCloseTo(8, 9);
+    expect(r.view.position.y).toBeCloseTo(5, 9);
+  });
+
+  it('C10: Space on a focused button, and any key with a dialog open or a book held, are not taken', () => {
+    const r = room([1, 5, 8], [1, 5, 2]);
+    const start = r.view.position.clone();
+    expect(r.key('keydown', 'Space', { target: { tagName: 'BUTTON' } }).prevented).toBe(false);
+    vi.stubGlobal('document', { querySelector: () => ({}) });
+    expect(r.key('keydown', 'Space').prevented).toBe(false);
+    r.key('keydown', 'KeyW');
+    vi.stubGlobal('document', { querySelector: () => null });
+    r.orbit.hold();
+    expect(r.key('keydown', 'Space').prevented).toBe(false);
+    r.key('keydown', 'KeyW');
+    r.orbit.step();
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+    // and the page body or the canvas does take it
+    expect(r.key('keydown', 'Space', { target: r.element }).prevented).toBe(true);
+  });
+
+  it('C10: a key held when a book is picked up is no longer held when it is put back', () => {
+    const r = room([1, 5, 8], [1, 5, 2]);
+    r.key('keydown', 'KeyW');
+    r.frames(2, 100);
+    r.orbit.hold();
+    // put back
+    r.frames(5, 100);
+    const back = r.view.position.clone();
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(back)).toBeLessThan(1e-9);
+  });
+
+  it('C10: a key pressed on the body and let go with a button focused, or a dialog open, is no longer held', () => {
+    const r = room([1, 5, 8], [1, 5, 2]);
+    r.key('keydown', 'KeyW');
+    r.key('keyup', 'KeyW', { target: { tagName: 'BUTTON' } });
+    const start = r.view.position.clone();
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+    r.key('keydown', 'KeyS');
+    vi.stubGlobal('document', { querySelector: () => ({}) });
+    r.key('keyup', 'KeyS');
+    vi.stubGlobal('document', { querySelector: () => null });
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
   });
 });
 
