@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type Box, type Vec3, bookcaseBox, contains } from './room-data.ts';
-import { BOOKCASE_STANDOFF, MOST_NOTCHES, notchesOf, pan, walk } from './room-walk.ts';
+import { BOOKCASE_STANDOFF, MOST_NOTCHES, type Stand, notchesOf, pan, walk } from './room-walk.ts';
 
 const box: Box = { min: [-7.4, 0.5, -0.2], max: [9.4, 10.5, 12.452] };
 const NEAREST = 1.5;
@@ -131,6 +131,23 @@ describe('pan (#632)', () => {
     expect(stood.target[2] - stood.camera[2]).toBeCloseTo(-3, 9);
   });
 
+  it('pans up square to a pitched view, not along the world’s up', () => {
+    // looking down: toward -z and 2 down in 3 ahead
+    const stood = pan(box, [1, 5, 8], [1, 3, 5], 0, 1);
+    const norm = Math.hypot(2, 3);
+    expect(stood.camera[0]).toBeCloseTo(1, 9);
+    expect(stood.camera[1]).toBeCloseTo(5 + 3 / norm, 9);
+    expect(stood.camera[2]).toBeCloseTo(8 - 2 / norm, 9);
+    // the step is one unit and square to the view
+    const step: Vec3 = [0, stood.camera[1] - 5, stood.camera[2] - 8];
+    const ahead: Vec3 = [0, -2, -3];
+    expect(Math.hypot(...step)).toBeCloseTo(1, 9);
+    expect(step[1] * ahead[1] + step[2] * ahead[2]).toBeCloseTo(0, 9);
+    // the target went with it, so the view keeps its direction
+    expect(stood.target[1] - stood.camera[1]).toBeCloseTo(-2, 9);
+    expect(stood.target[2] - stood.camera[2]).toBeCloseTo(-3, 9);
+  });
+
   it('pans along the screen, not the room: a camera looking along +x has right at +z', () => {
     const stood = pan(box, [0, 5, 5], [3, 5, 5], 1, 0);
     // right of a view down +x is +z in a y-up, right-handed world
@@ -167,6 +184,29 @@ describe('pan (#632)', () => {
     const into = pan(box, [-4, 3, 0.4], [-4, 3, -2.6], 3, 0, spaces);
     expect(into.camera[0]).toBeCloseTo(-1.79 - BOOKCASE_STANDOFF, 4);
     expect(into.target[0] - into.camera[0]).toBeCloseTo(0, 9);
+  });
+
+  it('stops on or outside the real face, so a walk toward the case afterwards does not go in', () => {
+    const slot = {
+      position: [0, 0, 0] as Vec3,
+      rotationY: 0,
+      extras: { caster_width: 3.58, caster_depth: 0.72 },
+    };
+    const keepOut = bookcaseBox(slot, 4.48, BOOKCASE_STANDOFF);
+    const spaces = keepOut === undefined ? [] : [keepOut];
+    const side = -1.79 - BOOKCASE_STANDOFF;
+    // pan into the case's side, then turn to face it and walk at it
+    const panned = pan(box, [-4, 3, 0.4], [-4, 3, -2.6], 3, 0, spaces);
+    let stand: Stand = {
+      camera: panned.camera,
+      target: [panned.camera[0] + 3, panned.camera[1], panned.camera[2]],
+    };
+    for (let i = 0; i < 20; i += 1) {
+      stand = walk(box, stand.camera, stand.target, 0.5, 3, NEAREST, spaces);
+    }
+    // the same face stops both, and nothing walks through it
+    expect(stand.camera[0]).toBeLessThanOrEqual(side + 1e-9);
+    expect(panned.camera[0]).toBeLessThanOrEqual(side + 1e-9);
   });
 
   it('does not trap a camera that is already inside the case', () => {

@@ -70,6 +70,27 @@ function enterReach(box: Box, point: Vec3, direction: Vec3): number {
   return near >= 0 && near <= far ? near : Infinity;
 }
 
+/** How far inside a keep-out's faces counts as the face itself: far above rounding, far below anything a person sees. */
+const FACE = 1e-10;
+
+/**
+ * How far a camera can go along `direction` before it enters `space` (a keep-out): `enterReach` on the
+ * space drawn in by `FACE`. **The walk and the pan both stop at this one face and both read "inside"
+ * by this one test**, so where either leaves the camera, the other treats it as outside and still
+ * stops it there. Were they to differ, a pan that parked the camera a hair inside the real face would
+ * leave a walk to read it as already inside the case and take it through.
+ */
+function keepOutReach(space: Box, point: Vec3, direction: Vec3): number {
+  return enterReach(
+    {
+      min: [space.min[0] + FACE, space.min[1] + FACE, space.min[2] + FACE],
+      max: [space.max[0] - FACE, space.max[1] - FACE, space.max[2] - FACE],
+    },
+    point,
+    direction,
+  );
+}
+
 export interface Stand {
   readonly camera: Vec3;
   readonly target: Vec3;
@@ -108,7 +129,7 @@ export function walk(
   const moved = Math.min(
     Math.abs(distance),
     reachOfBox(box, camera, heading),
-    ...keepOut.map((space) => enterReach(space, camera, heading)),
+    ...keepOut.map((space) => keepOutReach(space, camera, heading)),
   );
   const sign = distance >= 0 ? 1 : -1;
   const stood = clampInto(box, [
@@ -129,19 +150,12 @@ export function walk(
 
 /** World units a two-finger or a mouse pan moves the camera for each pixel the fingers or the pointer go. */
 export const PAN_PER_PIXEL = 0.01;
-/** How far inside a keep-out's faces the pan treats it as entered, so a camera standing on one is outside it. */
-const FACE = 1e-6;
 
 const cross = (a: Vec3, b: Vec3): Vec3 => [
   a[1] * b[2] - a[2] * b[1],
   a[2] * b[0] - a[0] * b[2],
   a[0] * b[1] - a[1] * b[0],
 ];
-
-const shrink = (box: Box): Box => ({
-  min: [box.min[0] + FACE, box.min[1] + FACE, box.min[2] + FACE],
-  max: [box.max[0] - FACE, box.max[1] - FACE, box.max[2] - FACE],
-});
 
 /**
  * One pan (#632) of `right` world units along the screen's right and `up` along its up, the camera
@@ -183,10 +197,7 @@ export function pan(
   const heading = unit(camera, wanted);
   if (heading === undefined) return { camera, target };
   const wished = Math.hypot(wanted[0] - camera[0], wanted[1] - camera[1], wanted[2] - camera[2]);
-  const moved = Math.min(
-    wished,
-    ...keepOut.map((space) => enterReach(shrink(space), camera, heading)),
-  );
+  const moved = Math.min(wished, ...keepOut.map((space) => keepOutReach(space, camera, heading)));
   const step: Vec3 = [heading[0] * moved, heading[1] * moved, heading[2] * moved];
   return {
     camera: clampInto(box, [camera[0] + step[0], camera[1] + step[1], camera[2] + step[2]]),

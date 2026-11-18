@@ -15,8 +15,11 @@
    bookcase's keep-out, and a camera already inside the case is not held there. **A pan slides along a
    face of the box** and goes on in the other axes, where a walk stops, because a walk has one line to go
    along and a pan has a plane; a pan that would enter the case stops at its face, and one along its face
-   goes on (a camera standing on a face counts as outside it, by a micrometre), so the visitor can pan
-   along the shelves at the standoff. The target goes exactly as far as the camera went and may leave the
+   goes on, so the visitor can pan along the shelves at the standoff. **The walk and the pan share one
+   face and one "inside" test** (`keepOutReach`, the keep-out drawn in by 1e-10): a camera on that face
+   counts as outside, and both stop at it. Were they to differ, a pan that parked the camera a hair inside
+   the real face would leave a walk reading it as already inside the case, which it does not hold, and take
+   it through; a test pans into the case's side, turns to face it and walks. The target goes exactly as far as the camera went and may leave the
    box, as the walk's does.
 3. **A touch is decided once** (`room-gesture.ts`). The spread and the midpoint are summed from the
    start of the touch and the touch is decided the first time either has gone `GESTURE_SLOP` (10 px)
@@ -37,9 +40,10 @@
 5. **While two fingers are down `OrbitControls` does not turn the view** (`enableRotate` is off from
    the second finger down until fewer than two are down). Its touch rotate follows the midpoint of two
    fingers, so a pan would have turned the head by as much as it moved the camera; the walk's pinch bent
-   its line a little for the same reason and no longer does. The finger left after a lift does not turn
-   the view either, until it is lifted and put down again, as `OrbitControls` does not restart a
-   rotate while it is off.
+   its line a little for the same reason and no longer does. **One finger turns the view, as it always
+   did**: the finger left after one of two lifts turns it again as soon as only one is down, and so does
+   a new touch once both have lifted (the owner's word in the lead's chat: turning the view with one
+   finger is the default behaviour for one finger anyway). Both are held by tests in `room-orbit.test.ts`.
 6. **A mouse pans too, on a right-button drag and on a shift-drag**, the same `pan` and the same
    constant, the room following the pointer. They are the gestures `OrbitControls` already assigned to
    pan, and with pan off in a room they did nothing; the left button alone still turns the view. Ctrl and

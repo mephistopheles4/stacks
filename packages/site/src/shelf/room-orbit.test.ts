@@ -367,7 +367,46 @@ describe('the camera in a room (#620, #626)', () => {
       expect(r.view.position.x).toBeCloseTo(-1.79 - BOOKCASE_STANDOFF, 3);
     });
 
-    it('lets a pinch walk after the pan ends, and the finger left behind turns nothing', () => {
+    /** The direction the camera looks, as a unit vector. */
+    const sightOf = (r: ReturnType<typeof room>): THREE.Vector3 =>
+      r.controls.target.clone().sub(r.view.position).normalize();
+    const turnedBy = (a: THREE.Vector3, b: THREE.Vector3): number =>
+      Math.acos(Math.min(1, a.dot(b)));
+
+    it('turns the view with the finger left after one of two lifts', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      r.frames(1);
+      r.send('pointerup', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      const sight = sightOf(r);
+      for (let i = 1; i <= 15; i += 1) {
+        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + i * 10, clientY: 400 });
+      }
+      r.frames(80);
+      // one finger turns the view as it always did: the same 150 px turns it as far as a mouse's
+      expect(turnedBy(sight, sightOf(r))).toBeGreaterThan(1);
+    });
+
+    it('turns the view again with one finger once two have lifted', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      drag(r, 60, 0);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerup', { ...touch, pointerId: 1, clientX: 460, clientY: 400 });
+      r.send('pointerup', { ...touch, pointerId: 2, clientX: 560, clientY: 400 });
+      const sight = sightOf(r);
+      r.send('pointerdown', { ...touch, pointerId: 3, clientX: 400, clientY: 400 });
+      for (let i = 1; i <= 15; i += 1) {
+        r.send('pointermove', { ...touch, pointerId: 3, clientX: 400 + i * 10, clientY: 400 });
+      }
+      r.frames(80);
+      expect(turnedBy(sight, sightOf(r))).toBeGreaterThan(1);
+    });
+
+    it('lets a pinch walk after the pan ends', () => {
       const r = room([1, 5, 8], [1, 5, 5]);
       r.frames(2);
       drag(r, 60, 0);
@@ -397,7 +436,7 @@ describe('the camera in a room (#620, #626)', () => {
       expect(r.view.position.z).toBeCloseTo(8, 9);
     });
 
-    it('pans on a shift-drag, and a plain left drag still turns the view', () => {
+    it('pans on a shift-drag', () => {
       const r = room([1, 5, 8], [1, 5, 5]);
       r.frames(2);
       const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
