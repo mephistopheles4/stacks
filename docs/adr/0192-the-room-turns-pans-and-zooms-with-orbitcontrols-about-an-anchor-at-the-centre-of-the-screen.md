@@ -16,7 +16,7 @@
 2. **The target is an anchor picked at the centre of the screen.** A raycast from the screen's centre
    finds the first visible mesh, and the anchor goes that far along the line the camera already looks
    down, so placing it never moves the view. A hit outside the room's box (with a 1-unit margin), or no
-   hit, falls back to the point on the line of sight nearest the room's centre; when that point is behind
+   hit, falls back to the point on the line of sight nearest the room's centre, or the hit if that is nearer; when that point is behind
    the camera the hit is kept, or 6 units ahead. The anchor stays between 0.5 and 60 units ahead.
 3. **It is placed at room open, after a reframe or a held book, at the start of every pan, and at the
    first turn after a walk, a pinch or a pan.** A turn on its own never moves it, so a drag orbits what

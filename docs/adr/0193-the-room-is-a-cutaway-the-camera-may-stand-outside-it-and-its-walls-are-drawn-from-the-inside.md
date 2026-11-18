@@ -1,7 +1,7 @@
 # ADR-0193 — The room is a cutaway: the camera may stand outside it, and its walls are drawn from the inside
 
 **Date:** 2026-11-18
-**Status:** accepted, built in [#637](https://github.com/mephistopheles4/stacks/issues/637) (and closes [#636](https://github.com/mephistopheles4/stacks/issues/636)).
+**Status:** accepted, built in [#637](https://github.com/mephistopheles4/stacks/issues/637).
 **Issue:** [#637](https://github.com/mephistopheles4/stacks/issues/637), part of the room ([#593](https://github.com/mephistopheles4/stacks/issues/593))
 **Spec:** [`## Spec: Anchor camera (revision 2)`](https://github.com/mephistopheles4/stacks/issues/637#issuecomment-6990624251) on #637, S4 D2, S6 and S7
 **Amends** [ADR-0178](0178-the-room-is-closed-by-its-own-wall-pieces-and-the-camera-comes-in-at-the-box.md) items 4 and 5 (the camera box, and the camera coming in at it). **Departs from** the room spec's S8.2 on #593 ([revision 3](https://github.com/mephistopheles4/stacks/issues/593#issuecomment-6904699109)), "never behind a wall, the floor or the ceiling".
