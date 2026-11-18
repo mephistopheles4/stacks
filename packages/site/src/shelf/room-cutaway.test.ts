@@ -35,6 +35,23 @@ const keptCount = (mesh: THREE.Mesh): number => {
   return (index?.count ?? mesh.geometry.getAttribute('position').count) / 3;
 };
 
+/** The normal of every triangle a mesh still draws, rounded so that it reads as an axis. */
+function normalsOf(mesh: THREE.Mesh): number[][] {
+  const { index } = mesh.geometry;
+  const position = mesh.geometry.getAttribute('position');
+  const vertex = (i: number): number => (index === null ? i : index.getX(i));
+  const count = index?.count ?? position.count;
+  const out: number[][] = [];
+  for (let i = 0; i < count; i += 3) {
+    const [a, b, c] = [0, 1, 2].map((k) =>
+      new THREE.Vector3().fromBufferAttribute(position, vertex(i + k)),
+    );
+    const n = b!.clone().sub(a!).cross(c!.clone().sub(a!)).normalize();
+    out.push([n.x, n.y, n.z].map((v) => Math.round(v) + 0));
+  }
+  return out;
+}
+
 /** A mesh under a wrapper node, as a GLB hands it over. */
 function under(name: string, mesh: THREE.Mesh): THREE.Group {
   const holder = new THREE.Group();
@@ -46,36 +63,66 @@ function under(name: string, mesh: THREE.Mesh): THREE.Group {
 describe('stripOuterFaces (#637, C8)', () => {
   const material = new THREE.MeshBasicMaterial();
 
-  it('C8: drops every outward face of a named mesh, keeps every inward one, and leaves an unnamed mesh alone', () => {
-    // the east wall at x = +10: inward faces -x, outward faces +x; the floor at y = 0: inward faces up
-    const east = new THREE.Mesh(
-      geometryOf(wall(10, false), wall(10, true), wall(10, false)),
-      material,
-    );
-    const floor = new THREE.Mesh(geometryOf(slab(0, true), slab(0, false)), material);
-    const prop = new THREE.Mesh(geometryOf(wall(10, true), wall(10, false)), material);
+  it('C8: keeps the faces that look into the room and drops the ones that look out, on every wall, the ceiling and the floor', () => {
+    // each surface carries one inward face and one outward: which is which depends on the side of the
+    // room's centre the surface stands on, so a rule blind to position, or inverted, keeps the wrong one
+    const surface = (name: string, ...triangles: number[][]): [string, THREE.Mesh] => [
+      name,
+      new THREE.Mesh(geometryOf(...triangles), material),
+    ];
+    const cases: [[string, THREE.Mesh], number[]][] = [
+      // the east wall at x = +10 looks into the room along -x, and the west one at x = -10 along +x
+      [surface('room_walls_east', wall(10, false), wall(10, true)), [-1, 0, 0]],
+      [surface('room_walls_west', wall(-10, false), wall(-10, true)), [1, 0, 0]],
+      // the floor at y = 0 looks up and the ceiling at y = 10 looks down
+      [surface('room_floor', slab(0, true), slab(0, false)), [0, 1, 0]],
+      [surface('room_ceiling_slab', slab(10, true), slab(10, false)), [0, -1, 0]],
+    ];
     const root = new THREE.Group();
-    root.add(under('room_walls_east', east), under('room_floor', floor), under('stool', prop));
-    const meshesBefore: THREE.Object3D[] = [];
-    root.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) meshesBefore.push(o);
-    });
+    for (const [[name, mesh]] of cases) root.add(under(name, mesh));
 
     const dropped = stripOuterFaces(root, box);
 
-    expect(dropped).toBe(2);
-    // the two inward wall faces and the one upward floor face are what is left
-    expect(keptCount(east)).toBe(2);
-    expect(keptCount(floor)).toBe(1);
-    // the unnamed mesh was not touched
+    expect(dropped).toBe(cases.length);
+    for (const [[name, mesh], inward] of cases) {
+      expect(normalsOf(mesh), name).toEqual([inward]);
+    }
+  });
+
+  it('C8: a mesh under any other name, and one named room_floor_rug, is not cut', () => {
+    // `room_floor` matches exactly: a rug laid on the floor keeps both of its faces
+    const rug = new THREE.Mesh(geometryOf(slab(0, true), slab(0, false)), material);
+    const prop = new THREE.Mesh(geometryOf(wall(10, true), wall(10, false)), material);
+    const root = new THREE.Group();
+    root.add(under('room_floor_rug', rug), under('stool', prop));
+    const originals = [rug.geometry, prop.geometry];
+
+    expect(stripOuterFaces(root, box)).toBe(0);
+
+    expect(keptCount(rug)).toBe(2);
     expect(keptCount(prop)).toBe(2);
+    expect([rug.geometry, prop.geometry]).toEqual(originals);
     expect(prop.geometry.index).toBeNull();
-    const meshesAfter: THREE.Object3D[] = [];
-    root.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) meshesAfter.push(o);
-    });
-    expect(meshesAfter).toEqual(meshesBefore);
-    for (const mesh of [east, floor, prop]) expect(mesh.material).toBe(material);
+  });
+
+  it('C8: no mesh is added or removed and no material changes', () => {
+    const east = new THREE.Mesh(geometryOf(wall(10, false), wall(10, true)), material);
+    const prop = new THREE.Mesh(geometryOf(wall(10, true)), material);
+    const root = new THREE.Group();
+    root.add(under('room_walls_east', east), under('stool', prop));
+    const meshes = (): THREE.Object3D[] => {
+      const found: THREE.Object3D[] = [];
+      root.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) found.push(o);
+      });
+      return found;
+    };
+    const before = meshes();
+
+    stripOuterFaces(root, box);
+
+    expect(meshes()).toEqual(before);
+    for (const mesh of [east, prop]) expect(mesh.material).toBe(material);
   });
 
   it('C8: disposes the geometry it replaced, unless another mesh still draws it', () => {
