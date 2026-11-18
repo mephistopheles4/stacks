@@ -3,7 +3,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { describe, expect, it } from 'vitest';
 import { type Box, bookcaseBox, contains } from './room-data.ts';
 import { createRoomOrbit } from './room-orbit.ts';
-import { BOOKCASE_STANDOFF, WALK_PER_NOTCH, WALK_PER_PINCH_PIXEL } from './room-walk.ts';
+import { GESTURE_SLOP } from './room-gesture.ts';
+import {
+  BOOKCASE_STANDOFF,
+  PAN_PER_PIXEL,
+  WALK_PER_NOTCH,
+  WALK_PER_PINCH_PIXEL,
+} from './room-walk.ts';
 
 const box: Box = { min: [-7.4, 0.5, -0.2], max: [9.4, 10.5, 12.452] };
 
@@ -43,10 +49,10 @@ function fakeCanvas(): {
       let prevented = false;
       const at = { clientX: 640, clientY: 400, ...event };
       const full = {
+        button: 0,
         ...at,
         pageX: at.clientX,
         pageY: at.clientY,
-        button: 0,
         preventDefault: () => {
           prevented = true;
         },
@@ -268,12 +274,207 @@ describe('the camera in a room (#620, #626)', () => {
     r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
     r.send('pointermove', { ...touch, pointerId: 2, clientX: 600, clientY: 400 });
     r.frames(80);
-    // The pivot is the walk's own, and the drag's turn about it does not move it: it stands
-    // `minDistance` ahead of where the walk took the camera, from z 8 forward by the spread. The
-    // fingers' midpoint turns the view a little as they spread, so the line bends a little.
-    const expected = 8 - 100 * WALK_PER_PINCH_PIXEL - r.controls.minDistance;
-    expect(r.controls.target.z).toBeCloseTo(expected, 0);
-    expect(r.controls.target.z).toBeLessThan(5);
+    // The pivot is the walk's own: it stands `minDistance` ahead of where the walk took the camera,
+    // from z 8 forward by the spread.
+    expect(r.view.position.z).toBeCloseTo(8 - 100 * WALK_PER_PINCH_PIXEL, 6);
+    expect(r.controls.target.z).toBeCloseTo(
+      8 - 100 * WALK_PER_PINCH_PIXEL - r.controls.minDistance,
+      6,
+    );
+    // a pinch walks and does not pan, and does not turn the view either
+    expect(r.view.position.x).toBeCloseTo(1, 9);
+    expect(r.view.position.y).toBeCloseTo(5, 9);
+    expect(r.controls.target.x).toBeCloseTo(1, 9);
+  });
+
+  describe('two fingers moving together pan (#632)', () => {
+    /** Both fingers go `dx`, `dy` in `steps` frames, as two fingers on a glass do; they stay down. */
+    const drag = (r: ReturnType<typeof room>, dx: number, dy: number, steps = 10): void => {
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      for (let i = 1; i <= steps; i += 1) {
+        const [x, y] = [(dx * i) / steps, (dy * i) / steps];
+        r.send('pointermove', { ...touch, pointerId: 1, clientX: 400 + x, clientY: 400 + y });
+        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + x, clientY: 400 + y });
+        r.frames(1);
+      }
+      r.frames(80);
+    };
+
+    it('pans the camera and its target together, the way the fingers drag the room', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      drag(r, 100, 50);
+      // the room follows the fingers: right and down on the glass is the camera left and up
+      expect(r.view.position.x).toBeCloseTo(1 - 100 * PAN_PER_PIXEL, 6);
+      expect(r.view.position.y).toBeCloseTo(5 + 50 * PAN_PER_PIXEL, 6);
+      // it did not walk, and the view did not turn: the target is straight ahead of the camera
+      expect(r.view.position.z).toBeCloseTo(8, 9);
+      expect(r.controls.target.x).toBeCloseTo(r.view.position.x, 6);
+      expect(r.controls.target.y).toBeCloseTo(r.view.position.y, 6);
+      expect(r.controls.target.z).toBeLessThan(r.view.position.z);
+    });
+
+    it('leaves a finger at rest alone: a drift under the slop moves nothing', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const start = r.view.position.clone();
+      const target = r.controls.target.clone();
+      drag(r, GESTURE_SLOP - 2, 0, 4);
+      expect(r.view.position.distanceTo(start)).toBeCloseTo(0, 9);
+      expect(r.controls.target.distanceTo(target)).toBeCloseTo(0, 9);
+    });
+
+    it('does not walk when the fingers drift apart a little as they pan', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      for (let i = 1; i <= 10; i += 1) {
+        // the second finger goes a little faster: the spread grows 3 px a step, the midpoint goes 11.5
+        r.send('pointermove', { ...touch, pointerId: 1, clientX: 400 + i * 10, clientY: 400 });
+        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + i * 13, clientY: 400 });
+        r.frames(1);
+      }
+      r.frames(80);
+      expect(r.view.position.z).toBeCloseTo(8, 9);
+      expect(r.view.position.x).toBeCloseTo(1 - 115 * PAN_PER_PIXEL, 6);
+    });
+
+    it('never takes the camera out of the room', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      drag(r, -3000, -3000, 60);
+      const { x, y, z } = r.view.position;
+      expect(contains(box, [x, y, z])).toBe(true);
+      expect(x).toBeCloseTo(box.max[0], 6);
+      expect(y).toBeCloseTo(box.min[1], 6);
+    });
+
+    it('never takes the camera into the main bookcase', () => {
+      const slot = {
+        position: [0, 0, 0] as [number, number, number],
+        rotationY: 0,
+        extras: { caster_width: 3.58, caster_depth: 0.72 },
+      };
+      const space = bookcaseBox(slot, 4.48, BOOKCASE_STANDOFF);
+      const r = room([-6, 3, 0.4], [-6, 3, -2.6], space === undefined ? [] : [space]);
+      r.frames(2);
+      drag(r, -1000, 0, 40);
+      // it went as far as the case's side and no further, with the standoff to spare
+      expect(r.view.position.x).toBeCloseTo(-1.79 - BOOKCASE_STANDOFF, 3);
+    });
+
+    /** The direction the camera looks, as a unit vector. */
+    const sightOf = (r: ReturnType<typeof room>): THREE.Vector3 =>
+      r.controls.target.clone().sub(r.view.position).normalize();
+    const turnedBy = (a: THREE.Vector3, b: THREE.Vector3): number =>
+      Math.acos(Math.min(1, a.dot(b)));
+
+    it('turns the view with the finger left after one of two lifts', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      r.frames(1);
+      r.send('pointerup', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      const sight = sightOf(r);
+      for (let i = 1; i <= 15; i += 1) {
+        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + i * 10, clientY: 400 });
+      }
+      r.frames(80);
+      // one finger turns the view as it always did: the same 150 px turns it as far as a mouse's
+      expect(turnedBy(sight, sightOf(r))).toBeGreaterThan(1);
+    });
+
+    it('turns the view again with one finger once two have lifted', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      drag(r, 60, 0);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerup', { ...touch, pointerId: 1, clientX: 460, clientY: 400 });
+      r.send('pointerup', { ...touch, pointerId: 2, clientX: 560, clientY: 400 });
+      const sight = sightOf(r);
+      r.send('pointerdown', { ...touch, pointerId: 3, clientX: 400, clientY: 400 });
+      for (let i = 1; i <= 15; i += 1) {
+        r.send('pointermove', { ...touch, pointerId: 3, clientX: 400 + i * 10, clientY: 400 });
+      }
+      r.frames(80);
+      expect(turnedBy(sight, sightOf(r))).toBeGreaterThan(1);
+    });
+
+    it('keeps what the fingers moved since the last frame when one lifts before the next', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 2, clientX: 520, clientY: 400 });
+      // a short pan, released with no frame between: it is still a pan of 20 px
+      r.send('pointerup', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
+      r.frames(80);
+      expect(r.view.position.x).toBeCloseTo(1 - 20 * PAN_PER_PIXEL, 6);
+    });
+
+    it('drops what the fingers moved when the touch is cancelled', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 2, clientX: 520, clientY: 400 });
+      r.send('pointercancel', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
+      r.frames(80);
+      expect(r.view.position.x).toBeCloseTo(1, 9);
+    });
+
+    it('lets a pinch walk after the pan ends', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      drag(r, 60, 0);
+      const panned = r.view.position.clone();
+      const touch = { pointerType: 'touch' };
+      r.send('pointerup', { ...touch, pointerId: 1, clientX: 460, clientY: 400 });
+      r.send('pointerup', { ...touch, pointerId: 2, clientX: 560, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 3, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 4, clientX: 500, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 4, clientX: 600, clientY: 400 });
+      r.frames(80);
+      expect(r.view.position.z).toBeCloseTo(panned.z - 100 * WALK_PER_PINCH_PIXEL, 6);
+      expect(r.view.position.x).toBeCloseTo(panned.x, 6);
+    });
+  });
+
+  describe('a mouse pans too (#632)', () => {
+    it('pans on a right-button drag', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const mouse = { pointerType: 'mouse', pointerId: 1, button: 2, buttons: 2 };
+      r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
+      r.send('pointermove', { ...mouse, clientX: 740, clientY: 400 });
+      r.send('pointerup', { ...mouse, clientX: 740, clientY: 400, buttons: 0 });
+      r.frames(80);
+      expect(r.view.position.x).toBeCloseTo(1 - 100 * PAN_PER_PIXEL, 6);
+      expect(r.view.position.z).toBeCloseTo(8, 9);
+    });
+
+    it('pans on a shift-drag', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
+      r.send('pointerdown', { ...mouse, shiftKey: true, clientX: 640, clientY: 400 });
+      r.send('pointermove', { ...mouse, shiftKey: true, clientX: 640, clientY: 300 });
+      r.send('pointerup', { ...mouse, shiftKey: true, clientX: 640, clientY: 300, buttons: 0 });
+      r.frames(80);
+      // the room follows the pointer: up on the glass is the camera down
+      expect(r.view.position.y).toBeCloseTo(5 - 100 * PAN_PER_PIXEL, 6);
+      expect(r.view.position.x).toBeCloseTo(1, 9);
+    });
   });
 
   it('leaves a single finger to the drag: it turns the view and walks nowhere', () => {
