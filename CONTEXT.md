@@ -79,9 +79,8 @@ sampling the shadow map, so later loads start with painted shadows until it
 expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess about the device, and a
 `?shadows=` in the URL goes around it
 ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
-A program that will not link while the shelf samples the map writes the same
-record (item 9), and the record does not say which of the two it was; the name
-keeps the common case.
+A program that will not link while sampling writes the same record (item 9),
+which does not say which it was; the name keeps the common case.
 *Avoid*: blocklist, device flag (nothing is decided by device), crash record
 (that is the black box's), fallback on its own (that is what the page does
 after a loss, in the page).
@@ -133,8 +132,8 @@ against it as the same picture at 6.7× the triangles. A paperback's is not
 The top edge of a book as it stands on a shelf, where the covering rolls over.
 The one edge that **cannot be faked** — a shelf is looked at from above, so the
 head is a silhouette, and no normal map moves a silhouette. There is no *tail*
-treatment and never will be: the lowest angle the camera permits is 3.6° above
-the horizon, so no tail is ever in frame.
+treatment: the camera's lowest angle is 3.6° above the horizon, so no tail is
+ever in frame.
 *Avoid*: top, cap (the cap is the *geometry*; the head is the edge), spine top.
 
 **Striation**:
@@ -148,8 +147,7 @@ taken by the *struck* roughness weave — see #68).
 **Provenance**:
 Which of the three providers in use a cover's *bytes* were downloaded from — a
 separate question from which provider answered for the book's metadata. The two
-differ often enough that conflating them loses real information: a book Open
-Library answered for can carry an Apple cover. Older covers may still say
+differ: a book Open Library answered for can carry an Apple cover. Older covers may still say
 `oreilly` ([ADR-0147](docs/adr/0147-oreilly-is-removed.md)). The rules are the
 `cover_source` ones in [`AGENTS.md`](AGENTS.md).
 *Avoid*: source (ambiguous — a record's `source` is the metadata provider).
@@ -191,9 +189,8 @@ The furniture the shelf renders: its **planks**, its **uprights** and its
 **backboard**. Narrower than the English word — it covers the wooden members,
 and not the dimensions, the row count, or the books standing in it.
 *Avoid*: case (that is a hardback's binding case — see **Square**), unit.
-**Older records call it the case**, and that name outlives any rename: several
-records under `docs/adr/` use it, and each keeps its original wording by
-design. **A live comment is not a record** — it describes the code as it is
+**Older records call it the case**: several under `docs/adr/` use it and keep
+their wording by design. **A live comment is not a record** — it describes the code as it is
 now, so it follows this glossary.
 
 **Plank**:
