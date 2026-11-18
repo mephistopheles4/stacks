@@ -100,3 +100,29 @@ export interface FogReach {
 export function fogRange(fog: FogReach, distance: number): FogReach {
   return { near: fog.near * distance, far: fog.far * distance };
 }
+
+/** The far plane's own distance, in a room or out of it, unless a camera standing outside the room needs more. */
+const FAR_PLANE = 100;
+/** How far past the fog's end the far plane goes, so the fog hides the cut before the plane does. */
+const FAR_SLACK = 10;
+
+export interface FogOutside extends FogReach {
+  /** The camera's far plane. */
+  readonly cameraFar: number;
+}
+
+/**
+ * The fog and the far plane in a room, for a camera `outside` the room's box (0 inside it; #637, spec S7).
+ * The fog is measured from the opening view, so a camera standing out past a wall would fade the room
+ * into the background: its range moves out with the camera, and the far plane with it. Inside the box
+ * both are exactly what they are in the plain shelf, whatever the fog's far.
+ */
+export function fogOutside(range: FogReach, outside: number): FogOutside {
+  if (!(outside > 0)) return { near: range.near, far: range.far, cameraFar: FAR_PLANE };
+  const far = range.far + outside;
+  return {
+    near: range.near + outside,
+    far,
+    cameraFar: Math.max(FAR_PLANE, far + FAR_SLACK),
+  };
+}
