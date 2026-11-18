@@ -420,6 +420,10 @@ describe('the camera stays within bounds (#637, C7)', () => {
       pinch(r, 400);
       expect(r.view.position.z).toBeCloseTo(shelves.max[2], 6);
       expect(inside(r)).toBe(false);
+      // and a second one from the face goes no farther in: a move that starts on a face is stopped by it
+      lift(r);
+      pinch(r, 400);
+      expect(r.view.position.z).toBeCloseTo(shelves.max[2], 6);
     });
 
     it('C7: a pan at it stops at its face', () => {

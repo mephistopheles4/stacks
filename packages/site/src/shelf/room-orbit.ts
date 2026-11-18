@@ -42,6 +42,9 @@ const SAMPLES = 48;
 /** The centre pick runs at most this often while a pinch or a wheel walks, in milliseconds. */
 const PICK_EVERY_MS = 100;
 
+/** Within this of a keep-out face a camera counts as standing on it, not inside. */
+const FACE = 1e-9;
+
 /** A point inside `space` is moved out through its nearest face. */
 function pushOut(space: Box, p: Vec3): Vec3 {
   const inside = [0, 1, 2].every((a) => p[a]! > space.min[a]! && p[a]! < space.max[a]!);
@@ -64,12 +67,15 @@ function pushOut(space: Box, p: Vec3): Vec3 {
 
 /**
  * `to`, or the first place along the line from `from` that meets a box in `spaces`. A step longer than a
- * keep-out is thick would otherwise land past it, where `pushOut` finds nothing to push. A `from` already
- * inside one is left to `pushOut`.
+ * keep-out is thick would otherwise land past it, where `pushOut` finds nothing to push. A `from` on a
+ * face, as a move that stopped there leaves it, goes no farther in; one well inside is left to `pushOut`,
+ * so a camera in a keep-out can still get out.
  */
 function stopAtKeepOut(spaces: readonly Box[], from: Vec3, to: Vec3): Vec3 {
   let stop = 1;
   for (const space of spaces) {
+    if ([0, 1, 2].every((a) => from[a]! > space.min[a]! + FACE && from[a]! < space.max[a]! - FACE))
+      continue;
     let enter = 0;
     let leave = 1;
     for (const a of [0, 1, 2]) {
@@ -84,7 +90,7 @@ function stopAtKeepOut(spaces: readonly Box[], from: Vec3, to: Vec3): Vec3 {
       enter = Math.max(enter, Math.min(t1, t2));
       leave = Math.min(leave, Math.max(t1, t2));
     }
-    if (enter > 0 && enter < leave) stop = Math.min(stop, enter);
+    if (enter < leave) stop = Math.min(stop, enter);
   }
   return stop === 1
     ? to
