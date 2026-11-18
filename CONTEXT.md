@@ -51,15 +51,14 @@ Placing a book on the shelf by hand rather than by date. Semantics are G12's.
 
 **Footprint**:
 How much shelf a book eats along the row — a single number. A face-out book has
-been turned side-on, so its footprint is the width of its cover rather than its
-own thickness, which is why row packing counts this and not thickness.
+been turned side-on, so its footprint is its cover's width, not its own
+thickness; row packing counts this.
 *Avoid*: width (of what?), extent, the shape it stands on (that is **contact**).
 
 **Contact**:
-Where a book meets the plank, as a rectangle. Not the same as its **footprint**:
-a face-out book's contact is its cover's width by its own *thickness*, because
-what it puts on the wood is the same slab as any other book, seen end-on. The
-painted shadow is drawn from these.
+Where a book meets the plank, as a rectangle. Not its **footprint**:
+a face-out book's contact is its cover's width by its own *thickness*: the same
+slab as any other book, seen end-on. The painted shadow is drawn from these.
 *Avoid*: footprint (the scalar), shadow (that is what is drawn from it), base.
 
 **Cover shade**:
@@ -71,12 +70,12 @@ lost the shadow sampler
 ([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
 *Avoid*: recess shade (that is the ambient darkening across a whole **row**,
 cast by nothing), band on its own (the backboard has one too), neighbour shadow
-(the older plane down a cover's right-hand edge, which it does not replace).
+(the older plane down a cover's right-hand edge, not replaced).
 
 **Lost-context record**:
 The one small entry a device keeps after the shelf lost its WebGL context while
 sampling the shadow map, so later loads start with painted shadows until it
-expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess about the device, and a
+expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess, and a
 `?shadows=` in the URL goes around it
 ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
 A program that will not link while sampling writes the same record (item 9); the record does not say which of the two it was.
@@ -129,11 +128,11 @@ against it as the same picture at 6.7× the triangles. A paperback's is not
 
 **Head**:
 The top edge of a book as it stands on a shelf, where the covering rolls over.
-The one edge that **cannot be faked** — a shelf is looked at from above, so the
-head is a silhouette, and no normal map moves a silhouette. There is no *tail*
+The one edge that **cannot be faked**: a shelf is seen from above, so the head
+is a silhouette, and no normal map moves a silhouette. There is no *tail*
 treatment: on the plain shelf the camera's lowest angle is 3.6° above the horizon,
 so no tail is in frame. In a room the camera can stand below the floor (polar
-limit 0.9π), and whether a plank hides a tail from below there is unchecked.
+limit 0.9π); whether a plank hides a tail from below is unchecked.
 *Avoid*: top, cap (the cap is the *geometry*; the head is the edge), spine top.
 
 **Striation**:
