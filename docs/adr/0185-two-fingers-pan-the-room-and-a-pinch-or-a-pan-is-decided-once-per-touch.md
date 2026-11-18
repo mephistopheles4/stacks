@@ -16,10 +16,12 @@
    face of the box** and goes on in the other axes, where a walk stops, because a walk has one line to go
    along and a pan has a plane; a pan that would enter the case stops at its face, and one along its face
    goes on, so the visitor can pan along the shelves at the standoff. **The walk and the pan share one
-   face and one "inside" test** (`keepOutReach`, the keep-out drawn in by 1e-10): a camera on that face
-   counts as outside, and both stop at it. Were they to differ, a pan that parked the camera a hair inside
-   the real face would leave a walk reading it as already inside the case, which it does not hold, and take
-   it through; a test pans into the case's side, turns to face it and walks. The target goes exactly as far as the camera went and may leave the
+   face and one "inside" test** (`keepOutReach`): both stop at the keep-out's real face, never inside it,
+   and a camera on it or within 1e-10 of it counts as outside (so it can slide along the face, and one a
+   rounding error inside is stopped rather than taken for being already in the case, which the walk does
+   not hold). Were they to differ, a pan that parked the camera a hair inside the face would leave a walk
+   reading it as already inside and take it through; a test pans into the case's side, turns to face it
+   and walks. The target goes exactly as far as the camera went and may leave the
    box, as the walk's does.
 3. **A touch is decided once** (`room-gesture.ts`). The spread and the midpoint are summed from the
    start of the touch and the touch is decided the first time either has gone `GESTURE_SLOP` (10 px)
@@ -36,7 +38,8 @@
 4. **The samples are taken a frame apart, in `step`, not in the pointer handlers.** A handler hears one
    finger at a time, and a fast two-finger pan is, between the first finger's event and the second's,
    half a pinch (one finger moved, the other not). A frame is when both have reported. This changes the
-   pinch's timing by up to a frame and nothing else.
+   pinch's timing by up to a frame and nothing else. **A lift takes the last sample first**, so a short
+   pan released before the next frame is not lost; a cancel (the browser taking the touch away) does not.
 5. **While two fingers are down `OrbitControls` does not turn the view** (`enableRotate` is off from
    the second finger down until fewer than two are down). Its touch rotate follows the midpoint of two
    fingers, so a pan would have turned the head by as much as it moved the camera; the walk's pinch bent

@@ -266,24 +266,31 @@ export function createRoomOrbit(
       finger.x = clientX;
       finger.y = clientY;
     };
-    const onUp = (event: Event): void => {
+    const release = (event: Event): void => {
       const { pointerId } = event as PointerEvent;
       if (dragging?.id === pointerId) dragging = undefined;
       if (!fingers.delete(pointerId)) return;
       rebase();
       if (bounds !== undefined && fingers.size < 2) controls.enableRotate = true;
     };
+    /** A lift is the end of what the fingers did, so what they moved since the last frame is taken first. */
+    const onUp = (event: Event): void => {
+      sample();
+      release(event);
+    };
+    /** A cancel is the browser taking the touch away: what it moved since the last frame is not taken. */
+    const onCancel = release;
     element.addEventListener('wheel', onWheel, { passive: false });
     element.addEventListener('pointerdown', onDown);
     element.addEventListener('pointermove', onMove);
     element.addEventListener('pointerup', onUp);
-    element.addEventListener('pointercancel', onUp);
+    element.addEventListener('pointercancel', onCancel);
     return () => {
       element.removeEventListener('wheel', onWheel);
       element.removeEventListener('pointerdown', onDown);
       element.removeEventListener('pointermove', onMove);
       element.removeEventListener('pointerup', onUp);
-      element.removeEventListener('pointercancel', onUp);
+      element.removeEventListener('pointercancel', onCancel);
     };
   };
 

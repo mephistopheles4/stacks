@@ -406,6 +406,33 @@ describe('the camera in a room (#620, #626)', () => {
       expect(turnedBy(sight, sightOf(r))).toBeGreaterThan(1);
     });
 
+    it('keeps what the fingers moved since the last frame when one lifts before the next', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 2, clientX: 520, clientY: 400 });
+      // a short pan, released with no frame between: it is still a pan of 20 px
+      r.send('pointerup', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
+      r.frames(80);
+      expect(r.view.position.x).toBeCloseTo(1 - 20 * PAN_PER_PIXEL, 6);
+    });
+
+    it('drops what the fingers moved when the touch is cancelled', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
+      r.send('pointermove', { ...touch, pointerId: 2, clientX: 520, clientY: 400 });
+      r.send('pointercancel', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
+      r.frames(80);
+      expect(r.view.position.x).toBeCloseTo(1, 9);
+    });
+
     it('lets a pinch walk after the pan ends', () => {
       const r = room([1, 5, 8], [1, 5, 5]);
       r.frames(2);

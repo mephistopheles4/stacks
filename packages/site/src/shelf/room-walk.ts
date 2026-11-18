@@ -74,14 +74,15 @@ function enterReach(box: Box, point: Vec3, direction: Vec3): number {
 const FACE = 1e-10;
 
 /**
- * How far a camera can go along `direction` before it enters `space` (a keep-out): `enterReach` on the
- * space drawn in by `FACE`. **The walk and the pan both stop at this one face and both read "inside"
- * by this one test**, so where either leaves the camera, the other treats it as outside and still
- * stops it there. Were they to differ, a pan that parked the camera a hair inside the real face would
- * leave a walk to read it as already inside the case and take it through.
+ * How far a camera can go along `direction` before it enters `space` (a keep-out). **The walk and the
+ * pan both stop at the space's real face and both read "inside" by this one test**: a camera within
+ * `FACE` of a face, or on it, is outside (so one standing on a face can slide along it, and one a
+ * rounding error inside it is stopped and not taken for being already in), and a line that would enter
+ * is stopped at the real face and never inside it. Were the two to differ, a pan that parked the camera
+ * a hair inside the face would leave a walk to read it as already inside the case and take it through.
  */
 function keepOutReach(space: Box, point: Vec3, direction: Vec3): number {
-  return enterReach(
+  const drawnIn = enterReach(
     {
       min: [space.min[0] + FACE, space.min[1] + FACE, space.min[2] + FACE],
       max: [space.max[0] - FACE, space.max[1] - FACE, space.max[2] - FACE],
@@ -89,6 +90,9 @@ function keepOutReach(space: Box, point: Vec3, direction: Vec3): number {
     point,
     direction,
   );
+  // The test above decides whether the line enters at all; the stop is the real face, which is met first
+  // where the camera is outside it. A camera in the `FACE` band has no real face ahead, and stops where it is.
+  return drawnIn === Infinity ? Infinity : Math.min(drawnIn, enterReach(space, point, direction));
 }
 
 export interface Stand {

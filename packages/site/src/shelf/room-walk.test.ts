@@ -205,8 +205,8 @@ describe('pan (#632)', () => {
       stand = walk(box, stand.camera, stand.target, 0.5, 3, NEAREST, spaces);
     }
     // the same face stops both, and nothing walks through it
-    expect(stand.camera[0]).toBeLessThanOrEqual(side + 1e-9);
-    expect(panned.camera[0]).toBeLessThanOrEqual(side + 1e-9);
+    expect(stand.camera[0]).toBeLessThanOrEqual(side + 1e-12);
+    expect(panned.camera[0]).toBeLessThanOrEqual(side + 1e-12);
   });
 
   it('does not trap a camera that is already inside the case', () => {
