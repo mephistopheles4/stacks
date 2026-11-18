@@ -289,6 +289,12 @@ export function createRoomOrbit(
       if (finger === undefined) return;
       finger.x = clientX;
       finger.y = clientY;
+      // one finger left after a pan or a pinch: OrbitControls turns with it from here, with no pointerdown to say so
+      if (panning && fingers.size === 1 && reachable !== undefined) {
+        panning = false;
+        if (moved) reanchor();
+        moved = false;
+      }
       const apart = readSpread();
       // a held book owns the camera, and the page disables the controls while it does
       if (

@@ -278,6 +278,22 @@ describe('the camera in a room (#637)', () => {
     expect(r.counted('shift right')).toBe(1);
   });
 
+  it('C3: the finger left after a pan or a pinch turns on a fresh anchor, with the turn rule and not the pan rule', () => {
+    // CodeRabbit finding on room-orbit.ts: lifting one of two fingers makes OrbitControls turn with the
+    // other without a new pointerdown, so `panning` stayed set and the turn kept the old anchor
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    pinch(r, 60, 3);
+    r.send('pointerup', { ...touch, pointerId: 1, buttons: 0 });
+    r.phase('one finger left');
+    r.send('pointermove', { ...touch, pointerId: 2, clientX: 600, clientY: 400 });
+    r.frames(1);
+    expect(r.counted('one finger left')).toBe(1);
+    r.send('pointermove', { ...touch, pointerId: 2, clientX: 640, clientY: 400 });
+    r.frames(1);
+    expect(r.counted('one finger left')).toBe(1);
+  });
+
   it('C5b: a pinch raycasts at most once per 100 ms', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
     r.frames(1);
