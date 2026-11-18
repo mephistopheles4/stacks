@@ -34,6 +34,8 @@ export function stripOuterFaces(root: THREE.Object3D, box: Box): number {
     if (mesh.isMesh !== true) return;
     if (!CUTAWAY_NAMES.test(mesh.parent?.name ?? mesh.name)) return;
     const geometry = mesh.geometry;
+    // a mirrored node reverses every face's winding and three flips its front-face test to match, so the normal flips with it
+    const mirrored = mesh.matrixWorld.determinant() < 0;
     const position = geometry.getAttribute('position');
     const { index } = geometry;
     const count = index === null ? position.count : index.count;
@@ -48,6 +50,7 @@ export function stripOuterFaces(root: THREE.Object3D, box: Box): number {
       b.fromBufferAttribute(position, i1).applyMatrix4(mesh.matrixWorld);
       c.fromBufferAttribute(position, i2).applyMatrix4(mesh.matrixWorld);
       n.subVectors(c, b).cross(a.clone().sub(b)).normalize();
+      if (mirrored) n.negate();
       mid.copy(a).add(b).add(c).divideScalar(3).sub(centre);
       const outward = Math.abs(n.y) > 0.5 ? n.y * mid.y > 0 : n.x * mid.x + n.z * mid.z > 0;
       if (outward) {

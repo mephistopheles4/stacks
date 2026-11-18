@@ -89,6 +89,22 @@ describe('stripOuterFaces (#637, C8)', () => {
     }
   });
 
+  it('C8: a wall under a mirrored node keeps the face that renders from inside the room', () => {
+    // CodeRabbit finding on room-cutaway.ts: a negative world determinant reverses the winding of every
+    // face, and three flips its front-face test to match, so the classification must flip with it.
+    // Local x = -10 under scale.x = -1 is the east wall at x = 10: its face that looks along +x in
+    // local space looks into the room.
+    const east = new THREE.Mesh(geometryOf(wall(-10, true), wall(-10, false)), material);
+    const holder = under('room_walls_east', east);
+    holder.scale.x = -1;
+    const root = new THREE.Group();
+    root.add(holder);
+
+    expect(stripOuterFaces(root, box)).toBe(1);
+
+    expect(normalsOf(east)).toEqual([[1, 0, 0]]);
+  });
+
   it('C8: a mesh under any other name, and one named room_floor_rug, is not cut', () => {
     // `room_floor` matches exactly: a rug laid on the floor keeps both of its faces
     const rug = new THREE.Mesh(geometryOf(slab(0, true), slab(0, false)), material);
