@@ -63,6 +63,39 @@ function pushOut(space: Box, p: Vec3): Vec3 {
 }
 
 /**
+ * `to`, or the first place along the line from `from` that meets a box in `spaces`. A step longer than a
+ * keep-out is thick would otherwise land past it, where `pushOut` finds nothing to push. A `from` already
+ * inside one is left to `pushOut`.
+ */
+function stopAtKeepOut(spaces: readonly Box[], from: Vec3, to: Vec3): Vec3 {
+  let stop = 1;
+  for (const space of spaces) {
+    let enter = 0;
+    let leave = 1;
+    for (const a of [0, 1, 2]) {
+      const d = to[a]! - from[a]!;
+      if (Math.abs(d) < 1e-12) {
+        // not moving on this axis: the line is in the box only if it already stands between its faces
+        if (from[a]! <= space.min[a]! || from[a]! >= space.max[a]!) leave = -1;
+        continue;
+      }
+      const t1 = (space.min[a]! - from[a]!) / d;
+      const t2 = (space.max[a]! - from[a]!) / d;
+      enter = Math.max(enter, Math.min(t1, t2));
+      leave = Math.min(leave, Math.max(t1, t2));
+    }
+    if (enter > 0 && enter < leave) stop = Math.min(stop, enter);
+  }
+  return stop === 1
+    ? to
+    : [
+        from[0] + (to[0] - from[0]) * stop,
+        from[1] + (to[1] - from[1]) * stop,
+        from[2] + (to[2] - from[2]) * stop,
+      ];
+}
+
+/**
  * How the camera moves in a room (#637, which replaced #620, #626 and #632): `OrbitControls` as it ships
  * turns and pans about an **anchor**, its target, picked at the centre of the screen; the wheel and the
  * pinch walk the camera and the anchor forward together; the camera may stand up to 50 units outside the
@@ -201,8 +234,10 @@ export function createRoomOrbit(
     unsettled = false;
   };
 
+  /** Where a move from `settled` to `p` ends: inside `box`, and stopped at the first keep-out face it meets. */
   const placeable = (box: Box, p: Vec3): Vec3 => {
-    let fixed = clampInto(box, p);
+    // after the page moved the camera there is no settled place to come from yet
+    let fixed = stopAtKeepOut(keepOut, unsettled ? p : at(settled), clampInto(box, p));
     for (const space of keepOut) fixed = pushOut(space, fixed);
     return fixed;
   };

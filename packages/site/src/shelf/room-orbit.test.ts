@@ -408,6 +408,16 @@ describe('the camera stays within bounds (#637, C7)', () => {
       expect(r.view.position.z).toBeCloseTo(shelves.max[2], 6);
     });
 
+    it('C7: a pinch step longer than the keep-out is thick stops at its near face, not behind it', () => {
+      // CodeRabbit finding on room-orbit.ts: only the end of a step was tested against the keep-out, so one
+      // that landed beyond the far face was accepted. 400 px of pinch is 8 units; the case is 1.2 thick
+      const r = room([1, 5, 8], [1, 5, 4], { keepOut: [shelves] });
+      r.frames(2);
+      pinch(r, 400);
+      expect(r.view.position.z).toBeCloseTo(shelves.max[2], 6);
+      expect(inside(r)).toBe(false);
+    });
+
     it('C7: a pan at it stops at its face', () => {
       // beside the case's west end, looking along -z, so screen right is +x: a drag to the left moves the
       // camera right, into the end face
