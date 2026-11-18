@@ -27,6 +27,7 @@ import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed, type RoomView } from './shelf-url.ts';
 import { bookcaseBox, frameRoom, lightsPatch, type RoomData, type Slot } from './room-data.ts';
 import { createRoomOrbit } from './room-orbit.ts';
+import { createAnchorOrbit, mountCamSwitcher, readPivot } from './room-orbit.prototype-anchor.ts';
 import { BOOKCASE_STANDOFF } from './room-walk.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
 import {
@@ -657,7 +658,15 @@ function assembleShelf(
   /** Set once a room is dressed: the camera then opens at the room's view and stays in its box. */
   let roomData: RoomData | undefined;
   /** The drag orbits, and in a room the scroll and the pinch walk (#626); the plain shelf keeps the dolly. */
-  const roomOrbit = createRoomOrbit(camera, controls);
+  // PROTOTYPE (#637): `?cam=anchor` swaps in the anchor camera; never merged
+  const camSearch = typeof location === 'undefined' ? '' : location.search;
+  const cam = new URLSearchParams(camSearch).get('cam') === 'anchor' ? 'anchor' : 'current';
+  const pivot = readPivot(camSearch);
+  const roomOrbit =
+    cam === 'anchor'
+      ? createAnchorOrbit(camera, controls, pivot)
+      : createRoomOrbit(camera, controls);
+  if (typeof document !== 'undefined') mountCamSwitcher(document, cam, pivot);
   const unwalk = roomOrbit.attach(renderer.domElement);
   own({ dispose: unwalk });
 
