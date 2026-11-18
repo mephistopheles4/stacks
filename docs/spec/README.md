@@ -48,8 +48,8 @@ bookcase is on `main`, not when this folder is complete.
 | The room's camera turns about an anchor, and the room is a cutaway | no file in this folder: [revision 2](https://github.com/mephistopheles4/stacks/issues/637#issuecomment-6990624251) on [#637](https://github.com/mephistopheles4/stacks/issues/637) | **built in the pull request for #637**, standard tier. [ADR-0192](../adr/0192-the-room-turns-pans-and-zooms-with-orbitcontrols-about-an-anchor-at-the-centre-of-the-screen.md) supersedes ADR-0185 and ADR-0188; [ADR-0193](../adr/0193-the-room-is-a-cutaway-the-camera-may-stand-outside-it-and-its-walls-are-drawn-from-the-inside.md) records the cutaway and departs from #593's S8.2 |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
-**G30–G35**; the second landed **G36 and G38–G43**, landed in its own
-order: `agents-import` took **G37** out of band while that rollout was
+**G30–G35**; the second landed **G36 and G38–G43** in its own landing
+order, not chosen: `agents-import` took **G37** out of band while that rollout was
 open, so the gap is not a typo. A row number is a fact about when
 something landed, not a name — **cite slug and number together, never the number
 alone.**
