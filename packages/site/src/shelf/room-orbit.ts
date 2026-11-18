@@ -68,6 +68,8 @@ export function createRoomOrbit(
   camera: THREE.PerspectiveCamera,
   controls: OrbitControls,
 ): RoomOrbit {
+  /** `OrbitControls`' rotate speed as the page set it: a mouse turns by it, a finger by its negative. */
+  const rotateSpeed = controls.rotateSpeed;
   let bounds: Box | undefined;
   let keepOut: readonly Box[] = [];
   /** How far from the target the visitor stands: the distance the orbit goes back to. */
@@ -234,6 +236,11 @@ export function createRoomOrbit(
     };
     const onDown = (event: Event): void => {
       const { pointerId, pointerType, clientX, clientY, button, shiftKey } = event as PointerEvent;
+      // A finger turns the view the other way from a mouse (#635, ADR-0186): the sign of
+      // `rotateSpeed` flips both axes, and is read on each move, so it is set by what went down.
+      if (bounds !== undefined) {
+        controls.rotateSpeed = pointerType === 'touch' ? -rotateSpeed : rotateSpeed;
+      }
       if (pointerType === 'touch') {
         fingers.set(pointerId, { x: clientX, y: clientY });
         // two fingers are a pinch or a pan, and neither turns the view
@@ -317,6 +324,7 @@ export function createRoomOrbit(
       controls.enableZoom = true;
       controls.enablePan = true;
       controls.enableRotate = true;
+      controls.rotateSpeed = rotateSpeed;
       forget();
     },
     forget,

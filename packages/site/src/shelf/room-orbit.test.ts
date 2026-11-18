@@ -490,6 +490,50 @@ describe('the camera in a room (#620, #626)', () => {
     expect(r.view.position.distanceTo(target)).toBeCloseTo(3, 6);
   });
 
+  describe('the direction of a one-pointer turn (#635)', () => {
+    /** Drags one pointer by (dx, dy) and returns how the view's direction moved. */
+    const turn = (pointerType: 'touch' | 'mouse', dx: number, dy: number): THREE.Vector3 => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const before = r.controls.target.clone().sub(r.view.position).normalize();
+      const p = { pointerType, pointerId: 1, buttons: 1 };
+      r.send('pointerdown', { ...p, clientX: 640, clientY: 400 });
+      for (let i = 1; i <= 10; i += 1) {
+        r.send('pointermove', { ...p, clientX: 640 + (dx * i) / 10, clientY: 400 + (dy * i) / 10 });
+      }
+      r.send('pointerup', { ...p, buttons: 0, clientX: 640 + dx, clientY: 400 + dy });
+      r.frames(80);
+      return r.controls.target.clone().sub(r.view.position).normalize().sub(before);
+    };
+
+    it('pins the mouse: a drag right turns the view right, a drag down turns it down', () => {
+      expect(turn('mouse', 100, 0).x).toBeGreaterThan(0.01);
+      expect(turn('mouse', 0, 100).y).toBeLessThan(-0.01);
+    });
+
+    it('turns the view the other way for one finger, left-right and up-down', () => {
+      expect(turn('touch', 100, 0).x).toBeLessThan(-0.01);
+      expect(turn('touch', 0, 100).y).toBeGreaterThan(0.01);
+    });
+
+    it('turns the other way for the finger left after one of two lifts', () => {
+      const r = room([1, 5, 8], [1, 5, 5]);
+      r.frames(2);
+      const touch = { pointerType: 'touch' };
+      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+      r.frames(1);
+      r.send('pointerup', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+      const before = r.controls.target.clone().sub(r.view.position).normalize();
+      for (let i = 1; i <= 10; i += 1) {
+        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + i * 10, clientY: 400 });
+      }
+      r.frames(80);
+      const after = r.controls.target.clone().sub(r.view.position).normalize();
+      expect(after.x - before.x).toBeLessThan(-0.01);
+    });
+  });
+
   it('forgets a queued walk when a held book takes the camera', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
     r.frames(2);
