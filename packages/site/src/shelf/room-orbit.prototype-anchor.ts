@@ -28,6 +28,23 @@ const REST = 0.005;
 // world units, not metres: the room's eye height is 3.9
 const AUTO_FALLBACK = 6;
 const AUTO_NEAREST = 0.5;
+/** WASD speed in units a second (1 unit ≈ 0.4 m), and Q/E turn in radians a second. */
+const KEY_WALK = 6;
+const KEY_TURN = Math.PI / 2;
+const KEYS = new Set([
+  'KeyW',
+  'KeyA',
+  'KeyS',
+  'KeyD',
+  'KeyQ',
+  'KeyE',
+  'Space',
+  'KeyC',
+  'ShiftLeft',
+  'ShiftRight',
+]);
+/** Shift held: this many times faster. */
+const KEY_SPRINT = 3;
 /** How far past the room's box a picked surface still counts as the room's. */
 const ROOM_MARGIN = 1;
 const AUTO_FARTHEST = 60;
@@ -105,6 +122,10 @@ export function createAnchorOrbit(
   const offset = new THREE.Vector3();
   /** Where the camera stood before this frame's spin. */
   const before = new THREE.Vector3();
+  const side = new THREE.Vector3();
+  const keys = new Set<string>();
+  let lastStep = performance.now();
+  let keyTurning = false;
   const at = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
 
   /** Puts the anchor `distance` ahead along the line the camera looks down. */
@@ -280,12 +301,37 @@ export function createAnchorOrbit(
         mouseDown = false;
       }
     };
+    // WASD walks and strafes, Q and E orbit the anchor; on the window, since the canvas rarely has focus
+    const typing = (event: Event): boolean => {
+      const el = event.target as HTMLElement | null;
+      return el !== null && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+    };
+    const onKeyDown = (event: Event): void => {
+      const { code, ctrlKey, metaKey, altKey } = event as KeyboardEvent;
+      if (typing(event) || ctrlKey || metaKey || altKey || !KEYS.has(code)) return;
+      // Space would otherwise scroll the page
+      if (code === 'Space') event.preventDefault();
+      keys.add(code);
+    };
+    const onKeyUp = (event: Event): void => {
+      keys.delete((event as KeyboardEvent).code);
+    };
+    const onBlur = (): void => {
+      keys.clear();
+    };
+    const view = typeof window === 'undefined' ? undefined : window;
+    view?.addEventListener('keydown', onKeyDown);
+    view?.addEventListener('keyup', onKeyUp);
+    view?.addEventListener('blur', onBlur);
     element.addEventListener('wheel', onWheel, { passive: false });
     element.addEventListener('pointerdown', onDown);
     element.addEventListener('pointermove', onMove);
     element.addEventListener('pointerup', onUp);
     element.addEventListener('pointercancel', onUp);
     return () => {
+      view?.removeEventListener('keydown', onKeyDown);
+      view?.removeEventListener('keyup', onKeyUp);
+      view?.removeEventListener('blur', onBlur);
       element.removeEventListener('wheel', onWheel);
       element.removeEventListener('pointerdown', onDown);
       element.removeEventListener('pointermove', onMove);
@@ -380,7 +426,47 @@ export function createAnchorOrbit(
         if (Math.abs(pending) < 1e-6) pending = 0;
         confineBoth(bounds);
       }
+      const now = performance.now();
+      const dt = Math.min(0.1, (now - lastStep) / 1000);
+      lastStep = now;
+      const axis = (plus: string, minus: string): number =>
+        (keys.has(plus) ? 1 : 0) - (keys.has(minus) ? 1 : 0);
+      const forward = axis('KeyW', 'KeyS');
+      const right = axis('KeyD', 'KeyA');
+      const turn = axis('KeyQ', 'KeyE');
+      const rise = axis('Space', 'KeyC');
+      const speed =
+        KEY_WALK * dt * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? KEY_SPRINT : 1);
+      // a key turn is a spin: it picks a new anchor when it starts after a move, as a drag does, and
+      // keeps that anchor while it lasts, so walking and turning together orbit as they go
+      if (turn !== 0 && !keyTurning && moved) {
+        reanchor();
+        moved = false;
+      }
+      keyTurning = turn !== 0;
+      if (forward !== 0) {
+        walkBy(forward * speed);
+        confineBoth(bounds);
+      }
+      if (right !== 0 || rise !== 0) {
+        moved = true;
+        dir.subVectors(controls.target, camera.position);
+        side
+          .crossVectors(dir, camera.up)
+          .setY(0)
+          .normalize()
+          .multiplyScalar(right * speed);
+        side.y = rise * speed;
+        camera.position.add(side);
+        controls.target.add(side);
+        confineBoth(bounds);
+      }
       before.copy(camera.position);
+      if (turn !== 0) {
+        offset.subVectors(camera.position, controls.target);
+        offset.applyAxisAngle(camera.up, (turn * KEY_TURN * speed) / KEY_WALK);
+        camera.position.copy(controls.target).add(offset);
+      }
       // the page's framing sets OrbitControls' maxDistance after `enter`, and OrbitControls clamps to
       // it every frame: a pan, which nothing puts back, snapped the camera in to it
       controls.minDistance = NEAREST;
