@@ -32,6 +32,7 @@ import {
   mountCamSwitcher,
   readCutaway,
   readPivot,
+  stripOuterFaces,
 } from './room-orbit.prototype-anchor.ts';
 import { BOOKCASE_STANDOFF } from './room-walk.ts';
 import { roomAssets, type LoadedRoom } from './room-assets.ts';
@@ -683,9 +684,7 @@ function assembleShelf(
   };
   const roomOrbit =
     cam === 'anchor'
-      ? createAnchorOrbit(camera, controls, pivot, pickAhead, cutaway, (plane) => {
-          renderer.clippingPlanes = plane === null ? [] : [plane];
-        })
+      ? createAnchorOrbit(camera, controls, pivot, pickAhead, cutaway)
       : createRoomOrbit(camera, controls);
   if (typeof document !== 'undefined') mountCamSwitcher(document, cam, pivot, cutaway);
   const unwalk = roomOrbit.attach(renderer.domElement);
@@ -1138,6 +1137,8 @@ function assembleShelf(
             unitHeight,
             BOOKCASE_STANDOFF,
           );
+          // PROTOTYPE (#637): every wall drawn from the inside only
+          if (cam === 'anchor' && cutaway) stripOuterFaces(loaded.group, loaded.data.bounds);
           roomOrbit.enter(loaded.data.bounds, bookcaseSpace === undefined ? [] : [bookcaseSpace]);
           // The room's lighting and scene, from its own GLB and entry. They are the theme's defaults
           // for those two groups (spec S15.1): what the panel resets to, and what a `?debug` link is a

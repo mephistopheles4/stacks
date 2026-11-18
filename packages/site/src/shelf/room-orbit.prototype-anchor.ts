@@ -30,10 +30,11 @@ const AUTO_FALLBACK = 6;
 const AUTO_NEAREST = 0.5;
 const AUTO_FARTHEST = 60;
 const NEAREST = 0.05;
-/** How far past the walls a cutaway camera may go, in world units (about 4 m). */
+/**
+ * How far past the walls a cutaway camera may go, in world units (about 4 m). Inside that it passes
+ * through walls freely: they are drawn from the inside only (see `stripOuterFaces`).
+ */
 const CUTAWAY = 10;
-/** The cut stands this far inside the wall, so the panelling's thickness goes with it. */
-const CUT_PAST_WALL = 0.6;
 /** A spin comes in toward the anchor no nearer than this (about 60 cm); past it, it turns in place. */
 const TURN_IN_PLACE = 1.5;
 /** Steps along the line out from the anchor when looking for where the camera can stand. */
@@ -74,8 +75,6 @@ export function createAnchorOrbit(
   pickAhead: () => number | undefined,
   /** `?walls=cutaway`: the camera may leave the room, and the one-sided walls it is behind are not drawn. */
   cutaway = false,
-  /** Sets the one clipping plane the renderer uses, or clears it. */
-  setCut: (plane: THREE.Plane | null) => void = () => undefined,
 ): RoomOrbit {
   const saved = {
     minDistance: controls.minDistance,
@@ -83,42 +82,6 @@ export function createAnchorOrbit(
     maxPolarAngle: controls.maxPolarAngle,
   };
   let bounds: Box | undefined;
-  /** The room itself, when `bounds` has been grown past it for a cutaway. */
-  let room: Box | undefined;
-  const cut = new THREE.Plane();
-  const view = new THREE.Vector3();
-  const entry = new THREE.Vector3();
-
-  /**
-   * A camera outside the room looks in through a wall: everything nearer than where the line of sight
-   * enters the room is clipped, so the near wall (and its panelling) is cut away.
-   */
-  const updateCut = (): void => {
-    if (room === undefined) return setCut(null);
-    const p = at(camera.position);
-    const inside = p.every((v, a) => v >= room!.min[a]! && v <= room!.max[a]!);
-    if (inside) return setCut(null);
-    view.subVectors(controls.target, camera.position).normalize();
-    // slab test: how far along the view the ray enters the room
-    let near = 0;
-    let far = Infinity;
-    for (const a of [0, 1, 2] as const) {
-      const d = view.getComponent(a);
-      const o = p[a];
-      if (Math.abs(d) < 1e-9) {
-        if (o < room.min[a] || o > room.max[a]) return setCut(null);
-        continue;
-      }
-      const t1 = (room.min[a] - o) / d;
-      const t2 = (room.max[a] - o) / d;
-      near = Math.max(near, Math.min(t1, t2));
-      far = Math.min(far, Math.max(t1, t2));
-    }
-    if (near > far) return setCut(null);
-    entry.copy(camera.position).addScaledVector(view, near + CUT_PAST_WALL);
-    cut.setFromNormalAndCoplanarPoint(view, entry);
-    setCut(cut);
-  };
   let keepOut: readonly Box[] = [];
   /** How far from the anchor the visitor asked to stand: the spin goes back out to it. */
   let wished = 0;
@@ -288,7 +251,6 @@ export function createAnchorOrbit(
   return {
     enter(box, spaces = []) {
       // past the walls by CUTAWAY units on every side and above, never below the floor
-      room = cutaway ? box : undefined;
       bounds = cutaway
         ? {
             min: [box.min[0] - CUTAWAY, box.min[1], box.min[2] - CUTAWAY],
@@ -307,8 +269,6 @@ export function createAnchorOrbit(
     },
     leave() {
       bounds = undefined;
-      room = undefined;
-      setCut(null);
       keepOut = [];
       controls.enableZoom = true;
       controls.minDistance = saved.minDistance;
@@ -350,7 +310,6 @@ export function createAnchorOrbit(
       controls.update();
       if (panning) confineBoth(bounds);
       else confineSpin(bounds);
-      updateCut();
       debug();
     },
     attach,
@@ -414,4 +373,51 @@ export function mountCamSwitcher(doc: Document, cam: string, pivot: Pivot, cutaw
     }
   }
   doc.body.append(bar);
+}
+
+/**
+ * PROTOTYPE cutaway: drops the faces of the room's walls, panelling, trim and ceiling that point out of
+ * the room, so every wall is drawn from the inside only and a camera outside sees through the ones
+ * between it and the room. The wallpaper and the ceiling's underside are already one-sided; the
+ * panelling and the trim are built with thickness. Returns how many triangles were dropped.
+ */
+export function stripOuterFaces(root: THREE.Object3D, box: Box): number {
+  root.updateMatrixWorld(true);
+  const centre = new THREE.Vector3(
+    (box.min[0] + box.max[0]) / 2,
+    (box.min[1] + box.max[1]) / 2,
+    (box.min[2] + box.max[2]) / 2,
+  );
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const n = new THREE.Vector3();
+  const mid = new THREE.Vector3();
+  let dropped = 0;
+  root.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    if (mesh.isMesh !== true) return;
+    if (!/^room_(shell|walls|ceiling|wallpaper)/.test(mesh.parent?.name ?? mesh.name)) return;
+    const geometry = mesh.geometry;
+    const position = geometry.getAttribute('position');
+    const count = geometry.index === null ? position.count : geometry.index.count;
+    const vertex = (i: number): number => (geometry.index === null ? i : geometry.index.getX(i));
+    const kept: number[] = [];
+    for (let i = 0; i < count; i += 3) {
+      const [i0, i1, i2] = [vertex(i), vertex(i + 1), vertex(i + 2)];
+      a.fromBufferAttribute(position, i0).applyMatrix4(mesh.matrixWorld);
+      b.fromBufferAttribute(position, i1).applyMatrix4(mesh.matrixWorld);
+      c.fromBufferAttribute(position, i2).applyMatrix4(mesh.matrixWorld);
+      n.subVectors(c, b).cross(a.clone().sub(b)).normalize();
+      mid.copy(a).add(b).add(c).divideScalar(3).sub(centre);
+      // a wall's face points out when it points away from the room's centre, on its own axis
+      const outward = Math.abs(n.y) > 0.5 ? n.y * mid.y > 0 : n.x * mid.x + n.z * mid.z > 0;
+      if (outward) dropped += 1;
+      else kept.push(i0, i1, i2);
+    }
+    const stripped = geometry.clone();
+    stripped.setIndex(kept);
+    mesh.geometry = stripped;
+  });
+  return dropped;
 }
