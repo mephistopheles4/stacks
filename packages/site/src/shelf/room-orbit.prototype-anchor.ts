@@ -43,6 +43,8 @@ const KEYS = new Set([
   'ShiftLeft',
   'ShiftRight',
 ]);
+/** The nearest anchor distance the pan's rate follows (units). */
+const PAN_FLOOR = 2;
 /** Shift held: this many times faster. */
 const KEY_SPRINT = 3;
 /** How far past the room's box a picked surface still counts as the room's. */
@@ -260,6 +262,9 @@ export function createAnchorOrbit(
         fingers.set(pointerId, { x: clientX, y: clientY });
         spread = readSpread();
         panning = fingers.size >= 2;
+        // a pan drags what is under the centre of the screen: pick it as the anchor when the pan
+        // starts, or the pan runs at the rate of an anchor a walk has carried far ahead
+        if (fingers.size === 2 && bounds !== undefined) reanchor();
         if (panning) moved = true;
         if (fingers.size === 1 && bounds !== undefined && moved) {
           reanchor();
@@ -269,6 +274,7 @@ export function createAnchorOrbit(
       }
       mouseDown = true;
       panning = button === 2 || shiftKey || ctrlKey || metaKey;
+      if (panning && bounds !== undefined) reanchor();
       if (panning) moved = true;
       else if (bounds !== undefined && moved) {
         reanchor();
@@ -471,6 +477,10 @@ export function createAnchorOrbit(
       // it every frame: a pan, which nothing puts back, snapped the camera in to it
       controls.minDistance = NEAREST;
       controls.maxDistance = Infinity;
+      // OrbitControls pans in proportion to the anchor's distance; under PAN_FLOOR it pans as if
+      // the anchor stood at PAN_FLOOR, so a surface right in front never makes the pan crawl
+      const reach = camera.position.distanceTo(controls.target);
+      controls.panSpeed = reach > 0 ? Math.max(1, PAN_FLOOR / reach) : 1;
       controls.update();
       if (panning) confineBoth(bounds);
       else confineSpin(bounds);
