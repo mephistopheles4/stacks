@@ -140,8 +140,14 @@ export function createRoomOrbit(
   let spread: number | undefined;
   const dir = new THREE.Vector3();
   const offset = new THREE.Vector3();
-  /** Where the camera stood before this frame's turn. */
-  const before = new THREE.Vector3();
+  /**
+   * The last place the camera was put within bounds: after a walk or a pan, and at the end of a step.
+   * `OrbitControls` moves the camera inside its own pointermove, before the step runs, so the camera's
+   * position at the start of a step may already be past a limit; this one never is.
+   */
+  const settled = new THREE.Vector3();
+  /** The camera was moved by the page (`enter`, `forget`, `hold`): `settled` is taken afresh at the next step. */
+  let unsettled = true;
   const side = new THREE.Vector3();
   const keys = new Set<string>();
   let lastStep = now();
@@ -190,6 +196,11 @@ export function createRoomOrbit(
     controls.target.addScaledVector(dir, distance);
   };
 
+  const settle = (): void => {
+    settled.copy(camera.position);
+    unsettled = false;
+  };
+
   const placeable = (box: Box, p: Vec3): Vec3 => {
     let fixed = clampInto(box, p);
     for (const space of keepOut) fixed = pushOut(space, fixed);
@@ -204,6 +215,7 @@ export function createRoomOrbit(
     controls.target.x += fixed[0] - was[0];
     controls.target.y += fixed[1] - was[1];
     controls.target.z += fixed[2] - was[2];
+    settle();
   };
 
   const free = (p: Vec3): boolean =>
@@ -212,7 +224,7 @@ export function createRoomOrbit(
   /**
    * A turn. The anchor stays and the camera stands `wished` from it, or as near as the main bookcase's
    * keep-out allows along the line to the anchor; past the outer limit it slides along it. Nearer than
-   * `TURN_IN_PLACE` it stops coming in: the camera stays where it stood and the rest of the drag turns
+   * `TURN_IN_PLACE` it stops coming in: the camera stays where it was last settled and the rest of the drag turns
    * the view about it, so the bookcase never holds a drag still.
    */
   const confineTurn = (box: Box): void => {
@@ -239,8 +251,8 @@ export function createRoomOrbit(
       return;
     }
     // turn in place: the camera back where it stood, looking the way the drag turned it
-    camera.position.copy(before);
-    controls.target.copy(before).addScaledVector(offset, -wished);
+    camera.position.copy(settled);
+    controls.target.copy(settled).addScaledVector(offset, -wished);
     camera.lookAt(controls.target);
   };
 
@@ -403,6 +415,7 @@ export function createRoomOrbit(
       controls.maxDistance = Infinity;
       controls.maxPolarAngle = POLAR;
       anchorDue = true;
+      unsettled = true;
       pending = 0;
     },
     leave() {
@@ -417,10 +430,12 @@ export function createRoomOrbit(
     },
     forget() {
       anchorDue = true;
+      unsettled = true;
       pending = 0;
     },
     hold() {
       anchorDue = true;
+      unsettled = true;
       pending = 0;
       holding = true;
       keys.clear();
@@ -435,6 +450,7 @@ export function createRoomOrbit(
         controls.update();
         return;
       }
+      if (unsettled) settle();
       if (anchorDue) {
         reanchor();
         anchorDue = false;
@@ -481,7 +497,6 @@ export function createRoomOrbit(
         controls.target.add(side);
         confineBoth(reachable);
       }
-      before.copy(camera.position);
       if (turn !== 0) {
         offset.subVectors(camera.position, controls.target);
         offset.applyAxisAngle(camera.up, (turn * KEY_TURN * speed) / KEY_WALK);
@@ -493,6 +508,7 @@ export function createRoomOrbit(
       controls.update();
       if (panning) confineBoth(reachable);
       else confineTurn(reachable);
+      settle();
     },
     attach,
   };

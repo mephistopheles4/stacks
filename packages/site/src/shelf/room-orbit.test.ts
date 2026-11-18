@@ -438,6 +438,19 @@ describe('the camera stays within bounds (#637, C7)', () => {
 });
 
 describe('a turn held on the outer limit (#637)', () => {
+  it('C7: a turn in place from the limit does not leave the box when OrbitControls has already swung the camera out', () => {
+    // CodeRabbit finding on room-orbit.ts: OrbitControls moves the camera inside its pointermove, before
+    // the step runs, so the position the turn in place went back to was already past the limit. The
+    // anchor is 1 ahead (under TURN_IN_PLACE), so the turn swings the camera 1 unit about it: east or west
+    const edge = box.max[0] + OUT;
+    for (const dx of [150, -150]) {
+      const r = room([edge, 5, 6], [edge, 5, 7], { hit: 1 });
+      r.frames(2);
+      turn(r, dx);
+      expect(r.view.position.x).toBeLessThanOrEqual(edge + 1e-9);
+    }
+  });
+
   it('C7: after a turn slides the camera along the limit it still looks at the anchor', () => {
     // CodeRabbit finding on room-orbit.ts: confineTurn moved the camera after OrbitControls had pointed
     // it at the anchor, so the centre of the screen and the line to the anchor disagreed until the next update
