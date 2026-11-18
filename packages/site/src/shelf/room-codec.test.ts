@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { chooseCodec, codecSession, DEFAULT_ROOM_CODEC, loadWithFallback } from './room-codec.ts';
 
 describe('the default set (spec S5.2)', () => {
-  it('is WebP until the owner flips it', () => {
-    expect(DEFAULT_ROOM_CODEC).toBe('webp');
+  it('is KTX2, the owner having flipped it', () => {
+    expect(DEFAULT_ROOM_CODEC).toBe('etc1s');
   });
 });
 
