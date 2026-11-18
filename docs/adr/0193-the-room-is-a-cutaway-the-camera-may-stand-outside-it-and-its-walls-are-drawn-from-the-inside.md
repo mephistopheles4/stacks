@@ -21,7 +21,7 @@
    reading the shadow map ([ADR-0088](0088-one-program-samples-the-shadow-map-in-two-draws.md)).
 4. **The fog and the far plane follow the camera out.** Each frame in a room, the fog's near and far are
    the panel's range plus the camera's distance outside the box, and the far plane is
-   `max(100, fog far + outside + 10)`. Inside the box both are what they were, and the panel's fog
+   `max(100, the panel's fog far + outside + 10)`. Inside the box both are what they were, and the panel's fog
    sliders still move what they say.
 5. **It is the only wall mode.** The prototype's solid walls (`?walls=solid`) are deleted, not kept
    behind a flag.

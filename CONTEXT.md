@@ -79,8 +79,7 @@ sampling the shadow map, so later loads start with painted shadows until it
 expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess about the device, and a
 `?shadows=` in the URL goes around it
 ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
-A program that will not link while sampling writes the same record (item 9),
-which does not say which it was; the name keeps the common case.
+A program that will not link while sampling writes the same record (item 9); the record does not say which of the two it was.
 *Avoid*: blocklist, device flag (nothing is decided by device), crash record
 (that is the black box's), fallback on its own (that is what the page does
 after a loss, in the page).
@@ -132,8 +131,9 @@ against it as the same picture at 6.7× the triangles. A paperback's is not
 The top edge of a book as it stands on a shelf, where the covering rolls over.
 The one edge that **cannot be faked** — a shelf is looked at from above, so the
 head is a silhouette, and no normal map moves a silhouette. There is no *tail*
-treatment: the camera's lowest angle is 3.6° above the horizon, so no tail is
-ever in frame.
+treatment: on the plain shelf the camera's lowest angle is 3.6° above the horizon,
+so no tail is in frame. In a room the camera can stand below the floor (polar
+limit 0.9π), and whether a plank hides a tail from below there is unchecked.
 *Avoid*: top, cap (the cap is the *geometry*; the head is the edge), spine top.
 
 **Striation**:
