@@ -825,6 +825,7 @@ function assembleShelf(
   /** A pickup's hooks, when one is installed. See `FrameHooks`. */
   let hooks: FrameHooks | undefined;
 
+  const roomBox = new THREE.Box3();
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
@@ -832,6 +833,23 @@ function assembleShelf(
     // the room's box (spec S8.2, C7): see `room-orbit.ts`.
     if (hooks?.holdsCamera() === true) roomOrbit.hold();
     else roomOrbit.step();
+    // PROTOTYPE (#637): the fog is measured from the opening view, so a cutaway camera standing
+    // out past the walls would fade the whole room into the background. Push the fog's range out
+    // by however far the camera stands outside the room, and the far plane with it.
+    if (cam === 'anchor' && cutaway && roomData !== undefined) {
+      const { min, max } = roomData.bounds;
+      roomBox.min.set(...min);
+      roomBox.max.set(...max);
+      const outside = roomBox.distanceToPoint(camera.position);
+      const range = fogRange(settings.scene.fog, framedAt);
+      fog.near = range.near + outside;
+      fog.far = range.far + outside;
+      const far = Math.max(100, range.far + outside + 10);
+      if (camera.far !== far) {
+        camera.far = far;
+        camera.updateProjectionMatrix();
+      }
+    }
     renderer.info.reset();
     if (hooks === undefined) renderFrame();
     else hooks.draw(renderFrame);
