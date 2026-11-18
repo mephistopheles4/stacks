@@ -134,7 +134,7 @@ export function createRoomOrbit(
    */
   let moved = false;
   let pending = 0;
-  /** A pan is under way: the camera and the anchor go together and stop at a wall. */
+  /** A pan is under way: the camera and the anchor go together and stop at the edge of `reachable` or at the keep-out. */
   let panning = false;
   const fingers = new Map<number, { x: number; y: number }>();
   let spread: number | undefined;
@@ -182,7 +182,7 @@ export function createRoomOrbit(
     return fixed;
   };
 
-  /** A pan or a walk: the camera back in the room, and the anchor moved by the same amount. */
+  /** A pan or a walk: the camera back inside `box` and out of the keep-out, and the anchor moved by the same amount. */
   const confineBoth = (box: Box): void => {
     const was = at(camera.position);
     const fixed = placeable(box, was);

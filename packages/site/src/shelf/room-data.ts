@@ -6,9 +6,8 @@ import type { SettingsPatch } from './shelf-settings.ts';
  *
  * **Code never hard-codes a room position.** The room's GLB carries named empties: `slot_*` place
  * live things, `view_open` is where the camera opens, `bounds_min` and `bounds_max` are the room's
- * box: the walls the cutaway cuts; the camera may stand up to 50 units outside it, and
- * `live_ambient`, `live_key`, `live_fill` and `live_lamp` are the live lights, placed
- * from the lights that baked it (`packages/site/rooms/<room>/room-data.json` is where a person
+ * box (the camera may stand up to 50 units outside it), and `live_ambient`, `live_key`, `live_fill`
+ * and `live_lamp` are the live lights, placed from the lights that baked it (`packages/site/rooms/<room>/room-data.json` is where a person
  * writes them; `shared/add_room_data.mjs` puts them in the GLB). A GLB missing one the page needs
  * is a room that failed, and the page draws the plain shelf (S2.5): `RoomDataError` says which.
  *
@@ -170,11 +169,13 @@ export function readRoomData(empties: readonly Empty[]): RoomData {
   };
   for (let axis = 0; axis < 3; axis += 1) {
     if (!((bounds.min[axis] ?? 0) < (bounds.max[axis] ?? 0))) {
-      throw new RoomDataError('the camera box has no room: "bounds_min" is not below "bounds_max"');
+      throw new RoomDataError(
+        'the room\'s box has no room: "bounds_min" is not below "bounds_max"',
+      );
     }
   }
   if (!contains(bounds, view.position)) {
-    throw new RoomDataError('"view_open" is outside the camera box');
+    throw new RoomDataError('"view_open" is outside the room\'s box');
   }
 
   const lamp = empties.find((empty) => empty.name === 'live_lamp');
