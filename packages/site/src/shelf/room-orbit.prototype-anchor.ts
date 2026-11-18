@@ -31,10 +31,10 @@ const AUTO_NEAREST = 0.5;
 const AUTO_FARTHEST = 60;
 const NEAREST = 0.05;
 /**
- * How far past the walls a cutaway camera may go, in world units (about 4 m). Inside that it passes
+ * How far past the walls a cutaway camera may go, in world units (about 20 m). Inside that it passes
  * through walls freely: they are drawn from the inside only (see `stripOuterFaces`).
  */
-const CUTAWAY = 10;
+const CUTAWAY = 50;
 /** A spin comes in toward the anchor no nearer than this (about 60 cm); past it, it turns in place. */
 const TURN_IN_PLACE = 1.5;
 /** Steps along the line out from the anchor when looking for where the camera can stand. */
@@ -155,16 +155,23 @@ export function createAnchorOrbit(
       target[1] + offset.y * wished * t,
       target[2] + offset.z * wished * t,
     ];
-    // the farthest place on the line out from the anchor that is free
+    // the farthest place on the line out from the anchor that is free; a cutaway is held at its outer
+    // limit by sliding along it, never by being pulled in toward the anchor
+    const open = cutaway
+      ? {
+          min: [-Infinity, -Infinity, -Infinity] as const,
+          max: [Infinity, Infinity, Infinity] as const,
+        }
+      : box;
     let reach = 0;
     for (let i = SAMPLES; i >= 1; i -= 1) {
-      if (free(box, along(i / SAMPLES))) {
+      if (free(open, along(i / SAMPLES))) {
         reach = i / SAMPLES;
         break;
       }
     }
     if (reach * wished >= TURN_IN_PLACE) {
-      camera.position.set(...along(reach));
+      camera.position.set(...(cutaway ? clampInto(box, along(reach)) : along(reach)));
       return;
     }
     // turn in place: the camera back where it stood, looking the way the drag turned it
@@ -250,10 +257,10 @@ export function createAnchorOrbit(
 
   return {
     enter(box, spaces = []) {
-      // past the walls by CUTAWAY units on every side and above, never below the floor
+      // past the walls, the ceiling and the floor by CUTAWAY units
       bounds = cutaway
         ? {
-            min: [box.min[0] - CUTAWAY, box.min[1], box.min[2] - CUTAWAY],
+            min: [box.min[0] - CUTAWAY, box.min[1] - CUTAWAY, box.min[2] - CUTAWAY],
             max: [box.max[0] + CUTAWAY, box.max[1] + CUTAWAY, box.max[2] + CUTAWAY],
           }
         : box;
@@ -397,7 +404,8 @@ export function stripOuterFaces(root: THREE.Object3D, box: Box): number {
   root.traverse((object) => {
     const mesh = object as THREE.Mesh;
     if (mesh.isMesh !== true) return;
-    if (!/^room_(shell|walls|ceiling|wallpaper)/.test(mesh.parent?.name ?? mesh.name)) return;
+    if (!/^room_(shell|walls|ceiling|wallpaper|floor$)/.test(mesh.parent?.name ?? mesh.name))
+      return;
     const geometry = mesh.geometry;
     const position = geometry.getAttribute('position');
     const count = geometry.index === null ? position.count : geometry.index.count;
