@@ -28,6 +28,8 @@ const REST = 0.005;
 // world units, not metres: the room's eye height is 3.9
 const AUTO_FALLBACK = 6;
 const AUTO_NEAREST = 0.5;
+/** How far past the room's box a picked surface still counts as the room's. */
+const ROOM_MARGIN = 1;
 const AUTO_FARTHEST = 60;
 const NEAREST = 0.05;
 /**
@@ -129,8 +131,10 @@ export function createAnchorOrbit(
         camera.position.y + dir.y * t,
         camera.position.z + dir.z * t,
       ];
+      // a hit on the floor, a wall or a bookcase backed onto one lands on the box's face or just
+      // past it: give the test a margin so a surface of the room still counts as in it
       const inRoom = (p: Vec3): boolean =>
-        p.every((v, a) => v >= inside.min[a]! && v <= inside.max[a]!);
+        p.every((v, a) => v >= inside.min[a]! - ROOM_MARGIN && v <= inside.max[a]! + ROOM_MARGIN);
       if (hit === undefined || !inRoom(point(hit))) {
         const centre = new THREE.Vector3(
           (inside.min[0] + inside.max[0]) / 2,
@@ -139,7 +143,11 @@ export function createAnchorOrbit(
         );
         const nearest = centre.sub(camera.position).dot(dir);
         note(`anchor off-room ${hit?.toFixed(1) ?? '-'} -> ${nearest.toFixed(1)}`);
-        return anchorAt(Math.max(AUTO_NEAREST, Math.min(nearest, hit ?? Infinity)));
+        // the room's centre behind the camera says nothing about what is ahead: keep the hit, or
+        // fall back, rather than pinning the anchor at the nearest limit (which makes the pan crawl)
+        const ahead =
+          nearest < AUTO_NEAREST ? (hit ?? AUTO_FALLBACK) : Math.min(nearest, hit ?? Infinity);
+        return anchorAt(Math.max(AUTO_NEAREST, Math.min(ahead, AUTO_FARTHEST)));
       }
     }
     anchorAt(hit === undefined || hit < AUTO_NEAREST || hit > AUTO_FARTHEST ? AUTO_FALLBACK : hit);
