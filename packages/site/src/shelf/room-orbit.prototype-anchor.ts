@@ -43,6 +43,10 @@ const KEYS = new Set([
   'ShiftLeft',
   'ShiftRight',
 ]);
+/** The zoom's step is its base length at this distance ahead, and follows it between the limits. */
+const ZOOM_REFERENCE = 6;
+const ZOOM_NEAREST = 1;
+const ZOOM_FARTHEST = 40;
 /** The nearest anchor distance the pan's rate follows (units). */
 const PAN_FLOOR = 2;
 /** Shift held: this many times faster. */
@@ -242,6 +246,23 @@ export function createAnchorOrbit(
     controls.target.copy(before).addScaledVector(offset, -wished);
   };
 
+  /**
+   * A scroll notch or a pinch moves a share of the distance to what is ahead rather than a fixed
+   * length, so it closes in on a book as steadily as it crosses the room: 1 at ZOOM_REFERENCE units.
+   */
+  let zoomAt = -Infinity;
+  let zoomLast = 1;
+  const zoomScale = (): number => {
+    // a raycast through the whole room on every pointermove is costly on a phone: once per 100 ms
+    const now = performance.now();
+    if (now - zoomAt < 100) return zoomLast;
+    zoomAt = now;
+    camera.updateMatrixWorld();
+    const ahead = pickAhead() ?? ZOOM_REFERENCE;
+    zoomLast = Math.min(ZOOM_FARTHEST, Math.max(ZOOM_NEAREST, ahead)) / ZOOM_REFERENCE;
+    return zoomLast;
+  };
+
   const readSpread = (): number | undefined => {
     const [a, b] = [...fingers.values()];
     return a === undefined || b === undefined ? undefined : Math.hypot(a.x - b.x, a.y - b.y);
@@ -252,7 +273,7 @@ export function createAnchorOrbit(
       if (bounds === undefined) return;
       const { deltaY, deltaMode } = event as WheelEvent;
       event.preventDefault();
-      pending += notchesOf(deltaY, deltaMode) * WALK_PER_NOTCH;
+      pending += notchesOf(deltaY, deltaMode) * WALK_PER_NOTCH * zoomScale();
     };
     const onDown = (event: Event): void => {
       const { pointerId, pointerType, clientX, clientY, button, shiftKey, ctrlKey, metaKey } =
@@ -290,7 +311,7 @@ export function createAnchorOrbit(
       const now = readSpread();
       if (bounds !== undefined && now !== undefined && spread !== undefined) {
         if (Math.abs(now - spread) > 20) note(`pinch ${(now - spread).toFixed(0)}px`);
-        walkBy((now - spread) * WALK_PER_PINCH_PIXEL);
+        walkBy((now - spread) * WALK_PER_PINCH_PIXEL * zoomScale());
         confineBoth(bounds);
       }
       spread = now;
