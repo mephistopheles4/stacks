@@ -1,50 +1,34 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { describe, expect, it } from 'vitest';
-import { type Box, bookcaseBox, contains } from './room-data.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FOV } from './framing.ts';
+import { type Box, frameRoom } from './room-data.ts';
 import { createRoomOrbit } from './room-orbit.ts';
-import { GESTURE_SLOP } from './room-gesture.ts';
-import {
-  BOOKCASE_STANDOFF,
-  PAN_PER_PIXEL,
-  WALK_PER_NOTCH,
-  WALK_PER_PINCH_PIXEL,
-} from './room-walk.ts';
 
 const box: Box = { min: [-7.4, 0.5, -0.2], max: [9.4, 10.5, 12.452] };
+/** How far past the box the camera may go (spec S5.8). */
+const OUT = 50;
 
 type Handler = (event: unknown) => void;
 
 /** The part of a canvas `OrbitControls` and the walk listen on: events go to every listener, as a browser sends them. */
-function fakeCanvas(): {
-  element: HTMLElement;
+function fakeTarget(): {
+  target: Pick<HTMLElement, 'addEventListener' | 'removeEventListener'>;
   send: (type: string, event: Record<string, unknown>) => { prevented: boolean };
 } {
   const listeners = new Map<string, Handler[]>();
-  const target = {
-    addEventListener(type: string, handler: Handler): void {
-      listeners.set(type, [...(listeners.get(type) ?? []), handler]);
-    },
-    removeEventListener(type: string, handler: Handler): void {
-      listeners.set(
-        type,
-        (listeners.get(type) ?? []).filter((h) => h !== handler),
-      );
-    },
-  };
-  const element = {
-    ...target,
-    style: {},
-    clientWidth: 1280,
-    clientHeight: 800,
-    ownerDocument: target,
-    getRootNode: () => target,
-    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 800 }),
-    setPointerCapture: () => undefined,
-    releasePointerCapture: () => undefined,
-  } as unknown as HTMLElement;
   return {
-    element,
+    target: {
+      addEventListener(type: string, handler: Handler): void {
+        listeners.set(type, [...(listeners.get(type) ?? []), handler]);
+      },
+      removeEventListener(type: string, handler: Handler): void {
+        listeners.set(
+          type,
+          (listeners.get(type) ?? []).filter((h) => h !== handler),
+        );
+      },
+    },
     send(type, event) {
       let prevented = false;
       const at = { clientX: 640, clientY: 400, ...event };
@@ -63,498 +47,674 @@ function fakeCanvas(): {
   };
 }
 
+function fakeCanvas(): { element: HTMLElement; send: ReturnType<typeof fakeTarget>['send'] } {
+  const { target, send } = fakeTarget();
+  const element = {
+    ...target,
+    style: {},
+    clientWidth: 1280,
+    clientHeight: 800,
+    ownerDocument: target,
+    getRootNode: () => target,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 800 }),
+    setPointerCapture: () => undefined,
+    releasePointerCapture: () => undefined,
+  } as unknown as HTMLElement;
+  return { element, send };
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+interface Options {
+  keepOut?: readonly Box[];
+  /** What the centre pick finds ahead. */
+  hit?: number | undefined;
+  /** Set up `controls` as the page leaves it before the room is entered. */
+  before?: (controls: OrbitControls) => void;
+}
+
 function room(
   camera: [number, number, number],
   target: [number, number, number],
-  keepOut: readonly Box[] = [],
+  { keepOut = [], hit = 6, before }: Options = {},
 ) {
   const canvas = fakeCanvas();
-  const view = new THREE.PerspectiveCamera(30, 1.6, 0.1, 100);
+  const keyboard = fakeTarget();
+  vi.stubGlobal('window', keyboard.target);
+  const view = new THREE.PerspectiveCamera(FOV, 1.6, 0.1, 100);
   view.position.set(...camera);
   const controls = new OrbitControls(view, canvas.element);
   controls.enableDamping = true;
   controls.minDistance = 1.5;
   controls.maxDistance = 30;
   controls.target.set(...target);
+  before?.(controls);
   controls.update();
-  const orbit = createRoomOrbit(view, controls);
+  const clock = { t: 0 };
+  /** Picks by the phase the test says it is in. */
+  const picks: { phase: string; by: Map<string, number>; hit: number | undefined } = {
+    phase: 'enter',
+    by: new Map<string, number>(),
+    hit,
+  };
+  const pick = (): number | undefined => {
+    picks.by.set(picks.phase, (picks.by.get(picks.phase) ?? 0) + 1);
+    return picks.hit;
+  };
+  const orbit = createRoomOrbit(view, controls, pick, { now: () => clock.t });
   orbit.enter(box, keepOut);
   orbit.attach(canvas.element);
-  const frames = (n: number): void => {
-    for (let i = 0; i < n; i += 1) orbit.step();
+  const frames = (n: number, ms = 16): void => {
+    for (let i = 0; i < n; i += 1) {
+      clock.t += ms;
+      orbit.step();
+    }
   };
-  return { ...canvas, view, controls, orbit, frames };
+  const phase = (name: string): void => {
+    picks.phase = name;
+  };
+  const counted = (name: string): number => picks.by.get(name) ?? 0;
+  /** What the centre pick finds from now on. */
+  const seeing = (ahead: number | undefined): void => {
+    picks.hit = ahead;
+  };
+  const key = (
+    type: 'keydown' | 'keyup',
+    code: string,
+    event: Record<string, unknown> = {},
+  ): { prevented: boolean } => keyboard.send(type, { code, target: { tagName: 'BODY' }, ...event });
+  const blur = (): void => {
+    keyboard.send('blur', {});
+  };
+  return { ...canvas, view, controls, orbit, frames, clock, phase, counted, seeing, key, blur };
 }
 
-describe('the camera in a room (#620, #626)', () => {
-  it('walks when the wheel turns: the scroll moves the camera, which the dolly did not', () => {
-    const r = room([-3.9, 3.8, 11], [2.334, 1.504, 1.335]);
-    r.frames(2);
-    const start = r.view.position.clone();
-    const sight = r.controls.target.clone().sub(start).normalize();
-    const { prevented } = r.send('wheel', { deltaY: -100, deltaMode: 0 });
-    r.frames(80);
-    expect(prevented).toBe(true);
-    expect(r.view.position.distanceTo(start)).toBeCloseTo(WALK_PER_NOTCH, 6);
-    // a walk, not a dolly: the camera still looks the way it did, and the target is just ahead of it
-    const now = r.controls.target.clone().sub(r.view.position);
-    expect(now.length()).toBeCloseTo(r.controls.minDistance, 6);
-    expect(now.normalize().dot(sight)).toBeCloseTo(1, 9);
-  });
+type Room = ReturnType<typeof room>;
 
-  it('turns the view about a pivot just ahead once it has walked, and swings the camera before', () => {
-    const drag = (r: ReturnType<typeof room>): void => {
-      const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
-      r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
-      r.send('pointermove', { ...mouse, clientX: 790, clientY: 400 });
-      r.send('pointerup', { ...mouse, clientX: 790, clientY: 400, buttons: 0 });
-      r.frames(120);
-    };
-    const before = room([1, 5, 12], [1, 5, 1]);
-    before.frames(2);
-    const stood = before.view.position.clone();
-    drag(before);
-    // the opening view's far target: a 150 px drag sweeps the camera across the room
-    expect(before.view.position.distanceTo(stood)).toBeGreaterThan(8);
+const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
+const touch = { pointerType: 'touch' };
+const at = (r: Room): number[] => [r.view.position.x, r.view.position.y, r.view.position.z];
+const turn = (r: Room, dx = 150): void => {
+  r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
+  r.send('pointermove', { ...mouse, clientX: 640 + dx, clientY: 400 });
+  r.send('pointerup', { ...mouse, clientX: 640 + dx, clientY: 400, buttons: 0 });
+  r.frames(60);
+};
+/** A shift-drag: a pan, `dx` and `dy` pixels. */
+const pan = (r: Room, dx: number, dy: number): void => {
+  const shifted = { ...mouse, shiftKey: true };
+  r.send('pointerdown', { ...shifted, clientX: 640, clientY: 400 });
+  r.send('pointermove', { ...shifted, clientX: 640 + dx, clientY: 400 + dy });
+  r.send('pointerup', { ...shifted, clientX: 640 + dx, clientY: 400 + dy, buttons: 0 });
+  r.frames(30);
+};
+const wheel = (r: Room, notches: number): void => {
+  r.send('wheel', { deltaY: -100 * notches, deltaMode: 0 });
+  r.frames(30);
+};
+/** Two fingers down, then the second moves `by` pixels in `steps` moves, `ms` apart. */
+const pinch = (r: Room, by: number, steps = 1, ms = 16): void => {
+  r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+  r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+  r.phase('pinch');
+  for (let i = 1; i <= steps; i += 1) {
+    r.send('pointermove', {
+      ...touch,
+      pointerId: 2,
+      clientX: 500 + (by * i) / steps,
+      clientY: 400,
+    });
+    r.frames(1, ms);
+  }
+};
+const lift = (r: Room): void => {
+  r.send('pointerup', { ...touch, pointerId: 1, buttons: 0 });
+  r.send('pointerup', { ...touch, pointerId: 2, buttons: 0 });
+};
 
-    const after = room([1, 5, 12], [1, 5, 1]);
-    after.frames(2);
-    for (let i = 0; i < 10; i += 1) {
-      after.send('wheel', { deltaY: -100, deltaMode: 0 });
-      after.frames(40);
-    }
-    const walked = after.view.position.clone();
-    const sight = after.controls.target.clone().sub(walked).normalize();
-    drag(after);
-    // after a walk it turns the view where the visitor stands, and the camera stays there
-    expect(after.view.position.distanceTo(walked)).toBeLessThan(1e-6);
-    const turned = after.controls.target.clone().sub(walked).normalize();
-    expect(Math.acos(Math.min(1, sight.dot(turned)))).toBeGreaterThan(1);
-  });
-
-  it('keeps turning the view after the walk has stopped at a face (#620’s done-when)', () => {
-    const r = room([1, 5, 8], [1, 5, 5]);
-    r.frames(2);
-    for (let i = 0; i < 80; i += 1) {
-      r.send('wheel', { deltaY: -300, deltaMode: 0 });
-      r.frames(10);
-    }
-    r.frames(80);
-    const atFace = r.view.position.clone();
-    const sight = r.controls.target.clone().sub(atFace).normalize();
-    const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
-    r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
-    r.send('pointermove', { ...mouse, clientX: 790, clientY: 400 });
-    r.send('pointerup', { ...mouse, clientX: 790, clientY: 400, buttons: 0 });
-    r.frames(120);
-    const turned = r.controls.target.clone().sub(r.view.position).normalize();
-    // the same 150 px turns it as far as it does anywhere in the room: 2π · 150 / 800 ≈ 67°
-    expect(Math.acos(sight.dot(turned))).toBeGreaterThan(1);
-    expect(r.view.position.distanceTo(atFace)).toBeLessThan(1e-6);
-  });
-
-  it('walks the same step with the target near or far', () => {
-    for (const reach of [2, 5, 9]) {
-      const r = room([1, 5, 10], [1, 5, 10 - reach]);
-      r.frames(2);
-      const start = r.view.position.clone();
-      r.send('wheel', { deltaY: -100, deltaMode: 0 });
-      r.frames(80);
-      expect(r.view.position.distanceTo(start)).toBeCloseTo(WALK_PER_NOTCH, 6);
-    }
-  });
-
-  it('walks on past the page’s nearest distance, ten notches ten steps', () => {
-    const r = room([1, 5, 8], [1, 5, 5]);
-    r.frames(2);
-    const start = r.view.position.clone();
-    for (let i = 0; i < 10; i += 1) {
-      r.send('wheel', { deltaY: -100, deltaMode: 0 });
-      r.frames(40);
-    }
-    expect(r.view.position.distanceTo(start)).toBeCloseTo(10 * WALK_PER_NOTCH, 5);
-    expect(r.view.position.distanceTo(r.controls.target)).toBeCloseTo(r.controls.minDistance, 5);
-  });
-
-  it('walks back out the way it came', () => {
-    const r = room([1, 5, 8], [1, 5, 5]);
-    r.frames(2);
-    const start = r.view.position.clone();
-    r.send('wheel', { deltaY: -100, deltaMode: 0 });
-    r.frames(80);
-    expect(r.view.position.distanceTo(start)).toBeCloseTo(WALK_PER_NOTCH, 6);
-    r.send('wheel', { deltaY: 100, deltaMode: 0 });
-    r.frames(80);
-    expect(r.view.position.distanceTo(start)).toBeCloseTo(0, 6);
-  });
-
-  it('stops at the face of the box, and walks back from it at once', () => {
-    const r = room([1, 5, 8], [1, 5, 5]);
-    r.frames(2);
-    for (let i = 0; i < 80; i += 1) {
-      r.send('wheel', { deltaY: -300, deltaMode: 0 });
-      r.frames(10);
-    }
-    r.frames(80);
-    expect(r.view.position.z).toBeGreaterThanOrEqual(-0.2 - 1e-6);
-    expect(r.view.position.z).toBeLessThan(0.1);
-    // what was queued against the face was dropped, so one notch back is one step back
-    const atFace = r.view.position.clone();
-    r.send('wheel', { deltaY: 100, deltaMode: 0 });
-    r.frames(80);
-    expect(r.view.position.distanceTo(atFace)).toBeCloseTo(WALK_PER_NOTCH, 6);
-  });
-
-  it('never walks into the main bookcase, however many notches, and leaves it by walking back', () => {
-    const slot = {
-      position: [0, 0, 0] as [number, number, number],
-      rotationY: 0,
-      extras: { caster_width: 3.58, caster_depth: 0.72 },
-    };
-    const space = bookcaseBox(slot, 4.48, BOOKCASE_STANDOFF);
-    const r = room([0.3, 3, 6], [0.3, 3, 3], space === undefined ? [] : [space]);
-    r.frames(2);
-    for (let i = 0; i < 80; i += 1) {
-      r.send('wheel', { deltaY: -300, deltaMode: 0 });
-      r.frames(10);
-    }
-    r.frames(80);
-    // the front plane of the case is z 0.36; the walk stops its standoff short of it
-    expect(r.view.position.z).toBeGreaterThanOrEqual(0.36 + BOOKCASE_STANDOFF - 1e-6);
-    expect(r.view.position.z).toBeLessThan(0.36 + BOOKCASE_STANDOFF + 0.01);
-    const atFront = r.view.position.clone();
-    r.send('wheel', { deltaY: 100, deltaMode: 0 });
-    r.frames(80);
-    expect(r.view.position.distanceTo(atFront)).toBeCloseTo(WALK_PER_NOTCH, 6);
-  });
-
-  it('brings a camera a pointer handler swung out of the box back in before its first walk step', () => {
-    const r = room([1, 5, 12], [1, 5, 1]);
-    r.frames(2);
-    const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
-    r.send('pointerdown', { ...mouse, clientX: 100, clientY: 400 });
-    // OrbitControls runs update() inside each handler, so these turn the camera with no frame between
-    for (let i = 1; i <= 10; i += 1) {
-      r.send('pointermove', { ...mouse, clientX: 100 + i * 100, clientY: 400 });
-    }
-    const swung = r.view.position;
-    expect(contains(box, [swung.x, swung.y, swung.z])).toBe(false);
-    r.send('wheel', { deltaY: -100, deltaMode: 0 });
-    r.frames(1);
-    const stood = r.view.position;
-    expect(contains(box, [stood.x, stood.y, stood.z])).toBe(true);
-  });
-
-  it('comes in toward a close wall along the line, and goes back out as the view turns away', () => {
-    const r = room([1, 5, 12], [1, 5, 1]);
-    r.frames(2);
-    const start = r.view.position.clone();
-    const drag = (dx: number): void => {
-      const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
-      r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
-      r.send('pointermove', { ...mouse, clientX: 640 + dx, clientY: 400 });
-      r.send('pointerup', { ...mouse, clientX: 640 + dx, clientY: 400, buttons: 0 });
-      r.frames(120);
-    };
-    drag(150);
-    // the view turned as far as the pointer went (2π · 150 / 800), the camera 11 from the target would
-    // be outside the box, so it is on that line and nearer
-    const out = r.view.position.clone().sub(r.controls.target);
-    expect(Math.atan2(out.x, out.z)).toBeCloseTo((-2 * Math.PI * 150) / 800, 2);
-    expect(out.length()).toBeLessThan(10);
-    drag(-150);
-    expect(r.view.position.distanceTo(start)).toBeLessThan(0.05);
-  });
-
-  it('walks to a pinch, forward as the fingers spread', () => {
-    const r = room([1, 5, 8], [1, 5, 5]);
-    r.frames(2);
-    const touch = { pointerType: 'touch' };
-    r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-    r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
-    r.send('pointermove', { ...touch, pointerId: 2, clientX: 600, clientY: 400 });
-    r.frames(80);
-    // The pivot is the walk's own: it stands `minDistance` ahead of where the walk took the camera,
-    // from z 8 forward by the spread.
-    expect(r.view.position.z).toBeCloseTo(8 - 100 * WALK_PER_PINCH_PIXEL, 6);
-    expect(r.controls.target.z).toBeCloseTo(
-      8 - 100 * WALK_PER_PINCH_PIXEL - r.controls.minDistance,
-      6,
+describe('the camera in a room (#637)', () => {
+  it('C1: the opening view does not move when the anchor is placed', () => {
+    const { position, target } = frameRoom(
+      1.6,
+      {
+        position: [-3.9, 3.8, 11],
+        target: [2.334, 1.504, 1.335],
+        aspect: 1.6,
+        height: 6,
+        span: 12,
+      },
+      box,
+      FOV,
     );
-    // a pinch walks and does not pan, and does not turn the view either
-    expect(r.view.position.x).toBeCloseTo(1, 9);
-    expect(r.view.position.y).toBeCloseTo(5, 9);
-    expect(r.controls.target.x).toBeCloseTo(1, 9);
+    const r = room([position.x, position.y, position.z], [target.x, target.y, target.z], {
+      hit: 5,
+    });
+    r.frames(1);
+    const opened = new THREE.Vector3(position.x, position.y, position.z);
+    expect(r.view.position.distanceTo(opened)).toBeLessThan(1e-9);
+    const sight = new THREE.Vector3(
+      target.x - position.x,
+      target.y - position.y,
+      target.z - position.z,
+    ).normalize();
+    expect(r.view.getWorldDirection(new THREE.Vector3()).distanceTo(sight)).toBeLessThan(1e-9);
+    // and the anchor is where the pick said, along that line
+    expect(r.view.position.distanceTo(r.controls.target)).toBeCloseTo(5, 9);
   });
 
-  describe('two fingers moving together pan (#632)', () => {
-    /** Both fingers go `dx`, `dy` in `steps` frames, as two fingers on a glass do; they stay down. */
-    const drag = (r: ReturnType<typeof room>, dx: number, dy: number, steps = 10): void => {
-      const touch = { pointerType: 'touch' };
-      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
-      for (let i = 1; i <= steps; i += 1) {
-        const [x, y] = [(dx * i) / steps, (dy * i) / steps];
-        r.send('pointermove', { ...touch, pointerId: 1, clientX: 400 + x, clientY: 400 + y });
-        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + x, clientY: 400 + y });
-        r.frames(1);
-      }
-      r.frames(80);
-    };
-
-    it('pans the camera and its target together, the way the fingers drag the room', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      drag(r, 100, 50);
-      // the room follows the fingers: right and down on the glass is the camera left and up
-      expect(r.view.position.x).toBeCloseTo(1 - 100 * PAN_PER_PIXEL, 6);
-      expect(r.view.position.y).toBeCloseTo(5 + 50 * PAN_PER_PIXEL, 6);
-      // it did not walk, and the view did not turn: the target is straight ahead of the camera
-      expect(r.view.position.z).toBeCloseTo(8, 9);
-      expect(r.controls.target.x).toBeCloseTo(r.view.position.x, 6);
-      expect(r.controls.target.y).toBeCloseTo(r.view.position.y, 6);
-      expect(r.controls.target.z).toBeLessThan(r.view.position.z);
-    });
-
-    it('leaves a finger at rest alone: a drift under the slop moves nothing', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const start = r.view.position.clone();
-      const target = r.controls.target.clone();
-      drag(r, GESTURE_SLOP - 2, 0, 4);
-      expect(r.view.position.distanceTo(start)).toBeCloseTo(0, 9);
-      expect(r.controls.target.distanceTo(target)).toBeCloseTo(0, 9);
-    });
-
-    it('does not walk when the fingers drift apart a little as they pan', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const touch = { pointerType: 'touch' };
-      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
-      for (let i = 1; i <= 10; i += 1) {
-        // the second finger goes a little faster: the spread grows 3 px a step, the midpoint goes 11.5
-        r.send('pointermove', { ...touch, pointerId: 1, clientX: 400 + i * 10, clientY: 400 });
-        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + i * 13, clientY: 400 });
-        r.frames(1);
-      }
-      r.frames(80);
-      expect(r.view.position.z).toBeCloseTo(8, 9);
-      expect(r.view.position.x).toBeCloseTo(1 - 115 * PAN_PER_PIXEL, 6);
-    });
-
-    it('never takes the camera out of the room', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      drag(r, -3000, -3000, 60);
-      const { x, y, z } = r.view.position;
-      expect(contains(box, [x, y, z])).toBe(true);
-      expect(x).toBeCloseTo(box.max[0], 6);
-      expect(y).toBeCloseTo(box.min[1], 6);
-    });
-
-    it('never takes the camera into the main bookcase', () => {
-      const slot = {
-        position: [0, 0, 0] as [number, number, number],
-        rotationY: 0,
-        extras: { caster_width: 3.58, caster_depth: 0.72 },
-      };
-      const space = bookcaseBox(slot, 4.48, BOOKCASE_STANDOFF);
-      const r = room([-6, 3, 0.4], [-6, 3, -2.6], space === undefined ? [] : [space]);
-      r.frames(2);
-      drag(r, -1000, 0, 40);
-      // it went as far as the case's side and no further, with the standoff to spare
-      expect(r.view.position.x).toBeCloseTo(-1.79 - BOOKCASE_STANDOFF, 3);
-    });
-
-    /** The direction the camera looks, as a unit vector. */
-    const sightOf = (r: ReturnType<typeof room>): THREE.Vector3 =>
-      r.controls.target.clone().sub(r.view.position).normalize();
-    const turnedBy = (a: THREE.Vector3, b: THREE.Vector3): number =>
-      Math.acos(Math.min(1, a.dot(b)));
-
-    it('turns the view with the finger left after one of two lifts', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const touch = { pointerType: 'touch' };
-      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
-      r.frames(1);
-      r.send('pointerup', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-      const sight = sightOf(r);
-      for (let i = 1; i <= 15; i += 1) {
-        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + i * 10, clientY: 400 });
-      }
-      r.frames(80);
-      // one finger turns the view as it always did: the same 150 px turns it as far as a mouse's
-      expect(turnedBy(sight, sightOf(r))).toBeGreaterThan(1);
-    });
-
-    it('turns the view again with one finger once two have lifted', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      drag(r, 60, 0);
-      const touch = { pointerType: 'touch' };
-      r.send('pointerup', { ...touch, pointerId: 1, clientX: 460, clientY: 400 });
-      r.send('pointerup', { ...touch, pointerId: 2, clientX: 560, clientY: 400 });
-      const sight = sightOf(r);
-      r.send('pointerdown', { ...touch, pointerId: 3, clientX: 400, clientY: 400 });
-      for (let i = 1; i <= 15; i += 1) {
-        r.send('pointermove', { ...touch, pointerId: 3, clientX: 400 + i * 10, clientY: 400 });
-      }
-      r.frames(80);
-      expect(turnedBy(sight, sightOf(r))).toBeGreaterThan(1);
-    });
-
-    it('keeps what the fingers moved since the last frame when one lifts before the next', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const touch = { pointerType: 'touch' };
-      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
-      r.send('pointermove', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
-      r.send('pointermove', { ...touch, pointerId: 2, clientX: 520, clientY: 400 });
-      // a short pan, released with no frame between: it is still a pan of 20 px
-      r.send('pointerup', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
-      r.frames(80);
-      expect(r.view.position.x).toBeCloseTo(1 - 20 * PAN_PER_PIXEL, 6);
-    });
-
-    it('drops what the fingers moved when the touch is cancelled', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const touch = { pointerType: 'touch' };
-      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
-      r.send('pointermove', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
-      r.send('pointermove', { ...touch, pointerId: 2, clientX: 520, clientY: 400 });
-      r.send('pointercancel', { ...touch, pointerId: 1, clientX: 420, clientY: 400 });
-      r.frames(80);
-      expect(r.view.position.x).toBeCloseTo(1, 9);
-    });
-
-    it('lets a pinch walk after the pan ends', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      drag(r, 60, 0);
-      const panned = r.view.position.clone();
-      const touch = { pointerType: 'touch' };
-      r.send('pointerup', { ...touch, pointerId: 1, clientX: 460, clientY: 400 });
-      r.send('pointerup', { ...touch, pointerId: 2, clientX: 560, clientY: 400 });
-      r.send('pointerdown', { ...touch, pointerId: 3, clientX: 400, clientY: 400 });
-      r.send('pointerdown', { ...touch, pointerId: 4, clientX: 500, clientY: 400 });
-      r.send('pointermove', { ...touch, pointerId: 4, clientX: 600, clientY: 400 });
-      r.frames(80);
-      expect(r.view.position.z).toBeCloseTo(panned.z - 100 * WALK_PER_PINCH_PIXEL, 6);
-      expect(r.view.position.x).toBeCloseTo(panned.x, 6);
-    });
-  });
-
-  describe('a mouse pans too (#632)', () => {
-    it('pans on a right-button drag', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const mouse = { pointerType: 'mouse', pointerId: 1, button: 2, buttons: 2 };
-      r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
-      r.send('pointermove', { ...mouse, clientX: 740, clientY: 400 });
-      r.send('pointerup', { ...mouse, clientX: 740, clientY: 400, buttons: 0 });
-      r.frames(80);
-      expect(r.view.position.x).toBeCloseTo(1 - 100 * PAN_PER_PIXEL, 6);
-      expect(r.view.position.z).toBeCloseTo(8, 9);
-    });
-
-    it('pans on a shift-drag', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const mouse = { pointerType: 'mouse', pointerId: 1, button: 0, buttons: 1 };
-      r.send('pointerdown', { ...mouse, shiftKey: true, clientX: 640, clientY: 400 });
-      r.send('pointermove', { ...mouse, shiftKey: true, clientX: 640, clientY: 300 });
-      r.send('pointerup', { ...mouse, shiftKey: true, clientX: 640, clientY: 300, buttons: 0 });
-      r.frames(80);
-      // the room follows the pointer: up on the glass is the camera down
-      expect(r.view.position.y).toBeCloseTo(5 - 100 * PAN_PER_PIXEL, 6);
-      expect(r.view.position.x).toBeCloseTo(1, 9);
-    });
-  });
-
-  it('leaves a single finger to the drag: it turns the view and walks nowhere', () => {
+  it('C3: the anchor is placed when S5.4 says and at no other time', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
-    r.frames(2);
-    const start = r.view.position.clone();
-    const target = r.controls.target.clone();
-    r.send('pointerdown', { pointerType: 'touch', pointerId: 1, clientX: 400, clientY: 400 });
-    r.send('pointermove', { pointerType: 'touch', pointerId: 1, clientX: 600, clientY: 400 });
-    r.frames(40);
-    expect(r.view.position.distanceTo(start)).toBeGreaterThan(0.1);
-    expect(r.controls.target.distanceTo(target)).toBeCloseTo(0, 9);
-    expect(r.view.position.distanceTo(target)).toBeCloseTo(3, 6);
-  });
+    r.frames(1);
+    expect(r.counted('enter')).toBe(1);
 
-  describe('the direction of a one-pointer turn (#635)', () => {
-    /** Drags one pointer by (dx, dy) and returns how the view's direction moved. */
-    const turn = (pointerType: 'touch' | 'mouse', dx: number, dy: number): THREE.Vector3 => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const before = r.controls.target.clone().sub(r.view.position).normalize();
-      const p = { pointerType, pointerId: 1, buttons: 1 };
-      r.send('pointerdown', { ...p, clientX: 640, clientY: 400 });
-      for (let i = 1; i <= 10; i += 1) {
-        r.send('pointermove', { ...p, clientX: 640 + (dx * i) / 10, clientY: 400 + (dy * i) / 10 });
-      }
-      r.send('pointerup', { ...p, buttons: 0, clientX: 640 + dx, clientY: 400 + dy });
-      r.frames(80);
-      return r.controls.target.clone().sub(r.view.position).normalize().sub(before);
-    };
+    r.phase('turn alone');
+    turn(r);
+    turn(r, -80);
+    expect(r.counted('turn alone')).toBe(0);
 
-    it('pins the mouse: a drag right turns the view right, a drag down turns it down', () => {
-      expect(turn('mouse', 100, 0).x).toBeGreaterThan(0.01);
-      expect(turn('mouse', 0, 100).y).toBeLessThan(-0.01);
-    });
+    // a wheel walk, then the first turn places it, and the second does not
+    r.phase('walk');
+    wheel(r, 2);
+    r.phase('after the wheel');
+    turn(r);
+    turn(r);
+    expect(r.counted('after the wheel')).toBe(1);
 
-    it('turns the view the other way for one finger, left-right and up-down', () => {
-      expect(turn('touch', 100, 0).x).toBeLessThan(-0.01);
-      expect(turn('touch', 0, 100).y).toBeGreaterThan(0.01);
-    });
+    // a pinch: the second finger landing is a pan's start and places it; the first turn after places it again
+    pinch(r, 60, 3);
+    lift(r);
+    r.phase('after the pinch');
+    turn(r);
+    turn(r);
+    expect(r.counted('after the pinch')).toBe(1);
 
-    it('turns the other way for the finger left after one of two lifts', () => {
-      const r = room([1, 5, 8], [1, 5, 5]);
-      r.frames(2);
-      const touch = { pointerType: 'touch' };
-      r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-      r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
-      r.frames(1);
-      r.send('pointerup', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
-      const before = r.controls.target.clone().sub(r.view.position).normalize();
-      for (let i = 1; i <= 10; i += 1) {
-        r.send('pointermove', { ...touch, pointerId: 2, clientX: 500 + i * 10, clientY: 400 });
-      }
-      r.frames(80);
-      const after = r.controls.target.clone().sub(r.view.position).normalize();
-      expect(after.x - before.x).toBeLessThan(-0.01);
-    });
-  });
+    // the second finger landing is a pan's start and places the anchor, the first finger does not
+    r.phase('fingers');
+    r.send('pointerdown', { ...touch, pointerId: 1, clientX: 400, clientY: 400 });
+    expect(r.counted('fingers')).toBe(0);
+    r.send('pointerdown', { ...touch, pointerId: 2, clientX: 500, clientY: 400 });
+    expect(r.counted('fingers')).toBe(1);
+    lift(r);
 
-  it('forgets a queued walk when a held book takes the camera', () => {
-    const r = room([1, 5, 8], [1, 5, 5]);
-    r.frames(2);
-    const start = r.view.position.clone();
-    r.send('wheel', { deltaY: -100, deltaMode: 0 });
-    r.orbit.hold();
-    r.frames(80);
-    expect(r.view.position.distanceTo(start)).toBeCloseTo(0, 6);
-  });
+    // a pan places it once at its start, however long it runs, and once again at the first turn
+    r.phase('pan');
+    pan(r, 100, 0);
+    expect(r.counted('pan')).toBe(1);
+    r.phase('after the pan');
+    turn(r);
+    turn(r);
+    expect(r.counted('after the pan')).toBe(1);
 
-  it('lets the dolly back in when the room is taken down', () => {
-    const r = room([1, 5, 8], [1, 5, 5]);
-    expect(r.controls.enableZoom).toBe(false);
-    expect(r.controls.enablePan).toBe(false);
-    r.orbit.leave();
-    expect(r.controls.enableZoom).toBe(true);
-    expect(r.controls.enablePan).toBe(true);
-    const start = r.view.position.clone();
-    r.send('wheel', { deltaY: -100, deltaMode: 0 });
+    // a Q turn after a W walk places it once, and keeps it while it lasts
+    r.phase('walk keys');
+    r.key('keydown', 'KeyW');
+    r.frames(5);
+    r.key('keyup', 'KeyW');
+    r.phase('q turn');
+    r.key('keydown', 'KeyQ');
     r.frames(10);
-    // OrbitControls' own dolly took it: the camera came toward the target by its share
-    expect(r.view.position.distanceTo(start)).toBeGreaterThan(0.1);
+    r.key('keyup', 'KeyQ');
+    r.key('keydown', 'KeyQ');
+    r.frames(10);
+    r.key('keyup', 'KeyQ');
+    expect(r.counted('q turn')).toBe(1);
+
+    // the camera framed anew, and a held book giving it back, each place it once
+    r.phase('forget');
+    r.orbit.forget();
+    r.frames(3);
+    expect(r.counted('forget')).toBe(1);
+    r.phase('hold');
+    r.orbit.hold();
+    r.frames(3);
+    expect(r.counted('hold')).toBe(1);
+  });
+
+  it('C3: a right drag with Shift turns in OrbitControls, so it does not place the anchor as a pan does', () => {
+    // CodeRabbit finding on room-orbit.ts: with Shift held, OrbitControls turns on the right button
+    // and pans on the left, so classing every right-button drag as a pan repicked the anchor
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    r.phase('shift right');
+    r.send('pointerdown', { ...mouse, button: 2, buttons: 2, shiftKey: true });
+    expect(r.counted('shift right')).toBe(0);
+    r.send('pointerup', { ...mouse, button: 2, buttons: 0, shiftKey: true });
+    // the unmodified right button still pans, and so places it
+    r.send('pointerdown', { ...mouse, button: 2, buttons: 2 });
+    expect(r.counted('shift right')).toBe(1);
+  });
+
+  it('C3: the finger left after a pan or a pinch turns on a fresh anchor, with the turn rule and not the pan rule', () => {
+    // CodeRabbit finding on room-orbit.ts: lifting one of two fingers makes OrbitControls turn with the
+    // other without a new pointerdown, so `panning` stayed set and the turn kept the old anchor
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    pinch(r, 60, 3);
+    r.send('pointerup', { ...touch, pointerId: 1, buttons: 0 });
+    r.phase('one finger left');
+    r.send('pointermove', { ...touch, pointerId: 2, clientX: 600, clientY: 400 });
+    r.frames(1);
+    expect(r.counted('one finger left')).toBe(1);
+    r.send('pointermove', { ...touch, pointerId: 2, clientX: 640, clientY: 400 });
+    r.frames(1);
+    expect(r.counted('one finger left')).toBe(1);
+  });
+
+  it('C4: the pan rate for a close hit is set when the pan starts, before its first move can reach OrbitControls', () => {
+    // CodeRabbit finding on room-orbit.ts: the rate was written once a frame, so a move in the frame the
+    // pan began in ran at the rate of the anchor the pan replaced
+    const r = room([1, 5, 8], [1, 5, 2]);
+    r.frames(2);
+    expect(r.controls.panSpeed).toBeCloseTo(1, 6);
+    r.seeing(0.5);
+    r.send('pointerdown', { ...mouse, shiftKey: true, clientX: 640, clientY: 400 });
+    expect(r.controls.panSpeed).toBeCloseTo(4, 6);
+  });
+
+  it('C5b: a pinch raycasts at most once per 100 ms', () => {
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    r.clock.t = 1000;
+    pinch(r, 30, 3, 0);
+    // the three steps stand at the same instant: one pick; then 50 ms on is still the same
+    expect(r.counted('pinch')).toBe(1);
+    r.clock.t = 1050;
+    r.send('pointermove', { ...touch, pointerId: 2, clientX: 540, clientY: 400 });
+    expect(r.counted('pinch')).toBe(1);
+    r.clock.t = 1150;
+    r.send('pointermove', { ...touch, pointerId: 2, clientX: 550, clientY: 400 });
+    expect(r.counted('pinch')).toBe(2);
+  });
+
+  it('C6: a framing that sets maxDistance after enter does not snap a panned camera in', () => {
+    // the pan places the anchor 8 ahead, and the page's framing then says no farther than 3
+    const r = room([1, 5, 12], [1, 5, 4], { hit: 8 });
+    r.frames(2);
+    // `frameCamera` sets this after `enter`, and OrbitControls clamps to it every frame
+    r.controls.maxDistance = 3;
+    // the pan comes before the next step (C6's order, and a CodeRabbit finding on this test): OrbitControls
+    // updates inside the pointermove, so the limits must already be put back by then
+    pan(r, 100, 0);
+    r.frames(10);
+    expect(r.view.position.distanceTo(r.controls.target)).toBeGreaterThan(7.9);
+    // the distance alone would also hold for a camera snapped in and turned back out: it went sideways by
+    // the pan and no nearer. OrbitControls pans 2 * distance * tan(fov / 2) * dx / clientHeight, the content
+    // following the pointer, and damping has played out all but 0.95 ** 41 of it
+    const full = (2 * 8 * Math.tan(THREE.MathUtils.degToRad(FOV) / 2) * 100) / 800;
+    const shifted = 1 - r.view.position.x;
+    expect(shifted).toBeGreaterThan(full * 0.95 * (1 - 0.95 ** 40));
+    expect(shifted).toBeLessThan(full * 1.001);
+    expect(r.view.position.z).toBeCloseTo(12, 9);
+    expect(r.view.position.y).toBeCloseTo(5, 9);
+  });
+});
+
+describe('the camera stays within bounds (#637, C7)', () => {
+  const faces: [string, 0 | 1 | 2, 1 | -1][] = [
+    ['east', 0, 1],
+    ['west', 0, -1],
+    ['up', 1, 1],
+    ['down', 1, -1],
+    ['north', 2, 1],
+    ['south', 2, -1],
+  ];
+  const limit = (axis: 0 | 1 | 2, sign: 1 | -1): number =>
+    sign > 0 ? box.max[axis] + OUT : box.min[axis] - OUT;
+
+  for (const [name, axis, sign] of faces) {
+    it(`C7: a walk toward the ${name} face stops ${String(OUT)} units past it`, () => {
+      const ahead: [number, number, number] = [1, 5, 6];
+      ahead[axis] += sign * 6;
+      const r = room([1, 5, 6], ahead);
+      r.frames(2);
+      for (let i = 0; i < 70; i += 1) wheel(r, 3);
+      expect(at(r)[axis]).toBeCloseTo(limit(axis, sign), 6);
+      expect(sign * (at(r)[axis]! - limit(axis, sign))).toBeLessThanOrEqual(1e-9);
+    });
+  }
+
+  it('C7: a pan toward the east and west faces stops 50 past them', () => {
+    // looking along -z, screen right is +x; the content follows the pointer, so a left drag moves the camera right
+    for (const sign of [1, -1] as const) {
+      const r = room([1, 5, 6], [1, 5, 0]);
+      r.frames(2);
+      for (let i = 0; i < 60; i += 1) pan(r, -600 * sign, 0);
+      expect(r.view.position.x).toBeCloseTo(limit(0, sign), 6);
+    }
+  });
+
+  it('C7: a pan up and down stops 50 past the ceiling and the floor', () => {
+    for (const sign of [1, -1] as const) {
+      const r = room([1, 5, 6], [1, 5, 0]);
+      r.frames(2);
+      // a drag down is the camera up
+      for (let i = 0; i < 60; i += 1) pan(r, 0, 600 * sign);
+      expect(r.view.position.y).toBeCloseTo(limit(1, sign), 6);
+    }
+  });
+
+  it('C7: Space held past the ceiling and C held past the floor stop 50 past them', () => {
+    const up = room([1, 5, 6], [1, 5, 0]);
+    up.key('keydown', 'Space');
+    up.frames(140, 100);
+    expect(up.view.position.y).toBeCloseTo(limit(1, 1), 6);
+    const down = room([1, 5, 6], [1, 5, 0]);
+    down.key('keydown', 'KeyC');
+    down.frames(140, 100);
+    expect(down.view.position.y).toBeCloseTo(limit(1, -1), 6);
+  });
+
+  describe('and the main bookcase', () => {
+    const shelves: Box = { min: [-2, 0.5, 2], max: [4, 10, 3.2] };
+    const inside = (r: Room): boolean =>
+      [0, 1, 2].every((a) => at(r)[a]! > shelves.min[a]! && at(r)[a]! < shelves.max[a]!);
+
+    it('C7: a walk at it stops at its face, however many notches', () => {
+      const r = room([1, 5, 8], [1, 5, 4], { keepOut: [shelves] });
+      r.frames(2);
+      for (let i = 0; i < 30; i += 1) {
+        wheel(r, 3);
+        expect(inside(r)).toBe(false);
+      }
+      expect(r.view.position.z).toBeCloseTo(shelves.max[2], 6);
+    });
+
+    it('C7: a pinch step longer than the keep-out is thick stops at its near face, not behind it', () => {
+      // CodeRabbit finding on room-orbit.ts: only the end of a step was tested against the keep-out, so one
+      // that landed beyond the far face was accepted. 400 px of pinch is 8 units; the case is 1.2 thick
+      const r = room([1, 5, 8], [1, 5, 4], { keepOut: [shelves] });
+      r.frames(2);
+      pinch(r, 400);
+      expect(r.view.position.z).toBeCloseTo(shelves.max[2], 6);
+      expect(inside(r)).toBe(false);
+      // and a second one from the face goes no farther in: a move that starts on a face is stopped by it
+      lift(r);
+      pinch(r, 400);
+      expect(r.view.position.z).toBeCloseTo(shelves.max[2], 6);
+    });
+
+    it('C7: a pan at it stops at its face', () => {
+      // beside the case's west end, looking along -z, so screen right is +x: a drag to the left moves the
+      // camera right, into the end face
+      const r = room([-6, 5, 2.6], [-6, 5, -3], { keepOut: [shelves] });
+      r.frames(2);
+      for (let i = 0; i < 20; i += 1) {
+        pan(r, -100, 0);
+        expect(inside(r)).toBe(false);
+      }
+      expect(r.view.position.x).toBeCloseTo(shelves.min[0], 6);
+    });
+  });
+
+  it('C7: a turn that would leave the outer limit slides along it and is not pulled in toward the anchor', () => {
+    // standing on the limit, the anchor 20 ahead and outside it: a turn swings the camera over the
+    // face, where it is held on the face and not taken along the line to the anchor
+    const edge = box.max[0] + OUT;
+    const r = room([edge, 5, 6], [edge + 20, 5, 6], { hit: 20 });
+    r.frames(2);
+    for (let i = 0; i < 6; i += 1) turn(r, 200);
+    const [x, y] = at(r);
+    expect(x).toBeLessThanOrEqual(edge + 1e-9);
+    expect(y).toBeCloseTo(5, 6);
+    // it ended on the face, and never nearer the anchor than the face itself is
+    expect(x).toBeCloseTo(edge, 6);
+    expect(r.view.position.distanceTo(r.controls.target)).toBeGreaterThanOrEqual(20 - 1e-6);
+  });
+});
+
+describe('a turn held on the outer limit (#637)', () => {
+  it('C7: a turn in place from the limit does not leave the box when OrbitControls has already swung the camera out', () => {
+    // CodeRabbit finding on room-orbit.ts: OrbitControls moves the camera inside its pointermove, before
+    // the step runs, so the position the turn in place went back to was already past the limit. The
+    // anchor is 1 ahead (under TURN_IN_PLACE), so the turn swings the camera 1 unit about it: east or west
+    const edge = box.max[0] + OUT;
+    for (const dx of [150, -150]) {
+      const r = room([edge, 5, 6], [edge, 5, 7], { hit: 1 });
+      r.frames(2);
+      turn(r, dx);
+      expect(r.view.position.x).toBeLessThanOrEqual(edge + 1e-9);
+    }
+  });
+
+  it('C7: after a turn slides the camera along the limit it still looks at the anchor', () => {
+    // CodeRabbit finding on room-orbit.ts: confineTurn moved the camera after OrbitControls had pointed
+    // it at the anchor, so the centre of the screen and the line to the anchor disagreed until the next update
+    const edge = box.max[0] + OUT;
+    const r = room([edge, 5, 6], [edge + 20, 5, 6], { hit: 20 });
+    r.frames(2);
+    r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
+    r.send('pointermove', { ...mouse, clientX: 840, clientY: 400 });
+    r.frames(1);
+    expect(r.view.position.x).toBeCloseTo(edge, 9);
+    const toAnchor = r.controls.target.clone().sub(r.view.position).normalize();
+    expect(r.view.getWorldDirection(new THREE.Vector3()).distanceTo(toAnchor)).toBeLessThan(1e-9);
+  });
+});
+
+describe('the keyboard (#637, C10)', () => {
+  /** Holds `code` for `n` frames of 100 ms, as a visitor on the page does. */
+  const hold = (r: Room, code: string, n = 5): void => {
+    r.key('keydown', code);
+    r.frames(n, 100);
+    r.key('keyup', code);
+  };
+  const angleAbout = (r: Room, from: THREE.Vector3): number => {
+    const before = from.clone().sub(r.controls.target).setY(0).normalize();
+    const after = r.view.position.clone().sub(r.controls.target).setY(0).normalize();
+    return Math.atan2(before.x * after.z - before.z * after.x, before.dot(after));
+  };
+
+  it('C10: each key, by its code, moves or turns the camera as S8.1 says', () => {
+    // looking along -z: forward is -z and right is +x
+    const moved = (code: string, shift = false): THREE.Vector3 => {
+      const r = room([1, 5, 8], [1, 5, 2]);
+      if (shift) r.key('keydown', 'ShiftLeft');
+      hold(r, code);
+      return r.view.position.clone().sub(new THREE.Vector3(1, 5, 8));
+    };
+    // 5 frames of 100 ms at 6 units a second
+    expect(moved('KeyW').z).toBeCloseTo(-3, 6);
+    expect(moved('KeyS').z).toBeCloseTo(3, 6);
+    expect(moved('KeyD').x).toBeCloseTo(3, 6);
+    expect(moved('KeyA').x).toBeCloseTo(-3, 6);
+    expect(moved('Space').y).toBeCloseTo(3, 6);
+    expect(moved('KeyC').y).toBeCloseTo(-3, 6);
+    expect(moved('KeyW', true).z).toBeCloseTo(-9, 6);
+    // Q and E turn about the anchor, a quarter turn a second, in opposite ways
+    const turned = (code: string): number => {
+      const r = room([1, 5, 8], [1, 5, 2]);
+      const start = r.view.position.clone();
+      hold(r, code, 10);
+      return angleAbout(r, start);
+    };
+    expect(Math.abs(turned('KeyQ'))).toBeCloseTo(Math.PI / 2, 6);
+    expect(turned('KeyE')).toBeCloseTo(-turned('KeyQ'), 6);
+  });
+
+  it('C10: nothing moves while typing in an input, with Ctrl, Meta or Alt held, or after a blur', () => {
+    const r = room([1, 5, 8], [1, 5, 2]);
+    const start = r.view.position.clone();
+    for (const tagName of ['INPUT', 'TEXTAREA', 'SELECT']) {
+      r.key('keydown', 'KeyW', { target: { tagName } });
+    }
+    r.key('keydown', 'KeyW', { target: { tagName: 'DIV', isContentEditable: true } });
+    for (const held of ['ctrlKey', 'metaKey', 'altKey']) {
+      r.key('keydown', 'KeyW', { [held]: true });
+      r.key('keydown', 'Space', { [held]: true });
+    }
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+    // a key held when the window loses focus is dropped
+    r.key('keydown', 'KeyW');
+    r.blur();
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+  });
+
+  it('C10: off a room, a Space keydown is not taken and no key is held', () => {
+    // the plain shelf and ?solo never enter a room; a room taken down leaves
+    const r = room([1, 5, 8], [1, 5, 2]);
+    r.orbit.leave();
+    expect(r.key('keydown', 'Space').prevented).toBe(false);
+    r.key('keydown', 'KeyW');
+    r.orbit.enter(box);
+    r.frames(5, 100);
+    expect(r.view.position.z).toBeCloseTo(8, 9);
+    expect(r.view.position.y).toBeCloseTo(5, 9);
+  });
+
+  it('C10: Space on a focused button, and any key with a dialog open or a book held, are not taken', () => {
+    const r = room([1, 5, 8], [1, 5, 2]);
+    const start = r.view.position.clone();
+    expect(r.key('keydown', 'Space', { target: { tagName: 'BUTTON' } }).prevented).toBe(false);
+    vi.stubGlobal('document', { querySelector: () => ({}) });
+    expect(r.key('keydown', 'Space').prevented).toBe(false);
+    r.key('keydown', 'KeyW');
+    vi.stubGlobal('document', { querySelector: () => null });
+    r.orbit.hold();
+    expect(r.key('keydown', 'Space').prevented).toBe(false);
+    r.key('keydown', 'KeyW');
+    r.orbit.step();
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+    // and the page body or the canvas does take it
+    expect(r.key('keydown', 'Space', { target: r.element }).prevented).toBe(true);
+  });
+
+  it('C10: a key held when a book is picked up is no longer held when it is put back', () => {
+    const r = room([1, 5, 8], [1, 5, 2]);
+    r.key('keydown', 'KeyW');
+    r.frames(2, 100);
+    r.orbit.hold();
+    // put back
+    r.frames(5, 100);
+    const back = r.view.position.clone();
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(back)).toBeLessThan(1e-9);
+  });
+
+  it('a held book owns the camera: a pinch does not walk it, even in the moves before the controls are disabled (6e34596)', () => {
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    const start = r.view.position.clone();
+    // the page calls hold() every frame a book is held, and the pickup disables OrbitControls
+    r.controls.enabled = false;
+    r.orbit.hold();
+    pinch(r, 200, 5);
+    r.orbit.hold();
+    r.frames(1);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+
+    // the move straight after hold(), before the pickup has disabled the controls and before a frame
+    const q = room([1, 5, 8], [1, 5, 5]);
+    q.frames(1);
+    const first = q.view.position.clone();
+    pinch(q, 0);
+    q.orbit.hold();
+    expect(q.controls.enabled).toBe(true);
+    q.send('pointermove', { ...touch, pointerId: 2, clientX: 700, clientY: 400 });
+    q.frames(1);
+    // the enabled controls may still pan sideways on that move; a walk would be along the line of sight (z)
+    expect(Math.abs(q.view.position.z - first.z)).toBeLessThan(1e-9);
+  });
+
+  it('S9.3: a wheel walk queued when a book is picked up is dropped, not played out over the held book', () => {
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    const start = r.view.position.clone();
+    r.send('wheel', { deltaY: -300, deltaMode: 0 });
+    r.orbit.hold();
+    r.frames(10);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+  });
+
+  it('S9.3: a wheel notch that lands after the last held frame is not walked when the book is put back', () => {
+    // CodeRabbit finding on room-orbit.ts: onWheel queued while `holding`, and the first step after the
+    // book went back played that one notch out
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    const start = r.view.position.clone();
+    r.orbit.hold();
+    const { prevented } = r.send('wheel', { deltaY: -300, deltaMode: 0 });
+    expect(prevented).toBe(true);
+    r.frames(10);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+  });
+
+  it('S9.3: the wheel is taken in a room, so the page does not scroll under it', () => {
+    // OrbitControls' own zoom is off in a room, so only the walk's listener can have prevented it
+    const r = room([1, 5, 8], [1, 5, 5]);
+    expect(r.send('wheel', { deltaY: -100, deltaMode: 0 }).prevented).toBe(true);
+  });
+
+  it('S5.6 and S5.7: a notch walks a share of a close hit, and a pan takes the speed for its reach', () => {
+    const r = room([1, 5, 8], [1, 5, 5], { hit: 0.5 });
+    r.frames(1);
+    const start = r.view.position.clone();
+    wheel(r, 1);
+    // zoomScaleFor(0.5) is 1/6 and a notch is WALK_PER_NOTCH (0.5)
+    expect(r.view.position.distanceTo(start)).toBeCloseTo(0.5 / 6, 3);
+
+    const q = room([1, 5, 8], [1, 5, 7.5], { hit: 0.5 });
+    q.frames(1);
+    pan(q, 40, 0);
+    // panSpeedFor(0.5) is PAN_FLOOR / 0.5 = 4
+    expect(q.controls.panSpeed).toBeCloseTo(4, 6);
+  });
+
+  it('C10: a key pressed on the body and let go with a button focused, or a dialog open, is no longer held', () => {
+    const r = room([1, 5, 8], [1, 5, 2]);
+    r.key('keydown', 'KeyW');
+    r.key('keyup', 'KeyW', { target: { tagName: 'BUTTON' } });
+    const start = r.view.position.clone();
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+    r.key('keydown', 'KeyS');
+    vi.stubGlobal('document', { querySelector: () => ({}) });
+    r.key('keyup', 'KeyS');
+    vi.stubGlobal('document', { querySelector: () => null });
+    r.frames(5, 100);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+  });
+});
+
+describe('leaving a room puts every field back (#637, C16)', () => {
+  it('C16: after enter then leave each OrbitControls field the room changed is what it was', () => {
+    const r = room([1, 5, 8], [1, 5, 5], {
+      before: (c) => {
+        c.enableZoom = true;
+        c.enablePan = false;
+        c.enableRotate = false;
+        c.panSpeed = 1.5;
+        c.minDistance = 1.5;
+        c.maxDistance = 30;
+        c.maxPolarAngle = Math.PI * 0.52;
+      },
+    });
+    r.frames(3);
+    expect(r.controls.enableZoom).toBe(false);
+    expect(r.controls.enablePan).toBe(true);
+    expect(r.controls.enableRotate).toBe(true);
+    expect(r.controls.maxPolarAngle).toBeCloseTo(Math.PI * 0.9, 9);
+    r.orbit.leave();
+    expect({
+      enableZoom: r.controls.enableZoom,
+      enablePan: r.controls.enablePan,
+      enableRotate: r.controls.enableRotate,
+      panSpeed: r.controls.panSpeed,
+      minDistance: r.controls.minDistance,
+      maxDistance: r.controls.maxDistance,
+      maxPolarAngle: r.controls.maxPolarAngle,
+    }).toEqual({
+      enableZoom: true,
+      enablePan: false,
+      enableRotate: false,
+      panSpeed: 1.5,
+      minDistance: 1.5,
+      maxDistance: 30,
+      maxPolarAngle: Math.PI * 0.52,
+    });
   });
 });

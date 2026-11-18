@@ -5,9 +5,9 @@ import type { SettingsPatch } from './shelf-settings.ts';
  * What the page reads off a room's GLB, and what it does with it (#602, spec S7.2, S7.3, S8).
  *
  * **Code never hard-codes a room position.** The room's GLB carries named empties: `slot_*` place
- * live things, `view_open` is where the camera opens, `bounds_min` and `bounds_max` are the box it
- * stays in, and `live_ambient`, `live_key`, `live_fill` and `live_lamp` are the live lights, placed
- * from the lights that baked it (`packages/site/rooms/<room>/room-data.json` is where a person
+ * live things, `view_open` is where the camera opens, `bounds_min` and `bounds_max` are the room's
+ * box (the camera may stand up to 50 units outside it), and `live_ambient`, `live_key`, `live_fill`
+ * and `live_lamp` are the live lights, placed from the lights that baked it (`packages/site/rooms/<room>/room-data.json` is where a person
  * writes them; `shared/add_room_data.mjs` puts them in the GLB). A GLB missing one the page needs
  * is a room that failed, and the page draws the plain shelf (S2.5): `RoomDataError` says which.
  *
@@ -15,6 +15,18 @@ import type { SettingsPatch } from './shelf-settings.ts';
  */
 
 export type Vec3 = readonly [number, number, number];
+
+/**
+ * Which of a room's meshes are cut away (#637, spec S6.4): `stripOuterFaces` drops the faces of every mesh
+ * under a node named like this that point out of the room, so the camera can stand outside it. The name
+ * read is the mesh's parent's (in a GLB a mesh always has one, even an unnamed one), else its own.
+ *
+ * **A theme room's GLB must use these names to be cut away**: `room_shell*`, `room_walls*`,
+ * `room_ceiling*`, `room_wallpaper*`, or exactly `room_floor`. There is no per-mesh flag.
+ * Put the name on the node *above* the mesh's node, as the room GLB does: for a one-primitive node
+ * `GLTFLoader` returns the mesh itself under the node's name, so a name on that node is never read.
+ */
+export const CUTAWAY_NAMES = /^room_(shell|walls|ceiling|wallpaper|floor$)/;
 
 /** A node of the GLB as the page's walk sees it: its place in the room, and its extras. */
 export interface Empty {
@@ -159,11 +171,13 @@ export function readRoomData(empties: readonly Empty[]): RoomData {
   };
   for (let axis = 0; axis < 3; axis += 1) {
     if (!((bounds.min[axis] ?? 0) < (bounds.max[axis] ?? 0))) {
-      throw new RoomDataError('the camera box has no room: "bounds_min" is not below "bounds_max"');
+      throw new RoomDataError(
+        'the room\'s box has no room: "bounds_min" is not below "bounds_max"',
+      );
     }
   }
   if (!contains(bounds, view.position)) {
-    throw new RoomDataError('"view_open" is outside the camera box');
+    throw new RoomDataError('"view_open" is outside the room\'s box');
   }
 
   const lamp = empties.find((empty) => empty.name === 'live_lamp');
