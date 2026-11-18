@@ -3,8 +3,8 @@
  *
  * Every baked atlas and light map ships twice, as WebP and as KTX2 ETC1S, and a visitor downloads
  * one. KTX2 is the target: about 190 MB of GPU memory against about 1.5 GB for the WebPs unpacked,
- * for 8 MB more download. **WebP stays the default until the owner flips the constant below** to
- * `'etc1s'`, by a typed word, in a commit of its own, after the device matrix passes (S5.2, S13).
+ * for 8 MB more download. **KTX2 is the default**: the owner flipped the constant below to
+ * `'etc1s'`, by a typed word, in a commit of its own, after the device matrix passed (S5.2, S13, #605).
  *
  * No `three` import and no DOM, so vitest's node environment runs every rule here. The room loader
  * (#593's T3) wires it; `room-ktx2.ts` holds the three half.
@@ -17,7 +17,7 @@ export type RoomCodec = 'webp' | 'etc1s';
  * The default set, and the one rollback lever for KTX2 (spec S19): setting it back to `'webp'`
  * puts every visitor on the WebPs without a revert.
  */
-export const DEFAULT_ROOM_CODEC: RoomCodec = 'webp';
+export const DEFAULT_ROOM_CODEC: RoomCodec = 'etc1s';
 
 /**
  * The worker and the wasm the page hands it, served from `public/rooms/basis/`. **Same-origin files
