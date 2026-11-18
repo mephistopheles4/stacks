@@ -253,6 +253,7 @@ export function createRoomOrbit(
       if (reachable === undefined) return;
       const { deltaY, deltaMode } = event as WheelEvent;
       event.preventDefault();
+      if (holding) return;
       pending += notchesOf(deltaY, deltaMode) * WALK_PER_NOTCH * zoomScale();
     };
     const onDown = (event: Event): void => {

@@ -528,6 +528,19 @@ describe('the keyboard (#637, C10)', () => {
     expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
   });
 
+  it('S9.3: a wheel notch that lands after the last held frame is not walked when the book is put back', () => {
+    // CodeRabbit finding on room-orbit.ts: onWheel queued while `holding`, and the first step after the
+    // book went back played that one notch out
+    const r = room([1, 5, 8], [1, 5, 5]);
+    r.frames(1);
+    const start = r.view.position.clone();
+    r.orbit.hold();
+    const { prevented } = r.send('wheel', { deltaY: -300, deltaMode: 0 });
+    expect(prevented).toBe(true);
+    r.frames(10);
+    expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+  });
+
   it('S9.3: the wheel is taken in a room, so the page does not scroll under it', () => {
     // OrbitControls' own zoom is off in a room, so only the walk's listener can have prevented it
     const r = room([1, 5, 8], [1, 5, 5]);
