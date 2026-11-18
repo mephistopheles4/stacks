@@ -493,7 +493,7 @@ describe('the keyboard (#637, C10)', () => {
     expect(r.view.position.distanceTo(back)).toBeLessThan(1e-9);
   });
 
-  it('C10: a pinch while a book is held does not walk the camera', () => {
+  it('a held book owns the camera: a pinch does not walk it, even in the moves before the controls are disabled (6e34596)', () => {
     const r = room([1, 5, 8], [1, 5, 5]);
     r.frames(1);
     const start = r.view.position.clone();
@@ -504,6 +504,18 @@ describe('the keyboard (#637, C10)', () => {
     r.orbit.hold();
     r.frames(1);
     expect(r.view.position.distanceTo(start)).toBeLessThan(1e-9);
+
+    // the move straight after hold(), before the pickup has disabled the controls and before a frame
+    const q = room([1, 5, 8], [1, 5, 5]);
+    q.frames(1);
+    const first = q.view.position.clone();
+    pinch(q, 0);
+    q.orbit.hold();
+    expect(q.controls.enabled).toBe(true);
+    q.send('pointermove', { ...touch, pointerId: 2, clientX: 700, clientY: 400 });
+    q.frames(1);
+    // the enabled controls may still pan sideways on that move; a walk would be along the line of sight (z)
+    expect(Math.abs(q.view.position.z - first.z)).toBeLessThan(1e-9);
   });
 
   it('S9.3: a wheel walk queued when a book is picked up is dropped, not played out over the held book', () => {
@@ -520,6 +532,21 @@ describe('the keyboard (#637, C10)', () => {
     // OrbitControls' own zoom is off in a room, so only the walk's listener can have prevented it
     const r = room([1, 5, 8], [1, 5, 5]);
     expect(r.send('wheel', { deltaY: -100, deltaMode: 0 }).prevented).toBe(true);
+  });
+
+  it('S5.6 and S5.7: a notch walks a share of a close hit, and a pan takes the speed for its reach', () => {
+    const r = room([1, 5, 8], [1, 5, 5], { hit: 0.5 });
+    r.frames(1);
+    const start = r.view.position.clone();
+    wheel(r, 1);
+    // zoomScaleFor(0.5) is 1/6 and a notch is WALK_PER_NOTCH (0.5)
+    expect(r.view.position.distanceTo(start)).toBeCloseTo(0.5 / 6, 3);
+
+    const q = room([1, 5, 8], [1, 5, 7.5], { hit: 0.5 });
+    q.frames(1);
+    pan(q, 40, 0);
+    // panSpeedFor(0.5) is PAN_FLOOR / 0.5 = 4
+    expect(q.controls.panSpeed).toBeCloseTo(4, 6);
   });
 
   it('C10: a key pressed on the body and let go with a button focused, or a dialog open, is no longer held', () => {
