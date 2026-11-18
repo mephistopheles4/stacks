@@ -1,5 +1,6 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { chooseAnchor, panSpeedFor, zoomScaleFor } from './room-anchor.ts';
+import { chooseAnchor, createCentrePick, panSpeedFor, zoomScaleFor } from './room-anchor.ts';
 import type { Box, Vec3 } from './room-data.ts';
 
 const room: Box = { min: [-10, 0, -10], max: [10, 10, 10] };
@@ -68,5 +69,29 @@ describe('zoomScaleFor (#637, C5: S5.6)', () => {
     expect(scales[2]).toBe(1);
     expect(scales[3]).toBe(2);
     expect(scales[4]).toBeCloseTo(40 / 6, 12);
+  });
+});
+
+describe('createCentrePick (#637)', () => {
+  it('skips a mesh under an invisible group and finds the first one that is drawn', () => {
+    // CodeRabbit finding on room-anchor.ts: the renderer skips a hidden group's children, but the
+    // raycaster does not, so a mesh at 2 under a hidden group must not set the anchor ahead of the one at 8
+    const plane = (z: number): THREE.Mesh => {
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(10, 10),
+        new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+      );
+      mesh.position.z = z;
+      return mesh;
+    };
+    const scene = new THREE.Scene();
+    const hidden = new THREE.Group();
+    hidden.visible = false;
+    hidden.add(plane(-2));
+    scene.add(hidden, plane(-8));
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    scene.updateMatrixWorld(true);
+    camera.updateMatrixWorld();
+    expect(createCentrePick(scene, camera)()).toBeCloseTo(8, 9);
   });
 });

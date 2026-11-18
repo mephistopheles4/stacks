@@ -90,6 +90,13 @@ export function createCentrePick(
     caster.setFromCamera(centre, camera);
     return caster
       .intersectObjects(scene.children, true)
-      .find((h) => (h.object as THREE.Mesh).isMesh === true && h.object.visible)?.distance;
+      .find((h) => (h.object as THREE.Mesh).isMesh === true && drawn(h.object))?.distance;
   };
+}
+
+/** The renderer skips a hidden group's children, but the raycaster does not: a mesh is drawn only if every ancestor is visible. */
+function drawn(object: THREE.Object3D): boolean {
+  for (let o: THREE.Object3D | null = object; o !== null; o = o.parent)
+    if (!o.visible) return false;
+  return true;
 }
