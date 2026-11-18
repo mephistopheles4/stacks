@@ -2,6 +2,7 @@
 
 **Date:** 2026-11-17
 **Status:** accepted, built in [#632](https://github.com/mephistopheles4/stacks/issues/632). **Amends [ADR-0178](0178-the-room-is-closed-by-its-own-wall-pieces-and-the-camera-comes-in-at-the-box.md) item 8**, which switched pan off in a room and left two-finger pan out on purpose; the owner has now asked for it.
+**Superseded by:** [ADR-0192](0192-the-room-turns-pans-and-zooms-with-orbitcontrols-about-an-anchor-at-the-centre-of-the-screen.md)
 **Issue:** [#632](https://github.com/mephistopheles4/stacks/issues/632), part of the room ([#593](https://github.com/mephistopheles4/stacks/issues/593))
 
 ## Decision

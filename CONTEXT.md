@@ -21,6 +21,13 @@ The baked scene round the bookcase on the default page, a committed GLB chosen b
 **Abandoned bookcase**:
 In the room, the second bookcase the abandoned books stand on: two rows, spine out, the most recent kept ([ADR-0175](docs/adr/0175-the-abandoned-books-leave-the-main-bookcase-for-one-of-their-own-in-the-room.md)).
 
+**Anchor**:
+The point the room's camera turns about, picked at the centre of the screen ([ADR-0192](docs/adr/0192-the-room-turns-pans-and-zooms-with-orbitcontrols-about-an-anchor-at-the-centre-of-the-screen.md)).
+*Avoid*: pivot.
+
+**Cutaway**:
+The room drawn from the inside only, so the camera can stand outside it ([ADR-0193](docs/adr/0193-the-room-is-a-cutaway-the-camera-may-stand-outside-it-and-its-walls-are-drawn-from-the-inside.md)).
+
 **Vault**:
 The folder of Obsidian notes that *is* the database. Defined by
 [invariant 1](AGENTS.md); reached only through the **adapter**, by

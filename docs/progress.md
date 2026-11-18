@@ -15,6 +15,7 @@ All five phases are green and tagged (`phase-0` to `phase-4`). The tool runs aga
 | | |
 | --- | --- |
 | **Room** | Built; sign-off pending; hold deploy for T5; credits (#621) in review. [ADR-0164](./adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md) |
+| **Room camera (#637), in review** | `OrbitControls` turns the room about an anchor at the centre of the screen, and the walls are a cutaway the camera may stand outside. [ADR-0192](./adr/0192-the-room-turns-pans-and-zooms-with-orbitcontrols-about-an-anchor-at-the-centre-of-the-screen.md), [ADR-0193](./adr/0193-the-room-is-a-cutaway-the-camera-may-stand-outside-it-and-its-walls-are-drawn-from-the-inside.md). Not run: real phones (C14), device check (C15) |
 | **Room abandoned bookcase (#604, T5), in review** | [ADR-0175](./adr/0175-the-abandoned-books-leave-the-main-bookcase-for-one-of-their-own-in-the-room.md). Not run: Pixel, owner's look |
 | **Room devices (#605, T6), in review** | `pnpm preview:fixture`, the confinement probe, the tunnel launcher and the BrowserStack key rules are built and green. **Not run:** the device matrix and the preview read, which need the owner's tunnel and a preview. [ADR-0165](./adr/0165-the-fixture-preview-and-the-tunnel-launcher-carry-a-fixture-build-only.md) |
 | **O'Reilly provider removed (#450), in review** | Lookups go Open Library, then Google, with Apple for covers only. `oreilly_ourn` and `cover_source: oreilly` stay as provenance on older notes and no provider writes them. A cover added by hand needs `cover_source: unknown` written by hand. [ADR-0147](./adr/0147-oreilly-is-removed.md); the spec is [revision 4 on #450](https://github.com/mephistopheles4/stacks/issues/450#issuecomment-6728372984) |
@@ -146,6 +147,7 @@ One line per episode, newest last. The narrative is one file per investigation i
 - 2026-11-12 — [`progress.md` before the cleanup](./log/2026-11-12-progress-before-the-cleanup.md)
 - 2026-11-15 — [iOS scroll, real iPhone (#599)](./log/2026-11-15-ios-scroll-on-a-real-iphone.md)
 - 2026-11-17 — [The ceiling trim on the closed room (#631)](./log/2026-11-17-the-ceiling-trim-on-the-closed-room.md)
+- 2026-11-18 — [The anchor camera prototype (#637)](./log/2026-11-18-anchor-camera-prototype.md)
 
 ## Notes to the next session
 
