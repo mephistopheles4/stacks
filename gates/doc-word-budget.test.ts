@@ -30,7 +30,7 @@ const BUDGETS: Readonly<Record<string, number>> = {
   'docs/commands.md': 15_470, // +170: pnpm preview:fixture and the launcher, commands that are new (#605)
   'docs/gates.md': 32_490, // +140 (#605: G9's key rules, G67's third script, the device-matrix row); earlier +550: G73-G75 and the rooms directory in G13 (#600), rules that are new, beside #609's wasm clause
   'docs/notes-on-the-shelf.md': 1_350,
-  'docs/progress.md': 3_560, // +60: the T6 row (#605)
+  'docs/progress.md': 3_571, // +11: the #631 log line; earlier +60: the T6 row (#605)
   'docs/shelf-inspectors.md': 2_500,
   'docs/spec/README.md': 4_970, // +70: the #618 row, an index entry that is new
 };
