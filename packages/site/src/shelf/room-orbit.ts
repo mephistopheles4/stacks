@@ -234,11 +234,14 @@ export function createRoomOrbit(
     }
     if (reach * wished >= TURN_IN_PLACE) {
       camera.position.set(...clampInto(box, along(reach)));
+      // the slide along the outer limit left the line `OrbitControls` pointed the camera down
+      camera.lookAt(controls.target);
       return;
     }
     // turn in place: the camera back where it stood, looking the way the drag turned it
     camera.position.copy(before);
     controls.target.copy(before).addScaledVector(offset, -wished);
+    camera.lookAt(controls.target);
   };
 
   /**

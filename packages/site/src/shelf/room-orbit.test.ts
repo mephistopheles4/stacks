@@ -437,6 +437,22 @@ describe('the camera stays within bounds (#637, C7)', () => {
   });
 });
 
+describe('a turn held on the outer limit (#637)', () => {
+  it('C7: after a turn slides the camera along the limit it still looks at the anchor', () => {
+    // CodeRabbit finding on room-orbit.ts: confineTurn moved the camera after OrbitControls had pointed
+    // it at the anchor, so the centre of the screen and the line to the anchor disagreed until the next update
+    const edge = box.max[0] + OUT;
+    const r = room([edge, 5, 6], [edge + 20, 5, 6], { hit: 20 });
+    r.frames(2);
+    r.send('pointerdown', { ...mouse, clientX: 640, clientY: 400 });
+    r.send('pointermove', { ...mouse, clientX: 840, clientY: 400 });
+    r.frames(1);
+    expect(r.view.position.x).toBeCloseTo(edge, 9);
+    const toAnchor = r.controls.target.clone().sub(r.view.position).normalize();
+    expect(r.view.getWorldDirection(new THREE.Vector3()).distanceTo(toAnchor)).toBeLessThan(1e-9);
+  });
+});
+
 describe('the keyboard (#637, C10)', () => {
   /** Holds `code` for `n` frames of 100 ms, as a visitor on the page does. */
   const hold = (r: Room, code: string, n = 5): void => {
