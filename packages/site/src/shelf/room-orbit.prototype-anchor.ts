@@ -88,6 +88,11 @@ export function createAnchorOrbit(
   /** How far from the anchor the visitor asked to stand: the spin goes back out to it. */
   let wished = 0;
   let anchorDue = true;
+  /**
+   * A walk, a pinch or a pan has moved the camera since the anchor was set: the next spin places it again
+   * on what is at the centre of the screen. A spin alone never moves it.
+   */
+  let moved = false;
   let pending = 0;
   /** A pan is under way: the camera and the anchor go together and stop at a wall. */
   let panning = false;
@@ -142,6 +147,7 @@ export function createAnchorOrbit(
 
   /** Camera and anchor forward together along the view. */
   const walkBy = (distance: number): void => {
+    moved = true;
     dir.subVectors(controls.target, camera.position).normalize();
     camera.position.addScaledVector(dir, distance);
     controls.target.addScaledVector(dir, distance);
@@ -225,12 +231,20 @@ export function createAnchorOrbit(
         fingers.set(pointerId, { x: clientX, y: clientY });
         spread = readSpread();
         panning = fingers.size >= 2;
-        if (fingers.size === 1 && bounds !== undefined) reanchor();
+        if (panning) moved = true;
+        if (fingers.size === 1 && bounds !== undefined && moved) {
+          reanchor();
+          moved = false;
+        }
         return;
       }
       mouseDown = true;
       panning = button === 2 || shiftKey || ctrlKey || metaKey;
-      if (!panning && bounds !== undefined) reanchor();
+      if (panning) moved = true;
+      else if (bounds !== undefined && moved) {
+        reanchor();
+        moved = false;
+      }
     };
     const onMove = (event: Event): void => {
       const { pointerId, clientX, clientY } = event as PointerEvent;
@@ -359,6 +373,10 @@ export function createAnchorOrbit(
         confineBoth(bounds);
       }
       before.copy(camera.position);
+      // the page's framing sets OrbitControls' maxDistance after `enter`, and OrbitControls clamps to
+      // it every frame: a pan, which nothing puts back, snapped the camera in to it
+      controls.minDistance = NEAREST;
+      controls.maxDistance = Infinity;
       controls.update();
       if (panning) confineBoth(bounds);
       else confineSpin(bounds);
