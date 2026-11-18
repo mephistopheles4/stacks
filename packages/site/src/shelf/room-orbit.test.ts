@@ -94,7 +94,11 @@ function room(
   controls.update();
   const clock = { t: 0 };
   /** Picks by the phase the test says it is in. */
-  const picks = { phase: 'enter', by: new Map<string, number>(), hit };
+  const picks: { phase: string; by: Map<string, number>; hit: number | undefined } = {
+    phase: 'enter',
+    by: new Map<string, number>(),
+    hit,
+  };
   const pick = (): number | undefined => {
     picks.by.set(picks.phase, (picks.by.get(picks.phase) ?? 0) + 1);
     return picks.hit;
