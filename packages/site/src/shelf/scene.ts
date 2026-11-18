@@ -662,9 +662,21 @@ function assembleShelf(
   const camSearch = typeof location === 'undefined' ? '' : location.search;
   const cam = new URLSearchParams(camSearch).get('cam') === 'anchor' ? 'anchor' : 'current';
   const pivot = readPivot(camSearch);
+  const centreCaster = new THREE.Raycaster();
+  const screenCentre = new THREE.Vector2(0, 0);
+  /** How far ahead the first drawn mesh at the centre of the screen is. */
+  const pickAhead = (): number | undefined => {
+    centreCaster.setFromCamera(screenCentre, camera);
+    const hits = centreCaster.intersectObjects(scene.children, true);
+    (globalThis as { __pick?: unknown }).__pick = hits
+      .slice(0, 6)
+      .map((h) => `${h.object.type}:${h.object.name}:${h.object.visible}:${h.distance.toFixed(2)}`);
+    const hit = hits.find((h) => (h.object as THREE.Mesh).isMesh === true && h.object.visible);
+    return hit?.distance;
+  };
   const roomOrbit =
     cam === 'anchor'
-      ? createAnchorOrbit(camera, controls, pivot)
+      ? createAnchorOrbit(camera, controls, pivot, pickAhead)
       : createRoomOrbit(camera, controls);
   if (typeof document !== 'undefined') mountCamSwitcher(document, cam, pivot);
   const unwalk = roomOrbit.attach(renderer.domElement);

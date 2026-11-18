@@ -2,26 +2,34 @@
  * PROTOTYPE (#637) — throwaway, on `prototype/637-anchor-camera`, never merged.
  *
  * Question: does the room feel better on a phone with `OrbitControls` as it ships than with the
- * custom gesture layer in `room-orbit.ts`? Chosen with `?cam=anchor`; `?pivot=<metres>` sets the
- * pivot's distance (default 1).
+ * custom gesture layer in `room-orbit.ts`? Chosen with `?cam=anchor`. `?pivot=<metres>` holds the
+ * anchor that far ahead; `?pivot=auto` puts it on whatever is at the centre of the screen.
  *
  * - Rotate, pan (two fingers, right-drag, shift/ctrl-drag) and damping are `OrbitControls`' own, in
  *   its own direction: the content follows the finger.
- * - The target is held `pivot` ahead (`minDistance = maxDistance`), so pan runs at one speed at any
- *   depth and nothing slows when you are close to something.
- * - Scroll and pinch move the camera and the target forward together: the pinch 1:1, the wheel eased.
- * - A camera past a wall or inside the bookcase is put back, and the pivot goes with it.
+ * - The anchor is set when a one-finger or left-button drag starts, along the line the camera already
+ *   looks down, so the view does not jump.
+ * - A spin keeps the anchor where it is: a camera the walls or the bookcase would not hold is brought
+ *   in toward the anchor, and goes back out when there is room. A pan moves both, and stops at a wall.
+ * - Scroll and pinch move the camera and the anchor forward together: the pinch 1:1, the wheel eased.
  */
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { type Box, type Vec3, clampInto } from './room-data.ts';
+import { type Box, type Vec3, clampInto, pullIn } from './room-data.ts';
 import { WALK_PER_NOTCH, WALK_PER_PINCH_PIXEL, notchesOf } from './room-walk.ts';
 import type { RoomOrbit } from './room-orbit.ts';
 
 type Listening = Pick<HTMLElement, 'addEventListener' | 'removeEventListener'>;
+export type Pivot = number | 'auto';
 
 const EASE = 0.25;
 const REST = 0.005;
+/** `auto` with nothing at the centre of the screen, or something nearer or farther than makes sense. */
+// world units, not metres: the room's eye height is 3.9
+const AUTO_FALLBACK = 6;
+const AUTO_NEAREST = 0.5;
+const AUTO_FARTHEST = 60;
+const NEAREST = 0.05;
 
 /** A point inside `space` is moved out through its nearest face. */
 function pushOut(space: Box, p: Vec3): Vec3 {
@@ -43,15 +51,19 @@ function pushOut(space: Box, p: Vec3): Vec3 {
   return out;
 }
 
-export function readPivot(search: string): number {
-  const raw = Number(new URLSearchParams(search).get('pivot'));
-  return Number.isFinite(raw) && raw > 0.1 && raw < 10 ? raw : 1;
+export function readPivot(search: string): Pivot {
+  const raw = new URLSearchParams(search).get('pivot');
+  if (raw === 'auto') return 'auto';
+  const n = Number(raw);
+  return raw !== null && Number.isFinite(n) && n > 0.1 && n < 60 ? n : 3;
 }
 
 export function createAnchorOrbit(
   camera: THREE.PerspectiveCamera,
   controls: OrbitControls,
-  pivot: number,
+  pivot: Pivot,
+  /** How far ahead the first surface at the centre of the screen is, if there is one. */
+  pickAhead: () => number | undefined,
 ): RoomOrbit {
   const saved = {
     minDistance: controls.minDistance,
@@ -60,42 +72,64 @@ export function createAnchorOrbit(
   };
   let bounds: Box | undefined;
   let keepOut: readonly Box[] = [];
-  /** Set when the target must be put `pivot` ahead along the view again (enter, reframe, after a hold). */
+  /** How far from the anchor the visitor asked to stand: the spin goes back out to it. */
+  let wished = 0;
   let anchorDue = true;
   let pending = 0;
+  /** A pan is under way: the camera and the anchor go together and stop at a wall. */
+  let panning = false;
+  let mouseDown = false;
   const fingers = new Map<number, { x: number; y: number }>();
   let spread: number | undefined;
   const dir = new THREE.Vector3();
+  const offset = new THREE.Vector3();
+  const at = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
 
-  const reanchor = (): void => {
-    // the line to the target framing set, not the camera's orientation, which `update` has not aimed yet
+  /** Puts the anchor `distance` ahead along the line the camera looks down. */
+  const anchorAt = (distance: number): void => {
     dir.subVectors(controls.target, camera.position);
     if (dir.lengthSq() < 1e-12) camera.getWorldDirection(dir);
     dir.normalize();
-    controls.target.copy(camera.position).addScaledVector(dir, pivot);
-    anchorDue = false;
+    controls.target.copy(camera.position).addScaledVector(dir, distance);
+    wished = distance;
   };
 
-  /** Camera and target forward together along the view. */
+  const reanchor = (): void => {
+    if (pivot !== 'auto') return anchorAt(pivot);
+    camera.updateMatrixWorld();
+    const hit = pickAhead();
+    anchorAt(hit === undefined || hit < AUTO_NEAREST || hit > AUTO_FARTHEST ? AUTO_FALLBACK : hit);
+  };
+
+  /** Camera and anchor forward together along the view. */
   const walkBy = (distance: number): void => {
     dir.subVectors(controls.target, camera.position).normalize();
     camera.position.addScaledVector(dir, distance);
     controls.target.addScaledVector(dir, distance);
   };
 
-  /** The camera back inside the room and out of the bookcase, the pivot moved by the same amount. */
-  const confine = (box: Box): void => {
-    const at: Vec3 = [camera.position.x, camera.position.y, camera.position.z];
-    let fixed = clampInto(box, at);
+  const placeable = (box: Box, p: Vec3): Vec3 => {
+    let fixed = clampInto(box, p);
     for (const space of keepOut) fixed = pushOut(space, fixed);
-    const dx = fixed[0] - at[0];
-    const dy = fixed[1] - at[1];
-    const dz = fixed[2] - at[2];
-    if (dx === 0 && dy === 0 && dz === 0) return;
+    return fixed;
+  };
+
+  /** A pan or a walk: the camera back in the room, and the anchor moved by the same amount. */
+  const confineBoth = (box: Box): void => {
+    const was = at(camera.position);
+    const fixed = placeable(box, was);
     camera.position.set(...fixed);
-    controls.target.x += dx;
-    controls.target.y += dy;
-    controls.target.z += dz;
+    controls.target.x += fixed[0] - was[0];
+    controls.target.y += fixed[1] - was[1];
+    controls.target.z += fixed[2] - was[2];
+  };
+
+  /** A spin: the anchor stays, the camera stands `wished` from it or as near as the room allows. */
+  const confineSpin = (box: Box): void => {
+    offset.subVectors(camera.position, controls.target).setLength(wished).add(controls.target);
+    let p = pullIn(box, at(controls.target), at(offset), NEAREST);
+    for (const space of keepOut) p = pushOut(space, p);
+    camera.position.set(...p);
   };
 
   const readSpread = (): number | undefined => {
@@ -111,10 +145,18 @@ export function createAnchorOrbit(
       pending += notchesOf(deltaY, deltaMode) * WALK_PER_NOTCH;
     };
     const onDown = (event: Event): void => {
-      const { pointerId, pointerType, clientX, clientY } = event as PointerEvent;
-      if (pointerType !== 'touch') return;
-      fingers.set(pointerId, { x: clientX, y: clientY });
-      spread = readSpread();
+      const { pointerId, pointerType, clientX, clientY, button, shiftKey, ctrlKey, metaKey } =
+        event as PointerEvent;
+      if (pointerType === 'touch') {
+        fingers.set(pointerId, { x: clientX, y: clientY });
+        spread = readSpread();
+        panning = fingers.size >= 2;
+        if (fingers.size === 1 && bounds !== undefined) reanchor();
+        return;
+      }
+      mouseDown = true;
+      panning = button === 2 || shiftKey || ctrlKey || metaKey;
+      if (!panning && bounds !== undefined) reanchor();
     };
     const onMove = (event: Event): void => {
       const { pointerId, clientX, clientY } = event as PointerEvent;
@@ -125,13 +167,20 @@ export function createAnchorOrbit(
       const now = readSpread();
       if (bounds !== undefined && now !== undefined && spread !== undefined) {
         walkBy((now - spread) * WALK_PER_PINCH_PIXEL);
-        confine(bounds);
+        confineBoth(bounds);
       }
       spread = now;
     };
     const onUp = (event: Event): void => {
-      fingers.delete((event as PointerEvent).pointerId);
-      spread = readSpread();
+      const { pointerId, pointerType } = event as PointerEvent;
+      if (pointerType === 'touch') {
+        fingers.delete(pointerId);
+        spread = readSpread();
+        // a pan's momentum plays out as a pan; the next touch decides again
+        if (fingers.size === 0) return;
+      } else {
+        mouseDown = false;
+      }
     };
     element.addEventListener('wheel', onWheel, { passive: false });
     element.addEventListener('pointerdown', onDown);
@@ -147,6 +196,18 @@ export function createAnchorOrbit(
     };
   };
 
+  const debug = (): void => {
+    (globalThis as { __anchorCam?: unknown }).__anchorCam = {
+      pivot,
+      wished: +wished.toFixed(3),
+      distance: +camera.position.distanceTo(controls.target).toFixed(3),
+      camera: at(camera.position).map((v) => +v.toFixed(3)),
+      target: at(controls.target).map((v) => +v.toFixed(3)),
+      panning,
+      mouseDown,
+    };
+  };
+
   return {
     enter(box, spaces = []) {
       bounds = box;
@@ -154,8 +215,8 @@ export function createAnchorOrbit(
       controls.enableZoom = false;
       controls.enablePan = true;
       controls.enableRotate = true;
-      controls.minDistance = pivot;
-      controls.maxDistance = pivot;
+      controls.minDistance = NEAREST;
+      controls.maxDistance = 100;
       controls.maxPolarAngle = Math.PI * 0.9;
       anchorDue = true;
       pending = 0;
@@ -188,22 +249,28 @@ export function createAnchorOrbit(
         controls.update();
         return;
       }
-      if (anchorDue) reanchor();
+      if (anchorDue) {
+        reanchor();
+        anchorDue = false;
+      }
       if (pending !== 0) {
         const part = Math.abs(pending) < REST ? pending : pending * EASE;
         walkBy(part);
         pending -= part;
         if (Math.abs(pending) < 1e-6) pending = 0;
+        confineBoth(bounds);
       }
       controls.update();
-      confine(bounds);
+      if (panning) confineBoth(bounds);
+      else confineSpin(bounds);
+      debug();
     },
     attach,
   };
 }
 
-/** PROTOTYPE switcher: a pill at the bottom to flip `?cam=` and step `?pivot=`. */
-export function mountCamSwitcher(doc: Document, cam: string, pivot: number): void {
+/** PROTOTYPE switcher: a pill at the bottom to flip `?cam=` and the anchor. */
+export function mountCamSwitcher(doc: Document, cam: string, pivot: Pivot): void {
   const bar = doc.createElement('div');
   bar.setAttribute(
     'style',
@@ -227,7 +294,8 @@ export function mountCamSwitcher(doc: Document, cam: string, pivot: number): voi
     return b;
   };
   const label = doc.createElement('span');
-  label.textContent = `PROTOTYPE cam=${cam}${cam === 'anchor' ? ` pivot=${pivot}m` : ''}`;
+  const shown = pivot === 'auto' ? 'auto' : `${pivot} units`;
+  label.textContent = `PROTOTYPE cam=${cam}${cam === 'anchor' ? ` pivot=${shown}` : ''}`;
   bar.append(
     label,
     button(cam === 'anchor' ? 'current' : 'anchor', () =>
@@ -235,10 +303,18 @@ export function mountCamSwitcher(doc: Document, cam: string, pivot: number): voi
     ),
   );
   if (cam === 'anchor') {
+    const fixed = pivot === 'auto' ? 3 : pivot;
     bar.append(
-      button('−', () => go({ pivot: String(Math.max(0.25, pivot - 0.25)) })),
-      button('+', () => go({ pivot: String(pivot + 0.25) })),
+      button(pivot === 'auto' ? 'fixed' : 'auto', () =>
+        go({ pivot: pivot === 'auto' ? '3' : 'auto' }),
+      ),
     );
+    if (pivot !== 'auto') {
+      bar.append(
+        button('−', () => go({ pivot: String(Math.max(1, fixed - 1)) })),
+        button('+', () => go({ pivot: String(fixed + 1) })),
+      );
+    }
   }
   doc.body.append(bar);
 }
