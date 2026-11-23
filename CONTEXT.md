@@ -21,6 +21,13 @@ The baked scene round the bookcase on the default page, a committed GLB chosen b
 **Abandoned bookcase**:
 In the room, the second bookcase the abandoned books stand on: two rows, spine out, the most recent kept ([ADR-0175](docs/adr/0175-the-abandoned-books-leave-the-main-bookcase-for-one-of-their-own-in-the-room.md)).
 
+**Anchor**:
+The point the room's camera turns about, picked at the centre of the screen ([ADR-0192](docs/adr/0192-the-room-turns-pans-and-zooms-with-orbitcontrols-about-an-anchor-at-the-centre-of-the-screen.md)).
+*Avoid*: pivot.
+
+**Cutaway**:
+The room drawn from the inside only, so the camera can stand outside it ([ADR-0193](docs/adr/0193-the-room-is-a-cutaway-the-camera-may-stand-outside-it-and-its-walls-are-drawn-from-the-inside.md)).
+
 **Vault**:
 The folder of Obsidian notes that *is* the database. Defined by
 [invariant 1](AGENTS.md); reached only through the **adapter**, by
@@ -44,15 +51,14 @@ Placing a book on the shelf by hand rather than by date. Semantics are G12's.
 
 **Footprint**:
 How much shelf a book eats along the row — a single number. A face-out book has
-been turned side-on, so its footprint is the width of its cover rather than its
-own thickness, which is why row packing counts this and not thickness.
+been turned side-on, so its footprint is its cover's width, not its own
+thickness; row packing counts this.
 *Avoid*: width (of what?), extent, the shape it stands on (that is **contact**).
 
 **Contact**:
-Where a book meets the plank, as a rectangle. Not the same as its **footprint**:
-a face-out book's contact is its cover's width by its own *thickness*, because
-what it puts on the wood is the same slab as any other book, seen end-on. The
-painted shadow is drawn from these.
+Where a book meets the plank, as a rectangle. Not its **footprint**:
+a face-out book's contact is its cover's width by its own *thickness*: the same
+slab as any other book, seen end-on. The painted shadow is drawn from these.
 *Avoid*: footprint (the scalar), shadow (that is what is drawn from it), base.
 
 **Cover shade**:
@@ -64,17 +70,15 @@ lost the shadow sampler
 ([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
 *Avoid*: recess shade (that is the ambient darkening across a whole **row**,
 cast by nothing), band on its own (the backboard has one too), neighbour shadow
-(the older plane down a cover's right-hand edge, which it does not replace).
+(the older plane down a cover's right-hand edge, not replaced).
 
 **Lost-context record**:
 The one small entry a device keeps after the shelf lost its WebGL context while
 sampling the shadow map, so later loads start with painted shadows until it
-expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess about the device, and a
+expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess, and a
 `?shadows=` in the URL goes around it
 ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
-A program that will not link while the shelf samples the map writes the same
-record (item 9), and the record does not say which of the two it was; the name
-keeps the common case.
+A program that will not link while sampling writes the same record (item 9); the record does not say which of the two it was.
 *Avoid*: blocklist, device flag (nothing is decided by device), crash record
 (that is the black box's), fallback on its own (that is what the page does
 after a loss, in the page).
@@ -124,10 +128,11 @@ against it as the same picture at 6.7× the triangles. A paperback's is not
 
 **Head**:
 The top edge of a book as it stands on a shelf, where the covering rolls over.
-The one edge that **cannot be faked** — a shelf is looked at from above, so the
-head is a silhouette, and no normal map moves a silhouette. There is no *tail*
-treatment and never will be: the lowest angle the camera permits is 3.6° above
-the horizon, so no tail is ever in frame.
+The one edge that **cannot be faked**: a shelf is seen from above, so the head
+is a silhouette, and no normal map moves a silhouette. There is no *tail*
+treatment: on the plain shelf the camera's lowest angle is 3.6° above the horizon,
+so no tail is in frame. In a room the camera can stand below the floor (polar
+limit 0.9π); whether a plank hides a tail from below is unchecked.
 *Avoid*: top, cap (the cap is the *geometry*; the head is the edge), spine top.
 
 **Striation**:
@@ -141,8 +146,7 @@ taken by the *struck* roughness weave — see #68).
 **Provenance**:
 Which of the three providers in use a cover's *bytes* were downloaded from — a
 separate question from which provider answered for the book's metadata. The two
-differ often enough that conflating them loses real information: a book Open
-Library answered for can carry an Apple cover. Older covers may still say
+differ: a book Open Library answered for can carry an Apple cover. Older covers may still say
 `oreilly` ([ADR-0147](docs/adr/0147-oreilly-is-removed.md)). The rules are the
 `cover_source` ones in [`AGENTS.md`](AGENTS.md).
 *Avoid*: source (ambiguous — a record's `source` is the metadata provider).
@@ -184,9 +188,8 @@ The furniture the shelf renders: its **planks**, its **uprights** and its
 **backboard**. Narrower than the English word — it covers the wooden members,
 and not the dimensions, the row count, or the books standing in it.
 *Avoid*: case (that is a hardback's binding case — see **Square**), unit.
-**Older records call it the case**, and that name outlives any rename: several
-records under `docs/adr/` use it, and each keeps its original wording by
-design. **A live comment is not a record** — it describes the code as it is
+**Older records call it the case**: several under `docs/adr/` use it and keep
+their wording by design. **A live comment is not a record** — it describes the code as it is
 now, so it follows this glossary.
 
 **Plank**:

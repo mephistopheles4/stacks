@@ -122,7 +122,7 @@ describe('readRoomData refuses a room that is missing what the page needs', () =
     const out = empties.map((e) =>
       e.name === 'view_open' ? { ...e, position: [30, 4, 14] as Vec3 } : e,
     );
-    expect(() => readRoomData(out)).toThrow('outside the camera box');
+    expect(() => readRoomData(out)).toThrow("outside the room's box");
   });
 
   it('with a camera that stands on its own target, which no framing can use', () => {

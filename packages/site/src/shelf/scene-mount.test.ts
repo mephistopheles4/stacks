@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_ROOM_ID, ROOMS } from './room-mode.ts';
+import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 
 /**
  * A mount that throws halfway lets go of what it made.
@@ -15,7 +16,21 @@ import { DEFAULT_ROOM_ID, ROOMS } from './room-mode.ts';
 
 const three = vi.hoisted(() => ({
   renderers: [] as { disposed: boolean }[],
+  cameras: [] as { far: number; near: number; position: { set(...at: number[]): void } }[],
+  fogs: [] as { near: number; far: number }[],
   refuse: false,
+}));
+
+/** What a mount's room load is handed, when a test stages one (spec #637, C16). */
+const staged = vi.hoisted(() => ({ room: undefined as (() => unknown) | undefined }));
+
+vi.mock('./room-assets.ts', () => ({
+  roomAssets: () => ({ prepare: () => Promise.resolve(staged.room?.()) }),
+}));
+
+vi.mock('./room-loading.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./room-loading.ts')>()),
+  showLoadingScreen: () => ({ update: () => {}, done: () => {} }),
 }));
 
 vi.mock('three', async (importOriginal) => {
@@ -56,7 +71,21 @@ vi.mock('three', async (importOriginal) => {
     }
   }
 
-  return { ...actual, WebGLRenderer };
+  class PerspectiveCamera extends actual.PerspectiveCamera {
+    constructor(...parameters: ConstructorParameters<typeof actual.PerspectiveCamera>) {
+      super(...parameters);
+      three.cameras.push(this);
+    }
+  }
+
+  class Fog extends actual.Fog {
+    constructor(...parameters: ConstructorParameters<typeof actual.Fog>) {
+      super(...parameters);
+      three.fogs.push(this);
+    }
+  }
+
+  return { ...actual, WebGLRenderer, PerspectiveCamera, Fog };
 });
 
 const { mountShelf } = await import('./scene.ts');
@@ -67,7 +96,7 @@ const LATE = new Error('staged: the mount throws after every other part is made'
 
 interface Listening {
   readonly canvas: HTMLCanvasElement;
-  /** Listeners still attached to the canvas and the document it sits in. */
+  /** Listeners still attached to the canvas, the document it sits in and the window the room's keys use. */
   live(): string[];
 }
 
@@ -83,6 +112,12 @@ function listeningCanvas(): Listening {
     },
   });
   const root = target('document');
+  // the room's keys listen on the window (#637): record them like the canvas's, in place of the plain stub
+  vi.stubGlobal('window', {
+    devicePixelRatio: 1,
+    location: { search: '' },
+    ...target('window'),
+  });
   const canvas = {
     ...target('canvas'),
     style: {},
@@ -100,8 +135,17 @@ function listeningCanvas(): Listening {
 
 beforeEach(() => {
   three.renderers.length = 0;
+  three.cameras.length = 0;
+  three.fogs.length = 0;
+  staged.room = undefined;
   three.refuse = false;
-  vi.stubGlobal('window', { devicePixelRatio: 1, location: { search: '' } });
+  // the room's keys listen on the window (#637)
+  vi.stubGlobal('window', {
+    devicePixelRatio: 1,
+    location: { search: '' },
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  });
   // The painted textures ask for a 2D canvas, and each does without one; an
   // image a loader asks for never arrives.
   const element = (): object => ({
@@ -171,6 +215,9 @@ describe('a mount that succeeds, and is disposed', () => {
     const page = listeningCanvas();
     const shelf = mountShelf(page.canvas);
     expect(page.live().some((key) => key.endsWith(' wheel'))).toBe(true);
+    expect(page.live()).toEqual(
+      expect.arrayContaining(['window keydown', 'window keyup', 'window blur']),
+    );
 
     shelf.dispose();
 
@@ -211,5 +258,85 @@ describe('a context the browser refused', () => {
     expect(thrown).toBeInstanceOf(ContextRefused);
     expect((thrown as Error).cause).toBeInstanceOf(Error);
     expect(((thrown as Error).cause as Error).message).toContain('Error creating WebGL context');
+  });
+});
+
+describe('a room taken down (#637, C16)', () => {
+  it('C16: puts the far plane and the fog back after the camera stood 30 units outside it', async () => {
+    const THREE = await import('three');
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        disconnect(): void {}
+      },
+    );
+    let drawFrame: (() => void) | undefined;
+    vi.stubGlobal('requestAnimationFrame', (callback: () => void) => {
+      drawFrame = callback;
+      return 0;
+    });
+    const bounds = { min: [-7.4, 0.5, -0.2] as const, max: [9.4, 10.5, 12.452] as const };
+    const seen = { far: 0, near: 0, fogNear: 0, fogFar: 0, outside: 0 };
+    const disposed = vi.fn();
+    // `ready` reads the lights after the room's orbit is entered: stand the camera outside, draw
+    // a frame, and fail, so the room is taken down with the camera still out there
+    staged.room = () => ({
+      group: new THREE.Group(),
+      settled: Promise.resolve(),
+      dispose: disposed,
+      draws: 0,
+      bytes: 0,
+      codec: () => '',
+      data: {
+        view: { position: [0, 0, 0], target: [0, 0, 1] },
+        bounds,
+        slots: {},
+        get lights(): never {
+          const camera = three.cameras[0]!;
+          camera.position.set(bounds.max[0] + 30, 5, 5);
+          drawFrame?.();
+          const box = new THREE.Box3(
+            new THREE.Vector3(...bounds.min),
+            new THREE.Vector3(...bounds.max),
+          );
+          seen.outside = box.distanceToPoint(camera.position as never);
+          Object.assign(seen, {
+            far: camera.far,
+            fogNear: three.fogs[0]!.near,
+            fogFar: three.fogs[0]!.far,
+          });
+          throw new Error('staged: the room fails after the camera stood outside it');
+        },
+      },
+    });
+    const page = listeningCanvas();
+    // a fog that reaches far, so that standing outside the room pushes the far plane past 100
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      scene: { ...DEFAULT_SETTINGS.scene, fog: { ...DEFAULT_SETTINGS.scene.fog, far: 20 } },
+    };
+    const shelf = mountShelf(page.canvas, [], {
+      settings,
+      room: { id: DEFAULT_ROOM_ID, entry: ROOMS['reading-corner'] },
+    });
+    const camera = three.cameras[0]!;
+    const fog = three.fogs[0]!;
+    const plain = { near: fog.near, far: fog.far };
+    expect(camera.far).toBe(100);
+
+    await vi.waitFor(() => {
+      expect(disposed).toHaveBeenCalled();
+    });
+
+    // outside, the plane and the fog had moved out by the distance outside; taken down, they are back
+    expect(seen.outside).toBeGreaterThan(25);
+    expect(seen.far).toBeGreaterThan(100);
+    expect(seen.fogNear).toBeCloseTo(plain.near + seen.outside, 6);
+    expect(seen.fogFar).toBeCloseTo(plain.far + seen.outside, 6);
+    expect(camera.far).toBe(100);
+    expect({ near: fog.near, far: fog.far }).toEqual(plain);
+    shelf.dispose();
   });
 });

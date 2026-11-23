@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SHELF } from './bookcase.ts';
-import { BOOKCASE_WIDTH, fogRange, frameBookcase, type FogReach, type Framing } from './framing.ts';
+import {
+  BOOKCASE_WIDTH,
+  fogOutside,
+  fogRange,
+  frameBookcase,
+  type FogReach,
+  type Framing,
+} from './framing.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 
 /** Today's fixture: the 50-book library stands on four shelves. */
@@ -116,5 +123,18 @@ describe('fogRange', () => {
     // rather than dim.
     const framing = frameBookcase(LARGE_ROWS, 16 / 9);
     expect(framing.distance - SHELF.depth / 2).toBeGreaterThan(absolute().far);
+  });
+});
+
+describe('fogOutside (#637, C9)', () => {
+  it('C9: inside the box is the panel’s range and a far plane of 100, whatever the fog’s far', () => {
+    for (const far of [50, 150]) {
+      expect(fogOutside({ near: 10, far }, 0)).toEqual({ near: 10, far, cameraFar: 100 });
+    }
+  });
+
+  it('C9: 20 outside adds 20 to both edges, and the far plane is never under 100', () => {
+    expect(fogOutside({ near: 10, far: 50 }, 20)).toEqual({ near: 30, far: 70, cameraFar: 100 });
+    expect(fogOutside({ near: 10, far: 150 }, 20)).toEqual({ near: 30, far: 170, cameraFar: 180 });
   });
 });
