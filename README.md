@@ -1,200 +1,141 @@
 # Stacks
 
-**A reading tracker where your Obsidian vault is the database — and your library
-is a bookcase you can walk up to.**
+A local-first reading tracker where your Obsidian vault (or any folder of Markdown files) is the database, rendered as a 3D reading room and bookshelf you can publish as a static site.
 
-`stacks add` writes a book note with structured frontmatter into your vault,
-fetching the metadata and the cover for you. `stacks build` reads the vault back
-and renders it as a 3D bookshelf you can publish as a plain static site.
+`stacks add` writes a book note with YAML frontmatter into your vault, fetching metadata and cover art for you. `stacks build` reads your notes back and stages a static site with a 3D bookcase you can browse and share.
 
-There is no account, no server, no sync, and no second database. The notes are
-the data. Delete this tool and you still have your library.
+There is no account or hosted database. Delete this tool and you still have your Markdown notes.
 
-![The shelf, rendered from the fixture vault](docs/images/shelf.png)
+![The reading room and shelf, rendered from the fixture vault](docs/images/shelf.png)
 
-**[See a real one →](https://stacks.aymandiab.com)**
+[See a live library](https://stacks.aymandiab.com)
 
-## Why it works this way
+## What you can do
 
-- **Your notes stay yours.** A published shelf carries covers and frontmatter,
-  and of a note's body only the `## Thoughts` section you choose to write, as
-  plain text. That rule is enforced by a gate that greps the built output for a
-  phrase planted in a fixture note, rather than trusted.
-- **Hand-editing is first-class.** Open any note in Obsidian and change it. The
-  parser tolerates extra keys, reordered keys and missing ones; `stacks` rewrites
-  individual frontmatter lines rather than re-serialising your YAML, so your
-  comments and formatting survive byte for byte.
-- **One bad note never breaks a build.** Malformed frontmatter is skipped with a
-  warning naming the file.
+- Walk up to your bookcase in a 3D reading room. Drag to turn the view, scroll or pinch to move closer, and right-drag, shift-drag, or two-finger drag to pan. Books you are currently reading stand face-out at the front, and abandoned books sit on their own bookcase in the room.
+- Click any book to pull it off the shelf. Turn it in your hand by dragging or pressing the arrow keys, then click it or select Open to read its metadata and anything you wrote under `## Thoughts`.
+- Add an optional AI Q&A drawer (`packages/ask`, backed by a Cloudflare Worker) so visitors can ask questions about your reading list and jump straight to mentioned books. Plain static builds work without it.
+- Edit any book note directly in Obsidian or another text editor. Stacks tolerates extra or reordered frontmatter keys, updates individual lines without reformatting your YAML, and skips malformed notes with a warning so one bad file never breaks a build.
 
-## Quick start
+## Quick preview
 
-You'll need **Node 24+** and **pnpm**. For your own library you'll also need an
-Obsidian vault (or any folder of Markdown — nothing here requires Obsidian
-itself); to just look at a shelf, you won't.
+You need Node 24+ and pnpm. The repository includes a small fixture vault of invented books, so you can try the 3D shelf locally without an Obsidian vault or an API key:
 
 ```bash
 git clone https://github.com/mephistopheles4/stacks.git
 cd stacks
 pnpm install
-```
-
-### Just want to see the shelf?
-
-This repo ships a small vault of invented books, so you can walk up to a
-bookcase before you own one. Stage it:
-
-```bash
 pnpm stacks build --public --vault fixtures/vault
-```
-
-Then serve it:
-
-```bash
 pnpm dev
 ```
 
-The shelf is at `http://localhost:4321`. Nothing above needs a vault, a `.env`
-or an API key — the books are made up, the covers are generated, and none of it
-is yours. For that, carry on below.
+Open `http://localhost:4321` in your browser.
 
-### Your own vault
+## How book notes work
+
+Every book is a Markdown file with YAML frontmatter. Only `type: book` and `title` are required. `stacks add` creates notes in this format for you, or you can write and edit them by hand:
+
+```markdown
+---
+type: book
+title: "The Tidal Engine"
+author: "Maren Lindqvist"
+status: read
+finished: 2026-08-14
+rating: 5
+pages: 312
+binding: hardback
+face_out: true
+shelf_order: 10
+tags: [fiction, maritime]
+---
+
+## Thoughts
+
+A spare, slow-moving story about keeping a lighthouse log through a winter storm.
+Plain paragraphs written here appear when a visitor opens the book on the shelf.
+
+## Notes
+
+Private reading notes, quotes, and reminders stay here and never leave your machine.
+```
+
+Common frontmatter fields:
+
+| Field | What it controls |
+| --- | --- |
+| `status` | `reading`, `read`, `abandoned`, or `wishlist` (defaults to `read`) |
+| `rating` | Score from `1` to `5` |
+| `face_out` | Forces a book cover-forward (`true`) or spine-out (`false`); unset stands `reading` books face-out |
+| `shelf_order` | Manual shelf position, lowest first; books without one sort after pinned books by finish date |
+| `binding` | `hardback` or `paperback`, affecting cover overhang and book height |
+| `private` | Set `private: true` to exclude the book, its cover, and its thoughts from public builds |
+
+A public build publishes only plain prose under `## Thoughts`. Everything else in the note body, including `## Notes` and any other headings, stays on your machine. If `## Thoughts` contains images, embeds, code fences, tables, or comments, the build withholds the whole section and prints a warning.
+
+## Privacy at a glance
+
+| Published | Never published |
+| --- | --- |
+| Title, author, ISBN, publisher, publication year, subjects | Note bodies outside `## Thoughts` |
+| Reading status, start/finish dates, rating, tags, page count | Vault paths and filenames |
+| Re-hosted cover images (512px on shelf, up to 1200px when held) | Books marked `private: true` (including wishlist books) |
+| Plain text from `## Thoughts`, plus non-private wishlist books | Covers and `## Thoughts` of any `private: true` book |
+
+`private` fails closed: any value other than a clear "no" (including `private: yes`) keeps the book out of public builds. Covers are re-hosted from the provider that supplied them as documented in [ADR-0013](docs/adr/0013-cover-provenance-and-rehosting.md), and takedown requests are honoured.
+
+## Using your own vault
+
+Stacks runs directly from TypeScript source via `tsx`. There is no Obsidian plugin or npm package yet, so using it with your own library means working from a cloned repository.
+
+Copy the example environment file and point `STACKS_VAULT` at your vault folder:
 
 ```bash
 cp .env.example .env
 ```
 
-Set `STACKS_VAULT` in `.env` to your vault's path, then add a book:
+Set `STACKS_VAULT=/path/to/your/vault` in `.env`. A free `GOOGLE_BOOKS_API_KEY` is also worth adding: Open Library is the primary metadata source, and recent books often fall back to Google Books, which shares an exhausted quota without a key and returns `429`. `.env.example` explains how to create a key and lists optional settings such as `STACKS_LANGUAGE`.
+
+Add a book and start the live-reloading shelf:
 
 ```bash
 pnpm stacks add "the left hand of darkness"
-```
-
-That looks the book up, downloads a cover into your vault, samples a spine
-colour from the cover's binding edge, and writes `Library/The Left Hand of
-Darkness.md`. Now look at your shelf:
-
-```bash
 pnpm dev:watch
 ```
 
-Edit a note in Obsidian and the shelf follows about a second later.
+Editing any note in your vault rebuilds and updates the local shelf about a second later.
 
-> **A Google Books key is close to essential.** Open Library is the primary
-> source and is thin on anything published in the last year or two. Without a key
-> the fallback shares one global quota that is permanently exhausted, so it
-> answers `429` every time. `.env.example` explains where to get one; it's free.
-
-## Publishing your shelf
+To build a static site for hosting:
 
 ```bash
 pnpm stacks build --public --vault /path/to/your/vault
 pnpm --filter @stacks/site build
 ```
 
-The result is `packages/site/dist/` — a static folder with no server behind it,
-so it deploys as-is to Cloudflare Pages, GitHub Pages, Netlify, or anything that
-serves files.
+This writes the static bundle to `packages/site/dist/`, ready to deploy to Cloudflare Pages, GitHub Pages, Netlify, or any static file server.
 
-### What a public build actually exposes
+### CLI commands
 
-Worth deciding on purpose, because this is the part that leaves your machine:
-
-| Published | Never published |
+| Command (`pnpm stacks ...`) | What it does |
 | --- | --- |
-| Title, author, ISBN | Note bodies outside `## Thoughts` — the rest of what you wrote |
-| Reading status, start and finish dates | Vault paths and filenames |
-| Rating, tags, page count | Books marked `private: true`, wishlist ones included |
-| Cover images, re-hosted at 512px | A private book's cover |
-| Your `## Thoughts` section, as plain text, and every wishlist book not marked private | The Thoughts of a private book |
-
-`private: true` **fails closed**: anything that isn't clearly a "no" keeps the
-book unpublished, because `private: yes` is a *string* in YAML and a strict
-boolean check would have published it. Wrongly private is a missing spine you
-fix in a second; wrongly public may already have been crawled.
-
-Covers are re-hosted from the provider that supplied them. That's a deliberate
-choice with its reasoning written down — see [ADR-0013](docs/adr/0013-cover-provenance-and-rehosting.md) — and takedown
-requests are honoured.
-
-## Commands
-
-| `pnpm stacks …` | What it does |
-| --- | --- |
-| `add` | fetch metadata and a cover, then write a note into the vault |
-| `build` | parse the vault into `library.json` (`--public`, `--watch`) |
-| `status` | books this year, in progress, covers still missing |
-| `covers` | report where each cover came from, or record it (`--backfill`) |
-| `enrich` | fill missing metadata on existing notes, never overwriting |
-| `order` | show the shelf order, or renumber it (`--renumber`) |
-| `import` | import a library export into the vault (`audible`) |
-
-| Script | What it does |
-| --- | --- |
-| `pnpm dev` | site dev server |
-| `pnpm dev:watch` | vault watcher + dev server, live-reloading |
-| `pnpm test` | vitest, all workspaces and the gates |
-| `pnpm typecheck` | `tsc --noEmit` across every `.ts` in the repo |
-| `pnpm build` | typecheck + static site build |
-| `pnpm worktree <branch>` | a second checkout, cut from `origin/main` and installed |
-| `pnpm fixtures:50` | regenerate the 50-book fixture vault |
-| `pnpm check:devices` | the fixture build on three real devices in BrowserStack (CI runs it after merge) |
-| `pnpm gate:public` | proves the public build leaks no note text |
-| `pnpm deploy:site` | gates, then build from the real vault, then publish |
-
-Both lists are documented in full in [AGENTS.md](AGENTS.md), and
-`gates/commands.test.ts` holds that file to reality in both directions — adding
-a command without documenting it there is a red build.
-
-## Who this is for
-
-**Developer-friendly personal software, not a packaged application.** There is
-no npm release and no installer: the CLI runs from TypeScript source through
-`tsx`, so using it means cloning this repo. If you're comfortable with a
-terminal and Node, you'll be fine. If you're looking for an Obsidian plugin to
-install, this isn't that yet.
-
-All five phases are green and tagged (`phase-0` … `phase-4`) and it runs against
-a real library daily. The invariants in [AGENTS.md](AGENTS.md) are the project's
-**constitution**, and every article of it has a named gate that can go red —
-scored in [docs/gates.md](docs/gates.md), which a gate holds to the constitution
-in both directions so that coverage is a checked fact rather than a claim.
+| `add <isbn-or-title>` | Fetch metadata and cover art, then create a new book note |
+| `build` | Parse the vault into `library.json` (supports `--public` and `--watch`) |
+| `status` | Print vault totals, books finished this year, currently reading, and missing covers |
+| `enrich [title]` | Fill missing metadata fields on existing notes without overwriting existing values |
+| `order` | Show the current shelf order or write `shelf_order` values (`--renumber`) |
+| `covers` | Report cover provenance or backfill `cover_source` from image dimensions (`--backfill`) |
+| `import audible <file>` | Import a Libation JSON export into the vault, deduplicating existing books |
 
 ## Contributing
 
-Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The short
-version: `pnpm test && pnpm build && pnpm gate:public` is
-the contract, and a defect worth fixing is usually worth a gate that goes red.
-Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers local setup, PR rules, and the required checks (`pnpm test && pnpm build && pnpm gate:public`). Project invariants, the full script list, and architecture decisions live in [AGENTS.md](AGENTS.md) and [docs/adr/](docs/adr/).
 
-The repo also carries optional configuration for a set of
-[engineering skills](https://github.com/mattpocock/skills) under
-[`docs/agents/`](docs/agents/). **They are entirely optional** — nothing in the
-workflow requires them, and every gate passes without a single one installed.
+Report security issues using [SECURITY.md](SECURITY.md) instead of opening a public issue. Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Tested with BrowserStack
 
-This project is tested with [BrowserStack](https://www.browserstack.com/). Each
-merge to `main` is tested on three real devices, unless a newer merge cancels its run.
-
-## Documentation
-
-| | |
-| --- | --- |
-| [docs/progress.md](docs/progress.md) | where the project actually is — start here |
-| [AGENTS.md](AGENTS.md) | the invariants and contracts that must not break |
-| [docs/adr/](docs/adr/) | every choice made, and why |
-| [docs/gates.md](docs/gates.md) | which rule each gate protects — and which are protected by nothing |
-| [docs/threat-model.md](docs/threat-model.md) | the threat model, boundaries first |
-| [SECURITY.md](SECURITY.md) | how to report a vulnerability |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1, and what one maintainer can escalate |
-| [docs/library-brief.md](docs/library-brief.md) | the original product spec (historical) |
-
-`library.json` is a build artifact: always regenerable from the vault, never
-hand-edited, gitignored.
+This project is tested with [BrowserStack](https://www.browserstack.com/). Each merge to `main` is tested on three real devices, unless a newer merge cancels its run.
 
 ## License
 
-[MIT](LICENSE). The cover images a build downloads are not covered by it — they
-belong to their publishers, and what you may do with them depends on which
-provider supplied them.
+[MIT](LICENSE). Downloaded cover images are not covered by this license; they belong to their publishers, and their reuse depends on the provider that supplied them.
