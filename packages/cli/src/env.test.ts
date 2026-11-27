@@ -26,7 +26,7 @@ import { envFilePath, loadEnv, mainCheckout } from './env.ts';
 
 /**
  * The env file the tests write, at the root of the scratch repository's *main*
- * checkout — that is the whole point of the fallback. Named per process.
+ * checkout — that is the whole point of the fallback.
  */
 const PROBE = `.env.worktree-probe-${String(process.pid)}`;
 
@@ -68,10 +68,8 @@ beforeAll(() => {
   git('worktree', 'add', '--detach', worktree);
 
   const firstWorktree = /^worktree (.+)$/m.exec(git('worktree', 'list', '--porcelain'))?.[1];
-  // The match, not the resolved path: `resolve('')` is the cwd, which in the
-  // main checkout is the right answer for the wrong reason — so a guard on the
-  // resolved value passes exactly where a broken parse would do least harm and
-  // fails where it does most. (Observed, on the first run of this line.)
+  // The match, not the resolved path: `resolve('')` is the cwd, a real
+  // directory, so a guard on the resolved value would pass on a broken parse.
   expect(firstWorktree, 'could not parse a main checkout out of `git worktree list`').toBeDefined();
   MAIN = resolve(firstWorktree ?? '');
   process.chdir(repo);
@@ -85,8 +83,8 @@ afterAll(() => {
       stdio: 'ignore',
     });
   } catch {
-    // Windows will refuse while anything still holds the directory. Prune drops
-    // the registration of a worktree that is gone.
+    // Windows will refuse while anything still holds the directory. Prune is the
+    // fallback, and the scratch folder is deleted next either way.
     execFileSync('git', ['worktree', 'prune'], { cwd: repo, stdio: 'ignore' });
   }
   try {

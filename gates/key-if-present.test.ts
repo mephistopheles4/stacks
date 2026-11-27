@@ -201,7 +201,9 @@ describe('G23 — one absent-key helper', () => {
    * the assertion to the thing that carries the claim.* Written here for the
    * fourth time, inside the gate whose docblock cites the other three.
    *
-   * The source is a string, so the test writes no file into the checkout.
+   * The source is a string, so the test writes no file into the checkout. It
+   * does not check that `codeOf` calls `blankComments`: that `codeOf` has no
+   * pattern of its own is held by `repo.ts` defining the pattern once.
    */
   it('blanks comments, via the same codeOf the sweeps use', () => {
     const code = blankComments(

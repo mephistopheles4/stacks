@@ -20,7 +20,7 @@ athanor 0.2.0 on the owner's Windows machine, its default of 2 runs at once, eac
 
 The spec also timed each cold `tsx` start of `scripts/deploy.ts` at about 0.35 to 0.5 s; the build did not re-time that.
 
-The spec's [amendments](https://linear.app/mephistopheles4/issue/STACKS-18#comment-dc1c7a8c) correct three of its facts. The one that matters here: it read 1,082 as a file count and concluded that per-file overhead sets the wall clock. 1,082 is the suite count, so **what sets the wall clock is not established.**
+The spec's amendments on STACKS-18 correct three of its facts. The one that matters here: it read 1,082 as a file count and concluded that per-file overhead sets the wall clock. 1,082 is the suite count, so **what sets the wall clock is not established.**
 
 ## Why causes 1 to 3 were dropped
 
@@ -39,7 +39,7 @@ athanor run -- sh -c 'touch /tmp/m; sleep 1; pnpm vitest run >/dev/null 2>&1; ec
 | --- | --- |
 | `b6bdbdb` | `.`, `./.git`, `./artifacts` |
 | With the change | none |
-| With `worktree add` planted back to the checkout's cwd | `./.git` and the new `./.git/worktrees/` entry; the suite failed |
+| With `worktree add` planted back to the checkout's cwd | `./.git` and the new `./.git/worktrees/` entry; the suite failed, as it should: the worktree belonged to a repository other than the one the tests ask about |
 
 `env.test.ts` now builds a scratch repository, with a linked worktree beside it, in a temp folder. G23's comment test calls `blankComments` on a string; with the regex's `//` arm removed it went red, and so did G23's copy sweep.
 
