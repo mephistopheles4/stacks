@@ -147,6 +147,7 @@ One line per episode, newest last. The narrative is one file per investigation i
 - 2026-11-17 — [The ceiling trim on the closed room (#631)](./log/2026-11-17-the-ceiling-trim-on-the-closed-room.md)
 - 2026-11-18 — [The anchor camera prototype (#637)](./log/2026-11-18-anchor-camera-prototype.md)
 - 2026-11-18 — [Two rows cut from Current state once merged (#450, #558)](./log/2026-11-18-progress-rows-for-merged-work.md)
+- 2026-11-27 — [The tests in athanor, measured (STACKS-18)](./log/2026-11-27-tests-speed-in-athanor.md)
 
 ## Notes to the next session
 
