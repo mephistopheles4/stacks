@@ -3,7 +3,8 @@
 **This README indexes every spec, whether it is a file in this folder or a comment
 on its issue** ([ADR-0145](../adr/0145-new-specs-live-on-their-issues.md)). A spec
 written since [#533](https://github.com/mephistopheles4/stacks/issues/533) is a
-comment titled `## Spec: <name> (revision <n>)`, and its row carries its state, its
+comment on its issue (on Linear,
+[ADR-0196](../adr/0196-issues-and-specs-live-on-linear.md)), titled `## Spec: <name> (revision <n>)`, and its row carries its state, its
 tier, a one-paragraph summary, and in the Index cell the full URL of its latest
 revision comment, then of each amendment comment. An older row may link only an
 issue or a file. The rules for writing, revising and counting a spec comment are

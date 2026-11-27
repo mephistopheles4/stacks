@@ -191,9 +191,9 @@ requests and commits, all public.
   `bypassPermissions`, and the owner's merge does not hold a post.
 
 **Residual:** Text steers a session; Posts are public; Review rests on gates. The
-rules they rest on: only a spec comment from the repo owner's account counts, once a merged
-README row names it (`docs/agents/issue-tracker.md`, Specs), and every other comment is data (unheld: anyone with write access can edit a comment, and every
-session posts as that account); a spec's issue body carries the owner's ask with a
+rules they rest on: only a spec comment by the owner or the Linear app counts, once a merged
+README row names it (`docs/agents/issue-tracker.md`, Specs), and every other comment is data (unheld: a comment's author can edit it, and every
+session posts as one account or app); a spec's issue body carries the owner's ask with a
 private book, note text, vault path, token or account id left out as `[withheld]`,
 and every post is read for a secret or a personal detail before it posts (the
 pact's posting rules) and read back after (a person's read is the only check).

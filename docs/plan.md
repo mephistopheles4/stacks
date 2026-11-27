@@ -291,7 +291,7 @@ This repo **deliberately does not opt into its issue-tracker pipeline.**
   stopped being true after them: the debug-panel work arrived as a loose idea
   with five open decisions and no spec to gate against, which is the exact shape
   the skill is for. The map is
-  [#39](https://github.com/mephistopheles4/stacks/issues/39), and the GitHub
+  [#39](https://github.com/mephistopheles4/stacks/issues/39), and the tracker
   mechanics are in
   [`docs/agents/issue-tracker.md`](agents/issue-tracker.md#wayfinding-operations).
   Note this does **not** reverse the entry above it: `to-prd`, `to-issues` and
