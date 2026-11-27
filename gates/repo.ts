@@ -150,6 +150,13 @@ export function extractAll(source: string, pattern: RegExp): string[] {
   return [...found].sort();
 }
 
+/** `source` with its comments blanked out: the rule `codeOf` reads a file through. */
+export function blankComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\/|(?<!:)\/\/[^\n]*/g, (match) =>
+    match.replace(/[^\n]/g, ' '),
+  );
+}
+
 /**
  * A file with its comments blanked out, so a gate's assertions read code.
  *
@@ -172,9 +179,7 @@ export function extractAll(source: string, pattern: RegExp): string[] {
  * Two gates sharing one copy is the point of the issue that produced G23.
  */
 export function codeOf(path: string): string {
-  return readRepoFile(path).replace(/\/\*[\s\S]*?\*\/|(?<!:)\/\/[^\n]*/g, (match) =>
-    match.replace(/[^\n]/g, ' '),
-  );
+  return blankComments(readRepoFile(path));
 }
 
 /**
