@@ -22,6 +22,27 @@ field transfer whole; the 35 rows do not.
 
 ---
 
+<!-- toc -->
+
+- [1. Five categories, on two axes](#1-five-categories-on-two-axes)
+  - [The decay bound, as restated](#the-decay-bound-as-restated)
+- [2. The register, and why it is not a column](#2-the-register-and-why-it-is-not-a-column)
+  - [The first pass was extraction, not invention](#the-first-pass-was-extraction-not-invention)
+  - [What an entry carries](#what-an-entry-carries)
+  - [The observed-red field](#the-observed-red-field)
+  - [The shape G40 asserts, stated as cardinality rather than as membership](#the-shape-g40-asserts-stated-as-cardinality-rather-than-as-membership)
+- [3. G40 `gate-register` — *Contract seams*](#3-g40-gate-register--contract-seams)
+  - [The floor: row side only, at 42](#the-floor-row-side-only-at-42)
+  - [It cannot ship first, and the ordering is dissolved rather than obeyed](#it-cannot-ship-first-and-the-ordering-is-dissolved-rather-than-obeyed)
+- [4. What the deep pass found](#4-what-the-deep-pass-found)
+  - [The remedy roster](#the-remedy-roster)
+- [5. Grading the sections — the pattern, not the verdicts](#5-grading-the-sections--the-pattern-not-the-verdicts)
+- [6. Specimens this effort produced about itself](#6-specimens-this-effort-produced-about-itself)
+- [7. What lands where](#7-what-lands-where)
+- [8. How it is proved able to fail](#8-how-it-is-proved-able-to-fail)
+
+<!-- /toc -->
+
 ## 1. Five categories, on two axes
 
 The charting note named three, and **all three presuppose an actor. Both specimens

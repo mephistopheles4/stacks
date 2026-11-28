@@ -16,6 +16,27 @@ section instead of a paragraph.
 
 ---
 
+<!-- toc -->
+
+- [1. The correction that reframed the piece](#1-the-correction-that-reframed-the-piece)
+- [2. G39 `action-pins` — *Contract seams → gates*](#2-g39-action-pins--contract-seams--gates)
+  - [The rule — stated over the pin and the comment together](#the-rule--stated-over-the-pin-and-the-comment-together)
+  - [The withdrawn exemption: the axis is mutability](#the-withdrawn-exemption-the-axis-is-mutability)
+  - [The vacuity floor](#the-vacuity-floor)
+- [3. G41 `dependency-audit`, in *Defect gates*](#3-g41-dependency-audit-in-defect-gates)
+  - [⚠️ G41 as first written was a row nothing can fail on](#️-g41-as-first-written-was-a-row-nothing-can-fail-on)
+  - [The `ignoreGhsas` handoff did not land, and saying it did would have been the failure](#the-ignoreghsas-handoff-did-not-land-and-saying-it-did-would-have-been-the-failure)
+- [4. The exception count is eight](#4-the-exception-count-is-eight)
+- [5. What G39 cannot check — written in two places on purpose](#5-what-g39-cannot-check--written-in-two-places-on-purpose)
+  - [`SECURITY.md`'s unverifiable clause is extended, not tiered](#securitymds-unverifiable-clause-is-extended-not-tiered)
+- [6. Two audiences, and the `audit` job inverts](#6-two-audiences-and-the-audit-job-inverts)
+  - [⚠️ The inversion, and what flipped it](#️-the-inversion-and-what-flipped-it)
+- [7. Gaming categories](#7-gaming-categories)
+- [8. What lands where](#8-what-lands-where)
+- [9. How it is proved able to fail](#9-how-it-is-proved-able-to-fail)
+
+<!-- /toc -->
+
 ## 1. The correction that reframed the piece
 
 The charting note said the `audit` job is *"gated in CI, absent from the file that

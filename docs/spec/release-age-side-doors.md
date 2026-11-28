@@ -19,6 +19,20 @@ Every measurement below was taken on pnpm 11.18.0 against a scratch copy of the
 manifests and lockfile on `main` at `4e97f22`. The real lockfile was never
 touched, and its hash was compared after every run.
 
+<!-- toc -->
+
+- [S1. Problem statement](#s1-problem-statement)
+- [S2. Solution](#s2-solution)
+- [S3. What was measured](#s3-what-was-measured)
+- [S4. Decisions](#s4-decisions)
+- [S5. Implementation decisions](#s5-implementation-decisions)
+- [S6. Testing decisions](#s6-testing-decisions)
+- [S7. Trade-off points](#s7-trade-off-points)
+- [S8. Out of scope](#s8-out-of-scope)
+- [S9. Needs a human](#s9-needs-a-human)
+
+<!-- /toc -->
+
 ## S1. Problem statement
 
 #449 set pnpm's release-age window to seven days and held it with G67

@@ -23,6 +23,25 @@ S7 and S8, and that branch's code at e0bc3c9. It amends
 and does not reopen anything else there. For §3.1: Thoughts that arrive while the book is
 closed appear with no fade, and they fade in only while the page shows.
 
+<!-- toc -->
+
+- [S1. Objective](#s1-objective)
+- [S2. The owner's decisions](#s2-the-owners-decisions)
+- [S3. What each input does](#s3-what-each-input-does)
+- [S4. The state and the motion](#s4-the-state-and-the-motion)
+- [S5. The controls](#s5-the-controls)
+- [S6. The drawer's code](#s6-the-drawers-code)
+- [S7. Tests](#s7-tests)
+- [S8. Acceptance claims](#s8-acceptance-claims)
+- [S9. Records, in the build's commit](#s9-records-in-the-builds-commit)
+- [S10. Boundaries for the build session](#s10-boundaries-for-the-build-session)
+- [S11. Trade-offs](#s11-trade-offs)
+- [S12. Residuals](#s12-residuals)
+- [S13. The questions raised at review](#s13-the-questions-raised-at-review)
+- [S14. Needs a human](#s14-needs-a-human)
+
+<!-- /toc -->
+
 ## S1. Objective
 
 > A book picked up off the shelf arrives closed, and the visitor opens it themselves

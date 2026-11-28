@@ -11,6 +11,22 @@ fields travel).
 
 ---
 
+<!-- toc -->
+
+- [1. What a contributor is](#1-what-a-contributor-is)
+- [2. What is recorded](#2-what-is-recorded)
+- [3. Four scalar keys, and that is forced rather than preferred](#3-four-scalar-keys-and-that-is-forced-rather-than-preferred)
+  - [O'Reilly is recorded although it cannot be linked](#oreilly-is-recorded-although-it-cannot-be-linked)
+  - [Ids, never URLs](#ids-never-urls)
+- [4. Unrecognised values are dropped at parse, per provider](#4-unrecognised-values-are-dropped-at-parse-per-provider)
+- [5. There is no inference route, and that is why the pass exists](#5-there-is-no-inference-route-and-that-is-why-the-pass-exists)
+- [6. All seven fields reach `library.json`, in both builds](#6-all-seven-fields-reach-libraryjson-in-both-builds)
+- [7. Gates](#7-gates)
+- [8. Implementation costs recorded so nobody rediscovers them](#8-implementation-costs-recorded-so-nobody-rediscovers-them)
+- [9. Residuals](#9-residuals)
+
+<!-- /toc -->
+
 ## 1. What a contributor is
 
 **A contributor is a provider whose record was confirmed to be this book** — by

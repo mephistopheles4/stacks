@@ -13,6 +13,20 @@ headless, `--enable-gpu --use-gl=angle`, real GPU). Source edits made to take
 the measurements were reverted; `pnpm smoke:render` is green on the reverted
 tree at the same numbers it started from.
 
+<!-- toc -->
+
+- [The table](#the-table)
+- [What each tone mapping does to *this* scene](#what-each-tone-mapping-does-to-this-scene)
+- [The warning in the ticket, answered](#the-warning-in-the-ticket-answered)
+- [Fog](#fog)
+- [Materials](#materials)
+- [The environment objection](#the-environment-objection)
+- [Programs accumulate, and that is the real phone cost of a live panel](#programs-accumulate-and-that-is-the-real-phone-cost-of-a-live-panel)
+- [Colour space is already right](#colour-space-is-already-right)
+- [Recommendation](#recommendation)
+
+<!-- /toc -->
+
 ## The table
 
 | Knob | How it is set | Live, or recompile | Phone cost | Expose? |

@@ -6,6 +6,16 @@ file.
 
 Read this before changing the renderer, the debug panel, or `shelf-settings.ts`.
 
+<!-- toc -->
+
+- [The page mode — `?shelf` and `?room=<id>`](#the-page-mode--shelf-and-roomid)
+- [One book, alone — `?solo`](#one-book-alone--solo)
+- [The dice, held still — `?woodSeed`](#the-dice-held-still--woodseed)
+- [The `?debug` page](#the-debug-page)
+  - [The lost-context record, on the black box](#the-lost-context-record-on-the-black-box)
+
+<!-- /toc -->
+
 ## The page mode — `?shelf` and `?room=<id>`
 
 The default page draws the room ([ADR-0164](adr/0164-the-room-is-the-default-page-and-the-glb-carries-its-camera-and-lights.md)); `?shelf` draws the bookcase alone. `?solo` wins over `?shelf`. `?room=<id>` takes a listed id ([ADR-0180](adr/0180-a-theme-is-a-room-and-the-visitor-picks-it-from-a-fixed-list.md)). `?debug` adds Room, Shelf, Solo buttons. `window.__shelf.room()` reports the room.

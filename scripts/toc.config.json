@@ -1,0 +1,15 @@
+{
+  "maxUncoveredLines": 100,
+  "exclude": [
+    "docs/adr/",
+    "docs/log/",
+    "fixtures/",
+    "docs/threat-model.md",
+    ".claude/agents/",
+    ".claude/commands/",
+    "**/AGENTS.md",
+    "**/CLAUDE.md",
+    "**/SKILL.md",
+    "**/README.md"
+  ]
+}

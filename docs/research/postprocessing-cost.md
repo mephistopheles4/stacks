@@ -14,6 +14,28 @@ abandon it.
 
 ---
 
+<!-- toc -->
+
+- [1. Is `three/examples/jsm/...` a new dependency?](#1-is-threeexamplesjsm-a-new-dependency)
+- [2. Bundle weight](#2-bundle-weight)
+  - [Baseline — a real `pnpm build` in this worktree](#baseline--a-real-pnpm-build-in-this-worktree)
+  - [Marginal cost of the passes](#marginal-cost-of-the-passes)
+  - [The `?debug` number and the every-visitor number are the same number today](#the-debug-number-and-the-every-visitor-number-are-the-same-number-today)
+- [3. The material recompile, and whether it hits the PowerVR bug](#3-the-material-recompile-and-whether-it-hits-the-powervr-bug)
+  - [What actually failed, stated precisely](#what-actually-failed-stated-precisely)
+  - [Does a composer reproduce it?](#does-a-composer-reproduce-it)
+  - [Bloom versus AO: different risk, and the difference is checkable in source](#bloom-versus-ao-different-risk-and-the-difference-is-checkable-in-source)
+  - [What is predictable and what is not](#what-is-predictable-and-what-is-not)
+- [4. AO against the painted shading](#4-ao-against-the-painted-shading)
+- [5. Order of operations](#5-order-of-operations)
+  - [And it makes `?aa` a lie, which this repo has a rule about](#and-it-makes-aa-a-lie-which-this-repo-has-a-rule-about)
+  - [Render-target allocation, at the size that matters](#render-target-allocation-at-the-size-that-matters)
+- [6. Recommendation](#6-recommendation)
+  - [Ticket A — bloom, behind a flag](#ticket-a--bloom-behind-a-flag)
+  - [Ticket B — AO, and it starts as a probe](#ticket-b--ao-and-it-starts-as-a-probe)
+
+<!-- /toc -->
+
 ## 1. Is `three/examples/jsm/...` a new dependency?
 
 **No — and the repo has already decided this once, in code.**

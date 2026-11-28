@@ -6,6 +6,22 @@ dependency, [#534](https://github.com/mephistopheles4/stacks/pull/534), merged o
 **Tier:** Standard (owner, 2026-11-08). Not on the sensitive list: no auth, crypto or
 data migration.
 
+<!-- toc -->
+
+- [1. Objective](#1-objective)
+- [2. Decisions](#2-decisions)
+- [3. Acceptance claims](#3-acceptance-claims)
+- [4. Where it goes](#4-where-it-goes)
+- [5. Docs the change must also move](#5-docs-the-change-must-also-move)
+- [6. Build order](#6-build-order)
+- [7. Where it runs](#7-where-it-runs)
+- [8. Boundaries, rollback, stop](#8-boundaries-rollback-stop)
+- [9. Trade-offs and residuals](#9-trade-offs-and-residuals)
+- [10. Still with the owner](#10-still-with-the-owner)
+- [11. Decisions log](#11-decisions-log)
+
+<!-- /toc -->
+
 ## 1. Objective
 
 The shelf's **Attribution** link and the drawer's **Privacy** link open their notice in a

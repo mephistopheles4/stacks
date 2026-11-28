@@ -43,6 +43,11 @@
 # response is the same category of error as reformatting a note.
 fixtures/
 
+# ── Vendored ───────────────────────────────────────────────────────────────
+# The pact's table-of-contents script, copied unchanged: its Source line names
+# the commit, and a formatter pass would turn the copy into a fork (ADR-0198).
+scripts/toc.mjs
+
 # ── Generated ──────────────────────────────────────────────────────────────
 pnpm-lock.yaml
 

@@ -6,6 +6,21 @@ only) bind every line below. **Signed off by the owner on 2026-11-06** ("Yes, bu
 the spec round (the executability, unstated and data lenses), with the picks in S8
 and the answers recorded there.
 
+<!-- toc -->
+
+- [S1. Problem](#s1-problem)
+- [S2. What the Worker logs (one line per request, as now)](#s2-what-the-worker-logs-one-line-per-request-as-now)
+- [S3. `pnpm ask:status`](#s3-pnpm-askstatus)
+- [S4. The page](#s4-the-page)
+- [S5. Alerts](#s5-alerts)
+- [S6. Where it runs](#s6-where-it-runs)
+- [S7. Acceptance claims](#s7-acceptance-claims)
+- [S8. Decisions for the owner](#s8-decisions-for-the-owner)
+- [S9. Trade-offs](#s9-trade-offs)
+- [S10. Build order](#s10-build-order)
+
+<!-- /toc -->
+
 ## S1. Problem
 
 Before the Worker goes public, the owner wants three answers the logs cannot give

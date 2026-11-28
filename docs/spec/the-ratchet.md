@@ -18,6 +18,26 @@ ratchet never retires.**
 
 ---
 
+<!-- toc -->
+
+- [1. The surface, and why there is no flag](#1-the-surface-and-why-there-is-no-flag)
+  - [⚠️ Three sentences #115 wrote here are false about this repo, and are replaced](#️-three-sentences-115-wrote-here-are-false-about-this-repo-and-are-replaced)
+- [2. The number is a rule, not a value](#2-the-number-is-a-rule-not-a-value)
+- [3. What the score is: static mutants in, at a 120-second timeout](#3-what-the-score-is-static-mutants-in-at-a-120-second-timeout)
+- [4. Three routes down, and they all land in one file](#4-three-routes-down-and-they-all-land-in-one-file)
+  - [G42 `ignored-mutants` — Contract seams](#g42-ignored-mutants--contract-seams)
+- [5. What the guard actually is](#5-what-the-guard-actually-is)
+- [6. The file](#6-the-file)
+- [7. The vector's edges — exact correspondence, both directions](#7-the-vectors-edges--exact-correspondence-both-directions)
+- [8. No target, and the Destination amendment](#8-no-target-and-the-destination-amendment)
+  - [Raising is manual, and it will probably never happen](#raising-is-manual-and-it-will-probably-never-happen)
+- [9. The two inversions this piece carries](#9-the-two-inversions-this-piece-carries)
+- [10. Rollout: the ratchet lands third, disarmed](#10-rollout-the-ratchet-lands-third-disarmed)
+- [11. Gaming categories — graded](#11-gaming-categories--graded)
+- [12. How it is proved able to fail](#12-how-it-is-proved-able-to-fail)
+
+<!-- /toc -->
+
 ## 1. The surface, and why there is no flag
 
 Three candidates were live, and the third was taken:

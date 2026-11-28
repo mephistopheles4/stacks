@@ -24,6 +24,18 @@ bookcase**, not by a document.
 
 ---
 
+<!-- toc -->
+
+- [1. What ships](#1-what-ships)
+- [2. The verdicts, and where each lives](#2-the-verdicts-and-where-each-lives)
+- [3. Build order](#3-build-order)
+- [4. The gate roster](#4-the-gate-roster)
+- [5. Contract edits](#5-contract-edits)
+- [6. The refusals](#6-the-refusals)
+- [7. Residuals](#7-residuals)
+
+<!-- /toc -->
+
 ## 1. What ships
 
 | | Value | Chosen on |

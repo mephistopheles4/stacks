@@ -22,6 +22,22 @@ a rendering problem and rides on the lazy texture loader the shelf needs anyway.
 
 ---
 
+<!-- toc -->
+
+- [1. Public and private notes](#1-public-and-private-notes)
+  - [The invariant this changes](#the-invariant-this-changes)
+  - [Allowlist, never denylist](#allowlist-never-denylist)
+  - [No new frontmatter key](#no-new-frontmatter-key)
+  - [The extraction happens in the adapter](#the-extraction-happens-in-the-adapter)
+  - [Sanitising, decided now rather than discovered](#sanitising-decided-now-rather-than-discovered)
+  - [On disk and in the build](#on-disk-and-in-the-build)
+  - [`stacks add` has to agree](#stacks-add-has-to-agree)
+  - [The gate has to change with it, or it goes vacuous](#the-gate-has-to-change-with-it-or-it-goes-vacuous)
+- [2. Picking a book up](#2-picking-a-book-up)
+- [Deliberately not decided](#deliberately-not-decided)
+
+<!-- /toc -->
+
 ## 1. Public and private notes
 
 ### The invariant this changes

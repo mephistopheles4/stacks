@@ -20,6 +20,22 @@ makes them.
 
 ---
 
+<!-- toc -->
+
+- [The files](#the-files)
+  - [Two audiences, always named](#two-audiences-always-named)
+- [The four inversions](#the-four-inversions)
+- [The build order](#the-build-order)
+  - [What is reversible, and what is not](#what-is-reversible-and-what-is-not)
+- [The gate roster](#the-gate-roster)
+- [Contract edits](#contract-edits)
+- [What belongs in `docs/adr/`](#what-belongs-in-docsadr)
+- [Out of scope — and the spec says so](#out-of-scope--and-the-spec-says-so)
+- [The residual register](#the-residual-register)
+- [Source material](#source-material)
+
+<!-- /toc -->
+
 ## The files
 
 ⚠️ **The pieces and the files do not correspond one to one, and the spec does not

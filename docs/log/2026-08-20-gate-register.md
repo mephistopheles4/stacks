@@ -6745,7 +6745,7 @@ stayed green under both, which is the reason the gate exists.
 
 - **Weakening** — **exposed.** Raising a ceiling in the test turns it green without cutting anything. That is a reviewed one-line diff, and the test's header says a ceiling raised whenever it fails is a comment. Disposition `accepted`.
 - **Satisfying the letter** — **exposed.** The gate counts whitespace-separated words, so a file can stay under its ceiling while carrying history, or by moving text into a file the table does not list. It does not judge what the words say. Disposition `accepted`.
-- **Routing around** — **exposed.** Moving a file out of the table, or renaming it, drops its budget. The tracked-file clause turns a rename red, so a doc that leaves the table has to be deleted or moved deliberately. Disposition `accepted`.
+- **Routing around** — **exposed.** Moving a file out of the table, or renaming it, drops its budget. The tracked-file clause turns a rename red, so a doc that leaves the table has to be deleted or moved deliberately. Text between the table-of-contents markers is not counted; only G76, which runs in CI's `style` job and not in `pnpm test`, holds that region to the headings. Disposition `accepted`.
 - **Vacuous green** — **gated.** The table must name at least ten files, each tracked and at least half its ceiling in words, so an emptied table, a file that became a stub or a count that undercounts fails, and the measuring function is planted red on a document over its budget and green on one inside it. Disposition `gated`.
 - **Decay** — **exposed.** The ceilings sit just above each file's size on the day they were set, so a file that is later cut hard keeps unused headroom that nothing tightens. Disposition `accepted`.
 
@@ -6804,3 +6804,17 @@ stayed green under both, which is the reason the gate exists.
 - **Routing around** — **exposed.** A destination with a `..`, a drive letter, a backslash or a leading slash, a signed-looking page URL, and a fetch URL off the list or over http are each planted and refused. But a bake input that `inputs.json` does not name is invisible to the row: nothing reads the scripts for the paths they open, and `build_room.py` checks the named inputs and not that nothing else is read. The scratch rebake from a clean inputs folder is the check that would show it. Disposition `accepted`.
 - **Vacuous green** — **gated.** At least ten entries and one CC BY per room, and at least three fetch hosts read out of the script. Disposition `gated`.
 - **Decay** — **exposed.** A licence that a host changes later is not seen; the audit is a date. Disposition `accepted`.
+
+### G76 — `doc-toc`
+
+**Gate:** the `style` job's `gate:toc` step, running [`scripts/toc.mjs`](../../scripts/toc.mjs) `--check`
+**Date:** 2026-11-28
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, in CI: with the "Success Metrics" heading of `docs/library-brief.md` renamed and its table left alone, the `style` job [failed at its `gate:toc` step](https://github.com/mephistopheles4/stacks/actions/runs/46112128051/job/140877768477), printing `docs/library-brief.md: table of contents is stale`. The [run on the commit before](https://github.com/mephistopheles4/stacks/actions/runs/46111962301/job/140877253838), its tables current, passed.
+
+- **Weakening** — **exposed.** An entry added to `exclude` in `scripts/toc.config.json`, or a higher `maxUncoveredLines`, takes docs out of the check. The check then reds on a table left in such a doc, and not on one removed with it. The diff is a reviewed line. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The row holds a table to the headings, so a doc with vague headings, or none at H2, passes and helps nobody. Disposition `accepted`.
+- **Routing around** — **exposed.** Deleting the step, or the script, passes every other gate: nothing reads the job for this step. Dropping `--check` from the `gate:toc` script turns the step into a writer that rewrites the tables in the runner and exits 0. Disposition `accepted`.
+- **Vacuous green** — **exposed.** The script has no floor on how many docs it covers, so an `exclude` that swallows the tree reads as green. Disposition `accepted`.
+- **Decay** — **exposed.** The copy is not compared with the pact's, so a fix made there does not arrive here on its own. Disposition `accepted`.

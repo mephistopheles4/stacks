@@ -11,6 +11,10 @@
  * words to a file at its ceiling, move the history out of it first, and raise a
  * ceiling only for a rule that is new.
  *
+ * A doc's generated table of contents is not counted: `scripts/toc.mjs` writes
+ * it from the headings, and G76 (`doc-toc`) fails CI when anything else sits
+ * between its markers.
+ *
  * Three guards against a vacuous pass: the budget table must name files that
  * exist and are tracked, none may be under half its ceiling, and the measuring
  * function is shown to fail on a document over its budget.
@@ -19,6 +23,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { stripToc } from '../scripts/toc.mjs';
 import { expectFound, readRepoFile, trackedFiles } from './repo.ts';
 
 /** File → the most words it may hold. Words are whitespace-separated runs. */
@@ -35,9 +40,11 @@ const BUDGETS: Readonly<Record<string, number>> = {
   'docs/spec/README.md': 5_021, // +51: the STACKS-18 row, an index entry that is new; earlier +70: the #618 row
 };
 
-/** Whitespace-separated words, the count the budgets are written in. */
+/** Whitespace-separated words outside the table of contents, the count the budgets are written in. */
 function wordCount(text: string): number {
-  return text.split(/\s+/).filter((word) => word.length > 0).length;
+  return stripToc(text)
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length;
 }
 
 /** The files whose text holds more words than their budget allows, with both counts. */
@@ -92,5 +99,11 @@ describe('G71 — the agent-facing docs stay inside a word budget', () => {
     ]);
     expect(overBudget({ 'long.md': 4 }, read)).toEqual([]);
     expect(wordCount('  a\nb\t c  ')).toBe(3);
+  });
+
+  it('leaves a table of contents out of the count, and nothing around it', () => {
+    const table = '<!-- toc -->\n\n- [Two words](#two-words)\n\n<!-- /toc -->';
+
+    expect(wordCount(`one two\n\n${table}\n\nthree four\n`)).toBe(4);
   });
 });

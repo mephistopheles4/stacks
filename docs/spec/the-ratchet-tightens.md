@@ -16,6 +16,23 @@ slack that leaves is what this spec's clause tightens (§S11, Q9).
 
 ---
 
+<!-- toc -->
+
+- [S1. Problem statement](#s1-problem-statement)
+- [S2. Solution](#s2-solution)
+- [S3. Vocabulary](#s3-vocabulary)
+- [S4. The rule](#s4-the-rule)
+- [S5. The age](#s5-the-age)
+- [S6. Implementation decisions](#s6-implementation-decisions)
+- [S7. Testing decisions](#s7-testing-decisions)
+- [S8. How it is proved able to fail](#s8-how-it-is-proved-able-to-fail)
+- [S9. Override list — the owner's decisions](#s9-override-list--the-owners-decisions)
+- [S10. Out of scope](#s10-out-of-scope)
+- [S11. Further notes](#s11-further-notes)
+- [S12. Needs a human](#s12-needs-a-human)
+
+<!-- /toc -->
+
 ## S1. Problem statement
 
 The ratchet sets a bound once, at arming, from the extreme value across a

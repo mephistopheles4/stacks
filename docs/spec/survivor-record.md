@@ -16,6 +16,30 @@ The measurements behind it are on `main`:
 and [the content key holds across a real edit](../log/2026-09-22-the-content-key-holds-across-a-real-edit.md).
 This spec cites them rather than restating them.
 
+<!-- toc -->
+
+- [S1. Problem statement](#s1-problem-statement)
+- [S2. Solution](#s2-solution)
+- [S3. User stories](#s3-user-stories)
+- [S4. Implementation decisions](#s4-implementation-decisions)
+  - [S4.1 Survivor and key](#s41-survivor-and-key)
+  - [S4.2 The record](#s42-the-record)
+  - [S4.3 When it is written](#s43-when-it-is-written)
+  - [S4.4 The summary line](#s44-the-summary-line)
+  - [S4.5 Where the code lives, and the workflow step](#s45-where-the-code-lives-and-the-workflow-step)
+  - [S4.6 Committing without a checkout](#s46-committing-without-a-checkout)
+  - [S4.7 Token scope](#s47-token-scope)
+  - [S4.8 Docs that move in the build](#s48-docs-that-move-in-the-build)
+- [S5. Testing decisions](#s5-testing-decisions)
+- [S6. Acceptance](#s6-acceptance)
+- [S11. Needs a human, rollback and stop conditions](#s11-needs-a-human-rollback-and-stop-conditions)
+- [S7. Out of scope](#s7-out-of-scope)
+- [S8. Lenses offered at Design](#s8-lenses-offered-at-design)
+- [S9. Decisions, and what changing each would move](#s9-decisions-and-what-changing-each-would-move)
+- [S10. Trade-off points](#s10-trade-off-points)
+
+<!-- /toc -->
+
 ## S1. Problem statement
 
 Each nightly keeps its full Stryker report for 30 days as a workflow artifact,

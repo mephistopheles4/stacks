@@ -11,6 +11,48 @@ is compaction-fragile safety, not reference, and no code catches it. It is not
 restated here, because a rule with two homes is a rule that drifts
 ([ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md)).
 
+<!-- toc -->
+
+- [`pnpm lint` — the rule set, the fix flag, and the file it is not in](#pnpm-lint--the-rule-set-the-fix-flag-and-the-file-it-is-not-in)
+- [`pnpm format` and `pnpm format:check` — and the quarter of the site they never open](#pnpm-format-and-pnpm-formatcheck--and-the-quarter-of-the-site-they-never-open)
+- [`pnpm deploy:site` — the branch guard](#pnpm-deploysite--the-branch-guard)
+- [`pnpm deploy:site` — the upload, and what it refuses](#pnpm-deploysite--the-upload-and-what-it-refuses)
+- [`pnpm deploy:site` — what it checks after the upload](#pnpm-deploysite--what-it-checks-after-the-upload)
+- [`pnpm deploy:site` — published Thoughts, and taking them back](#pnpm-deploysite--published-thoughts-and-taking-them-back)
+- [`pnpm deploy:site` — the trend panel, and what a stale record refuses](#pnpm-deploysite--the-trend-panel-and-what-a-stale-record-refuses)
+- [`pnpm deploy:site` — the mutation floor, and the four things it refuses](#pnpm-deploysite--the-mutation-floor-and-the-four-things-it-refuses)
+- [`pnpm deploy:ask`, `pnpm evals:ask` and `pnpm ask:status` — the Ask the library Worker](#pnpm-deployask-pnpm-evalsask-and-pnpm-askstatus--the-ask-the-library-worker)
+- [`pnpm turnstile` — the Ask the library Turnstile widget and its secret](#pnpm-turnstile--the-ask-the-library-turnstile-widget-and-its-secret)
+- [`pnpm preview:fixture` and `scripts/browserstack-local.ts` — the room on a real device](#pnpm-previewfixture-and-scriptsbrowserstack-localts--the-room-on-a-real-device)
+- [`pnpm worktree <branch>`](#pnpm-worktree-branch)
+- [`pnpm mutation:run` and `pnpm mutation:score`](#pnpm-mutationrun-and-pnpm-mutationscore)
+  - [A scoped run through athanor — the only mutation run for an agent](#a-scoped-run-through-athanor--the-only-mutation-run-for-an-agent)
+  - [A red dry run on a pull request (G70)](#a-red-dry-run-on-a-pull-request-g70)
+  - [Incremental runs are fast, and they are not a score](#incremental-runs-are-fast-and-they-are-not-a-score)
+  - [Survivors on every recent night — `scripts/persistent-survivors.ts`](#survivors-on-every-recent-night--scriptspersistent-survivorsts)
+- [`pnpm mutation:stamp`](#pnpm-mutationstamp)
+- [`pnpm duplication:report`](#pnpm-duplicationreport)
+  - [Suppression blocks](#suppression-blocks)
+- [`pnpm metrics:emit` and the trend layer](#pnpm-metricsemit-and-the-trend-layer)
+- [`pnpm trend:sync` — the reading half, and surface D](#pnpm-trendsync--the-reading-half-and-surface-d)
+  - [The page you actually read](#the-page-you-actually-read)
+  - [Setup: Docker, and nothing else](#setup-docker-and-nothing-else)
+  - [What it refuses, and the one flag](#what-it-refuses-and-the-one-flag)
+  - [Surface D — the edge check between deploys](#surface-d--the-edge-check-between-deploys)
+- [`pnpm lint:md` and `pnpm lint:md:fix` — the Markdown gate, and why its fix is allowlisted](#pnpm-lintmd-and-pnpm-lintmdfix--the-markdown-gate-and-why-its-fix-is-allowlisted)
+- [`pnpm gate:toc` — the tables of contents](#pnpm-gatetoc--the-tables-of-contents)
+- [The hooks — what arrives with `pnpm install`, and reading the CRAP table](#the-hooks--what-arrives-with-pnpm-install-and-reading-the-crap-table)
+  - [`.githooks/pre-commit` is retired, and why it could not simply stay](#githookspre-commit-is-retired-and-why-it-could-not-simply-stay)
+  - [What it does, on every commit](#what-it-does-on-every-commit)
+  - [Reading it](#reading-it)
+- [`pnpm check:devices` — the three-device check](#pnpm-checkdevices--the-three-device-check)
+- [`scripts/phone-check.ts` — the check only a phone can run](#scriptsphone-checkts--the-check-only-a-phone-can-run)
+- [`athanor run` — the suite in a sealed Linux container](#athanor-run--the-suite-in-a-sealed-linux-container)
+  - [The agent guard — `scripts/agent-test-guard.ts`](#the-agent-guard--scriptsagent-test-guardts)
+- [Analytics](#analytics)
+
+<!-- /toc -->
+
 ## `pnpm lint` — the rule set, the fix flag, and the file it is not in
 
 **G46.** The type-checked recommended set from `typescript-eslint`, plus
@@ -76,10 +118,10 @@ a block one *under* its cap of 6 is reported as nine. That is a false red whose
 message tells the contributor to move code that nobody moved. Taking the plugin
 means repairing G7 in the same change.
 
-**The configuration is two overrides and three exclusions, and not one of them
+**The configuration is two overrides and a few exclusions, and not one of them
 is restated here.** `singleQuote: true` and `printWidth: 100` live in
-[`prettier.config.mjs`](../prettier.config.mjs); `*.md`, `fixtures/` and
-`pnpm-lock.yaml` live in [`.prettierignore`](../.prettierignore). **Each carries
+[`prettier.config.mjs`](../prettier.config.mjs); the exclusions
+live in [`.prettierignore`](../.prettierignore). **Each carries
 its measured reason as a comment beside the setting it explains**, and
 [ADR-0074](adr/0074-prettier-formats-code-and-nothing-else.md) carries the
 decision behind the whole set — including which two settings are load-bearing
@@ -1115,6 +1157,17 @@ rules reconcile with CodeRabbit and the versions cannot.** CodeRabbit reads
 once a workflow runs one, so there is no rule set to negotiate; but its docs name
 `0.23.1` and it floats, and this repo can pin only its own copy. That residual is
 tolerable because the review half is advisory.
+
+## `pnpm gate:toc` — the tables of contents
+
+**`pnpm gate:toc` reports; `node scripts/toc.mjs` writes.** Docs over 100 lines
+carry a table of their H2 and H3 headings, unless `scripts/toc.config.json`
+excludes them
+([ADR-0198](adr/0198-long-reference-docs-carry-a-generated-table-of-contents.md)).
+
+⚠️ **The script is vendored.** To update it, copy `docs/toc.mjs` from
+[the pact](https://github.com/mephistopheles4/the-pact), then add
+`// Source: the-pact <commit>` as a new line 2.
 
 ## The hooks — what arrives with `pnpm install`, and reading the CRAP table
 

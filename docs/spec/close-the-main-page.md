@@ -9,6 +9,32 @@ answered, an eagle-eye box and a local measurement. **Nothing here is built.**
 Every line number is on `main` at `4e97f22`. Each place is also named by its
 function, so a rebase can find it again.
 
+<!-- toc -->
+
+- [S1. Problem statement](#s1-problem-statement)
+- [S2. Solution](#s2-solution)
+- [S3. User stories](#s3-user-stories)
+- [S4. Implementation decisions](#s4-implementation-decisions)
+  - [S4.1 Close the main page after the phone check](#s41-close-the-main-page-after-the-phone-check)
+  - [S4.2 Nothing else changes in what a check does](#s42-nothing-else-changes-in-what-a-check-does)
+  - [S4.3 The `visit()` timer counts G61's boots too](#s43-the-visit-timer-counts-g61s-boots-too)
+  - [S4.4 What was measured and dropped](#s44-what-was-measured-and-dropped)
+- [S5. Testing decisions](#s5-testing-decisions)
+- [S6. How the build is proved](#s6-how-the-build-is-proved)
+  - [S6.1 Acceptance claims](#s61-acceptance-claims)
+  - [S6.2 Reading C5, and if it fails](#s62-reading-c5-and-if-it-fails)
+  - [S6.3 Gates](#s63-gates)
+  - [S6.4 The record](#s64-the-record)
+- [S7. Trade-off points](#s7-trade-off-points)
+- [S8. Business drivers](#s8-business-drivers)
+- [S9. Out of scope](#s9-out-of-scope)
+- [S10. The measurement](#s10-the-measurement)
+- [S11. Branches to rebase over](#s11-branches-to-rebase-over)
+- [S12. Override list](#s12-override-list)
+- [S13. Needs a human](#s13-needs-a-human)
+
+<!-- /toc -->
+
 ## S1. Problem statement
 
 `pnpm smoke:render` takes about 11.5 minutes on `main`'s push run, and about 8.5

@@ -248,6 +248,13 @@ jobs:
       - name: lint
         run: pnpm lint
 
+      # G76: every covered doc's table of contents matches its headings. It
+      # reports and never writes; `node scripts/toc.mjs` is the remedy. Ahead of
+      # `lint:md`, so a renamed heading reads as a stale table rather than as the
+      # dead link inside it.
+      - name: 'gate:toc (fix: node scripts/toc.mjs)'
+        run: pnpm gate:toc
+
       # The narrow rule set over tracked Markdown. `pnpm lint:md:fix` repairs
       # the seven rules whose fixes are measured safe here; the rest need a
       # person, on purpose. The command prints that line with the failure.

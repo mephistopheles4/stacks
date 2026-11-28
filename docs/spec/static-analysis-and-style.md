@@ -23,6 +23,29 @@ below.
 
 ---
 
+<!-- toc -->
+
+- [1. What this spec is, and what it is not](#1-what-this-spec-is-and-what-it-is-not)
+- [2. The routing rule](#2-the-routing-rule)
+- [3. The verdicts](#3-the-verdicts)
+  - [The one question the map left open, and how it closed](#the-one-question-the-map-left-open-and-how-it-closed)
+- [4. Gate roster](#4-gate-roster)
+  - [One CI job, not three](#one-ci-job-not-three)
+  - [S4 runs inside `pnpm build`](#s4-runs-inside-pnpm-build)
+  - [One gate is offered and declined](#one-gate-is-offered-and-declined)
+- [5. Trend rows](#5-trend-rows)
+  - [Why the whole tree gets its own series and not a label](#why-the-whole-tree-gets-its-own-series-and-not-a-label)
+  - [The cognitive denominator differs, and the spec says so](#the-cognitive-denominator-differs-and-the-spec-says-so)
+  - [Caps](#caps)
+  - [Suppression is allowed and it is counted](#suppression-is-allowed-and-it-is-counted)
+- [6. Build order](#6-build-order)
+- [7. Contract edits](#7-contract-edits)
+- [8. What belongs in `docs/adr/` rather than here](#8-what-belongs-in-docsadr-rather-than-here)
+- [9. Out of scope, and the refusals recorded](#9-out-of-scope-and-the-refusals-recorded)
+- [10. Residual register](#10-residual-register)
+
+<!-- /toc -->
+
 ## 1. What this spec is, and what it is not
 
 **It is not adoption.** The map's Notes say it plans and does not adopt, and that

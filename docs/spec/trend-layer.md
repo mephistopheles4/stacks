@@ -20,6 +20,31 @@ page that computes no confidence figure must not be named after one.**
 
 ---
 
+<!-- toc -->
+
+- [1. The transport: CI writes a durable record; the machine pulls it](#1-the-transport-ci-writes-a-durable-record-the-machine-pulls-it)
+  - [Where the store lives](#where-the-store-lives)
+- [2. The unit is a run, and "is this real" is answered before "is this bad"](#2-the-unit-is-a-run-and-is-this-real-is-answered-before-is-this-bad)
+  - [The cadence stays nightly](#the-cadence-stays-nightly)
+- [3. Four series, no composite](#3-four-series-no-composite)
+  - [No composite, and the refusal is written on the page](#no-composite-and-the-refusal-is-written-on-the-page)
+- [4. The reading ritual, and what deploy refuses](#4-the-reading-ritual-and-what-deploy-refuses)
+  - [Staleness is per-series, not over the record](#staleness-is-per-series-not-over-the-record)
+  - [The dated bootstrap](#the-dated-bootstrap)
+- [5. Runtime counters: four surfaces, not one](#5-runtime-counters-four-surfaces-not-one)
+  - [C was argued on its merits, not refused on privacy](#c-was-argued-on-its-merits-not-refused-on-privacy)
+  - [D is folded into `trend:sync`, and there is no token](#d-is-folded-into-trendsync-and-there-is-no-token)
+  - [Which invariants — only invariant 2](#which-invariants--only-invariant-2)
+  - [One principle, covering both leaks this effort found](#one-principle-covering-both-leaks-this-effort-found)
+- [6. Agent session logs — recorded, not specced](#6-agent-session-logs--recorded-not-specced)
+- [7. Gaming categories, graded](#7-gaming-categories-graded)
+- [8. Residuals](#8-residuals)
+- [9. The transferable half](#9-the-transferable-half)
+- [10. What lands where](#10-what-lands-where)
+- [11. How it is proved able to fail](#11-how-it-is-proved-able-to-fail)
+
+<!-- /toc -->
+
 ## 1. The transport: CI writes a durable record; the machine pulls it
 
 **Neither push nor pull — both, split at a durable record.**

@@ -12,6 +12,19 @@ Marks: *Proposed* is drafted and not yet agreed, **Confirmed** is a draft the ow
 **Decided** is the owner's own words. Freedom: Fixed always applies, and Guided may adapt to the
 case. Status: potential has not been seen, and observed has, with where.
 
+<!-- toc -->
+
+- [`purpose`](#purpose)
+- [`why`](#why)
+- [`good`](#good)
+- [`roles`](#roles)
+- [`tools`](#tools)
+- [`rules`](#rules)
+- [`writing`](#writing)
+- [`open`](#open)
+
+<!-- /toc -->
+
 ## `purpose`
 
 **Name:** `ask-the-library`. **Confirmed**
