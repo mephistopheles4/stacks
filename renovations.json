@@ -192,6 +192,14 @@
       "reason": "The scripts scope's exclusions changed for the device check (#618, ADR-0171): scripts/smoke-render.ts left the list because the file is deleted, and scripts/check-devices.ts and scripts/build-device-fixture.ts joined it, each run by a pnpm script or a workflow and never a Vitest spec. The smoke gate's lib modules (flat-layer-gate, large-library-lit, page-watch, pickup-gate, settle) and their specs were deleted from the mutated set, and device-check.ts joined it, so the scripts scope's inventory moved. Reasoned from the configuration diff, not from a mutation run.",
       "pr": 619,
       "preserves": false
+    },
+    {
+      "date": "2026-11-28",
+      "stamp": "duplicationHash",
+      "value": "sha256:4bbc56a8393c3775e02f30f0fc9ccb85e03f3d1330cedfe1130e383a88909d5d",
+      "reason": "jscpd moved to 5.4.3. Measured over the identical tree, main at 00af59d under 5.4.2 against the bump at 7e7a157 under 5.4.3, which differ only in package.json and the lockfile: pnpm duplication:report printed byte-identical output under both. The whole tree reads 107 clones, 1075 duplicated lines, 123372 total lines and 0 ignored, and all ten declared scopes are unchanged. Totals were compared, not the clone spans one by one. So the window is declared preserved; no code reads a duplication calibration window yet (#269). One gap: the tree holds no jscpd:ignore block, and 5.4.3 changes how the markers are found in JS and TS, so that was not exercised.",
+      "pr": 649,
+      "preserves": true
     }
   ]
 }
