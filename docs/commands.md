@@ -118,10 +118,10 @@ a block one *under* its cap of 6 is reported as nine. That is a false red whose
 message tells the contributor to move code that nobody moved. Taking the plugin
 means repairing G7 in the same change.
 
-**The configuration is two overrides and three exclusions, and not one of them
+**The configuration is two overrides and a few exclusions, and not one of them
 is restated here.** `singleQuote: true` and `printWidth: 100` live in
-[`prettier.config.mjs`](../prettier.config.mjs); `*.md`, `fixtures/` and
-`pnpm-lock.yaml` live in [`.prettierignore`](../.prettierignore). **Each carries
+[`prettier.config.mjs`](../prettier.config.mjs); the exclusions
+live in [`.prettierignore`](../.prettierignore). **Each carries
 its measured reason as a comment beside the setting it explains**, and
 [ADR-0074](adr/0074-prettier-formats-code-and-nothing-else.md) carries the
 decision behind the whole set — including which two settings are load-bearing
@@ -1166,8 +1166,8 @@ excludes them
 ([ADR-0198](adr/0198-long-reference-docs-carry-a-generated-table-of-contents.md)).
 
 ⚠️ **The script is vendored.** To update it, copy `docs/toc.mjs` from
-[the pact](https://github.com/mephistopheles4/the-pact) and set line 2's
-`Source:` to that commit.
+[the pact](https://github.com/mephistopheles4/the-pact), then add
+`// Source: the-pact <commit>` as a new line 2.
 
 ## The hooks — what arrives with `pnpm install`, and reading the CRAP table
 

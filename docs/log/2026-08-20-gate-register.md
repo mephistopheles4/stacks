@@ -6745,7 +6745,7 @@ stayed green under both, which is the reason the gate exists.
 
 - **Weakening** — **exposed.** Raising a ceiling in the test turns it green without cutting anything. That is a reviewed one-line diff, and the test's header says a ceiling raised whenever it fails is a comment. Disposition `accepted`.
 - **Satisfying the letter** — **exposed.** The gate counts whitespace-separated words, so a file can stay under its ceiling while carrying history, or by moving text into a file the table does not list. It does not judge what the words say. Disposition `accepted`.
-- **Routing around** — **exposed.** Moving a file out of the table, or renaming it, drops its budget. The tracked-file clause turns a rename red, so a doc that leaves the table has to be deleted or moved deliberately. Disposition `accepted`.
+- **Routing around** — **exposed.** Moving a file out of the table, or renaming it, drops its budget. The tracked-file clause turns a rename red, so a doc that leaves the table has to be deleted or moved deliberately. Text between the table-of-contents markers is not counted; only G76, which runs in CI's `style` job and not in `pnpm test`, holds that region to the headings. Disposition `accepted`.
 - **Vacuous green** — **gated.** The table must name at least ten files, each tracked and at least half its ceiling in words, so an emptied table, a file that became a stub or a count that undercounts fails, and the measuring function is planted red on a document over its budget and green on one inside it. Disposition `gated`.
 - **Decay** — **exposed.** The ceilings sit just above each file's size on the day they were set, so a file that is later cut hard keeps unused headroom that nothing tightens. Disposition `accepted`.
 
@@ -6811,10 +6811,10 @@ stayed green under both, which is the reason the gate exists.
 **Date:** 2026-11-28
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
-**Observed-red**, on the real tree: with one heading of a covered doc renamed and its table left alone, the `gate:toc` step failed naming that doc's table as stale; with the table written again it passed. Both CI runs are recorded on the pull request that added the row.
+**Observed-red**, locally, on a clone of the real tree: with the `pnpm gate:toc` heading of `docs/commands.md` renamed and its table left alone, `node scripts/toc.mjs --check` exited 1 printing `docs/commands.md: table of contents is stale`; with the table written again it exited 0.
 
 - **Weakening** — **exposed.** An entry added to `exclude` in `scripts/toc.config.json`, or a higher `maxUncoveredLines`, takes docs out of the check. The check then reds on a table left in such a doc, and not on one removed with it. The diff is a reviewed line. Disposition `accepted`.
 - **Satisfying the letter** — **exposed.** The row holds a table to the headings, so a doc with vague headings, or none at H2, passes and helps nobody. Disposition `accepted`.
-- **Routing around** — **exposed.** Deleting the step, or the script, passes every other gate: nothing reads the job for this step. Disposition `accepted`.
+- **Routing around** — **exposed.** Deleting the step, or the script, passes every other gate: nothing reads the job for this step. Dropping `--check` from the `gate:toc` script turns the step into a writer that rewrites the tables in the runner and exits 0. Disposition `accepted`.
 - **Vacuous green** — **exposed.** The script has no floor on how many docs it covers, so an `exclude` that swallows the tree reads as green. Disposition `accepted`.
 - **Decay** — **exposed.** The copy is not compared with the pact's, so a fix made there does not arrive here on its own. Disposition `accepted`.

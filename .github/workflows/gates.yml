@@ -252,7 +252,7 @@ jobs:
       # reports and never writes; `node scripts/toc.mjs` is the remedy. Ahead of
       # `lint:md`, so a renamed heading reads as a stale table rather than as the
       # dead link inside it.
-      - name: gate:toc
+      - name: 'gate:toc (fix: node scripts/toc.mjs)'
         run: pnpm gate:toc
 
       # The narrow rule set over tracked Markdown. `pnpm lint:md:fix` repairs

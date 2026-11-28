@@ -195,7 +195,7 @@ three commands at the top of this file are the contract. A contributor with no
 skills installed — or no agent at all — must be able to pass every gate, and if
 that ever stops being true it is a bug in this repo, not in your setup. Nothing
 under `docs/agents/` is read by any gate, any script, or CI, except that G71
-(`doc-word-budget`) counts the words of `issue-tracker.md`.
+(`doc-word-budget`) counts the words of `issue-tracker.md` and G76 checks its table.
 
 They are written down because a workflow that lives only in one person's head
 is the same failure this project keeps gating against: a documented claim that
