@@ -187,7 +187,7 @@ Done when: import against your real instance dedupes correctly against existing 
 - Instruct the agent to commit per phase with a summary, and to write decisions it makes (library choices, API quirks) into `CLAUDE.md` — that file is your paper trail across sessions.
 - Phase 2 is the one to babysit visually: have the agent produce a screenshot artifact per iteration so you can course-correct the aesthetic early (shelf proportions and lighting are taste, not tests).
 
-## Success Metrics (for a fun project)
+## Success Metrics
 
 - **Leading:** you log your next real book with `stacks add` instead of thinking "I'll do it later" (30-second target holds).
 - **Leading:** shelf renders your actual library, not just fixtures, within the first week.
