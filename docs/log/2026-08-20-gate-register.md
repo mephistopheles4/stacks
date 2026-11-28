@@ -6811,7 +6811,7 @@ stayed green under both, which is the reason the gate exists.
 **Date:** 2026-11-28
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
-**Observed-red**, locally, on a clone of the real tree: with the `pnpm gate:toc` heading of `docs/commands.md` renamed and its table left alone, `node scripts/toc.mjs --check` exited 1 printing `docs/commands.md: table of contents is stale`; with the table written again it exited 0.
+**Observed-red**, in CI: with the "Success Metrics" heading of `docs/library-brief.md` renamed and its table left alone, the `style` job [failed at its `gate:toc` step](https://github.com/mephistopheles4/stacks/actions/runs/46112128051/job/140877768477), printing `docs/library-brief.md: table of contents is stale`. The [run on the commit before](https://github.com/mephistopheles4/stacks/actions/runs/46111962301/job/140877253838), its tables current, passed.
 
 - **Weakening** — **exposed.** An entry added to `exclude` in `scripts/toc.config.json`, or a higher `maxUncoveredLines`, takes docs out of the check. The check then reds on a table left in such a doc, and not on one removed with it. The diff is a reviewed line. Disposition `accepted`.
 - **Satisfying the letter** — **exposed.** The row holds a table to the headings, so a doc with vague headings, or none at H2, passes and helps nobody. Disposition `accepted`.
