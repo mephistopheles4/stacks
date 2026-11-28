@@ -46,6 +46,20 @@ three.**
 
 ---
 
+<!-- toc -->
+
+- [1. Three legs, and the row's own written reason is not one of them](#1-three-legs-and-the-rows-own-written-reason-is-not-one-of-them)
+  - [Leg 1 — Clause B forecloses the word *floor*, at every surface](#leg-1--clause-b-forecloses-the-word-floor-at-every-surface)
+  - [Leg 2 — `coverage.all`'s removal makes it worse than absent](#leg-2--coveragealls-removal-makes-it-worse-than-absent)
+  - [Leg 3 — the AI-volume reversal was made and refused, not skipped](#leg-3--the-ai-volume-reversal-was-made-and-refused-not-skipped)
+- [2. The row edit — landed by this spec's implementation session](#2-the-row-edit--landed-by-this-specs-implementation-session)
+- [3. The scope reduction — stated rather than inferred, because it is large](#3-the-scope-reduction--stated-rather-than-inferred-because-it-is-large)
+- [4. Moot, so the spec does not hunt for answers nobody owed](#4-moot-so-the-spec-does-not-hunt-for-answers-nobody-owed)
+- [5. Gaming categories — graded](#5-gaming-categories--graded)
+- [6. What lands where](#6-what-lands-where)
+
+<!-- /toc -->
+
 ## 1. Three legs, and the row's own written reason is not one of them
 
 ### Leg 1 — Clause B forecloses the word *floor*, at every surface

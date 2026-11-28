@@ -28,6 +28,30 @@ owner on 2026-11-04 ("Let's file it and proceed").** The owner's decisions are i
 
 **Amended on 2026-11-06 for the model, signed off by the owner ("go with 1").** The Worker switches from `@cf/openai/gpt-oss-20b` to `@cf/deepseek-ai/deepseek-v4.1-flash-1017` (issue [#540](https://github.com/mephistopheles4/stacks/issues/540), ADR-0136). The owner asked for it ("let's amend the spec and switch to DeepSeek") and took Q15's option 1. Tier: standard. Nothing matches the sensitive-work list, and nothing changes in what the Worker reads, logs or exposes. The amendment touches S3, S5, S6, S9, S10, S12 and S14 and is folded into them below (M1 to M5, C36 and C37, Q15).
 
+<!-- toc -->
+
+- [Decisions](#decisions)
+- [S1. Problem](#s1-problem)
+- [S2. Solution](#s2-solution)
+- [S3. Decisions already made](#s3-decisions-already-made)
+- [S4. Data](#s4-data)
+- [S5. Protection](#s5-protection)
+- [S6. Answers](#s6-answers)
+- [S7. The drawer](#s7-the-drawer)
+- [S8. Code and infrastructure](#s8-code-and-infrastructure)
+- [S9. Evals](#s9-evals)
+- [S10. Acceptance claims](#s10-acceptance-claims)
+- [S11. Monitoring](#s11-monitoring)
+- [S12. The live environment](#s12-the-live-environment)
+  - [Open after the runs](#open-after-the-runs)
+  - [Run results](#run-results)
+- [S13. Build order and way back](#s13-build-order-and-way-back)
+- [S14. The owner's decisions](#s14-the-owners-decisions)
+- [S15. Trade-offs](#s15-trade-offs)
+- [S16. Out of scope](#s16-out-of-scope)
+
+<!-- /toc -->
+
 ## Decisions
 
 Labels cited through the spec and the code, defined once. **D1 to D7** are conversation memory's

@@ -37,6 +37,32 @@ is the design this finishes; it now points here.
 
 ---
 
+<!-- toc -->
+
+- [1. What ships](#1-what-ships)
+- [2. The verdicts, and where each lives](#2-the-verdicts-and-where-each-lives)
+- [3. Decided in this spec](#3-decided-in-this-spec)
+  - [3.1 The `notes/<id>.json` schema](#31-the-notesidjson-schema)
+  - [3.2 Which books get a notes file](#32-which-books-get-a-notes-file)
+  - [3.3 The held copy's field and path](#33-the-held-copys-field-and-path)
+  - [3.4 What replaces the card](#34-what-replaces-the-card)
+  - [3.5 The Phase 2 click gate, and G35](#35-the-phase-2-click-gate-and-g35)
+  - [3.6 The open spread at rest](#36-the-open-spread-at-rest)
+  - [3.7 The empty placeholders, and the hash they no longer need](#37-the-empty-placeholders-and-the-hash-they-no-longer-need)
+  - [3.8 Types for the two libraries](#38-types-for-the-two-libraries)
+  - [3.9 Who owns `history.state`](#39-who-owns-historystate)
+  - [3.10 The painted pieces](#310-the-painted-pieces)
+  - [3.11 Deferred, each with its trigger](#311-deferred-each-with-its-trigger)
+- [4. Build order](#4-build-order)
+- [5. The gate roster](#5-the-gate-roster)
+- [6. Contract edits](#6-contract-edits)
+- [7. The records](#7-the-records)
+- [8. Needs a human](#8-needs-a-human)
+- [9. Residuals and follow-ups](#9-residuals-and-follow-ups)
+- [10. Out of scope](#10-out-of-scope)
+
+<!-- /toc -->
+
 ## 1. What ships
 
 | | Value | Chosen on |

@@ -6,6 +6,23 @@ superseding [ADR-0078](../adr/0078-a-tool-rewrites-prose-before-it-reaches-githu
 **State:** signed off by the owner on 2026-10-17 (relayed by the head chef);
 **built**
 
+<!-- toc -->
+
+- [S1. Problem statement](#s1-problem-statement)
+- [S2. Solution](#s2-solution)
+- [S3. Decisions, and where each came from](#s3-decisions-and-where-each-came-from)
+- [S4. User stories](#s4-user-stories)
+- [S5. Implementation decisions](#s5-implementation-decisions)
+- [S6. Acceptance claims](#s6-acceptance-claims)
+- [S7. Testing decisions](#s7-testing-decisions)
+- [S8. Follow-up, not built here](#s8-follow-up-not-built-here)
+- [S9. Trade-off points](#s9-trade-off-points)
+- [S10. Override list](#s10-override-list)
+- [S11. Out of scope](#s11-out-of-scope)
+- [S12. Needs a human](#s12-needs-a-human)
+
+<!-- /toc -->
+
 ## S1. Problem statement
 
 Two posting tools give opposite instructions. `AGENTS.md` sends every agent to

@@ -10,6 +10,28 @@ Every line number below is on `main` at `0a458e7`. Three other branches edit
 this file tonight (§S8), so each wait is also named by its function and by what
 it waits for. After a rebase, find the lines again with the grep in §S10.
 
+<!-- toc -->
+
+- [S1. Problem statement](#s1-problem-statement)
+- [S2. Solution](#s2-solution)
+- [S3. User stories](#s3-user-stories)
+- [S4. Implementation decisions](#s4-implementation-decisions)
+- [S5. Testing decisions](#s5-testing-decisions)
+- [S6. How the build is proved on CI](#s6-how-the-build-is-proved-on-ci)
+- [S7. The waits that stay fixed — for the owner's approval](#s7-the-waits-that-stay-fixed--for-the-owners-approval)
+- [S8. Branches to rebase over](#s8-branches-to-rebase-over)
+- [S9. Override list](#s9-override-list)
+- [S10. Appendix — the inventory at `0a458e7`](#s10-appendix--the-inventory-at-0a458e7)
+  - [Fixed sleeps (9)](#fixed-sleeps-9)
+  - [Network-quiet waits (4)](#network-quiet-waits-4)
+  - [Frame-based waits (3)](#frame-based-waits-3)
+  - [Polls with a short or silent deadline (30)](#polls-with-a-short-or-silent-deadline-30)
+- [S11. Out of scope](#s11-out-of-scope)
+- [S12. Further notes](#s12-further-notes)
+- [S13. Needs a human](#s13-needs-a-human)
+
+<!-- /toc -->
+
 ## S1. Problem statement
 
 `pnpm smoke:render` turns pull requests red for reasons that are not

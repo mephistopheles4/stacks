@@ -22,6 +22,23 @@ is the transferable half**, and it is the part worth carrying.
 
 ---
 
+<!-- toc -->
+
+- [1. The dependency](#1-the-dependency)
+  - [⚠️ Three things must be fixed before a single mutant runs](#️-three-things-must-be-fixed-before-a-single-mutant-runs)
+- [2. What it costs](#2-what-it-costs)
+- [3. The unit is the oracle's mechanism, not the directory](#3-the-unit-is-the-oracles-mechanism-not-the-directory)
+- [4. Eight declared scopes — reachable only, declared never discovered](#4-eight-declared-scopes--reachable-only-declared-never-discovered)
+- [5. The exclusion list: named files, a mechanism each](#5-the-exclusion-list-named-files-a-mechanism-each)
+  - [`gates/` is out, for a measured reason](#gates-is-out-for-a-measured-reason)
+- [6. The scope check splits by what evidence it can reach](#6-the-scope-check-splits-by-what-evidence-it-can-reach)
+  - [G37 `mutation-scope` — Contract seams, two surfaces, one row](#g37-mutation-scope--contract-seams-two-surfaces-one-row)
+- [7. A scope's identity is its declared name](#7-a-scopes-identity-is-its-declared-name)
+- [8. What lands where](#8-what-lands-where)
+- [9. How it is proved able to fail](#9-how-it-is-proved-able-to-fail)
+
+<!-- /toc -->
+
 ## 1. The dependency
 
 ```text

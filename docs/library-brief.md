@@ -6,6 +6,28 @@
 
 ---
 
+<!-- toc -->
+
+- [Problem Statement](#problem-statement)
+- [Product Concept](#product-concept)
+- [Goals](#goals)
+- [Non-Goals (v1)](#non-goals-v1)
+- [Target User](#target-user)
+- [System Overview](#system-overview)
+  - [Components](#components)
+- [User Stories (priority order)](#user-stories-priority-order)
+- [Requirements](#requirements)
+  - [P0 — prototype isn't real without these](#p0--prototype-isnt-real-without-these)
+  - [P1 — fast follows](#p1--fast-follows)
+  - [P2 — architectural insurance (design for, don't build)](#p2--architectural-insurance-design-for-dont-build)
+- [Open Questions](#open-questions)
+- [Claude Code Orchestration Plan](#claude-code-orchestration-plan)
+  - [Phasing (each phase independently verifiable)](#phasing-each-phase-independently-verifiable)
+  - [Long-running agent guidance](#long-running-agent-guidance)
+- [Success Metrics (for a fun project)](#success-metrics-for-a-fun-project)
+
+<!-- /toc -->
+
 ## Problem Statement
 
 Reading activity is scattered: books finished, books in progress, and the notes they generate live in different places with no connective tissue and no way to *see* the accumulated library. There's no low-friction way to log a book, have it automatically become a first-class note in an Obsidian vault, and see it appear on a visual shelf that can be shared with friends.

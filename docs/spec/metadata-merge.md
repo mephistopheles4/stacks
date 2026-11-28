@@ -10,6 +10,28 @@ struck).
 
 ---
 
+<!-- toc -->
+
+- [1. The shape: one default order, named per-field exceptions](#1-the-shape-one-default-order-named-per-field-exceptions)
+- [2. Apple becomes a full metadata contributor](#2-apple-becomes-a-full-metadata-contributor)
+- [3. Which fields are taken](#3-which-fields-are-taken)
+- [4. Containers](#4-containers)
+  - [The `subjects` separator is `; `, and a comma would have been a silent bug](#the-subjects-separator-is---and-a-comma-would-have-been-a-silent-bug)
+  - [`## About`: why the body, and what it costs](#-about-why-the-body-and-what-it-costs)
+- [5. Absent-only holds unconditionally](#5-absent-only-holds-unconditionally)
+  - [`FILLABLE` after this work](#fillable-after-this-work)
+- [6. The pass](#6-the-pass)
+  - [The one property everything rests on](#the-one-property-everything-rests-on)
+  - [Cache, rate limits, convergence](#cache-rate-limits-convergence)
+  - [A gap a provider cannot fill stays a gap](#a-gap-a-provider-cannot-fill-stays-a-gap)
+  - [Identity bar: unchanged](#identity-bar-unchanged)
+  - [Failure reporting: unchanged](#failure-reporting-unchanged)
+  - [Two consequences that outlive the pass](#two-consequences-that-outlive-the-pass)
+- [7. Gates](#7-gates)
+- [8. Residuals](#8-residuals)
+
+<!-- /toc -->
+
 ## 1. The shape: one default order, named per-field exceptions
 
 **The merge was never a global ranking.** `fillGaps` fills gaps from **Google

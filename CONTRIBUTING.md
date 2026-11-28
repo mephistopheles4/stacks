@@ -5,6 +5,20 @@ everything here is built on. The bar is not "did a careful person read it" — i
 is "does a machine say it still holds". If you are an agent, this file is your
 contract; if you are a person, it is the same contract.
 
+<!-- toc -->
+
+- [The short version](#the-short-version)
+- [Git hooks arrive with `pnpm install`](#git-hooks-arrive-with-pnpm-install)
+- [Read these first](#read-these-first)
+- [What a change has to do](#what-a-change-has-to-do)
+- [Never, under any circumstances](#never-under-any-circumstances)
+- [Pull requests](#pull-requests)
+- [Optional: the engineering skills](#optional-the-engineering-skills)
+- [Reporting something you cannot fix](#reporting-something-you-cannot-fix)
+- [Conduct](#conduct)
+
+<!-- /toc -->
+
 ## The short version
 
 ```bash
@@ -20,15 +34,16 @@ BrowserStack check runs after merge, on `main` only, and no contributor needs it
 
 **Those three are the behavioural contract, and they are not the whole of
 `gates`.** It also requires a `style` job, so a tree that passes all three can
-still take a red. Run these two before pushing:
+still take a red. Run these before pushing:
 
 ```bash
-pnpm lint && pnpm format:check
+pnpm lint && pnpm format:check && pnpm gate:toc
 ```
 
 `pnpm format` rewrites the tree and is the whole remedy for the second;
 `pnpm lint --fix` repairs about a quarter of what the first reports and the
-rest is read. Both are documented in [`docs/commands.md`](docs/commands.md).
+rest is read. `node scripts/toc.mjs` is the remedy for the third. All are in
+[`docs/commands.md`](docs/commands.md).
 
 ## Git hooks arrive with `pnpm install`
 

@@ -6804,3 +6804,17 @@ stayed green under both, which is the reason the gate exists.
 - **Routing around** — **exposed.** A destination with a `..`, a drive letter, a backslash or a leading slash, a signed-looking page URL, and a fetch URL off the list or over http are each planted and refused. But a bake input that `inputs.json` does not name is invisible to the row: nothing reads the scripts for the paths they open, and `build_room.py` checks the named inputs and not that nothing else is read. The scratch rebake from a clean inputs folder is the check that would show it. Disposition `accepted`.
 - **Vacuous green** — **gated.** At least ten entries and one CC BY per room, and at least three fetch hosts read out of the script. Disposition `gated`.
 - **Decay** — **exposed.** A licence that a host changes later is not seen; the audit is a date. Disposition `accepted`.
+
+### G76 — `doc-toc`
+
+**Gate:** the `style` job's `gate:toc` step, running [`scripts/toc.mjs`](../../scripts/toc.mjs) `--check`
+**Date:** 2026-11-28
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, on the real tree: with one heading of a covered doc renamed and its table left alone, the `gate:toc` step failed naming that doc's table as stale; with the table written again it passed. Both CI runs are recorded on the pull request that added the row.
+
+- **Weakening** — **exposed.** An entry added to `exclude` in `scripts/toc.config.json`, or a higher `maxUncoveredLines`, takes docs out of the check. The check then reds on a table left in such a doc, and not on one removed with it. The diff is a reviewed line. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The row holds a table to the headings, so a doc with vague headings, or none at H2, passes and helps nobody. Disposition `accepted`.
+- **Routing around** — **exposed.** Deleting the step, or the script, passes every other gate: nothing reads the job for this step. Disposition `accepted`.
+- **Vacuous green** — **exposed.** The script has no floor on how many docs it covers, so an `exclude` that swallows the tree reads as green. Disposition `accepted`.
+- **Decay** — **exposed.** The copy is not compared with the pact's, so a fix made there does not arrive here on its own. Disposition `accepted`.

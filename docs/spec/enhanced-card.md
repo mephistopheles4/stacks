@@ -19,6 +19,31 @@ times.
 
 ---
 
+<!-- toc -->
+
+- [1. What this changes](#1-what-this-changes)
+- [2. Content, in order](#2-content-in-order)
+  - [Why the reading line always renders](#why-the-reading-line-always-renders)
+  - [Formatting rules](#formatting-rules)
+  - [Field presence in the real vault, for anyone sizing this](#field-presence-in-the-real-vault-for-anyone-sizing-this)
+- [3. How missing fields collapse](#3-how-missing-fields-collapse)
+- [4. Layout](#4-layout)
+- [5. Presentation: sheet below the breakpoint, corner card above](#5-presentation-sheet-below-the-breakpoint-corner-card-above)
+- [6. Dismissal, drag and motion](#6-dismissal-drag-and-motion)
+- [7. Accessibility](#7-accessibility)
+- [8. The provider links row](#8-the-provider-links-row)
+  - [Destinations](#destinations)
+  - [Naming — `title`, and no `aria-label`](#naming--title-and-no-aria-label)
+  - [Where the URL builders live](#where-the-url-builders-live)
+  - [The marks themselves](#the-marks-themselves)
+- [9. DOM structure and where things live](#9-dom-structure-and-where-things-live)
+- [10. Data this card reads](#10-data-this-card-reads)
+- [11. Acceptance](#11-acceptance)
+- [12. Residuals — carried, not smoothed](#12-residuals--carried-not-smoothed)
+- [13. Supersessions — the order the decisions actually landed in](#13-supersessions--the-order-the-decisions-actually-landed-in)
+
+<!-- /toc -->
+
 ## 1. What this changes
 
 Today's card is `showCard` at [`packages/site/src/shelf/boot.ts:301`](../../packages/site/src/shelf/boot.ts)

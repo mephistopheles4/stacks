@@ -9,6 +9,28 @@ sensitive list decides what counts as a security finding. Written on 2026-11-07 
 grilling through an eagle-eye box, whose accepted set is S2. Base: `ca372c4`.
 Revision 6: **signed off by the owner on 2026-11-07** ("Yes, sign off", decision 91, relayed by the lead), with the last S17 items settled. Revision 5 recorded the owner's other round-2 answers (decision 89). Revision 3 recorded the owner's answers to S16, relayed by the lead (decision 74). **Nothing here is built.**
 
+<!-- toc -->
+
+- [S1. Objective](#s1-objective)
+- [S2. The owner's decisions](#s2-the-owners-decisions)
+- [S3. The switch](#s3-the-switch)
+- [S4. The analytics module](#s4-the-analytics-module)
+- [S5. The CSP and G20](#s5-the-csp-and-g20)
+- [S6. The events](#s6-the-events)
+- [S7. The pages](#s7-the-pages)
+- [S8. `deploy:site`](#s8-deploysite)
+- [S9. Records, in the build's commit](#s9-records-in-the-builds-commit)
+- [S10. Tests](#s10-tests)
+- [S11. Acceptance claims](#s11-acceptance-claims)
+- [S12. Boundaries for the build session](#s12-boundaries-for-the-build-session)
+- [S13. Trade-offs](#s13-trade-offs)
+- [S14. Residuals and rollback](#s14-residuals-and-rollback)
+- [S15. Needs a human](#s15-needs-a-human)
+- [S16. The owner's answers](#s16-the-owners-answers)
+- [S17. Round 2's questions, and the owner's answers](#s17-round-2s-questions-and-the-owners-answers)
+
+<!-- /toc -->
+
 ## S1. Objective
 
 > I already have plausible as part of my main domain, and I'm wondering what would be

@@ -11,6 +11,27 @@ Revised after the spec pair; the crossing is on
 
 Every line number below is on `main` at `4e97f22`.
 
+<!-- toc -->
+
+- [S1. Problem statement](#s1-problem-statement)
+- [S2. Solution](#s2-solution)
+- [S3. User stories](#s3-user-stories)
+- [S4. Implementation decisions](#s4-implementation-decisions)
+  - [The read — `readWindow` and `windowReadEnough`](#the-read--readwindow-and-windowreadenough)
+  - [The caller](#the-caller)
+  - [The stale text](#the-stale-text)
+  - [The armable line — `roundDownToHundredths`](#the-armable-line--rounddowntohundredths)
+  - [The renovation](#the-renovation)
+  - [Rollback](#rollback)
+- [S5. Testing decisions](#s5-testing-decisions)
+- [S6. The renovation's measurement](#s6-the-renovations-measurement)
+- [S7. Needs a human](#s7-needs-a-human)
+  - [For #462's builder](#for-462s-builder)
+- [S8. Out of scope](#s8-out-of-scope)
+- [S9. Further notes](#s9-further-notes)
+
+<!-- /toc -->
+
 ## S1. Problem statement
 
 The owner chose to arm every bound from the deploy print once

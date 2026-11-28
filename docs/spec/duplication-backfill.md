@@ -16,6 +16,31 @@ among them.
 Every line number is on `main` at `e6cce7c`. Each place is also named by its
 function, so a rebase can find it again.
 
+<!-- toc -->
+
+- [S1. Problem statement](#s1-problem-statement)
+- [S2. Solution](#s2-solution)
+- [S3. Decisions, and where each came from](#s3-decisions-and-where-each-came-from)
+- [S4. User stories](#s4-user-stories)
+- [S5. Implementation decisions](#s5-implementation-decisions)
+  - [S5.1 The measurement](#s51-the-measurement)
+  - [S5.2 The file](#s52-the-file)
+  - [S5.3 The generator command](#s53-the-generator-command)
+  - [S5.4 Into the store](#s54-into-the-store)
+  - [S5.5 The trend page](#s55-the-trend-page)
+  - [S5.6 The record](#s56-the-record)
+- [S6. How the build is proved](#s6-how-the-build-is-proved)
+  - [S6.1 Acceptance claims](#s61-acceptance-claims)
+  - [S6.2 The owner's visual check](#s62-the-owners-visual-check)
+  - [S6.3 Gates](#s63-gates)
+- [S7. Trade-off points](#s7-trade-off-points)
+- [S8. Business drivers](#s8-business-drivers)
+- [S9. Out of scope](#s9-out-of-scope)
+- [S10. The measurement](#s10-the-measurement)
+- [S11. Needs a human](#s11-needs-a-human)
+
+<!-- /toc -->
+
 ## S1. Problem statement
 
 The eight duplication series and the whole-tree four start with

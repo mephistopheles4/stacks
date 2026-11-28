@@ -10,6 +10,28 @@ scope, change it here and the executing session will pick it up on next read.
 
 ---
 
+<!-- toc -->
+
+- [1. Rules of engagement for this run](#1-rules-of-engagement-for-this-run)
+  - [Hard constraint: no third-party copyrighted material in the repo](#hard-constraint-no-third-party-copyrighted-material-in-the-repo)
+- [2. Working agreement for agent sessions](#2-working-agreement-for-agent-sessions)
+- [3. Phase 0 — Scaffold](#3-phase-0--scaffold)
+  - [Ground work](#ground-work)
+  - [Files](#files)
+  - [Dependencies](#dependencies)
+  - [Decisions taken here](#decisions-taken-here)
+  - [Two probes before building on the scaffold](#two-probes-before-building-on-the-scaffold)
+  - [Gate](#gate)
+- [4. Phase 1 — Data layer](#4-phase-1--data-layer)
+- [5. Phase 2 — Shelf renderer](#5-phase-2--shelf-renderer)
+- [6. Phase 3 — Public build](#6-phase-3--public-build)
+- [7. Fixture design](#7-fixture-design)
+- [8. Out of scope for this run](#8-out-of-scope-for-this-run)
+- [9. Agent tooling — decided, do not re-litigate](#9-agent-tooling--decided-do-not-re-litigate)
+- [10. Open items](#10-open-items)
+
+<!-- /toc -->
+
 ## 1. Rules of engagement for this run
 
 These came from the human and must survive context compaction. They are not

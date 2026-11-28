@@ -8,6 +8,25 @@ for either file as a whole** — for a reason that is about genre, not size.
 Every number below was measured on this tree at `d67c576`. Every claim about
 what a gate does was checked by running its parsing logic, not by reading it.
 
+<!-- toc -->
+
+- [The measurement that decides it](#the-measurement-that-decides-it)
+- [This repo has already made this exact decision once](#this-repo-has-already-made-this-exact-decision-once)
+- [What the gates actually permit](#what-the-gates-actually-permit)
+  - [`gates.md` — the spine is pinned, the tail is not](#gatesmd--the-spine-is-pinned-the-tail-is-not)
+  - [`progress.md` — nothing *parses* it, but one thing reads it](#progressmd--nothing-parses-it-but-one-thing-reads-it)
+- [Are the episodes actually separable? Measured, not asserted](#are-the-episodes-actually-separable-measured-not-asserted)
+- [The thing a split breaks with nothing going red](#the-thing-a-split-breaks-with-nothing-going-red)
+- [What the field says](#what-the-field-says)
+- [The recommendation](#the-recommendation)
+  - [`progress.md` → a spine plus `docs/log/`](#progressmd--a-spine-plus-docslog)
+  - [`gates.md` → the scoreboard stays, the commentary moves](#gatesmd--the-scoreboard-stays-the-commentary-moves)
+  - [Not recommended](#not-recommended)
+- [What is not known](#what-is-not-known)
+- [What happened](#what-happened)
+
+<!-- /toc -->
+
 ## The measurement that decides it
 
 | | `progress.md` | `gates.md` |

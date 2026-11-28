@@ -19,6 +19,7 @@
     "dev:watch": "tsx scripts/dev-watch.ts",
     "lint:md": "tsx scripts/lint-md.ts",
     "lint:md:fix": "tsx scripts/lint-md.ts --fix",
+    "gate:toc": "node scripts/toc.mjs --check",
     "stacks": "tsx packages/cli/src/index.ts",
     "worktree": "tsx scripts/worktree.ts",
     "fixtures:50": "tsx scripts/make-50-book-fixture.ts",

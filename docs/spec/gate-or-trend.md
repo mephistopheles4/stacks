@@ -16,6 +16,21 @@ discovery about the taxonomy that #112 could not make from inside itself; see
 
 ---
 
+<!-- toc -->
+
+- [1. The rule](#1-the-rule)
+  - [Clause B does the sorting](#clause-b-does-the-sorting)
+  - [⚠️ The honest limit of the rule](#️-the-honest-limit-of-the-rule)
+- [2. Trends are obliged to reach a person, and only silence is red](#2-trends-are-obliged-to-reach-a-person-and-only-silence-is-red)
+- [3. Three enforcement surfaces, not two](#3-three-enforcement-surfaces-not-two)
+- [4. What the `gates` aggregator may depend on](#4-what-the-gates-aggregator-may-depend-on)
+- [5. `docs/gates.md` admits trends — and holds them by not scoring them](#5-docsgatesmd-admits-trends--and-holds-them-by-not-scoring-them)
+  - [The Trends section](#the-trends-section)
+- [6. What the rule does not close](#6-what-the-rule-does-not-close)
+- [7. Clause A is tree-size-sensitive, and that was found rather than designed](#7-clause-a-is-tree-size-sensitive-and-that-was-found-rather-than-designed)
+
+<!-- /toc -->
+
 ## 1. The rule
 
 **A check is a gate if both clauses hold. Otherwise it is a trend. The taxonomy

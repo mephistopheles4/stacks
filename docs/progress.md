@@ -8,6 +8,16 @@ This is an **index, not a narrative**. Say what holds now, link the rest, and ne
 
 ---
 
+<!-- toc -->
+
+- [Current state](#current-state)
+- [Environment findings](#environment-findings)
+  - [The deploy check and the zone](#the-deploy-check-and-the-zone)
+- [The log](#the-log)
+- [Notes to the next session](#notes-to-the-next-session)
+
+<!-- /toc -->
+
 ## Current state
 
 All five phases are green and tagged (`phase-0` to `phase-4`). The tool runs against the owner's real vault, not fixtures. The gate scoreboard is [`gates.md`](./gates.md); the history this file used to carry is in [`log/2026-11-12-progress-before-the-cleanup.md`](./log/2026-11-12-progress-before-the-cleanup.md).

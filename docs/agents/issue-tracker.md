@@ -9,6 +9,22 @@ infers the repo from `git remote -v` inside a clone.
 installed. They are not a requirement for contributing** — see
 [`CONTRIBUTING.md`](../../CONTRIBUTING.md). Nothing here gates a pull request.
 
+<!-- toc -->
+
+- [Conventions](#conventions)
+- [Whose text counts](#whose-text-counts)
+- [Specs](#specs)
+- [Tickets](#tickets)
+- [Wayfinding operations](#wayfinding-operations)
+- [Triage labels](#triage-labels)
+- [Older GitHub issues](#older-github-issues)
+- [Pull requests](#pull-requests)
+- [When a skill says "publish to the issue tracker"](#when-a-skill-says-publish-to-the-issue-tracker)
+- [When a skill says "fetch the relevant ticket"](#when-a-skill-says-fetch-the-relevant-ticket)
+- [What this repo expects of a change, whatever opened it](#what-this-repo-expects-of-a-change-whatever-opened-it)
+
+<!-- /toc -->
+
 ## Conventions
 
 - **Read an item** with the Linear connector's `get_issue`, then

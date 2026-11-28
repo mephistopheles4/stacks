@@ -10,6 +10,29 @@ scene. Where it is neither, it says so. Given that this repo has a documented ca
 allocation predicting exactly the wrong answer ([the mobile crash](../log/2026-08-01-the-mobile-crash-g15.md), "The ranking was wrong"),
 every row carries its provenance.
 
+<!-- toc -->
+
+- [How the settings were counted](#how-the-settings-were-counted)
+- [The classes](#the-classes)
+- [The table](#the-table)
+  - [The ten probes](#the-ten-probes)
+  - [Lighting, fog and colour](#lighting-fog-and-colour)
+- [The three things the source says that the ticket does not assume](#the-three-things-the-source-says-that-the-ticket-does-not-assume)
+  - [1. `shadowMap.enabled` is compile-latched, and nothing in three notices it change](#1-shadowmapenabled-is-compile-latched-and-nothing-in-three-notices-it-change)
+  - [2. The asymmetry that makes a live `shadows` toggle dangerous *and* misleading](#2-the-asymmetry-that-makes-a-live-shadows-toggle-dangerous-and-misleading)
+  - [3. `autoUpdate = false` is load-bearing far beyond the shadow pass](#3-autoupdate--false-is-load-bearing-far-beyond-the-shadow-pass)
+  - [The `shadowMapSize` trap](#the-shadowmapsize-trap)
+  - [The casters trap: the off direction is safe, the on direction is not](#the-casters-trap-the-off-direction-is-safe-the-on-direction-is-not)
+  - [The key light is live and the painted shading is not](#the-key-light-is-live-and-the-painted-shading-is-not)
+- [The three sub-questions](#the-three-sub-questions)
+  - [What should the panel do when a toggle kills the WebGL context?](#what-should-the-panel-do-when-a-toggle-kills-the-webgl-context)
+  - [What does a dispose-and-remount actually cost?](#what-does-a-dispose-and-remount-actually-cost)
+  - [Is `dpr` really trivial?](#is-dpr-really-trivial)
+- [What could not be measured](#what-could-not-be-measured)
+- [Method](#method)
+
+<!-- /toc -->
+
 ## How the settings were counted
 
 `rendererOverrides()` in `packages/site/src/shelf/boot.ts` parses **nine** settings —

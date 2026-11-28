@@ -15,6 +15,20 @@ require, and a decision made in light of it.
 
 ---
 
+<!-- toc -->
+
+- [1. Why this exists at all](#1-why-this-exists-at-all)
+- [2. What ships](#2-what-ships)
+  - [On the shelf — the surface](#on-the-shelf--the-surface)
+  - [On the route — `/attribution`](#on-the-route--attribution)
+- [3. Apple's credit line — and why it is one sentence, not two](#3-apples-credit-line--and-why-it-is-one-sentence-not-two)
+- [4. Placement: measured, and the phone occlusion accepted](#4-placement-measured-and-the-phone-occlusion-accepted)
+- [5. The asset: vendored, not hotlinked](#5-the-asset-vendored-not-hotlinked)
+- [6. The second page: what it touches](#6-the-second-page-what-it-touches)
+- [7. Residuals](#7-residuals)
+
+<!-- /toc -->
+
 ## 1. Why this exists at all
 
 Google's obligation is a **live ToS clause pointing at a stale page**, not a

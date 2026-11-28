@@ -10,6 +10,18 @@ frontmatter keys belong to G8, the invariants to G19, the commands to G14,
 entry here ever needs a "must", it belongs in [`AGENTS.md`](AGENTS.md) with a
 gate.
 
+<!-- toc -->
+
+- [Language](#language)
+  - [Books and the shelf](#books-and-the-shelf)
+  - [The bookcase](#the-bookcase)
+  - [Picking a book up](#picking-a-book-up)
+  - [Building and publishing](#building-and-publishing)
+  - [Checking](#checking)
+  - [The tracker](#the-tracker)
+
+<!-- /toc -->
+
 ## Language
 
 ### Books and the shelf

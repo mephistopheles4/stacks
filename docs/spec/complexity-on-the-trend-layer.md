@@ -25,6 +25,31 @@ records the rest.
 
 ---
 
+<!-- toc -->
+
+- [1. What the series is for](#1-what-the-series-is-for)
+- [2. Four counts, never a ratio](#2-four-counts-never-a-ratio)
+  - [The population](#the-population)
+  - [What a function is, and what counts](#what-a-function-is-and-what-counts)
+  - [Labels](#labels)
+- [3. The tooling — TypeScript 6.0.3 until 7.1, and ESLint's rule as the counter](#3-the-tooling--typescript-603-until-71-and-eslints-rule-as-the-counter)
+  - [The inventory fixture, now pinning somebody else's rule](#the-inventory-fixture-now-pinning-somebody-elses-rule)
+- [4. Teeth: a cap that only falls](#4-teeth-a-cap-that-only-falls)
+- [5. CRAP: kept local, advisory, at pre-commit](#5-crap-kept-local-advisory-at-pre-commit)
+  - [What the spike changed, and what it did not](#what-the-spike-changed-and-what-it-did-not)
+  - [How the hook works](#how-the-hook-works)
+  - [Coverage enters the repo — as an ingredient, with its ADR](#coverage-enters-the-repo--as-an-ingredient-with-its-adr)
+  - [The inversion, and what flips it](#the-inversion-and-what-flips-it)
+- [6. The emitter, the cadence, and how it is proved able to fail](#6-the-emitter-the-cadence-and-how-it-is-proved-able-to-fail)
+  - [Cadence: both events, same bound](#cadence-both-events-same-bound)
+  - [Proved able to fail](#proved-able-to-fail)
+  - [Runtime](#runtime)
+- [7. Gaming categories, graded](#7-gaming-categories-graded)
+- [8. What was ruled out, and the fog that remains](#8-what-was-ruled-out-and-the-fog-that-remains)
+- [9. The build order](#9-the-build-order)
+
+<!-- /toc -->
+
 ## 1. What the series is for
 
 A source the owner brought — a vendor post on CRAP and cyclomatic complexity —
