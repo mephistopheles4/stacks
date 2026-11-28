@@ -1758,7 +1758,7 @@ again. Each line is a standing rule; the decisions behind the gates are in
 - A gate that matches prose matches anything: G14 anchors a command name to the start of a line in the Commands block.
 - G1 holds its allowlist in both directions, so a new importer needs an entry and a spent exception must be removed; a list that only grew would keep it.
 - A gate must not return early on the branch it happens to run on: G17 points git at a scratch repository with `GIT_DIR` so the guard is real and only the checkout is controlled, and one test omits the redirection on purpose. Mutate in both directions, because a positive check cannot detect a missing guard.
-- A test file that writes into the main checkout, like the `.env` probe, names it per process: two worktrees running `pnpm test` at once would otherwise delete each other's file and present as a flaky assertion.
+- A test file that writes into the main checkout names its file per process: two worktrees running `pnpm test` at once would otherwise delete each other's file and present as a flaky assertion.
 - README is not covered by G14, so its status line and lists point at the gated lists, and no prose states a count: numbers belong in gate output, where they cannot rot. `docs/progress.md`'s current-state table must be updated in the commit that closes a gate.
 - Every gate before G26 checked a contract; recall is not a contract. G26's expected answers are facts about the world, and its corpus pins the refusals as hard as the finds, so a matcher that says yes to everything goes red.
 - Trace a reported root-cause list before hunting it, and probe with the query the code actually sends, not a shorter one.

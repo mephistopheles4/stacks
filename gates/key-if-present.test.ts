@@ -46,10 +46,10 @@
  * See docs/gates.md, row G23 (key-if-present).
  */
 
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
-import { codeOf, expectFound, filesUnder, REPO_ROOT } from './repo.ts';
+import { describe, expect, it } from 'vitest';
+import { blankComments, codeOf, expectFound, filesUnder, REPO_ROOT } from './repo.ts';
 
 /** The one definition. */
 const OWNER = 'packages/core/src/key-if-present.ts';
@@ -192,41 +192,31 @@ describe('G23 — one absent-key helper', () => {
    * directions: a copy cannot hide inside a block comment, and a caller cannot
    * satisfy the count by merely *mentioning* `keyIfPresent` in prose.
    *
-   * **Asserted through `codeOf` itself**, against a real file on disk, because
-   * the point is that *the shared helper* blanks comments — not that some
-   * regex written here does. An earlier draft re-implemented a partial strip
-   * inline and compared against that, which would have stayed green while
-   * `codeOf`'s URL-aware arm was broken underneath it. That is verbatim the
-   * defect `docs/gates.md` logs under G14, G19 and G22: *anchor the assertion
-   * to the thing that carries the claim.* Written here for the fourth time,
-   * inside the gate whose docblock cites the other three.
+   * **Asserted through `blankComments`**, the one function `codeOf` blanks
+   * with, because the point is that *the shared helper* blanks comments — not
+   * that some regex written here does. An earlier draft re-implemented a
+   * partial strip inline and compared against that, which would have stayed
+   * green while `codeOf`'s URL-aware arm was broken underneath it. That is
+   * verbatim the defect `docs/gates.md` logs under G14, G19 and G22: *anchor
+   * the assertion to the thing that carries the claim.* Written here for the
+   * fourth time, inside the gate whose docblock cites the other three.
    *
-   * The probe lives under `artifacts/`, which `filesUnder` skips and git
-   * ignores, so it cannot be seen by the sweeps above while it exists.
+   * The source is a string, so the test writes no file into the checkout. It
+   * does not check that `codeOf` calls `blankComments`: that `codeOf` has no
+   * pattern of its own is held by `repo.ts` defining the pattern once.
    */
   it('blanks comments, via the same codeOf the sweeps use', () => {
-    const dir = join(REPO_ROOT, 'artifacts');
-    const probe = 'artifacts/__g23-comment-probe.ts';
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(
-      join(REPO_ROOT, probe),
+    const code = blankComments(
       '/* return commented === undefined ? {} : x; */\n' +
         '// return alsoCommented === undefined ? {} : x;\n' +
         'export const url = "https://example.com/a";\n' +
         'export const real = 1;\n',
-      'utf8',
     );
-
-    const code = codeOf(probe);
 
     expect(RETURNS_NOTHING_WHEN_ABSENT.test(code), 'a commented-out body counted as code').toBe(
       false,
     );
     expect(code, 'a URL was eaten as a comment').toContain('https://example.com/a');
     expect(code, 'real code was blanked').toContain('export const real = 1;');
-  });
-
-  afterAll(() => {
-    rmSync(join(REPO_ROOT, 'artifacts/__g23-comment-probe.ts'), { force: true });
   });
 });

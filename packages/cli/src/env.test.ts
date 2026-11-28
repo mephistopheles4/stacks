@@ -11,10 +11,13 @@
  * depending on where it is asked from — relative in the main checkout, absolute
  * in a linked worktree — so a stand-in would agree with the implementation and
  * with nothing else.
+ *
+ * The repository is a scratch one, built in a temp folder with a linked worktree
+ * beside it, so no test here writes into the checkout the suite runs from.
  */
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -22,72 +25,77 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { envFilePath, loadEnv, mainCheckout } from './env.ts';
 
 /**
- * Gitignored under `.env.*`, so a stray copy cannot be committed.
- *
- * Named per process because it is written into the *main* checkout — that is
- * the whole point of the fallback — and two worktrees running `pnpm test` at
- * once is now an ordinary thing to do. Sharing one filename, each suite's
- * `afterEach` would delete the file the other was mid-way through reading, and
- * it would present as a flaky assertion rather than as the shared-resource
- * collision it is. Same defect as the render gate's fixed port, one layer down.
+ * The env file the tests write, at the root of the scratch repository's *main*
+ * checkout — that is the whole point of the fallback.
  */
 const PROBE = `.env.worktree-probe-${String(process.pid)}`;
 
 const HERE = process.cwd();
 
+/** Holds the scratch repository and its linked worktree, side by side. */
+let scratch: string;
+let repo: string;
+let worktree: string;
+
 /**
- * The main checkout, asked a different way than the code under test asks it.
+ * The scratch repository's main checkout, asked a different way than the code
+ * under test asks it.
  *
  * `git worktree list` puts the main worktree first, always — a fact about
  * git, not about `--git-common-dir`, which is the mechanism being tested. An
  * oracle derived from the implementation would agree with it while it was
- * wrong.
- *
- * It also has to be asked rather than assumed, because `process.cwd()` is only
- * the main checkout when the suite runs there. Run `pnpm test` inside a
- * worktree — the thing this whole feature exists to make possible — and cwd is
- * the worktree, which is how the first draft of this file failed: five red
- * tests in the one place they most needed to be green.
+ * wrong. So it is asked of git, never assumed from where the repository was
+ * created.
  */
-const FIRST_WORKTREE = /^worktree (.+)$/m.exec(
-  execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd: HERE, encoding: 'utf8' }),
-)?.[1];
-
-const MAIN = resolve(FIRST_WORKTREE ?? '');
-
-let worktree: string;
+let MAIN: string;
 
 beforeAll(() => {
-  // The match, not the resolved path: `resolve('')` is the cwd, which in the
-  // main checkout is the right answer for the wrong reason — so a guard on the
-  // resolved value passes exactly where a broken parse would do least harm and
-  // fails where it does most. (Observed, on the first run of this line.)
-  expect(
-    FIRST_WORKTREE,
-    'could not parse a main checkout out of `git worktree list`',
-  ).toBeDefined();
-  // Detached, so the test creates no branch and cannot collide with one.
-  worktree = join(mkdtempSync(join(tmpdir(), 'stacks-worktree-')), 'checkout');
-  execFileSync('git', ['worktree', 'add', '--detach', worktree], { cwd: MAIN, stdio: 'ignore' });
+  // The long form git prints: a Windows temp path can come back in 8.3 short
+  // form, and `/var` on macOS is a symlink.
+  scratch = realpathSync.native(mkdtempSync(join(tmpdir(), 'stacks-env-')));
+  repo = join(scratch, 'repo');
+  const git = (...args: string[]): string =>
+    execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: 'pipe' });
+
+  // Two levels down, so "from a subdirectory" has somewhere to stand.
+  mkdirSync(join(repo, 'packages', 'site'), { recursive: true });
+  git('init', '--quiet');
+  // A worktree cannot be added without a commit, and athanor has no identity.
+  const identity = ['-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid'];
+  git(...identity, 'commit', '--allow-empty', '-m', 'root', '--quiet');
+  // Detached, so the test creates no branch.
+  worktree = join(scratch, 'checkout');
+  git('worktree', 'add', '--detach', worktree);
+
+  const firstWorktree = /^worktree (.+)$/m.exec(git('worktree', 'list', '--porcelain'))?.[1];
+  // The match, not the resolved path: `resolve('')` is the cwd, a real
+  // directory, so a guard on the resolved value would pass on a broken parse.
+  expect(firstWorktree, 'could not parse a main checkout out of `git worktree list`').toBeDefined();
+  MAIN = resolve(firstWorktree ?? '');
+  process.chdir(repo);
 });
 
 afterAll(() => {
   process.chdir(HERE);
   try {
     execFileSync('git', ['worktree', 'remove', '--force', worktree], {
-      cwd: MAIN,
+      cwd: repo,
       stdio: 'ignore',
     });
   } catch {
-    // Windows will refuse while anything still holds the directory. Prune drops
-    // the registration either way, so a failure here cannot leave the repo
-    // believing in a worktree that is gone.
-    execFileSync('git', ['worktree', 'prune'], { cwd: MAIN, stdio: 'ignore' });
+    // Windows will refuse while anything still holds the directory. Prune is the
+    // fallback, and the scratch folder is deleted next either way.
+    execFileSync('git', ['worktree', 'prune'], { cwd: repo, stdio: 'ignore' });
+  }
+  try {
+    rmSync(scratch, { recursive: true, force: true });
+  } catch {
+    // A held temp directory is the OS's to clean up, never a test failure.
   }
 });
 
 afterEach(() => {
-  process.chdir(HERE);
+  process.chdir(repo);
   rmSync(join(MAIN, PROBE), { force: true });
   delete process.env['STACKS_PROBE_VALUE'];
 });
